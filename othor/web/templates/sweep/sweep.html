@@ -1,0 +1,165 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/app.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import tabs as tabs_bar, banner, why_unseen, empty_state, page_title %}
+{% from "components/buttons.html" import button, link %}
+{% from "components/forms.html" import text_input, select %}
+{% from "components/panels.html" import pane, pane_title %}
+{% from "components/sweep.html" import stat, finding_row, detector_table, detectors_strip, reasons, kv, status_pill, held_rows, pattern_groups, rows_table, question_box, runs_menu, panel_head, code, hold_form, overlay %}
+{% block title %}Sweep · {{ company.name }}{% endblock %}
+{% block crumb %}Sweep{% endblock %}
+{% block crumb_after %}{% call el("p", "crumbs") %}{% call el("span", "crumb-sep") %}/{% endcall %}<span>{{ fmt.date_short(summary.date) }} {{ summary.date.year }}</span>{% endcall %}{% endblock %}
+{% block actions %}{{ runs_menu(runs, run) }}{% endblock %}
+{% block main %}
+{% if run and not request.query_params.get("run") %}<span data-run="{{ run }}" hidden></span>{% endif %}
+{{ page_title("Sweep", aside=fmt.date_short(summary.date) ~ " " ~ summary.date.year) }}
+<div class="flex flex-col gap-24">
+
+{{ detectors_strip(strip, strip_info) }}
+<div class="grid grid-cols-1 md:grid-cols-3 gap-16">
+  {{ stat(fmt.num(history.ok) ~ " / " ~ fmt.num(history.all), "metrics with enough history", boxed=True) }}
+  {{ stat(fmt.num(summary.tests), "tests tonight · FDR " ~ summary.fdr, boxed=True) }}
+  {{ stat(fmt.num(findings | length) ~ " open · " ~ fmt.num(rv.counts.new) ~ " new tonight", "findings", boxed=True) }}
+</div>
+
+{{ tabs_bar(tabs, tabs[["findings", "watching", "suppressed", "resolved"].index(tab)][0]) }}
+
+{% if tab == "findings" %}
+  {# M15.9 · the page style: the findings, then the detectors under their caps title, 56 px apart #}
+  {% call el("div", layout="flex flex-col gap-56") %}<div class="flex flex-col gap-24">
+  {% if added %}{% set msg %}<b>Added to {{ added }}</b> · from tomorrow’s run{% endset %}{{ banner("ok", msg, "Open the brief →", "/brief") }}{% endif %}
+  {% if findings %}
+  {% call el("div", layout="flex flex-col") %}{% for c in findings %}{{ finding_row(c, run) }}{% endfor %}{% endcall %}
+  {% else %}
+  {% call el("p", "hint") %}Nothing unusual found tonight.{% endcall %}
+  {% endif %}
+  </div>
+  {{ detector_table(detectors) }}
+  {% endcall %}
+  {% if early %}
+  {% set n = early.short | length %}
+  {% set what = fmt.num(n) ~ " snapshot number" ~ ("s are" if n != 1 else " is") ~ " still building history." if n else fmt.num(early.partly) ~ " detector" ~ ("s run" if early.partly != 1 else " runs") ~ " partly until every series has enough history." %}
+  {% set msg %}<b>Day {{ fmt.num(early.day) }} of 28.</b> {{ what }} Full coverage from {{ fmt.day_month(early.full_from) }}.{% endset %}
+  {{ banner("warn", msg, "Which numbers?" if n else None, "/sweep?run=" ~ run ~ "&panel=history" if n else None) }}
+  {% endif %}
+
+{% elif tab == "watching" %}
+  {% if watching %}
+  {% call el("div", "table-wrap") %}{% call el("table", "table flush") %}<thead><tr><th>Indicator</th><th>Alert when</th><th>Today</th><th>Status</th><th>Owner</th><th>Watching since</th><th></th></tr></thead><tbody>
+  {% for w in watching %}<tr><td>{{ w.label }}</td><td>{% call el("span", "value-mono") %}{{ w.alert }}{% endcall %}</td><td>{% call el("span", "value-neg" if w.status == "breached" else "value-mono") %}{{ w.today }}{% endcall %}</td><td>{{ status_pill(w.status) }}</td><td>{{ w.owner }}</td><td>{{ fmt.day_month(w.since) }}</td>
+    {% call el("td", "num") %}<form method="post" action="/sweep/watching/{{ w.id }}/stop?run={{ run }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{% call el("button", "link-muted", attrs={"type": "submit"}) %}Stop{% endcall %}</form>{% endcall %}</tr>{% endfor %}
+  </tbody>{% endcall %}{% endcall %}
+  {% call el("p", "footnote") %}Checked every night. A breach shows on Home and in the briefs that cover the metric the next morning. Thresholds set at first detection start in breach; review them once a fix is under way.{% endcall %}
+  {% else %}
+  {% call el("div", "card board") %}{{ empty_state(None, "Nothing watched yet", "Watch a finding to check its indicator every night.") }}{% endcall %}
+  {% endif %}
+
+{% elif tab == "suppressed" %}
+  <div class="flex flex-col gap-56">
+    {% if suppressed.held %}
+    <div class="flex flex-col gap-8">{% call el("p", "label-caps") %}Snoozed and muted by you · {{ fmt.num(suppressed.held | length) }}{% endcall %}
+      {% call el("div", "section lines") %}{% for h in suppressed.held %}{% call el("div", "held-row") %}<span>{{ h.title }}</span>{% call el("span", "how") %}{{ h.how }} · {{ hold_form("undo", h.fp, run, "Undo", csrf_token) }}{% endcall %}{% endcall %}{% endfor %}{% endcall %}
+    </div>
+    {% endif %}
+    <div class="flex flex-col gap-8">{% call el("p", "label-caps") %}Suppressed by your Ontology · {{ fmt.num(suppressed.by_ontology | length) }}{% endcall %}
+      {% if suppressed.by_ontology %}{{ pattern_groups(suppressed.by_ontology) }}
+      {% else %}{% call el("p", "hint") %}Nothing matched a known pattern tonight.{% endcall %}{% endif %}
+    </div>
+    {% if suppressed.proposals %}
+    <div class="flex flex-col gap-8">{% call el("p", "label-caps") %}Proposed for your Ontology · {{ fmt.num(suppressed.proposals | length) }}{% endcall %}
+      {% call el("div", "section lines") %}{% for p in suppressed.proposals %}{% call el("div", "held-row") %}<span>{{ p.text }}</span>{% endcall %}{% endfor %}{% endcall %}
+    </div>
+    {% endif %}
+  </div>
+
+{% elif tab == "resolved" %}
+  {% if resolved %}
+  {% call el("div", "table-wrap") %}{% call el("table", "table flush") %}<thead><tr><th>Finding</th><th>Detector</th><th>How it ended</th>{% call el("th", "num") %}Resolved{% endcall %}</tr></thead><tbody>
+  {% for r in resolved %}<tr>{% call el("td", "wrap") %}{{ r.title }}{% endcall %}<td>{{ r.label }}</td>{% call el("td", "wrap") %}{% if r.into %}{% call el("a", "link", attrs={"href": "/sweep/finding/" ~ r.into ~ "?run=" ~ run}) %}{{ r.how }} →{% endcall %}{% else %}{{ r.how }}{% endif %}{% endcall %}{% call el("td", "num") %}{{ fmt.day_month(r.on) }}{% endcall %}</tr>{% endfor %}
+  </tbody>{% endcall %}{% endcall %}
+  {% call el("p", "footnote") %}Resolved findings stay here for 7 days.{% endcall %}
+  {% else %}
+  {% call el("div", "card board") %}{{ empty_state(None, "Nothing resolved this week", None) }}{% endcall %}
+  {% endif %}
+{% endif %}
+</div>
+{% endblock %}
+
+{% block overlay %}
+{% set close = "/sweep?run=" ~ run %}
+{% if chat %}{% set qfrom, qclose = "sweep-" ~ run, close %}{% include "home/_questions_panel.html" %}
+{% elif history_panel %}
+{% call overlay("Numbers still building history", close) %}
+{% call(part) pane() %}
+{% if part == "head" %}{{ pane_title("Numbers still building history", "Day " ~ fmt.num(history_panel.day) ~ " of 28 · full coverage from " ~ fmt.day_month(history_panel.full_from), close) }}
+{% elif part == "body" %}
+{% call el("div", "table-wrap") %}{% call el("table", "table") %}<thead><tr><th>Number</th><th>Why history is short</th>{% call el("th", "num") %}History{% endcall %}{% call el("th", "num") %}Ready{% endcall %}</tr></thead><tbody>
+  {% for n in history_panel.short %}<tr><td>{{ n.name }}</td><td>{{ n.why }}</td>{% call el("td", "num") %}{{ n.history }}{% endcall %}{% call el("td", "num") %}{{ fmt.day_month(n.ready) }}{% endcall %}</tr>{% endfor %}
+</tbody>{% endcall %}{% endcall %}
+{% call el("p", "footnote") %}Snapshot numbers need 28 days for changepoint and variance. Most numbers have years of history in your sources already.{% endcall %}
+{% else %}{{ button("Close", href=close) }}
+{% endif %}
+{% endcall %}
+{% endcall %}
+{% elif panel %}
+{% set fbase = "/sweep/finding/" %}{% set fq = "run=" ~ run %}
+{% include "sweep/_panel.html" %}
+{% elif add_brief is defined %}
+{% set a = add_brief %}
+{% call overlay("Add to a brief", close) %}
+<form method="post" action="/sweep/finding/{{ a.fp }}/brief?run={{ run }}" class="contents" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">
+{% call(part) pane() %}
+{% if part == "head" %}{{ pane_title("Add to a brief", a.title ~ (" · " ~ a.money if a.money else ""), close) }}
+{% elif part == "body" %}
+<div class="flex flex-col gap-12">
+  {% for o in a.options %}
+  {% call el("label", "pick-row" ~ (" is-disabled" if o.blocked or o.added else "")) %}
+    <input type="radio" name="brief" value="{{ o.id }}"{% if o.blocked or o.added %} disabled{% elif o.default %} checked{% endif %}>
+    <span class="flex flex-col gap-4">{% call el("span", "name") %}{{ o.name }} brief{% endcall %}{% call el("span", "hint") %}{{ o.blocked or (o.scope ~ " · " ~ fmt.num(o.item_count) ~ " items today") }}{% endcall %}{% if o.added %}{% call el("span", "hint") %}Already added{% endcall %}{% elif o.tomorrow %}{% call el("span", "tomorrow") %}{{ o.tomorrow }}{% endcall %}{% endif %}</span>
+  {% endcall %}
+  {% endfor %}
+  {% call el("div", layout="flex flex-wrap gap-12") %}
+    {% call el("label", "pick-row") %}<input type="radio" name="mode" value="item" checked><span>Add as an item</span>{% endcall %}
+    {% call el("label", "pick-row") %}<input type="radio" name="mode" value="watch"><span>Watch it in this brief</span>{% endcall %}
+  {% endcall %}
+  {% call el("p", "hint") %}Items stay while the finding is open. Counts in Sweep and on Home update tonight.{% endcall %}
+</div>
+{% else %}{% call el("div", layout="flex items-center justify-end gap-8 w-full") %}{{ button("Cancel", href=close) }}{{ button("Add", kind="primary", type="submit") }}{% endcall %}
+{% endif %}
+{% endcall %}
+</form>
+{% endcall %}
+{% elif watch is defined %}
+{% set w = watch %}
+{% call overlay("Watch this", close) %}
+{% if w %}
+<form method="post" action="/sweep/watch/{{ w.fp }}/start?run={{ run }}" class="contents" data-inplace>
+<input type="hidden" name="csrf" value="{{ csrf_token }}">
+{% call(part) pane() %}
+{% if part == "head" %}
+  {{ pane_title("Watch this", "From finding " ~ watch_from.number ~ " · " ~ watch_from.label, close) }}
+{% elif part == "body" %}
+<div class="flex flex-col gap-16">
+  <div class="flex flex-col gap-6">{% call el("div", "field-head") %}<span>Indicator</span>{% call el("span", "hint") %}Drafted from the finding{% endcall %}{% endcall %}{{ text_input("label", value=w.label, disabled=True) }}</div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+    <div class="flex flex-col gap-6">{% call el("div", "field-head") %}<span>Alert when {{ w.direction }}</span>{% call el("span", "hint") %}{{ w.hint }}{% endcall %}{% endcall %}{{ text_input("threshold", value=w.threshold) }}</div>
+    <div class="flex flex-col gap-6">{% call el("div", "field-head") %}<span>Owner</span>{% call el("span", "hint") %}{{ w.owner_note }}{% endcall %}{% endcall %}{{ select("owner", w.owner_options, w.owner) }}</div>
+  </div>
+  {% if w.today is not none %}
+  {% call el("div", "breach-box" if w.breached else "breach-box ok") %}{% call el("span", "t") %}Today {{ w.today_text }}{{ " · in breach from the start" if w.breached else " · within" }}{% endcall %}{% if w.breached %}Thresholds set at first detection start in breach. Review it once a fix is under way.{% endif %}{% endcall %}
+  {% endif %}
+  {% call el("p", "label-caps") %}When it breaches{% endcall %}{% call el("p", "finding-line") %}{{ w.when }}{% endcall %}
+  {% if w.chart %}{% call el("p", "label-caps") %}Last 90 days, replayed{% endcall %}{% call el("div", "chart") %}{{ chart(w.chart, 620, 170) }}{% endcall %}
+  {% call el("p", "footnote") %}{% if w.first_breach %}Would have breached first on {{ fmt.day_month(w.first_breach) }} · {{ fmt.num(w.days_ago) }} days ago{% else %}Would not have breached in the last 90 days{% endif %}{% endcall %}{% endif %}
+</div>
+{% else %}
+{% call el("div", layout="flex items-center justify-between gap-12 w-full") %}{% call el("p", "prov-foot") %}Checked every night · change or stop any time{% endcall %}<div class="flex items-center gap-8">{{ button("Cancel", href=close) }}{{ button("Start watching", kind="primary", type="submit") }}</div>{% endcall %}
+{% endif %}
+{% endcall %}
+</form>
+{% else %}
+{% call(part) pane() %}{% if part == "head" %}{{ pane_title("Watch this", None, close) }}{% elif part == "body" %}{{ empty_state(None, "No indicator to draft for this finding", "Its numbers come from a check that has no nightly value.") }}{% else %}{{ button("Close", href=close) }}{% endif %}{% endcall %}
+{% endif %}
+{% endcall %}
+{% endif %}
+{% endblock %}

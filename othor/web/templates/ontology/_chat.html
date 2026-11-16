@@ -1,0 +1,53 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# 6a3 · Change with Othor AI (480 px; v0.11, docs/plans/questions-panel.md part 4): the questions
+   panel's form. One request box and Send; then the draft card (the change as a record, its
+   computed effect) with Apply · Edit; nothing is written before Apply, and Apply writes one
+   Ontology version (Undo after). The page stays live behind it. #}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% from "components/blocks.html" import callout %}
+{% from "components/forms.html" import action_form, text_area %}
+{% from "components/panels.html" import pane %}
+{% from "components/brief.html" import nb_head, nb_ai_tag, nb_busy, nb_note %}
+{% from "components/ontology.html" import record_card %}
+{% set c = chat %}
+{% call el("aside", "panel chat", attrs={"aria-label": c.title, "id": "chat-panel"}) %}
+{% call(part) pane("nb qp") %}
+{% if part == "head" %}{% call(p) nb_head("/ontology", c.title) %}{% if p == "rest" %}{% call el("p", "hint") %}{{ c.sub }}{% endcall %}{% endif %}{% endcall %}
+{% elif part == "body" %}
+{% call el("div", layout="flex flex-col gap-24") %}
+  {% call el("div", layout="flex flex-col gap-12") %}
+    {{ nb_ai_tag() }}
+    {% call el("h2", "nb-q", attrs={"id": "ch-q"}) %}{{ c.question }}{% endcall %}
+  {% endcall %}
+  {% if c.draft %}{% set d = c.draft %}{% set k = d.card %}
+    {% if d.said %}{% call el("p", "nb-reply") %}You asked: “{{ d.said }}”{% endcall %}{% endif %}
+    {% if d.applied %}
+    {% call record_card(k.section, k.before, k.after, k.lines, k.effect.note, kicker="Applied · Ontology v" ~ d.version ~ " · from tonight’s run") %}
+      {% call action_form("/ontology/versions/" ~ d.version ~ "/undo", csrf_token) %}<input type="hidden" name="back" value="/ontology?panel=chat&subject={{ c.subject }}">{{ button("Undo", size="sm", type="submit") }}{% endcall %}
+    {% endcall %}
+    {% else %}
+    {% call record_card(k.section, k.before, k.after, k.lines, k.effect.note, kicker="Draft · will be saved · " ~ k.section ~ " · Ontology v" ~ c.next) %}
+      {% call action_form("/ontology/chat/" ~ d.id ~ "/apply", csrf_token) %}{{ button("Apply", kind="primary", size="sm", type="submit", attrs={"data-busy": "Applying…"}) }}{% endcall %}
+      {% call action_form("/ontology/chat/" ~ d.id ~ "/edit", csrf_token) %}{{ button("Edit", size="sm", type="submit") }}{% endcall %}
+    {% endcall %}
+    {% endif %}
+  {% endif %}
+  {% if not c.draft or c.draft.applied %}
+  {% call action_form("/ontology/chat", csrf_token, layout="flex flex-col gap-16") %}
+    <input type="hidden" name="subject" value="{{ c.subject }}">
+    {% if c.reply %}{% call el("p", "nb-reply", attrs={"role": "status"}) %}{{ c.reply }}{% endcall %}{% endif %}
+    {% if note %}{{ callout(note | e) }}{% endif %}
+    {% call el("div", layout="flex flex-col gap-8") %}
+      {% call el("label", "nb-label", attrs={"for": "f-line"}) %}Your request{% endcall %}
+      {% if c.model %}{{ text_area("line", None, value=c.prefill, placeholder="Ask or tell Othor AI…", rows=4, autofocus=True) }}
+      {% else %}{{ text_area("line", None, placeholder="Not available right now", rows=4, attrs="disabled") }}{% endif %}
+    {% endcall %}
+    {% call el("div", layout="flex items-center justify-end gap-16") %}{{ nb_busy("Othor AI is drafting the change…") }}{% call el("span", layout="flex-1") %}{% endcall %}{{ button("Send", kind="primary nb-go", type="submit", disabled=not c.model, attrs={"data-busy": "Drafting…", "data-busy-say": "Othor AI is drafting the change…"}) }}{% endcall %}
+  {% endcall %}
+  {% endif %}
+{% endcall %}
+{% else %}{{ nb_note() }}
+{% endif %}
+{% endcall %}
+{% endcall %}

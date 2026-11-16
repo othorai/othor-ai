@@ -1,0 +1,29 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{# 10m · Reconnect panel: why it failed, what it affects, same tabs after sign-in, read now. #}
+{% from "components/blocks.html" import banner %}
+{% call(part) side_panel("Reconnect " ~ kn[sel.src.kind], sel.title ~ " · read-only", sel.tile, "/sources?s=" ~ sel.src.id) %}
+{% if part == "body" %}
+  {{ banner("neg", "<b>Access expired</b>" ~ (" · " ~ fmt.date_short(sel.src.disconnected_at.date()) ~ " " ~ fmt.clock(sel.src.disconnected_at) if sel.src.disconnected_at else "") ~ " · " ~ (sel.src.disconnect_reason or "the sign-in no longer works")) }}
+  {% call el("p", "label-caps") %}What it affects{% endcall %}
+  {% if affects %}
+  {% call el("div", "table-wrap") %}{% call el("table", "table flush") %}<thead><tr><th>Number</th><th>Last good value</th><th>Used in</th></tr></thead><tbody>
+    {% for a in affects %}<tr>{% call el("td", "strong") %}{{ a.name }}{% endcall %}{% call el("td", "num") %}{{ a.value }}{% endcall %}<td>{{ a.briefs }}</td></tr>{% endfor %}
+  </tbody>{% endcall %}{% endcall %}
+  {% else %}
+  {% call el("div", "card dashed") %}{{ empty_state(None, "Nothing yet", "No numbers or briefs use this source yet.") }}{% endcall %}
+  {% endif %}
+  {% call el("p", "label-caps") %}After you sign in{% endcall %}
+  <p>Same {{ "spreadsheets and tabs; nothing to pick again" if sel.src.kind == "gsheets" else "tables and uses" }}</p>
+  <p>Read now, not at {{ fmt.clock(run_time) }}, so the numbers are fresh within minutes</p>
+  <p>Briefs already sent today stay as they were; tomorrow’s are normal</p>
+  {% call el("div", "rule") %}{% endcall %}
+  {% call el('dl', 'kv') %}{% if sel.src.kind == "gsheets" and sel.src.config.account %}<dt>Signed in as</dt><dd>{{ sel.src.config.account }}</dd>{% endif %}
+    <dt>Last good read</dt><dd>{% if sel.src.last_read_at %}{{ fmt.date_short(sel.src.last_read_at.date()) }} {{ fmt.clock(sel.src.last_read_at) }}{% if sel.src.health and sel.src.health.last_read %}{% set lr = sel.src.health.last_read %}{% if lr.tabs %} · {{ fmt.num(lr.tabs) }} tab{{ "s" if lr.tabs != 1 else "" }}{% endif %}{% if lr.rows %} · {{ fmt.num(lr.rows) }} rows{% endif %}{% endif %}{% else %}None yet{% endif %}</dd>{% endcall %}
+{% else %}
+  {% call el('a', 'link-u', attrs={'href': '/sources?panel=manage&s=' ~ sel.src.id}) %}Manage source{% endcall %}
+  <span class="flex items-center gap-8">{{ button("Cancel", href="/sources?s=" ~ sel.src.id) }}
+  {% if sel.src.kind == "gsheets" %}<form method="post" action="/sources/google/start"><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="reconnect" value="{{ sel.src.id }}">{{ button("Sign in with Google", "primary", type="submit") }}</form>
+  {% else %}{{ button("Edit credentials", "primary", href="/sources?panel=connect&kind=" ~ sel.src.kind ~ "&sid=" ~ sel.src.id) }}{% endif %}</span>
+{% endif %}
+{% endcall %}

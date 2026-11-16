@@ -1,0 +1,59 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# 6a2 · the metric panel (680 px), and 10n · Needs a source, for one metric. #}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button, link %}
+{% from "components/panels.html" import pane, pane_title %}
+{% from "components/sweep.html" import overlay, kv, code %}
+{% from "components/ontology.html" import ont_sub, area_field %}
+{% set m = metric %}
+{# opened from a brief's headline tile (#38), it closes back to the brief #}
+{% set close = metric_close if metric_close else "/ontology" ~ (("?numbers=" ~ filter) if filter else "") %}
+{% call overlay(m.name, close) %}
+{% call(part) pane() %}
+{% if part == "head" %}
+  {% set sub %}{% if m.needs %}Drafted from {{ m.seen_in }} · not computed yet · Ontology v{{ m.version }}{% else %}{{ m.confirmed_line }}{% endif %}{% endset %}
+  {% call pane_title(m.name, sub, close) %}{% call el("span", "chip") %}{% call el("span", "dot " ~ ("neg" if m.needs else "ok")) %}{% endcall %}{{ "Needs a source" if m.needs else "Confirmed" }}{% endcall %}{% call el("span", "chip soft") %}{{ m.grain }}{% endcall %}{% endcall %}
+{% elif part == "body" %}
+<div class="flex flex-col gap-16">
+{% if m.needs %}
+  <div>{% call el("p", "panel-money") %}—{% endcall %}{% call el("p", "hint") %}{% if m.needs_line %}Not computed · it reads from {{ m.needs_line }}, which isn’t connected{% else %}Not computed · no connected source has what it needs{% endif %}{% endcall %}</div>
+  <div class="flex flex-col gap-6">{{ ont_sub("Definition · draft") }}{% if m.description %}<p>{{ m.description }}</p>{% endif %}{{ kv([("Needs", m.needs_line), ("Breakdowns", m.breakdowns), ("Seen in", m.seen_in)]) }}</div>
+  <div class="flex flex-col gap-6">{{ ont_sub("Area") }}{{ area_field(m, csrf_token) }}</div>
+  <div class="flex flex-col gap-6">{{ ont_sub("Where it could come from") }}
+    {% call el("div", "table-wrap") %}{% call el("table", "table flush") %}<thead><tr><th>Source</th><th>What we found</th><th></th></tr></thead><tbody>
+    {% for r in m.sources %}<tr><td>{{ r.source }}</td>{% call el("td", "wrap") %}{{ r.found }}{% endcall %}<td>{% call el("span", "hint") %}Checked{% endcall %}</td></tr>{% endfor %}
+    <tr><td>A CRM</td>{% call el("td", "wrap") %}Direct CRM connectors come in a later release{% endcall %}<td></td></tr>
+    </tbody>{% endcall %}{% endcall %}
+  </div>
+  <div class="flex flex-col gap-6">{{ ont_sub("Waiting on it") }}{% for w in m.waiting %}<p>{{ w }}</p>{% endfor %}</div>
+{% else %}
+  {% if m.tile %}<div>{% call el("p", "panel-money") %}{{ m.tile.value }}{% endcall %}{% call el("p", "hint") %}{{ m.tile.label }} · {{ m.tile.comparison.text }}{% if m.tile.stale %} · {{ m.tile.stale }}{% endif %}{% endcall %}</div>{% else %}{% call el("p", "hint") %}No value yet: it is computed from tonight’s run.{% endcall %}{% endif %}
+  {% if m.chart %}<div>{{ chart(m.chart, 600, 180) }}</div>{% endif %}
+  {% if m.changed %}{% call el("p", "hint") %}{{ m.changed }}{% endcall %}{% endif %}
+  <div class="flex flex-col gap-6">{{ ont_sub("Definition") }}{% if m.description %}<p>{{ m.description }}</p>{% endif %}{{ kv(m.definition + m.where) }}</div>
+  <div class="flex flex-col gap-6">{{ ont_sub("Area") }}{{ area_field(m, csrf_token) }}{% call el("p", "hint") %}Where Summary shows this number{% endcall %}</div>
+  {% if m.sql %}<div class="flex flex-col gap-6">
+    {% call el("div", layout="flex items-center justify-between gap-8") %}{{ ont_sub("SQL") }}{% call el("span", layout="flex items-center gap-8") %}{% call el("span", "hint") %}Generated from the definition, not written by AI{% endcall %}{{ button("Copy", attrs={"data-copy-text": m.sql}) }}{% endcall %}{% endcall %}
+    {{ code(m.sql) }}
+    {% call el("p", "hint") %}{{ m.run_line }}{% endcall %}
+  </div>{% endif %}
+  {% if m.rules %}<div class="flex flex-col gap-6">{{ ont_sub("Rules it follows") }}{{ kv(m.rules) }}</div>{% endif %}
+  <div class="flex flex-col gap-6">{{ ont_sub("Used in") }}{{ kv([("Briefs", m.briefs | join(", ") or "—"), ("Goal", ((m.goal.text ~ " · " ~ (m.goal.mark or m.goal.track)) if m.goal else "—")), ("Sweep", m.sweep), ("Watching", m.watching | join(", ") or "—")]) }}</div>
+  {% if m.findings %}<div class="flex flex-col gap-6">{{ ont_sub("Findings on this number") }}{% for f in m.findings %}{% call el("div", layout="flex items-center justify-between gap-12") %}{{ link(f.title, "/sweep/finding/" ~ f.fp) }}{% call el("span", "hint") %}{{ f.label }}{% if f.status != "open" %} · {{ f.status }}{% endif %}{% endcall %}{% endcall %}{% endfor %}</div>{% endif %}
+{% endif %}
+</div>
+{% else %}
+  {% call el("div", layout="flex items-center justify-between gap-8 w-full flex-wrap") %}
+    {{ link("Change with Othor AI", "/ontology?panel=chat&subject=metric:" ~ m.key) }}
+    {% call el("span", layout="flex items-center gap-8") %}
+    {% if m.needs %}
+      {% call el("form", attrs={"data-inplace": true, "method": "post", "action": "/ontology/metric/" ~ m.key ~ "/remove"}) %}<input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Remove this number", type="submit") }}{% endcall %}
+      {{ button("Connect a source", kind="primary", href="/sources?panel=connect") }}
+    {% else %}
+      {{ button("Watch", href=("/sweep/watch/" ~ m.findings[0].fp) if m.findings else "/sweep?tab=watching") }}{{ button("Add to a brief", kind="primary", href=m.add_href) }}
+    {% endif %}
+    {% endcall %}
+  {% endcall %}
+{% endif %}
+{% endcall %}
+{% endcall %}

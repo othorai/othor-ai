@@ -1,0 +1,137 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# The finding panel (5b, 5c, 4g, 4f–4f3, 10p), shared by Sweep and the brief. Set before
+   including: panel, run (its run number, for the actions), close, fbase (the panel's URL base,
+   ending in "/finding/"), fq (its query: "run=2" or "date=2026-11-01"). #}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import why_unseen, empty_state %}
+{% from "components/buttons.html" import button, link %}
+{% from "components/forms.html" import text_input %}
+{% from "components/panels.html" import pane %}
+{% from "components/sweep.html" import kv, reasons, rows_table, question_box, panel_head, code, hold_form, overlay, more_menu, run_phases %}
+{% set p = panel %}{% set b = p.body %}
+{% call overlay(p.title, close) %}
+{% call(part) pane() %}
+{% if part == "head" %}{{ panel_head(p, run, close, fbase, fq) }}
+{% elif part == "body" %}
+<div class="flex flex-col gap-16">
+{% if p.tab == "finding" %}
+  {% if b.line %}{% call el("p", "finding-line") %}{{ b.line }}{% endcall %}{% endif %}
+  {% if b.why and not b.nd %}{{ why_unseen(b.why) }}{% endif %}
+  {% if b.nd %}
+    {% call el("p", "label-caps") %}What is measured{% endcall %}{{ kv(b.measured) }}
+    {% call el("p", "label-caps") %}{{ fmt.num(b.reasons | length) }} possible reasons · what would settle each{% endcall %}{{ reasons(b.reasons, verdicts=True) }}
+    {% call el("p", "label-caps") %}To settle it{% endcall %}
+    <div class="flex flex-col gap-4">{% for t in b.settle %}{% call el("p", "finding-line") %}{{ t }}{% endcall %}{% endfor %}</div>
+    {% call el("form", layout="flex items-end gap-8 flex-wrap", attrs={"data-inplace": true, "method": "post", "action": "/sweep/finding/" ~ p.fp ~ "/pause?run=" ~ run, "id": "pause"}) %}
+      <input type="hidden" name="csrf" value="{{ csrf_token }}">
+      {{ text_input("until", "Paused until", type="date") }}
+      {{ text_input("reason", "Why (shown in Sweep)", placeholder="e.g. EU audit, orders resume in December") }}
+      {{ button("Add a known pause", type="submit") }}
+    {% endcall %}
+  {% elif b.nc %}
+    {% call el("p", "label-caps") %}{{ fmt.num(b.reasons | length) }} possible reasons · the data can’t tell which{% endcall %}{{ reasons(b.reasons) }}
+  {% endif %}
+  {% if b.chart %}{% call el("div", "chart") %}{{ chart(b.chart, 620, 180) }}{% endcall %}{% endif %}
+  {% if b.rows and b.rows.rows %}
+    {% call el("p", "label-caps") %}{{ b.rows.noun | capitalize }} · top {{ fmt.num(b.rows.rows | length) }} of {{ fmt.num(b.rows.total) }}{{ " · no chart by design" if b.rows.note else "" }}{% endcall %}
+    {{ rows_table(b.rows, all_href=fbase ~ p.fp ~ "?" ~ fq ~ "&tab=sql") }}
+  {% endif %}
+  {% if b.home_note %}{% call el("div", "home-note box") %}<span>{{ b.home_note }}: <b>{{ b.question.text }}</b></span>{{ link("Open Home →", "/home") }}{% endcall %}
+  {% else %}{{ question_box(b.question) }}{% endif %}
+  {# 4g (M15.3): the nights it was found, the briefs that carried it, your holds; newest first #}
+  {% if b.history %}
+  {% call el("p", "test-head") %}History{% endcall %}
+  {% call el("div", "table-wrap") %}{% call el("table", "table flush") %}<thead><tr><th>Date</th><th>What happened</th>{% call el("th", "num") %}Run{% endcall %}</tr></thead><tbody>
+  {% for h in b.history %}<tr><td>{{ fmt.day_month(h.on) }}</td>{% call el("td", "wrap") %}{{ h.what }}{% endcall %}{% call el("td", "num") %}{{ ("#%04d" | format(h.run)) if h.run else "—" }}{% endcall %}</tr>{% endfor %}
+  </tbody>{% endcall %}{% endcall %}
+  {% endif %}
+{% elif p.tab == "test" %}
+  {# M15.3 · "How is this calculated?" (the v0.15 design): what it tested, how it moved, the gates
+     it passed with their values, the money, the numbers it used, method and settings #}
+  {% if b.tested %}{% call el("div", "tested") %}{% call el("p", "k") %}What it tested{% endcall %}{% call el("p", "q") %}{{ b.tested }}{% endcall %}{% endcall %}{% endif %}
+  {% if b.chart %}
+    {% call el("p", "test-head") %}{{ b.chart.title if b.moved else "How it moved" }}{% endcall %}
+    {% call el("div", "chart test-chart") %}{{ chart(b.chart, 620, 220 if b.moved else 180) }}{% endcall %}
+    {% if b.moved %}{% call el("p", "footnote") %}{{ b.moved.line }}{% endcall %}{% endif %}
+  {% endif %}
+  {% call el("p", "test-head") %}{{ b.gates_title }}{% endcall %}
+  {% call el("div", "gates") %}{% for g in b.gates %}{% call el("div", "gate") %}{% call el("span", "ok") %}✓{% endcall %}<span>{% call el("span", "n") %}{{ g.name }}{% endcall %}{% call el("span", "gwhy") %}{{ g.why }}{% endcall %}</span>{% call el("span", "v") %}{{ g.value }}{% endcall %}{% endcall %}{% endfor %}{% endcall %}
+  {% if b.money %}{% call el("div", "stake") %}{% call el("p", "k") %}Money at stake{% endcall %}{% call el("p", "v") %}{{ b.money }}{% endcall %}{% call el("p", "how") %}{{ b.stake or "" }}{% if b.state_note %} {{ b.state_note }}{% endif %}{% endcall %}{% endcall %}{% endif %}
+  {% if b.moved %}
+    {% call el("p", "test-head") %}The numbers it used{% endcall %}
+    {% call el("div", "table-wrap") %}{% call el("table", "table flush") %}<thead><tr>{% for h in b.moved.headers %}{% call el("th", "num" if not loop.first else "") %}{{ h }}{% endcall %}{% endfor %}</tr></thead><tbody>{% for r in b.moved.rows %}{% call el("tr", "total" if loop.last else "") %}{% for c in r %}{% call el("td", "num" if not loop.first else "") %}{{ c }}{% endcall %}{% endfor %}{% endcall %}{% endfor %}</tbody>{% endcall %}{% endcall %}
+  {% elif b.evidence %}
+    {% call el("p", "test-head") %}The numbers it used{% endcall %}
+    {% call el("div", "table-wrap") %}{% call el("table", "table flush") %}<thead><tr>{% for h in b.evidence.headers %}<th>{{ h | replace("_", " ") | capitalize }}</th>{% endfor %}</tr></thead><tbody>{% for r in b.evidence.rows %}<tr>{% for c in r %}<td>{{ c }}</td>{% endfor %}</tr>{% endfor %}</tbody>{% endcall %}{% endcall %}
+  {% endif %}
+  {% if b.reconstructed %}{% call el("p", "footnote") %}History reconstructed: every point this test used was back-filled, so it is Assessed at most.{% endcall %}{% endif %}
+  {% if b.allocated %}{% call el("p", "footnote") %}Includes {{ fmt.inr(b.allocated) }} allocated to this value by rule.{% endcall %}{% endif %}
+  {% if b.also %}{% call el("p", "test-head") %}Also seen by{% endcall %}{% call el("p", "finding-line") %}{{ b.also | join(", ") }}{% endcall %}{% endif %}
+  {% if b.support %}{% call el("p", "test-head") %}Supporting evidence{% endcall %}{% for line in b.support %}{% call el("p", "finding-line") %}{{ line }}{% endcall %}{% endfor %}{% endif %}
+  {% call el("p", "test-head") %}Method and settings{% endcall %}{{ kv(b.settings) }}
+{% elif p.tab == "metric" %}
+  {% call el("p", "section-title") %}{{ b.name }}{% endcall %}
+  {% if b.description %}{% call el("p", "finding-line") %}{{ b.description }}{% endcall %}{% endif %}
+  {% call el("p", "label-caps") %}Definition{% endcall %}{{ kv(b.definition) }}
+  {% call el("p", "label-caps") %}Source{% endcall %}{{ kv(b.source) }}
+  {% call el("p", "label-caps") %}Rules from your Ontology{% endcall %}
+  {% if b.rules %}{% call el("div", "section") %}{% for r in b.rules %}{% call el("div", "held-row") %}<span>{{ r.text }}</span>{% call el("span", "how") %}{{ r.kind | capitalize }}{% endcall %}{% endcall %}{% endfor %}{% endcall %}
+  {% else %}{% call el("p", "hint") %}No rule applies to this metric.{% endcall %}{% endif %}
+  {% call el("p", "label-caps") %}Version{% endcall %}{{ kv(b.version) }}
+{% elif p.tab == "sql" %}
+  {% for st in b.statements %}
+    {% call el("p", "label-caps") %}Ran on · {{ st.metric }}{% endcall %}
+    {{ kv([("Engine", st.where or "Not sent in this run"), ("Returned", fmt.num(st.rows) ~ " rows" if st.ran else ""), ("Time", fmt.num(st.ms / 1000, decimals=2) ~ " s" if st.ran else ""), ("Sent", fmt.num(st.times) ~ " times" if st.times > 1 else "")]) }}
+    {% call el("div", "group-head") %}{% call el("p", "label-caps") %}SQL · as executed{% endcall %}{% call el("span", "r") %}Generated from the metric spec, not written by AI{% endcall %}{% endcall %}
+    {{ code(st.sql, "sql-" ~ loop.index) }}
+  {% else %}{% call el("p", "hint") %}This finding reads the run’s stored series; no statement of its own.{% endcall %}{% endfor %}
+{% else %}
+  {% call el("p", "label-caps") %}Run {{ b.number }}{% endcall %}{{ kv(b.facts) }}
+  {% call el("p", "label-caps") %}Sources read{% endcall %}
+  {% call el("div", "table-wrap") %}{% call el("table", "table flush") %}<thead><tr><th>Source</th><th>Status</th>{% call el("th", "num") %}Queries{% endcall %}{% call el("th", "num") %}Rows{% endcall %}</tr></thead><tbody>{% for x in b.sources %}<tr><td>{{ x.name }}</td><td>{{ x.status | capitalize }}</td>{% call el("td", "num") %}{{ fmt.num(x.queries) }}{% endcall %}{% call el("td", "num") %}{{ fmt.num(x.rows) }}{% endcall %}</tr>{% endfor %}</tbody>{% endcall %}{% endcall %}
+  {% call el("p", "label-caps") %}Steps{% endcall %}
+  {{ run_phases(b.phases) }}
+  {% call el("p", "label-caps") %}Replay{% endcall %}
+  {% if b.replay %}{% call el("div", "group-head") %}{% call el("span", "finding-line") %}Replayed {{ fmt.day_month(b.replay.at.date()) }} {{ fmt.clock(b.replay.at) }} with the same inputs, spec and image{% endcall %}{% call el("span", "home-note") %}{{ "Identical" if b.replay.ok else "Differs in " ~ fmt.num(b.replay.differences) ~ " places" }}{% endcall %}{% endcall %}
+  {% else %}{% call el("p", "hint") %}Not replayed yet.{% endcall %}{% endif %}
+{% endif %}
+</div>
+{% else %}
+{% call el("div", layout="flex flex-wrap items-center justify-between gap-8 w-full") %}
+  {# #35: the run line has its own row above the actions, one line, so it never wraps word by word #}
+  {% call el("p", "prov-foot", layout="w-full min-w-0", attrs={"title": p.footer}) %}{{ p.footer }}{% endcall %}
+  <div class="flex flex-wrap items-center justify-end gap-8 w-full md:w-auto">
+  {% if readonly %}{# 10d: details open read-only, without actions #}
+  {% elif p.tab == "finding" %}
+    {% if b.nd %}{{ link("How is this calculated?", fbase ~ p.fp ~ "?" ~ fq ~ "&tab=test") }}{{ button("Add a known pause", href="#pause") }}{% if b.question %}{{ button("Copy question" ~ (" for " ~ b.question.to[0].name.split(" ")[0] if b.question.to else ""), kind="primary", attrs={"data-copy": b.question.text}) }}{% endif %}
+    {% else %}{{ link("How is this calculated?", fbase ~ p.fp ~ "?" ~ fq ~ "&tab=test") }}{% call el("span", layout="hidden md:inline-flex items-center gap-8") %}{{ hold_form("snooze", p.fp, run, "Snooze 7 days", csrf_token, kind="button") }}{{ hold_form("mute", p.fp, run, "Mute", csrf_token, kind="button") }}{% endcall %}{% call more_menu(layout="md:hidden") %}{{ hold_form("snooze", p.fp, run, "Snooze 7 days", csrf_token, kind="button") }}{{ hold_form("mute", p.fp, run, "Mute", csrf_token, kind="button") }}{{ button("Watch", href="/sweep/watch/" ~ p.fp ~ "?run=" ~ run) }}{% endcall %}{% call el("span", layout="hidden md:inline-flex") %}{{ button("Watch", href="/sweep/watch/" ~ p.fp ~ "?run=" ~ run) }}{% endcall %}{% if features.BRIEFS and p.state != "needs_confirmation" %}{{ button("Add to a brief", kind="primary", href="/sweep/finding/" ~ p.fp ~ "/brief?run=" ~ run, attrs={"data-dialog-open": "add-brief"} if add_dialog is defined and add_dialog else {}) }}{% endif %}{% endif %}
+  {% elif p.tab == "test" %}{% if b.replays %}{% call el("span", "hint", layout="mr-auto") %}Same inputs, same numbers: this run replays identically.{% endcall %}{% endif %}{{ button("See the SQL", href=fbase ~ p.fp ~ "?" ~ fq ~ "&tab=sql") }}{{ button("Open the metric", href=fbase ~ p.fp ~ "?" ~ fq ~ "&tab=metric") }}
+  {% elif p.tab == "metric" %}{{ button("Open in Ontology", href="/ontology") }}
+  {% elif p.tab == "sql" %}{% if b.statements %}{{ button("Copy SQL", attrs={"data-copy-text": b.statements | map(attribute="sql") | join("\n\n")}) }}{% endif %}{{ button("Download result", href=b.download) }}
+  {% else %}{{ button("Download run log", href=b.log) }}<form method="post" action="/sweep/run/{{ run }}/replay?fp={{ p.fp }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Replay this run", type="submit") }}</form>
+  {% endif %}
+  </div>
+{% endcall %}
+{% endif %}
+{% endcall %}
+{% endcall %}
+
+{# M15.3 · Add to a brief as a dialog over the finding panel (owner, 13 Nov 2026); the panel stays #}
+{% if add_dialog is defined and add_dialog and not readonly %}{% set a = add_dialog %}
+{% from "components/forms.html" import dialog_form %}
+{% call dialog_form("add-brief", "Add to a brief", "/sweep/finding/" ~ a.fp ~ "/brief?run=" ~ run ~ "&back=panel", csrf_token, "Add", foot="Items stay while the finding is open.") %}
+<div class="flex flex-col gap-12">
+  {% call el("p", "hint") %}{{ a.title }}{{ " · " ~ a.money if a.money else "" }}{% endcall %}
+  {% for o in a.options %}
+  {% call el("label", "pick-row" ~ (" is-disabled" if o.blocked or o.added else "")) %}
+    <input type="radio" name="brief" value="{{ o.id }}"{% if o.blocked or o.added %} disabled{% elif o.default %} checked{% endif %}>
+    <span class="flex flex-col gap-4">{% call el("span", "name") %}{{ o.name }} brief{% endcall %}{% call el("span", "hint") %}{{ o.blocked or (o.scope ~ " · " ~ fmt.num(o.item_count) ~ " items today") }}{% endcall %}{% if o.added %}{% call el("span", "hint") %}Already added{% endcall %}{% elif o.tomorrow %}{% call el("span", "tomorrow") %}{{ o.tomorrow }}{% endcall %}{% endif %}</span>
+  {% endcall %}
+  {% endfor %}
+  {% call el("div", layout="flex flex-wrap gap-12") %}
+    {% call el("label", "pick-row") %}<input type="radio" name="mode" value="item" checked><span>Add as an item</span>{% endcall %}
+    {% call el("label", "pick-row") %}<input type="radio" name="mode" value="watch"><span>Watch it in this brief</span>{% endcall %}
+  {% endcall %}
+</div>
+{% endcall %}
+{% endif %}

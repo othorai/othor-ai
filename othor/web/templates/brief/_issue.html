@@ -1,0 +1,82 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# One stored issue (4d, 4d0, 4d1, 10j, 10l), shared by the owner's page and the read-only page
+   (10d). Set: bv, b, words, tiles, items, since_line, early, sources, view, base, q,
+   readonly (no actions: no Edit, no Add, no Sweep links), recipient_link (a recipient's signed link: its own
+   footer replaces the run line), wx and wx_outlook (the brief's own weather, v0.12 part 1c; no
+   panel links when read-only). #}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import banner, empty_state, watching, ask_today, ask_line, goal_line %}
+{% from "components/buttons.html" import button, link %}
+{% from "components/tags.html" import state_tag, change_tag %}
+{% from "components/brief.html" import brief_tile, brief_item, brief_section %}
+{% from "components/weather.html" import weather_banner %}
+{% from "components/ahead.html" import whats_ahead %}
+{# M15.7c: a Weekly or Monthly issue speaks for its period ("Since last week") #}
+{% set since_word = ((b.period or {}).word if b else none) or "yesterday" %}
+{% if not bv.issue %}
+  {% call el("div", "card board") %}{{ empty_state(None, "No brief yet", "The first brief is written after the first nightly run.") }}{% endcall %}
+{% else %}
+  {# business weather (v0.12 part 1c): this brief's own scene, line and outlook, at its head #}
+  {% if wx %}{{ weather_banner(wx, wx_outlook) }}{% endif %}
+  {# M15.3 (v0.15 design): the brief's name, the day, when it went out and from which run #}
+  {% set sent_at, sent_n = sent if sent is defined else (None, 0) %}
+  {% call el("p", "brief-kicker") %}
+    {% call el("span", "name") %}{{ bv.brief.name }}{% endcall %}
+    <span>{{ fmt.date_short(bv.issue.date) }}{% if sent_at %} · sent {{ fmt.clock(sent_at) }} to {{ fmt.num(sent_n) }}{% else %} · {{ fmt.clock(b.time) }}{% endif %} · {{ updated if updated else "from last night’s run" }}</span>
+    {% if b.stale %}{% call el("span", "fresh") %}{% call el("span", "dot warn") %}{% endcall %}{{ fmt.num(b.stale | length) }} number{{ "s" if b.stale | length != 1 else "" }} from a stale source{% endcall %}{% endif %}
+    {% if early %}<span>· {{ fmt.num(early | length) }} number{{ "s" if early | length != 1 else "" }} still building history</span>{% endif %}
+  {% endcall %}
+
+  {% if stale_banner %}{% set msg %}<b>{{ stale_banner.lead }}</b>{% if stale_banner.source %} · {{ stale_banner.source }} couldn’t be read last night{% endif %} · Numbers using it say so; nothing else changed.{% endset %}{{ banner("warn", msg, None if readonly else "Reconnect →", stale_banner.href) }}{% endif %}
+
+  <div class="flex flex-col gap-8">
+    {% call el("h1", "brief-title") %}{{ words.title }}{% endcall %}
+    {% if words.line %}{% call el("p", "brief-line") %}{{ words.line }}{% endcall %}{% endif %}
+  </div>
+  {# Ask today, under the title (owner, 11 Nov 2026): it settles item 01 #}
+  {% if b.ask %}{{ ask_line([b.ask.to, b.ask.role] | select | join(" · "), b.ask.text, "#item-1" if items and not b.quiet else None) }}{% endif %}
+
+  {% if view == "full" and words.situation %}
+  <div class="flex flex-col gap-8">
+    {% call el("p", "label-caps") %}Situation{% endcall %}
+    {% call el("p", "brief-situation") %}{{ words.situation }}{% endcall %}
+    {% if sources %}{% call el("p", "brief-sources") %}{% for x in sources %}<span>{{ x.name }} · {{ ("read " ~ fmt.clock(x.at)) if x.ok and x.at else "not read" }}</span>{% endfor %}{% endcall %}{% endif %}
+  </div>
+  {% endif %}
+
+  {% if tiles %}{% call el("p", "caps-title") %}Headline numbers{% endcall %}{% endif %}
+  {% if tiles %}{% call el("div", "brief-tiles") %}{% for t in tiles %}{{ brief_tile(t, (tile_href ~ t.metric) if tile_href and t.metric else None) }}{% endfor %}{% endcall %}{% endif %}
+  {% if tiles and b.tiles_note %}{% call el("p", "brief-sources") %}{{ b.tiles_note }}{% endcall %}{% endif %}
+  {% for g in b.goals or [] %}{{ goal_line(g.text, g.tone) }}{% endfor %}
+
+  {% if b.quiet %}
+    {% call el("div", "quiet-card") %}
+      {% call el("p", "t") %}Nothing needs you today.{% endcall %}
+      <p>{{ fmt.num(b.tests) }} tests{% if detectors %} · {{ fmt.num(detectors) }} detectors{% endif %} · nothing new in this brief’s scope.{% if bv.more_in_sweep %} Sweep has {% if readonly %}{{ fmt.num(bv.more_in_sweep) }} finding{{ "s" if bv.more_in_sweep != 1 else "" }}{% else %}{% call el("a", "link-u", attrs={"href": "/sweep"}) %}{{ fmt.num(bv.more_in_sweep) }} finding{{ "s" if bv.more_in_sweep != 1 else "" }}{% endcall %}{% endif %} outside this brief.{% endif %}</p>
+    {% endcall %}
+  {% else %}
+    {% call brief_section(("What needs you · " if view == "simple" else "Needs attention · ") ~ fmt.num(items | length), "ranked by money, how soon, and how sure") %}{{ since_line }}{% endcall %}
+    {% if view == "full" %}
+      {% call el("div", "table-wrap") %}{% call el("table", "table") %}<thead><tr><th>#</th><th>Item</th><th>State</th><th>Since {{ since_word }}</th><th>Consequence</th>{% call el("th", "num") %}Money{% endcall %}</tr></thead><tbody>
+      {% for i in items %}<tr><td>{{ i.rank }}</td>{% call el("td", "wrap") %}{% call el("a", "link", attrs={"href": base ~ "/finding/" ~ i.fingerprint ~ "?" ~ q}) %}{{ i.title }}{% endcall %}{% call el("p", "footnote") %}{{ i.label }}{% endcall %}{% endcall %}<td>{{ state_tag(i.state, i.confidence | capitalize if i.confidence else None) }}</td><td>{% if i.change_tag[0] in ("new", "worse", "better", "open", "back") %}{{ change_tag(i.change_tag[0], i.change_tag[1]) }}{% endif %}</td>{% call el("td", "wrap") %}{{ i.consequence.text }}{% endcall %}{% call el("td", "num") %}{{ i.money }}{% endcall %}</tr>{% endfor %}
+      </tbody>{% endcall %}{% endcall %}
+      {% call el("p", "label-caps") %}Since {{ since_word }}’s brief{% endcall %}
+      {% call el("p", "hint") %}Every finding this brief covers: the items above and the rest in Sweep{% endcall %}
+      {% call el("div", "brief-since") %}{% for k, v in [("New", b.since.new), ("Worse", b.since.worse), ("Open", b.since.open), ("Resolved", b.since.resolved)] %}<div>{% call el("p", "k") %}{{ k }}{% endcall %}{% call el("p", "v") %}{{ fmt.num(v) }}{% endcall %}</div>{% endfor %}{% endcall %}
+    {% else %}
+      {% call el("div", "brief-items") %}{% for i in items %}{{ brief_item(i, base ~ "/finding/" ~ i.fingerprint ~ "?" ~ q, base ~ "/finding/" ~ i.fingerprint ~ "?" ~ q ~ ("" if i.link == "reasons" else "&tab=test"), None if readonly or not bv.run else (bv.run.number, bv.brief.id, csrf_token), (held or {}).get(i.fingerprint) if held is defined else None) }}{% endfor %}{% endcall %}
+    {% endif %}
+  {% endif %}
+
+  {# v0.19 (M19.4): where the headline numbers are heading, after the findings (owner) #}
+  {{ whats_ahead(b.ahead, b.ahead_note) }}
+
+  {% if b.watching %}{% set w0 = b.watching[0] %}{% set since = (watch_since or {}).get(w0.id | string) if watch_since is defined else None %}{{ watching("Watching · " ~ fmt.num(b.watching | length) ~ " breached", w0.text ~ (" · since " ~ fmt.day_month(since) if since else "") ~ (" · " ~ fmt.num(b.watching | length - 1) ~ " more" if b.watching | length > 1 else ""), href="/sweep?tab=watching", action=("" if readonly else "Open →")) }}{% endif %}
+
+  {% if b.ask %}{{ ask_today([b.ask.to, b.ask.role] | select | join(" · "), b.ask.text, ("Settles item 01. " ~ items[0].line) if items and items[0].line and not b.quiet else None) }}{% endif %}
+
+  {% if bv.more_in_sweep and not b.quiet %}{% call el("div", "more-line") %}<span>{{ fmt.num(bv.more_in_sweep) }} more found last night, not in this brief</span>{% if not readonly %}{% call el("a", "link", attrs={"href": "/sweep"}) %}See them in Sweep →{% endcall %}{% endif %}{% endcall %}{% endif %}
+
+  {% set run_tab = (base ~ "/finding/" ~ items[0].fingerprint ~ "?" ~ q ~ "&tab=run") if items else ("/sweep?run=" ~ bv.run.number if bv.run else "") %}
+  {% if not recipient_link and view == "full" %}{% call el("p", "brief-footer") %}Every number is computed{% if bv.run %} · {% call el("a", "link-u", attrs={"href": run_tab}) %}Run #{{ "%04d" | format(bv.run.number) }}{% if bv.spec_version %} · spec v{{ bv.spec_version }}{% endif %} · replayable{% endcall %}{% endif %} · {{ "prose rewritten, numbers checked" if bv.issue.prose.source == "model" else "template prose" }}{% endcall %}{% endif %}
+{% endif %}

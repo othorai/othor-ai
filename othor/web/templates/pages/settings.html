@@ -1,0 +1,54 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/app.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/forms.html" import select, listbox, toggle %}
+{% from "components/blocks.html" import page_title %}
+{% from "components/forms.html" import dialog %}
+{% from "components/buttons.html" import link %}
+{% from "partials/settings_close.html" import close_step %}
+{% block title %}Settings · {{ company.name }}{% endblock %}
+{% block crumb %}Settings{% endblock %}
+{% block main %}
+{{ page_title("Settings") }}
+<div class="flex flex-col gap-56" hx-target="#toast-dock" hx-swap="innerHTML">
+  {% call el('section', 'section lines') %}
+    {% call el("div", "section-head") %}Company{% endcall %}
+    {% call el('div', 'section-row') %}{% call el("p", "title") %}Fiscal year starts{% endcall %}
+      {{ listbox("value", fy_months, company.fiscal_year_start_month | string, id="fy", small=True, attrs='hx-post="/settings" hx-vals=\'{"field": "fiscal_year_start_month"}\' hx-include="this" aria-label="Fiscal year starts"') }}{% endcall %}
+    {% call el('div', 'section-row') %}{% call el("p", "title") %}Currency{% endcall %}
+      {{ select("value", currencies, company.currency, id="currency", small=True, attrs='hx-post="/settings" hx-vals=\'{"field": "currency"}\' hx-include="this" aria-label="Currency"') }}{% endcall %}
+    {# M15.6: the floor the owner sets; saved as an Ontology version, from tonight #}
+    {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}Tell me about problems worth more than{% endcall %}{% call el('p', 'sub') %}{{ fmt.inr(floor.amount) }}{{ " · your setting" if floor.owner else " · the default" }}{% if floor.suggest %} · 1% of a typical month’s revenue is {{ fmt.inr(floor.suggest) }}{% endif %}{% endcall %}</div>
+      {% call el("form", layout="flex items-center gap-8", attrs={"hx-post": "/settings", "hx-vals": '{"field": "materiality"}'}) %}{% call el("input", "input sm", attrs={"name": "value", "inputmode": "decimal", "value": floor.amount | string, "aria-label": "The floor, in your currency"}) %}{% endcall %}{% call el("button", "btn sm", attrs={"type": "submit"}) %}Save{% endcall %}{% endcall %}{% endcall %}
+    {% include "partials/settings_logo.html" %}
+    {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}Time zone{% endcall %}{% call el('p', 'sub') %}Nightly run {{ fmt.clock(company.run_time) }} · brief {{ fmt.clock(company.brief_time) }}{% endcall %}</div>
+      {{ listbox("value", timezones, company.timezone, id="tz", note=tz_note, small=True, attrs='hx-post="/settings" hx-vals=\'{"field": "timezone"}\' hx-include="this" aria-label="Time zone"') }}{% endcall %}
+    {# v0.19 (M19.5): the language Big Picture is written in #}
+    {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}Big Picture language{% endcall %}{% call el('p', 'sub') %}The language Othor AI writes your Big Picture report in · numbers stay as computed{% endcall %}</div>
+      {{ select("value", report_languages, company.report_language, id="report-language", small=True, attrs='hx-post="/settings" hx-vals=\'{"field": "report_language"}\' hx-include="this" aria-label="Big Picture language"') }}{% endcall %}
+    {{ slot("settings.company.advanced") }}
+  {% endcall %}
+  {% call el('section', 'section lines') %}
+    {% call el("div", "section-head") %}Delivery{% endcall %}
+    {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}Email{% endcall %}{% call el('p', 'sub') %}Full brief as a page · from {{ sender }} · recipients set per brief{% endcall %}</div>
+      {{ toggle("value", company.email_delivery, label="Email delivery", attrs='hx-post="/settings" hx-vals=\'{"field": "email_delivery"}\'') }}{% endcall %}
+    {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}Weekly digest{% endcall %}{% call el('p', 'sub') %}Sundays {{ fmt.clock(company.brief_time) }} · to you only · what Sweep found this week and what reached a brief{% endcall %}</div>
+      {{ toggle("value", company.weekly_digest, label="Weekly digest", attrs='hx-post="/settings" hx-vals=\'{"field": "weekly_digest"}\'') }}{% endcall %}
+  {% endcall %}
+  {# v0.18 (M18.1): everything Othor AI computed and the owner wrote, as one zip #}
+  {% call el('section', 'section lines') %}
+    {% call el("div", "section-head") %}Your data{% endcall %}
+    {% include "partials/settings_export.html" %}
+  {% endcall %}
+  {% if licence %}{% include "partials/settings_licence.html" %}{% endif %}
+  {{ slot("settings.end") }}
+  {# v0.18 (M18.2): delete the company: the name, an emailed code, then Delete; the headline red (owner, 15 Nov 2026) #}
+  {% call el('section', 'section lines') %}
+    {% call el("div", "section-head danger") %}Delete company{% endcall %}
+    {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}Delete {{ company.name }}{% endcall %}{% call el('p', 'sub') %}Stops runs, briefs and sign-in at once · your data is removed for good 30 days later · {{ link("download everything first", "#export-row") }}{% endcall %}</div>
+      {% call el("button", "btn sm danger", attrs={"type": "button", "data-dialog-open": "close-dlg"}) %}Delete the company…{% endcall %}{% endcall %}
+  {% endcall %}
+</div>
+{% call dialog("close-dlg", "Delete " ~ company.name, foot="This deletes the company for everyone in it") -%}{{ close_step(close, company, csrf_token) }}{%- endcall %}
+{% call el('div', 'toast-dock', attrs='id="toast-dock"  aria-live="polite"') %}{% endcall %}
+{% endblock %}

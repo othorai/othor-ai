@@ -1,0 +1,13 @@
+{{ kicker }}
+
+{{ lead }}{% if step %}{{ step }}.{% endif %} {{ after }}
+{% if error %}
+    {{ error }}
+{% endif %}{% if others %}
+{{ others }}
+{% endif %}
+{% for text, href, primary in actions %}{{ text }}: {{ href }}
+{% endfor %}
+—
+Sent by your Othor AI instance at {{ instance }} · Delivery preferences: {{ preferences }}
+This email contains business data; do not forward outside the company.

@@ -1,0 +1,11 @@
+Here is the code to delete {{ company_name }}:
+
+    {{ code }}
+
+Expires in 10 minutes. Deleting stops runs, briefs and sign-in at once; the data is removed for good 30 days later.
+
+Didn’t ask to delete it? Don’t share this code{% if support_email %}, and write to {{ support_email }}{% endif %}.
+
+—
+Sent by your Othor AI instance at {{ instance }} · Delivery preferences: {{ preferences }}
+This email contains business data; do not forward outside the company.

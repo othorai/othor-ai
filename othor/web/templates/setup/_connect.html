@@ -1,0 +1,49 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/forms.html" import chip %}
+{% from "components/buttons.html" import button %}
+{% from "components/sources.html" import scan_label %}
+{% from "components/blocks.html" import empty_state %}
+{% from "components/panels.html" import side_panel %}
+{# 2nca / 2ncb: the M2 connect panel opened from Metrics for one metric. Sign in, choose data and
+   scan as in Sources; the Review shows the metric redrafted from the new source with today's
+   value computed, and the drafts the source unlocks. #}
+{% call(part) side_panel(panel.title, panel.subtitle, "GS", panel.close, panel.steps, panel.step) %}
+{% if part == "body" %}
+  {% if panel.database %}
+    {{ empty_state(None, "Connect the database in Sources", "Databases are connected from the Sources step, with a read-only user. Its tables are scanned, then this metric is redrafted.", "Go to Sources", "/setup/sources/new") }}
+  {% elif panel.step < 5 %}
+    {% with src=panel.src, account=panel.account, picked=panel.picked, rows=panel.rows, selected=panel.selected, running=panel.running, mode=panel.mode, setup=True, for_key=panel.key, sheets_mime=panel.sheets_mime %}{% include "sources/_sheets_body.html" %}{% endwith %}
+  {% else %}
+    <div id="connect-review" class="flex flex-col gap-16"{% if panel.drafting %} hx-get="/setup/metrics?panel=connect&key={{ panel.key }}&kind=gsheets&sid={{ panel.src.id }}" hx-trigger="every 1s" hx-select="#connect-review" hx-swap="outerHTML"{% endif %}>
+    <div>{% call el("p", "section-title") %}The {{ panel.card.title }} is connected.{% endcall %}
+      {% call el("p", "hint") %}Scanned {{ fmt.num(panel.card.tables_total) }} tab{{ "s" if panel.card.tables_total != 1 else "" }}, {{ fmt.num(panel.card.tables_used) }} used{% if panel.card.excluded %} · {{ fmt.num(panel.card.excluded) }} excluded, personal data{% endif %}{% endcall %}</div>
+    {% if panel.drafting %}{% call el("p", "progress-line") %}Redrafting from the new tabs…{% endcall %}
+    {% else %}
+      {% if panel.target %}
+      {% call el("div", "card board", layout="flex flex-col gap-8") %}
+        <div class="flex items-center justify-between gap-12">{% call el("span", "strong") %}{{ panel.target.name }}{% endcall %}{{ chip(panel.target.label, dot=panel.target.dot) }}</div>
+        <p>{{ panel.target.definition }}</p>
+        {% if panel.target_value %}<div class="flex items-baseline gap-8">{% call el("span", "label-caps") %}Today · computed{% endcall %}{% call el("span", "strong") %}{{ panel.target_value }}{% endcall %}</div>{% endif %}
+      {% endcall %}
+      {% endif %}
+      {% if panel.added %}
+      {% call el("p", "label-caps") %}Also added to your metrics{% endcall %}
+      {% call el("div", "card flush") %}{% call el("table", "table flush") %}<tbody>{% for r in panel.added %}<tr><td>{{ r.name }}</td>{% call el("td", "num") %}{{ chip(r.label, dot=r.dot) }}{% endcall %}</tr>{% endfor %}</tbody>{% endcall %}{% endcall %}
+      {% endif %}
+    {% endif %}
+    </div>
+  {% endif %}
+{% else %}
+  {% if panel.step == 5 %}
+    {% set n = (panel.added | length) + (1 if panel.target else 0) %}
+    {% call el("span", "hint") %}{{ fmt.num(n) }} metric{{ "s" if n != 1 else "" }} added to the list{% endcall %}{{ button("Back to Metrics", "primary", href="/setup/metrics") }}
+  {% else %}
+    {% if not (panel.src and panel.rows) %}{% call el("span", "hint") %}Pick a spreadsheet to continue{% endcall %}{% endif %}
+    {{ button("Cancel", href="/setup/metrics") }}
+    {% if panel.src and panel.rows %}{% call el('button', 'btn primary', attrs='type="submit" form="tabs-form"') %}{{ scan_label(panel.to_check, panel.selected) }}{% endcall %}
+    {% else %}{% call el('button', 'btn primary', attrs='type="button" disabled') %}Connect and scan{% endcall %}{% endif %}
+  {% endif %}
+{% endif %}
+{% endcall %}
+{% if panel.mode == "google" and panel.step < 5 %}{% with sheets_mime=panel.sheets_mime, google_api_key=panel.google_api_key, google_app_id=panel.google_app_id %}{% include "sources/_picker_google.html" %}{% endwith %}{% endif %}

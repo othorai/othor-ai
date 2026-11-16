@@ -1,0 +1,161 @@
+{
+  "_doc": "Figures the generator must plant (docs/11, boards 4d, 4d1, 5a, 10c, 2m). Money in INR. 'verified_in' says which milestone proves the detector finds it; M0 tests prove the signal is in the data. Tolerance: money +-1%, shares +-1 percentage point unless stated.",
+  "generator_version": 1,
+  "seed": 20261101,
+  "as_of": "2026-11-04",
+  "data_hash": "b1b6883d433947ad74c5c8aa422b2fd48d36cd3c0d31a84bebe96bceee5d36bc",
+  "run_date": "2026-11-01",
+  "P1": {
+    "oct_net_revenue": 46200000,
+    "sep_net_revenue": 48100000,
+    "region_change_oct_vs_sep": {
+      "South": -14000000,
+      "West": 12100000,
+      "North": 0,
+      "East": 0,
+      "Export": 0
+    },
+    "total_change": -1900000,
+    "accounts": [
+      "Ravira Exports",
+      "Tessora EU",
+      "Skarfab"
+    ],
+    "accounts_share_of_south_drop_min": 0.7,
+    "last_invoice": {
+      "Ravira Exports": "2026-10-09",
+      "Tessora EU": "2026-10-08",
+      "Skarfab": "2026-10-06"
+    },
+    "verified_in": "M6 (Net hiding gross, Assessed High, rank 1), M8"
+  },
+  "P2": {
+    "share_over_60_before": 0.09,
+    "share_over_60_after": 0.14,
+    "step_date": "2026-08-14",
+    "money": 6000000,
+    "verified_in": "M6 (money)"
+  },
+  "P3": {
+    "top4_share_june": 0.48,
+    "top4_share_last_week": 0.58,
+    "top4_share_now": 0.62,
+    "last_week_date": "2026-10-25",
+    "money": 31000000,
+    "tolerance_pp": 0.02,
+    "verified_in": "M6 (money)"
+  },
+  "P4": {
+    "customer": "Ravira Exports",
+    "gap_min_days": 4,
+    "gap_max_days": 9,
+    "history_years": 3,
+    "gap_on_run_date": 23,
+    "overdue": 4000000,
+    "money": 5200000,
+    "verified_in": "M6 (Not determinable, GSTIN check)"
+  },
+  "P5": {
+    "count": 14,
+    "min_quiet_days": 90,
+    "last_12m_total": 36000000,
+    "named": {
+      "Shree Varada Textiles": {
+        "last_invoice": "2026-07-12",
+        "last_12m": 6200000
+      },
+      "Tidewell Garments": {
+        "last_invoice": "2026-07-02",
+        "last_12m": 4800000
+      },
+      "Anvika Knit Works": {
+        "last_invoice": "2026-06-28",
+        "last_12m": 4100000
+      }
+    },
+    "gap_lengthening_weeks": 5
+  },
+  "P6": {
+    "break_date": "2026-09-08",
+    "r_before_min": 0.85,
+    "r_after_max": 0.35,
+    "freight_per_m_change": 0.19,
+    "months_tracked": 20,
+    "money_per_month": 2100000,
+    "verified_in": "M6 (money)"
+  },
+  "P7": {
+    "plant": "Coimbatore",
+    "start": "2026-09-12",
+    "mean_days": 4.1,
+    "p90_before": 5.1,
+    "p90_after": 7.9,
+    "spread_now": 6.3,
+    "watch_threshold": 4.0,
+    "owner": "Aditya Naik"
+  },
+  "P8": {
+    "limit": 500000,
+    "band_below": 50000,
+    "min_ratio_below_vs_above": 2.5,
+    "min_events": 200
+  },
+  "P9": {
+    "oct_mis_minus_erp": 8300000,
+    "gst_rate_in_mis": 0.18
+  },
+  "P10": {
+    "orders": 37,
+    "value": 19000000,
+    "min_days_since_dispatch": 30
+  },
+  "P11": {
+    "domestic_mode": 40000,
+    "export_mode": 300000
+  },
+  "P12": {
+    "lead_weeks": 4
+  },
+  "P13": {
+    "fy27_goal": 600000000,
+    "projection": 584000000,
+    "verified_in": "M7"
+  },
+  "P14": {
+    "quarter_end_days": 5,
+    "diwali_week_start": {
+      "2021": "2021-11-01",
+      "2022": "2022-10-24",
+      "2023": "2023-11-06",
+      "2024": "2024-10-28",
+      "2025": "2025-10-20",
+      "2026": "2026-10-19"
+    },
+    "surat_shutdown": [
+      "08-10",
+      "08-24"
+    ],
+    "skarfab_pause": [
+      "2026-10-09",
+      "2026-12-01"
+    ]
+  },
+  "board_extras": {
+    "gross_margin_per_m_oct": 41.6,
+    "dso_days_oct": 46,
+    "cash_2026_10_31": 21000000,
+    "credit_notes_share_of_gross": 0.016,
+    "top10_revenue_share": 0.34,
+    "eur_share_of_revenue": 0.38,
+    "open_orders_sheet_total_m": 1284000,
+    "open_orders_sheet_total_lakh": 1512.4,
+    "dispatch_mean_coimbatore": 4.1
+  },
+  "P16": {
+    "week": "2026-10-19",
+    "posted": "2026-10-31",
+    "cn_frac": 0.85,
+    "min_amount": 500000,
+    "_doc": "One South mid account's two credit notes dated 23 Oct (together at least min_amount), booked in the MIS on time, posted in erp_db only on 31 Oct (M6, decided 5 Nov)"
+  }
+}

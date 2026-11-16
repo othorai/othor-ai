@@ -1,0 +1,10 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/app.html" %}
+{% from "components/blocks.html" import page_title %}
+{% from "components/usage.html" import usage_filters, usage_body %}
+{% block title %}AI usage · {{ company.name }}{% endblock %}
+{% block crumb %}AI usage{% endblock %}
+{% block main %}
+{% call page_title("AI usage") %}{{ usage_filters(u) }}{% endcall %}
+{{ usage_body(u) }}
+{% endblock %}

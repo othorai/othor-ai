@@ -1,0 +1,20 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/icons.html" import icon %}
+{# The first run's stages (2o, M11c): shared by First run and Morning Brief while it runs. #}
+{% set stages = view.stages %}
+  {% call el("section", "run-card", layout=mt|default(""), attrs={'aria-label': 'Run ' ~ view.number}) %}
+    <div class="flex items-center justify-between gap-12">
+      {% call el("p", "strong") %}{{ fmt.num(view.stages_done) }} of {{ fmt.num(stages | length) }} done{% endcall %}
+      {% call el("span", "hint") %}{% if view.finished %}Done{% if view.elapsed %} · {{ view.elapsed | replace(" elapsed", "") }}{% endif %}{% elif view.elapsed %}{{ view.elapsed }}{% else %}Starting{% endif %}{% endcall %}
+    </div>
+    {% call el('progress', 'bar', attrs={'max': [stages | length, 1] | max, 'value': view.stages_done, 'aria-label': 'Run progress'}) %}{% endcall %}
+    {% call el('div', 'scan-steps') %}
+    {% for x in stages %}
+      {% call el('p', 'scan-step run-step ' ~ x.state) %}
+        {% if x.state == "now" %}{{ icon("loading") }}{% elif x.state == "done" %}{% call el('span', 'run-ic done') %}{{ icon("check") }}{% endcall %}{% elif x.state == "skipped" %}{% call el('span', 'run-ic skipped') %}{% endcall %}{% elif x.state == "failed" %}{% call el('span', 'dot neg') %}{% endcall %}{% else %}{% call el('span', 'dot muted') %}{% endcall %}{% endif %}
+        <span>{{ x.label }}</span>{% if x.note %}{% call el('span', 'scan-note') %}{{ x.note }}{% endcall %}{% endif %}
+      {% endcall %}
+    {% endfor %}
+    {% endcall %}
+  {% endcall %}

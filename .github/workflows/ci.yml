@@ -1,0 +1,118 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# The suite took ~40 min in one job (M8); M11a splits it into parallel jobs by test area.
+# `make ci` still runs everything in one go locally.
+# a newer push to the same branch cancels the run still going for the older one (Actions minutes,
+# 12 Nov 2026)
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Docs, plans, previews and design files only: the real-names guard runs, the rest is skipped
+  # (a skipped job passes, so the deploy check still finds ci green on the commit).
+  changes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Did code change?
+        id: diff
+        env:
+          BEFORE: ${{ github.event.before || github.event.pull_request.base.sha }}
+        run: |
+          if [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null \
+             || [ "$BEFORE" = 0000000000000000000000000000000000000000 ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA")
+          echo "$changed"
+          other=$(echo "$changed" | grep -vE '^(docs|design)/|\.md$' || true)
+          if [ -n "$other" ]; then echo "code=true"; else echo "code=false"; fi >> "$GITHUB_OUTPUT"
+      - uses: astral-sh/setup-uv@v6
+        if: steps.diff.outputs.code == 'false'
+        with:
+          version: "0.13.7"
+      - name: Guards (docs-only push)
+        if: steps.diff.outputs.code == 'false'
+        run: uv sync --frozen && uv run pytest tests/guards -q
+
+  static:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.7"
+      - name: Install
+        run: uv sync --frozen
+      - name: Lint, types, import contracts, SPDX lines, licences, CSS build
+        run: make lint type contracts spdx licences css
+
+  tests:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        area:
+          - name: unit, detectors, guards, ui, sample company
+            paths: tests/unit tests/detectors tests/guards tests/ui tests/sample_company
+          # the web tests in four jobs side by side (scripts/ci_shard.py; one job took ~56 min)
+          - name: web 1/4
+            shard: 1
+          - name: web 2/4
+            shard: 2
+          - name: web 3/4
+            shard: 3
+          - name: web 4/4
+            shard: 4
+          # the slowest job (22 min of tests) in two halves of about 11 min (v0.11, 12 Nov 2026):
+          # every test still runs on every push and before every deploy
+          - name: e2e nights, sample run
+            paths: tests/e2e tests/integration/test_run_sample.py tests/integration/test_series_versions.py
+          - name: integration, replay
+            paths: tests/integration --ignore=tests/integration/test_run_sample.py --ignore=tests/integration/test_series_versions.py
+    name: tests · ${{ matrix.area.name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.7"
+      - name: Start metadata DB and sample sources
+        run: docker compose up -d meta-db sales-dw erp-db --wait
+      - name: Install
+        run: uv sync --frozen
+      - name: Chromium for the responsive, stress and compare tests
+        # The runner image already has Chromium's system libraries. When Ubuntu's mirror is
+        # unreachable, apt waits ~10 min per try (11 Nov 2026: 31 min lost to three tries), so
+        # give it 2 minutes once, then install Chromium alone (the tests pass with it).
+        run: |
+          timeout 120 uv run playwright install --with-deps chromium && exit 0
+          echo "::warning::system packages unreachable; installing Chromium without them"
+          uv run playwright install chromium
+      - name: CSS
+        run: make css
+      - name: CSS is current
+        run: make css-check
+      - name: Tests
+        env:
+          PATHS: ${{ matrix.area.paths }}
+          SHARD: ${{ matrix.area.shard }}
+        run: |
+          if [ -n "$SHARD" ]; then PATHS=$(python3 scripts/ci_shard.py "$SHARD"); fi
+          # shellcheck disable=SC2086  # a list of paths, split on purpose
+          uv run pytest $PATHS --durations=30 --durations-min=10

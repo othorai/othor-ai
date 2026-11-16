@@ -1,0 +1,33 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% from "components/icons.html" import icon %}
+{# 2d (M11c): the message box. Waiting: which files are read, a spinner and placeholder lines,
+   polled every 2 s and swapped in place when the draft lands. Otherwise the box itself: filled
+   with the draft (the owner edits or deletes it; nothing is saved until Continue), or empty with
+   the example as placeholder text. `oob` also swaps the footer's Continue (on the poll). #}
+{% set DRAFT_NOTE = "Drafts only. Numbers are computed, not written. Nothing changes until you apply." %}
+{% call el('div', 'biz-box', attrs={'id': 'biz-box', 'hx-get': ('/setup/business/draft' if box == 'waiting' else none), 'hx-trigger': ('every 2s' if box == 'waiting' else none), 'hx-target': ('#biz-box' if box == 'waiting' else none), 'hx-swap': ('outerHTML' if box == 'waiting' else none)}) %}
+{% if box == "waiting" %}
+  {% call el('div', 'card flush biz-wait', attrs='role="status" aria-live="polite"') %}
+    {% call el('div', 'box-head plain') %}{% call el('span', 'hint') %}Drafting from your files{% endcall %}{% endcall %}
+    {% call el('div', 'biz-wait-body') %}
+      {% call el('p', 'biz-wait-t') %}{{ icon("loading") }}Drafting your message. You can edit it when it’s ready.{% endcall %}
+      {% call el('ul', 'biz-wait-files') %}{% for f in uploads %}{% call el('li') %}{% call el('span', 'dot ' ~ ('muted' if f.reading else 'ok')) %}{% endcall %}{{ f.name }} · {{ "being read" if f.reading else "read" }}{% endcall %}{% endfor %}{% endcall %}
+      {% call el('div', 'biz-wait-lines') %}{% for w in ["", "mid", "", "mid", "short"] %}{% call el('div', 'skeleton line' ~ (' ' ~ w if w else '')) %}{% endcall %}{% endfor %}{% endcall %}
+    {% endcall %}
+  {% endcall %}
+{% else %}
+  {% call el('div', 'card flush message') %}
+    {% call el('div', 'box-head plain') %}{% call el('span', 'hint') %}
+      {%- if box == "drafted" %}Drafted from {{ drafted_from | join(" and ") if drafted_from | length < 3 else (drafted_from[:-1] | join(", ") ~ " and " ~ drafted_from[-1]) }} · edit or delete anything
+      {%- elif box == "nofiles" %}No files to draft from. Write a few lines in your own words.
+      {%- else %}Couldn’t draft from your files right now. Write a few lines in your own words.{% endif -%}
+    {% endcall %}{% endcall %}
+    {% call el('textarea', 'message-text', attrs={'id': 'f-text', 'name': 'text', 'aria-label': 'About the business', 'placeholder': 'For example:\n\n' ~ example}) %}{{ text }}{% endcall %}
+  {% endcall %}
+  {% if box == "drafted" %}{% from "components/panels.html" import draft_note %}{{ draft_note() }}{% endif %}
+  {% if not_covered %}{% call el('p', 'biz-note') %}Not in your files: {{ not_covered | join(", ") }}.{% endcall %}{% endif %}
+{% endif %}
+{% endcall %}
+{% if oob %}{% call el('span', 'biz-continue', attrs='id="biz-continue" hx-swap-oob="true"') %}{% if box == "waiting" %}{% call el('span', 'hint') %}Continue opens when the draft is ready{% endcall %}{% endif %}{{ button("Continue", "primary", "lg", type="submit", disabled=(box == "waiting")) }}{% endcall %}{% endif %}

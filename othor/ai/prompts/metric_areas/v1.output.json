@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "properties": {
+    "areas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {"type": "string"},
+          "area": {
+            "type": "string",
+            "enum": ["Sales", "Collections", "Operations", "Finance", "Customers", "Other"]
+          }
+        },
+        "required": ["key", "area"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["areas"],
+  "additionalProperties": false
+}

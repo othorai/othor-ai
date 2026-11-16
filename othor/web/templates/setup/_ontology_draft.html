@@ -1,0 +1,30 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/forms.html" import chip %}
+{% from "components/panels.html" import side_panel %}
+{# 2n0: the Ontology draft, read-only. Becomes Ontology v1 when the owner confirms metrics. #}
+{% call(part) side_panel("Ontology draft", "Becomes Ontology v1 when you confirm metrics", None, "/setup/metrics") %}
+{% if part == "body" %}
+  <div class="flex items-center justify-between">{{ chip("Draft · not live", soft=True) }}</div>
+  {% if panel.needs %}
+  {% call el('div', 'banner warn', layout='flex items-center justify-between gap-12', attrs='role="status"') %}
+    <span>Needs you · {{ fmt.num(panel.needs) }}{% if panel.conflict %} · {{ fmt.num(panel.conflict) }} conflict{{ "s" if panel.conflict != 1 else "" }}{% endif %}{% if panel.check %} · {{ fmt.num(panel.check) }} to check{% endif %}</span>
+    {% call el('a', 'link-u', attrs='href="/setup/metrics"') %}Fix in Metrics →{% endcall %}
+  {% endcall %}
+  {% endif %}
+  {% for sec in panel.sections %}
+  {% call el('div', 'card flush') %}
+    {% call el("div", "box-head") %}<p>{% call el("span", "strong") %}{{ loop.index }} · {{ sec.title }}{% endcall %}{% call el("span", "hint") %} · {{ sec.count }}{% if sec.hint %} · {{ sec.hint }}{% endif %}{% endcall %}</p>{% endcall %}
+    {% if sec.lines %}
+    {% call el('table', 'table flush') %}<tbody>{% for ln in sec.lines %}<tr>
+      {% call el('td', 'wrap') %}<p>{% if ln.lead %}{% call el("span", "strong") %}{{ ln.lead }}{% endcall %}: {% endif %}{{ ln.text }}</p>{% if ln.flag %}{% call el("p", "hint", layout="flex items-center gap-6") %}{% call el('span', 'dot ' ~ ln.dot) %}{% endcall %}{{ ln.flag }}{% endcall %}{% endif %}{% endcall %}
+      {% call el('td', 'num hint') %}{{ ln.cite or "" }}{% endcall %}
+    </tr>{% endfor %}</tbody>{% endcall %}
+    {% else %}{% call el("p", "hint", layout="p-16") %}Nothing yet.{% endcall %}{% endif %}
+  {% endcall %}
+  {% endfor %}
+{% else %}
+  {% call el("span", "hint") %}{{ panel.built or "" }}{% endcall %}
+  <span class="flex items-center gap-12">{% call el('span', 'chip') %}{% call el('span', 'dot ok') %}{% endcall %}found{% endcall %}{% call el('span', 'chip') %}{% call el('span', 'dot warn') %}{% endcall %}to check{% endcall %}{% call el('span', 'chip') %}{% call el('span', 'dot neg') %}{% endcall %}conflict{% endcall %}</span>
+{% endif %}
+{% endcall %}

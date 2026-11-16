@@ -1,0 +1,136 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/app.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button, link, run_again, ai_button, top_menu, menu_link %}
+{% from "components/blocks.html" import banner, toast, empty_state, page_title %}
+{% from "components/panels.html" import DRAFT_NOTE, draft_note %}
+{% from "components/forms.html" import action_form, text_area %}
+{% from "components/home.html" import home_card, question_row, recent_row, qp_steps, qp_why, qp_pick, qp_nav, qp_found, qp_decided, confidence_pill, checks_strip, section_label, brief_more, sweep_box, sources_table, health_button, lights_panel %}
+{% from "components/brief.html" import nb_head, nb_ai_tag, nb_busy %}
+{% from "components/ontology.html" import record_card %}
+{% from "components/weather.html" import weather_banner, forecast_panel, picked_panel %}
+{% from "components/panels.html" import pane %}
+{% from "components/big_picture.html" import bp_panel %}
+{% block title %}Home · {{ company.name }}{% endblock %}
+{% block crumb %}Home{% endblock %}
+{% block actions %}{% call el("div", layout="flex items-center gap-12") %}{% if updated %}{% call el("p", "hint") %}{{ updated }}{% endcall %}{% endif %}{% call top_menu() %}{{ menu_link("History", "/ontology?panel=history") }}{{ run_again(again, csrf_token, kind="opt") }}{% endcall %}{% endcall %}{% endblock %}
+{% block main %}
+{% if run %}<span data-run="{{ run.number }}" hidden></span>{% endif %}
+<div class="flex flex-col gap-56">
+  {% for b in banners %}{{ banner("warn", ("<b>%s</b> · %s" | safe) | format(b.lead, b.text), b.action, b.href) }}{% endfor %}
+  {% for n in notices %}
+  {% call el("div", layout="flex items-center gap-8 flex-wrap") %}
+    {% call el("div", layout="flex-1 min-w-0") %}{{ banner("note", n.text | e, "Delivery →", n.href) }}{% endcall %}
+    {% call action_form("/home/notices/" ~ n.id ~ "/dismiss", csrf_token) %}{{ button("Dismiss", kind="quiet", type="submit") }}{% endcall %}
+  {% endcall %}
+  {% endfor %}
+
+  {# #61 (owner, 14 Nov 2026): the company's name as the title; the crumb still says Home #}
+  {# v0.19 (M19.5): Big Picture where "Updated" was; the time moved to the top bar (owner, 15 Nov 2026) #}
+  {% call page_title(company.name) %}{% call el("div", layout="flex items-center gap-12 flex-wrap") %}{# System Health left of Big Picture (owner, 16 Nov 2026) #}{{ slot("home.title_actions") }}{% if lights %}{{ health_button(lights) }}{% endif %}{% if big_picture is defined %}{{ ai_button("Big Picture Report" if big_picture else "Big Picture · not available right now", href="/home?panel=big-picture", disabled=not big_picture) }}{% endif %}{% endcall %}{% endcall %}
+
+  {% include "partials/run_again.html" %}
+
+  {% if weather %}{{ weather_banner(weather, outlook) }}{% endif %}
+
+  {% if checks %}{{ checks_strip(checks) }}{% endif %}
+
+  {{ slot("home.before_briefs") }}
+  {# design B2 (owner, 11 Nov 2026): briefs as cards, at most two rows; Sweep as one box below #}
+  {% if briefs.cards %}
+  {% call el("section", attrs={"aria-label": "Briefs"}) %}
+    {{ section_label("Briefs · " ~ fmt.num(briefs.cards | length + briefs.rest | length)) }}
+    {% call el("div", "brief-cards home") %}
+      {% for c in briefs.cards %}{{ home_card(c.name ~ " brief" if not c.name.lower().endswith("brief") else c.name, c.title, c.meta, "/brief/" ~ c.id, c.flag, chart_spec=c.chart, visual=True, count=c.count, quiet=("Quiet day" if c.quiet else "Building history to chart")) }}{% endfor %}
+      {% if briefs.more %}{{ brief_more(briefs.more) }}{% endif %}
+    {% endcall %}
+  {% endcall %}
+  {% endif %}
+
+  {% if swept %}
+  {% call el("section", attrs={"aria-label": "Sweep"}) %}
+    {{ section_label("Sweep") }}{{ sweep_box(swept) }}
+  {% endcall %}
+  {% endif %}
+
+  {% if sources %}{{ sources_table(sources) }}{% endif %}
+
+  {% if proposals %}
+  {% call el("section", "card lines", attrs={"aria-label": "Proposals", "id": "proposals"}) %}
+    {% call el("div", "section-head") %}{% call el("p", "card-title") %}Proposals for the Ontology{% endcall %}{% call el("p", "hint") %}Accepted items change the spec from tomorrow’s run{% endcall %}{% endcall %}
+    {% call el("div", "table-wrap") %}{% call el("table", "table flush stack") %}<thead><tr><th>Kind</th><th>Proposal</th><th>From</th><th>Confidence</th><th></th></tr></thead><tbody data-rows>
+    {% for p in proposals %}{% if p.decided %}{% call el("tr", "is-decided", attrs={"data-row": p.id}) %}
+      {% call el("td", attrs={"colspan": "5"}) %}{% call el("div", layout="flex items-center gap-8 flex-wrap") %}{{ toast(p.decided, sub=p.text) }}{% call action_form("/home/proposals/" ~ p.id ~ "/undo", csrf_token) %}{{ button("Undo", type="submit") }}{% endcall %}{% endcall %}{% endcall %}
+    {% endcall %}{% else %}<tr data-row="{{ p.id }}">
+      <td>{% call el("span", "chip soft") %}{{ p.kind }}{% endcall %}</td>
+      {% call el("td", "wrap") %}{% call el("p", "strong") %}{{ p.text }}{% endcall %}{% if p.line %}{% call el("p", "hint") %}{{ p.line }}{% endcall %}{% endif %}{% endcall %}
+      {% call el("td", "wrap") %}{{ p.from }}{% endcall %}
+      <td>{{ confidence_pill(p.confidence) }}</td>
+      <td>{% call el("div", layout="flex items-center gap-6 justify-end") %}
+        {% call action_form("/home/proposals/" ~ p.id ~ "/accept", csrf_token) %}{{ button("Accept", kind="primary", type="submit") }}{% endcall %}
+        {% call action_form("/home/proposals/" ~ p.id ~ "/decline", csrf_token) %}{{ button("Decline", type="submit") }}{% endcall %}
+        {{ link("Chat about this", "/home?panel=proposal&p=" ~ p.id) }}
+      {% endcall %}</td>
+    </tr>{% endif %}{% endfor %}
+    </tbody>{% endcall %}{% endcall %}
+  {% endcall %}
+  {% endif %}
+
+  {% if question_count or questions_left or decided_left %}
+  {% call el("section", "card lines", attrs={"aria-label": "Questions for you"}) %}
+    {% call el("div", "section-head") %}{% call el("p", "card-title") %}Questions for you{% if question_count %} · {{ fmt.num(question_count) }}{% endif %}{% endcall %}
+      {% call el("div", layout="flex items-center gap-12") %}{% if questions_left %}{% call el("p", "hint") %}{{ questions_left }}{% endcall %}{% endif %}{{ link("Answer questions →" if question_count else "Review answers →", "/home?panel=questions") }}{% endcall %}{% endcall %}
+    {% for q in questions %}{{ question_row(loop.index, q.text, q.origin) }}{% endfor %}
+    {% call el("div", "section-head") %}{% call el("p", "hint") %}One at a time · answers go into the Ontology{% endcall %}{% if decided_left %}{{ link(decided_left ~ " →", "/ontology#decided", muted=True) }}{% else %}{{ link("Open the Ontology", "/ontology", muted=True) }}{% endif %}{% endcall %}
+  {% endcall %}
+  {% endif %}
+
+  {% if not proposals and not question_count %}
+  {% call el("div", "card board") %}{{ empty_state(None, "All caught up", "New proposals and questions arrive after the nightly run.", "Open the Ontology", "/ontology") }}{% endcall %}
+  {% if recent %}
+  {% call el("section", "card lines", attrs={"aria-label": "Recently accepted"}) %}
+    {% call el("div", "section-head") %}{% call el("p", "card-title") %}Recently accepted{% endcall %}{% call el("p", "hint") %}Ontology v{{ version }}{% endcall %}{% endcall %}
+    {% for r in recent %}{{ recent_row(fmt.date_short(r.date), r.text, r.kind) }}{% endfor %}
+  {% endcall %}
+  {% endif %}
+  {% endif %}
+  {{ slot("home.end") }}
+</div>
+{% endblock %}
+
+{% block overlay %}
+{% if fpanel %}{{ forecast_panel(fpanel, "/home") }}{% endif %}
+{% if wpanel %}{{ picked_panel(wpanel, "/home") }}{% endif %}
+{% if bpanel %}{{ bp_panel(bpanel, csrf_token) }}{% endif %}
+{% if lpanel %}{{ lights_panel(lpanel) }}{% endif %}
+{% if chat %}{% set qfrom, qclose = None, "/home" %}{% include "home/_questions_panel.html" %}{% endif %}
+
+{% if pchat %}{% set p = pchat.p %}
+{% call el("aside", "panel chat", attrs={"aria-label": "Chat about this", "id": "chat-panel"}) %}
+  {% call el("header", "panel-head") %}<div>{% call el("p", "panel-title") %}Chat about this{% endcall %}{% call el("p", "hint") %}{{ p.kind }} · {{ p.from }}{% endcall %}</div>
+    {% call el("a", "btn quiet", attrs={"href": "/home", "aria-label": "Close"}) %}×{% endcall %}{% endcall %}
+  {% call el("div", "panel-body", layout="flex flex-col gap-16") %}
+    {% call el("div", "msg-ai") %}{% call el("span", "avatar-ai") %}AI{% endcall %}<div class="flex flex-col gap-8 flex-1 min-w-0">
+      {% call el("div", "draft", layout="flex flex-col gap-4") %}{% call el("p", "strong") %}{{ p.text }}{% endcall %}{% if p.line %}{% call el("p", "hint") %}{{ p.line }}{% endcall %}{% endif %}{% call el("p", "hint") %}Confidence · {{ p.confidence }}{% endcall %}{% endcall %}
+      {% if p.status == "open" %}{% call el("div", layout="flex items-center gap-6") %}
+        {% call action_form("/home/proposals/" ~ p.id ~ "/accept", csrf_token) %}{{ button("Accept", kind="primary", type="submit") }}{% endcall %}
+        {% call action_form("/home/proposals/" ~ p.id ~ "/decline", csrf_token) %}{{ button("Decline", type="submit") }}{% endcall %}
+        {% call el("span", "hint") %}Applies from the next run{% endcall %}
+      {% endcall %}{% endif %}
+    </div>{% endcall %}
+    {% for m in pchat.messages %}
+      {% if m.role == "user" %}{% call el("p", "msg-user") %}{{ m.text }}{% endcall %}
+      {% else %}{% call el("div", "msg-ai") %}{% call el("span", "avatar-ai") %}AI{% endcall %}<p>{{ m.text }}</p>{% endcall %}{% endif %}
+    {% endfor %}
+  {% endcall %}
+  {% call action_form("/home/proposals/" ~ p.id ~ "/ask", csrf_token, "composer") %}
+    {% if pchat.model %}
+    <div class="flex items-center gap-8">{{ el("input", "input", layout="flex-1 min-w-0", attrs={"name": "text", "placeholder": "Ask or tell Othor AI…", "aria-label": "Ask or tell Othor AI"}) }}{% call el("button", "btn primary", attrs='type="submit"') %}Send{% endcall %}</div>
+    {% else %}
+    <div class="flex items-center gap-8">{{ el("input", "input", layout="flex-1 min-w-0", attrs={"placeholder": "Not available right now", "aria-label": "Not available right now", "disabled": true}) }}{% call el("button", "btn", attrs='type="button" disabled') %}Send{% endcall %}</div>
+    {% endif %}
+    {{ draft_note("draft-note-pchat") }}
+  {% endcall %}
+{% endcall %}
+{% endif %}
+{% endblock %}

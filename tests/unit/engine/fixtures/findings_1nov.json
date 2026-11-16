@@ -1,0 +1,2001 @@
+{
+ "findings": [
+  {
+   "breakdown": "plant",
+   "breakdown_value": "Coimbatore",
+   "change": "New",
+   "confidence": "high",
+   "days_open": 1,
+   "detector": "rising_variance",
+   "direction": "up",
+   "entities": [],
+   "evidence": [],
+   "family": "dispatch_time",
+   "fingerprint": "83f4e966442fc01cd415cf2c",
+   "first_seen": {
+    "date": "2026-11-01"
+   },
+   "metric": "dispatch_time",
+   "money": "45364798.65",
+   "money_basis": "line_revenue for dispatch_time·Coimbatore since 2026-09-07",
+   "p_value": "1E-12",
+   "q_value": "7.4E-11",
+   "reasons": [],
+   "reconstructed_only": false,
+   "series": [
+    "dispatch_time|day|plant|Coimbatore"
+   ],
+   "slots": {
+    "mean_prior": "4.130234",
+    "mean_recent": "4.295806",
+    "p10_prior": "3.668574",
+    "p10_recent": "3.207177",
+    "p90_prior": "4.552889",
+    "p90_recent": "4.919517",
+    "sd_prior": "0.342580",
+    "sd_recent": "1.196903",
+    "started": "2026-09-07",
+    "unit": "days"
+   },
+   "state": "assessed",
+   "status": "open",
+   "version": "1",
+   "window": [
+    "2026-09-07",
+    "2026-10-31"
+   ]
+  },
+  {
+   "breakdown": "customer",
+   "breakdown_value": null,
+   "change": "New",
+   "confidence": null,
+   "days_open": 1,
+   "detector": "missing_records",
+   "direction": "down",
+   "entities": [
+    "Anvika Knit Works",
+    "Charu Knit Fab",
+    "Tidewell Garments",
+    "Devana Apparels",
+    "Inara Creations",
+    "Kavira Knitwear",
+    "Korana Clothing",
+    "Maravi Linens",
+    "Navika Fashions",
+    "Nilavi Exports",
+    "Sanvi Weaves",
+    "Shree Varada Textiles",
+    "Tarini Garments",
+    "Vihana Textiles"
+   ],
+   "evidence": [
+    {
+     "gap_before": {
+      "from": 9,
+      "to": 16
+     },
+     "last": "2026-07-12",
+     "last_12m": "6200000.01",
+     "name": "Shree Varada Textiles",
+     "silent_days": 111
+    },
+    {
+     "gap_before": {
+      "from": 8,
+      "to": 14
+     },
+     "last": "2026-07-02",
+     "last_12m": "4800000.00",
+     "name": "Tidewell Garments",
+     "silent_days": 121
+    },
+    {
+     "gap_before": {
+      "from": 10,
+      "to": 21
+     },
+     "last": "2026-06-28",
+     "last_12m": "4099999.98",
+     "name": "Anvika Knit Works",
+     "silent_days": 125
+    },
+    {
+     "gap_before": {
+      "from": 11,
+      "to": 17
+     },
+     "last": "2026-07-20",
+     "last_12m": "2599999.99",
+     "name": "Sanvi Weaves",
+     "silent_days": 103
+    },
+    {
+     "gap_before": {
+      "from": 7,
+      "to": 14
+     },
+     "last": "2026-07-08",
+     "last_12m": "2400000.02",
+     "name": "Kavira Knitwear",
+     "silent_days": 115
+    },
+    {
+     "gap_before": {
+      "from": 8,
+      "to": 13
+     },
+     "last": "2026-06-30",
+     "last_12m": "2249999.99",
+     "name": "Navika Fashions",
+     "silent_days": 123
+    },
+    {
+     "gap_before": {
+      "from": 8,
+      "to": 14
+     },
+     "last": "2026-07-25",
+     "last_12m": "2099999.99",
+     "name": "Korana Clothing",
+     "silent_days": 98
+    },
+    {
+     "gap_before": {
+      "from": 8,
+      "to": 16
+     },
+     "last": "2026-06-22",
+     "last_12m": "1950000.02",
+     "name": "Devana Apparels",
+     "silent_days": 131
+    },
+    {
+     "gap_before": {
+      "from": 7,
+      "to": 13
+     },
+     "last": "2026-07-16",
+     "last_12m": "1800000.00",
+     "name": "Inara Creations",
+     "silent_days": 107
+    },
+    {
+     "gap_before": {
+      "from": 8,
+      "to": 16
+     },
+     "last": "2026-06-18",
+     "last_12m": "1699999.99",
+     "name": "Maravi Linens",
+     "silent_days": 135
+    },
+    {
+     "gap_before": {
+      "from": 9,
+      "to": 18
+     },
+     "last": "2026-07-29",
+     "last_12m": "1599999.98",
+     "name": "Tarini Garments",
+     "silent_days": 94
+    },
+    {
+     "gap_before": {
+      "from": 10,
+      "to": 18
+     },
+     "last": "2026-07-04",
+     "last_12m": "1549999.99",
+     "name": "Nilavi Exports",
+     "silent_days": 119
+    },
+    {
+     "gap_before": {
+      "from": 7,
+      "to": 11
+     },
+     "last": "2026-06-26",
+     "last_12m": "1500000.01",
+     "name": "Vihana Textiles",
+     "silent_days": 127
+    },
+    {
+     "gap_before": {
+      "from": 7,
+      "to": 11
+     },
+     "last": "2026-07-01",
+     "last_12m": "1450000.02",
+     "name": "Charu Knit Fab",
+     "silent_days": 122
+    }
+   ],
+   "family": "entity:customer",
+   "fingerprint": "317748fe74417267983c0570",
+   "first_seen": {
+    "date": "2026-11-01"
+   },
+   "metric": "invoiced_value",
+   "money": "35999999.99",
+   "money_basis": "their value over the 12 months to 2026-10-31",
+   "p_value": "1E-12",
+   "q_value": "7.4E-11",
+   "reasons": [],
+   "reconstructed_only": false,
+   "series": [
+    "invoiced_value|day|customer|"
+   ],
+   "slots": {
+    "count": 14,
+    "gap_lengthened_weeks": "0.928571",
+    "quiet_days": 90,
+    "total_12m": "35999999.99"
+   },
+   "state": "measured",
+   "status": "open",
+   "version": "1",
+   "window": [
+    "2026-08-02",
+    "2026-10-31"
+   ]
+  },
+  {
+   "breakdown": "",
+   "breakdown_value": null,
+   "change": "New",
+   "confidence": null,
+   "days_open": 1,
+   "detector": "cross_source",
+   "direction": "none",
+   "entities": [],
+   "evidence": [
+    {
+     "date": "2026-08-30",
+     "days": 62,
+     "key": "SO-26013695",
+     "value": "1120769.68"
+    },
+    {
+     "date": "2026-08-25",
+     "days": 67,
+     "key": "SO-26013635",
+     "value": "796268.58"
+    },
+    {
+     "date": "2026-08-25",
+     "days": 67,
+     "key": "SO-26013644",
+     "value": "715429.26"
+    },
+    {
+     "date": "2026-08-29",
+     "days": 63,
+     "key": "SO-26013682",
+     "value": "701713.72"
+    },
+    {
+     "date": "2026-08-08",
+     "days": 84,
+     "key": "SO-26013487",
+     "value": "692523.74"
+    },
+    {
+     "date": "2026-09-11",
+     "days": 50,
+     "key": "SO-26013820",
+     "value": "682874.73"
+    },
+    {
+     "date": "2026-09-09",
+     "days": 52,
+     "key": "SO-26013800",
+     "value": "632133.99"
+    },
+    {
+     "date": "2026-08-06",
+     "days": 86,
+     "key": "SO-26013486",
+     "value": "604298.99"
+    },
+    {
+     "date": "2026-08-28",
+     "days": 64,
+     "key": "SO-26013694",
+     "value": "604117.34"
+    },
+    {
+     "date": "2026-08-27",
+     "days": 65,
+     "key": "SO-26013590",
+     "value": "597198.09"
+    },
+    {
+     "date": "2026-09-09",
+     "days": 52,
+     "key": "SO-26013821",
+     "value": "555622.22"
+    },
+    {
+     "date": "2026-08-25",
+     "days": 67,
+     "key": "SO-26013591",
+     "value": "545110.29"
+    },
+    {
+     "date": "2026-09-08",
+     "days": 53,
+     "key": "SO-26013782",
+     "value": "532648.26"
+    },
+    {
+     "date": "2026-08-27",
+     "days": 65,
+     "key": "SO-26013670",
+     "value": "528673.63"
+    },
+    {
+     "date": "2026-09-02",
+     "days": 59,
+     "key": "SO-26013745",
+     "value": "527200.80"
+    },
+    {
+     "date": "2026-08-27",
+     "days": 65,
+     "key": "SO-26013657",
+     "value": "512147.62"
+    },
+    {
+     "date": "2026-08-09",
+     "days": 83,
+     "key": "SO-26013510",
+     "value": "511630.20"
+    },
+    {
+     "date": "2026-08-27",
+     "days": 65,
+     "key": "SO-26013656",
+     "value": "505416.79"
+    },
+    {
+     "date": "2026-08-27",
+     "days": 65,
+     "key": "SO-26013579",
+     "value": "504364.42"
+    },
+    {
+     "date": "2026-08-27",
+     "days": 65,
+     "key": "SO-26013515",
+     "value": "502842.83"
+    },
+    {
+     "date": "2026-09-12",
+     "days": 49,
+     "key": "SO-26013815",
+     "value": "485218.85"
+    },
+    {
+     "date": "2026-08-30",
+     "days": 62,
+     "key": "SO-26013696",
+     "value": "462977.66"
+    },
+    {
+     "date": "2026-08-04",
+     "days": 88,
+     "key": "SO-26013471",
+     "value": "461987.70"
+    },
+    {
+     "date": "2026-09-12",
+     "days": 49,
+     "key": "SO-26013819",
+     "value": "460791.88"
+    },
+    {
+     "date": "2026-08-07",
+     "days": 85,
+     "key": "SO-26013500",
+     "value": "450106.68"
+    },
+    {
+     "date": "2026-09-02",
+     "days": 59,
+     "key": "SO-26013718",
+     "value": "427932.11"
+    },
+    {
+     "date": "2026-08-27",
+     "days": 65,
+     "key": "SO-26013681",
+     "value": "424744.21"
+    },
+    {
+     "date": "2026-09-11",
+     "days": 50,
+     "key": "SO-26013832",
+     "value": "424684.10"
+    },
+    {
+     "date": "2026-08-26",
+     "days": 66,
+     "key": "SO-26013535",
+     "value": "422133.61"
+    },
+    {
+     "date": "2026-08-31",
+     "days": 61,
+     "key": "SO-26013710",
+     "value": "419696.86"
+    },
+    {
+     "date": "2026-08-29",
+     "days": 63,
+     "key": "SO-26013683",
+     "value": "399245.83"
+    },
+    {
+     "date": "2026-08-31",
+     "days": 61,
+     "key": "SO-26013717",
+     "value": "353987.69"
+    },
+    {
+     "date": "2026-08-09",
+     "days": 83,
+     "key": "SO-26013498",
+     "value": "331983.53"
+    },
+    {
+     "date": "2026-08-29",
+     "days": 63,
+     "key": "SO-26013684",
+     "value": "297163.67"
+    },
+    {
+     "date": "2026-08-26",
+     "days": 66,
+     "key": "SO-26013534",
+     "value": "279618.69"
+    },
+    {
+     "date": "2026-08-09",
+     "days": 83,
+     "key": "SO-26013516",
+     "value": "264696.57"
+    },
+    {
+     "date": "2026-09-02",
+     "days": 59,
+     "key": "SO-26013752",
+     "value": "260045.18"
+    }
+   ],
+   "family": "reconcile:dispatch_invoice",
+   "fingerprint": "bed399a0cd8aabc1e89a3948",
+   "first_seen": {
+    "date": "2026-11-01"
+   },
+   "metric": "dispatch_invoice",
+   "money": "19000000.00",
+   "money_basis": "value of fact_order in sales_dw with no match in invoices in erp_db",
+   "p_value": "1E-12",
+   "q_value": "7.4E-11",
+   "reasons": [
+    {
+     "check": null,
+     "key": "r1",
+     "ruled_out": false,
+     "text": "late"
+    },
+    {
+     "check": null,
+     "key": "r2",
+     "ruled_out": false,
+     "text": "cancelled after the event, and the first system wasn't updated"
+    },
+    {
+     "check": null,
+     "key": "r3",
+     "ruled_out": false,
+     "text": "the two systems mean different things"
+    }
+   ],
+   "reconstructed_only": false,
+   "series": [
+    "reconcile|dispatch_invoice|keys"
+   ],
+   "slots": {
+    "checked": 37,
+    "count": 37,
+    "lag_days": 30,
+    "left": "fact_order in sales_dw",
+    "left_source": "sales_dw",
+    "noun": "orders",
+    "right": "invoices in erp_db",
+    "right_source": "erp_db",
+    "right_table": "invoices"
+   },
+   "state": "needs_confirmation",
+   "status": "open",
+   "version": "1",
+   "window": [
+    "2026-10-01",
+    "2026-10-31"
+   ]
+  },
+  {
+   "breakdown": "region",
+   "breakdown_value": null,
+   "change": "New",
+   "confidence": "high",
+   "days_open": 1,
+   "detector": "net_hiding_gross",
+   "direction": "down",
+   "entities": [
+    "South",
+    "West"
+   ],
+   "evidence": [
+    {
+     "breakdown_value": "South",
+     "change": "-14000000.460000"
+    },
+    {
+     "breakdown_value": "Export",
+     "change": "-0.510000"
+    },
+    {
+     "breakdown_value": "East",
+     "change": "0.370000"
+    },
+    {
+     "breakdown_value": "North",
+     "change": "1.110000"
+    },
+    {
+     "breakdown_value": "West",
+     "change": "12100000.980000"
+    }
+   ],
+   "family": "net_revenue",
+   "fingerprint": "2b7b32c5f8a79322b25382aa",
+   "first_seen": {
+    "date": "2026-11-01"
+   },
+   "metric": "net_revenue",
+   "money": "14000000.46",
+   "money_basis": "the fall in South, 2026-09 to 2026-10",
+   "p_value": "4.84066E-7",
+   "q_value": "0.000017789426",
+   "reasons": [],
+   "reconstructed_only": false,
+   "series": [
+    "net_revenue|month|region|"
+   ],
+   "slots": {
+    "also_in": [
+     "invoiced_value"
+    ],
+    "contributions": {
+     "East": "0.370000",
+     "Export": "-0.510000",
+     "North": "1.110000",
+     "South": "-14000000.460000",
+     "West": "12100000.980000"
+    },
+    "fall": {
+     "change": "-14000000.460000",
+     "name": "South",
+     "z": "-4.898008"
+    },
+    "gross": "26100003.430000",
+    "net": "-1899998.510000",
+    "period": "2026-10-01",
+    "previous": "2026-09-01",
+    "rise": {
+     "change": "12100000.980000",
+     "name": "West",
+     "z": "6.767649"
+    }
+   },
+   "state": "assessed",
+   "status": "open",
+   "version": "1",
+   "window": [
+    "2026-09-01",
+    "2026-10-01"
+   ]
+  },
+  {
+   "breakdown": "customer",
+   "breakdown_value": null,
+   "change": "New",
+   "confidence": "medium",
+   "days_open": 1,
+   "detector": "concentration",
+   "direction": "up",
+   "entities": [
+    "Ravira Exports",
+    "Merai Apparels",
+    "Skarfab",
+    "Tessora EU"
+   ],
+   "evidence": [
+    {
+     "name": "Tessora EU",
+     "share": "0.199657",
+     "value": "23144693.920000"
+    },
+    {
+     "name": "Skarfab",
+     "share": "0.186302",
+     "value": "21596637.440000"
+    },
+    {
+     "name": "Ravira Exports",
+     "share": "0.155637",
+     "value": "18041841.190000"
+    },
+    {
+     "name": "Merai Apparels",
+     "share": "0.038404",
+     "value": "4451867.860000"
+    },
+    {
+     "name": "Avonmere Cloth Co",
+     "share": "0.020276",
+     "value": "2350474.620000"
+    },
+    {
+     "name": "Bhavira Fabrics",
+     "share": "0.014663",
+     "value": "1699720.140000"
+    },
+    {
+     "name": "Amaravira Apparels",
+     "share": "0.014007",
+     "value": "1623736.950000"
+    },
+    {
+     "name": "Suruvra Apparels",
+     "share": "0.012997",
+     "value": "1506675.770000"
+    },
+    {
+     "name": "Solvik Textil",
+     "share": "0.012806",
+     "value": "1484509.640000"
+    },
+    {
+     "name": "Vaivra Textiles",
+     "share": "0.012764",
+     "value": "1479644.190000"
+    }
+   ],
+   "family": "orders",
+   "fingerprint": "226703f10328b0ed3ec3e09f",
+   "first_seen": {
+    "date": "2026-11-01"
+   },
+   "metric": "order_book",
+   "money": "9273798.68",
+   "money_basis": "value above 50% of order_book in the top 4",
+   "p_value": "0.000133397824",
+   "q_value": "0.002801354304",
+   "reasons": [],
+   "reconstructed_only": false,
+   "series": [
+    "order_book|week|customer|"
+   ],
+   "slots": {
+    "also_by": [
+     "changepoint"
+    ],
+    "hhi": "0.103889",
+    "limit": "0.500000",
+    "names": [
+     "Tessora EU",
+     "Skarfab",
+     "Ravira Exports",
+     "Merai Apparels"
+    ],
+    "period": "2026-10-19",
+    "share_now": "0.580000",
+    "share_start": "0.399643",
+    "start": "2026-04-27",
+    "top_n": 4
+   },
+   "state": "assessed",
+   "status": "open",
+   "version": "1",
+   "window": [
+    "2026-04-27",
+    "2026-10-19"
+   ]
+  },
+  {
+   "breakdown": "",
+   "breakdown_value": null,
+   "change": "New",
+   "confidence": "high",
+   "days_open": 1,
+   "detector": "broken_relationship",
+   "direction": "down",
+   "entities": [
+    "freight",
+    "metres_dispatched"
+   ],
+   "evidence": [],
+   "family": "pair:freight_metres",
+   "fingerprint": "b7f229a33df8c44eb13dc757",
+   "first_seen": {
+    "date": "2026-11-01"
+   },
+   "metric": "freight",
+   "money": "5759174.69",
+   "money_basis": "12 months at the excess per month of freight over the old ratio to metres_dispatched",
+   "p_value": "0.000003186504",
+   "q_value": "0.000085166561",
+   "reasons": [],
+   "reconstructed_only": false,
+   "series": [
+    "freight|week||",
+    "metres_dispatched|week||"
+   ],
+   "slots": {
+    "break": "2026-09-14",
+    "money_per_month": "479931.22",
+    "r_after": "0.257143",
+    "r_before": "0.839098",
+    "ratio_after": "5.454378",
+    "ratio_before": "4.337724",
+    "ratio_change": "0.257428",
+    "weeks_after": 6,
+    "weeks_before": 20
+   },
+   "state": "assessed",
+   "status": "open",
+   "version": "1",
+   "window": [
+    "2026-09-14",
+    "2026-10-19"
+   ]
+  },
+  {
+   "breakdown": "customer",
+   "breakdown_value": "Ravira Exports",
+   "change": "New",
+   "confidence": null,
+   "days_open": 1,
+   "detector": "missing_records",
+   "direction": "down",
+   "entities": [
+    "Ravira Exports"
+   ],
+   "evidence": [],
+   "family": "entity:customer",
+   "fingerprint": "12af3bd5a7b5367841316fd4",
+   "first_seen": {
+    "date": "2026-11-01"
+   },
+   "metric": "invoiced_value",
+   "money": "3618179.24",
+   "money_basis": "Ravira Exports's average daily value over 12 months × 22 days without an invoice",
+   "p_value": "1E-12",
+   "q_value": "7.4E-11",
+   "reasons": [
+    {
+     "check": null,
+     "key": "competitor",
+     "ruled_out": false,
+     "text": "moved to a competitor"
+    },
+    {
+     "check": null,
+     "key": "on_hold",
+     "ruled_out": false,
+     "text": "on hold"
+    },
+    {
+     "check": {
+      "found": [],
+      "kind": "same_identity"
+     },
+     "key": "billing_moved",
+     "ruled_out": true,
+     "text": "billing moved to another entity"
+    }
+   ],
+   "reconstructed_only": false,
+   "series": [
+    "invoiced_value|day|customer|Ravira Exports"
+   ],
+   "slots": {
+    "events": 137,
+    "gap_days": 22,
+    "last": "2026-10-09",
+    "max_days": 9,
+    "median_days": "7.000000",
+    "min_days": 5,
+    "name": "Ravira Exports",
+    "years": "2.507871"
+   },
+   "state": "not_determinable",
+   "status": "open",
+   "version": "1",
+   "window": [
+    "2026-10-09",
+    "2026-10-31"
+   ]
+  },
+  {
+   "breakdown": "",
+   "breakdown_value": null,
+   "change": "New",
+   "confidence": null,
+   "days_open": 1,
+   "detector": "changepoint",
+   "direction": "up",
+   "entities": [],
+   "evidence": [],
+   "family": "receivables",
+   "fingerprint": "cf2a8b3571166a3f5e47b10a",
+   "first_seen": {
+    "date": "2026-11-01"
+   },
+   "metric": "receivables_over_60",
+   "money": "2888013.39",
+   "money_basis": "step in receivables_over_60 from 2026-08-10",
+   "p_value": "2.1586E-8",
+   "q_value": "9.06612E-7",
+   "reasons": [],
+   "reconstructed_only": false,
+   "series": [
+    "receivables_over_60|week||"
+   ],
+   "slots": {
+    "after": "9267972.002500",
+    "also_in": [
+     "West"
+    ],
+    "before": "6379958.614231",
+    "change_date": "2026-08-14",
+    "change_week": "2026-08-10",
+    "delta": "2888013.388269",
+    "unit": "inr",
+    "weeks_held": 8
+   },
+   "state": "measured",
+   "status": "open",
+   "version": "1",
+   "window": [
+    "2026-08-10",
+    "2026-10-12"
+   ]
+  }
+ ],
+ "spec": {
+  "breakdowns": {
+   "bank": {
+    "cap": 50,
+    "entity": false,
+    "name": "Bank"
+   },
+   "customer": {
+    "cap": 50,
+    "entity": true,
+    "name": "Customer"
+   },
+   "plant": {
+    "cap": 50,
+    "entity": false,
+    "name": "Plant"
+   },
+   "product_family": {
+    "cap": 50,
+    "entity": false,
+    "name": "Product family"
+   },
+   "region": {
+    "cap": 50,
+    "entity": false,
+    "name": "Region"
+   },
+   "segment": {
+    "cap": 50,
+    "entity": false,
+    "name": "Segment"
+   },
+   "stage": {
+    "cap": 50,
+    "entity": false,
+    "name": "Stage"
+   }
+  },
+  "metrics": {
+   "active_customers": {
+    "agg": "count_distinct",
+    "breakdowns": [
+     "region"
+    ],
+    "definition_hash": "0dd4fb923441f648",
+    "description": "Customers with an invoice in the last 90 days",
+    "dialect": "mysql",
+    "family": null,
+    "grain": "month",
+    "headline": false,
+    "kind": "snapshot",
+    "labels": [
+     "erp_db (MySQL)"
+    ],
+    "listed": true,
+    "name": "Active customers",
+    "run_location": "runs in place on erp_db (MySQL) · read-only",
+    "scale": "1",
+    "source": "erp_db",
+    "source_id": "ac985f43-c786-4241-8757-bf86644479cc",
+    "source_label": "erp_db (MySQL)",
+    "sources": [
+     "erp_db"
+    ],
+    "status": "active",
+    "table": {
+     "name": "invoices",
+     "schema": "erp_db",
+     "stable_key": "52a5a1033e5fc20a"
+    },
+    "type": "base",
+    "unit": "count",
+    "variant": null
+   },
+   "average_order_value": {
+    "breakdowns": [
+     "region"
+    ],
+    "components": [
+     "orders",
+     "orders_value"
+    ],
+    "definition_hash": "e11006e457a14966",
+    "description": "Order value ÷ orders",
+    "dialect": "duckdb",
+    "distribution": {
+     "days": 365,
+     "key": "order_no",
+     "metric": "orders_value"
+    },
+    "family": null,
+    "grain": "month",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "sales_dw (PostgreSQL)"
+    ],
+    "listed": true,
+    "name": "Average order value",
+    "run_location": "joined in Othor AI from sales_dw",
+    "source_label": "sales_dw (PostgreSQL) · derived",
+    "sources": [
+     "sales_dw"
+    ],
+    "status": "active",
+    "type": "derived",
+    "unit": "inr",
+    "variant": null
+   },
+   "cash_balance": {
+    "agg": "last",
+    "breakdowns": [
+     "bank"
+    ],
+    "definition_hash": "1c153a9dd6c49e2a",
+    "description": "Closing balance across bank ledgers",
+    "dialect": "mysql",
+    "family": null,
+    "grain": "day",
+    "headline": false,
+    "kind": "snapshot",
+    "labels": [
+     "erp_db (MySQL)"
+    ],
+    "listed": true,
+    "name": "Cash balance",
+    "run_location": "runs in place on erp_db (MySQL) · read-only",
+    "scale": "1",
+    "source": "erp_db",
+    "source_id": "ac985f43-c786-4241-8757-bf86644479cc",
+    "source_label": "erp_db (MySQL)",
+    "sources": [
+     "erp_db"
+    ],
+    "status": "active",
+    "table": {
+     "name": "bank_ledger",
+     "schema": "erp_db",
+     "stable_key": "2276896b529780fe"
+    },
+    "type": "base",
+    "unit": "inr",
+    "variant": null
+   },
+   "cogs": {
+    "agg": "sum",
+    "breakdowns": [
+     "plant"
+    ],
+    "definition_hash": "db1edfa9766ca273",
+    "description": "",
+    "dialect": "mysql",
+    "family": null,
+    "grain": "month",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "erp_db (MySQL)"
+    ],
+    "listed": false,
+    "name": "Cost of goods",
+    "run_location": "runs in place on erp_db (MySQL) · read-only",
+    "scale": "1",
+    "source": "erp_db",
+    "source_id": "ac985f43-c786-4241-8757-bf86644479cc",
+    "source_label": "erp_db (MySQL)",
+    "sources": [
+     "erp_db"
+    ],
+    "status": "active",
+    "table": {
+     "name": "cost_ledger",
+     "schema": "erp_db",
+     "stable_key": "2729d40ac1c7607e"
+    },
+    "type": "base",
+    "unit": "inr",
+    "variant": null
+   },
+   "collections": {
+    "agg": "sum",
+    "breakdowns": [
+     "customer"
+    ],
+    "definition_hash": "390da9afa883ca97",
+    "description": "Receipts against invoices",
+    "dialect": "mysql",
+    "family": null,
+    "grain": "week",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "erp_db (MySQL)"
+    ],
+    "listed": true,
+    "name": "Collections",
+    "run_location": "runs in place on erp_db (MySQL) · read-only",
+    "scale": "1",
+    "source": "erp_db",
+    "source_id": "ac985f43-c786-4241-8757-bf86644479cc",
+    "source_label": "erp_db (MySQL)",
+    "sources": [
+     "erp_db"
+    ],
+    "status": "active",
+    "table": {
+     "name": "receivables",
+     "schema": "erp_db",
+     "stable_key": "a3bc4c0308a8d01b"
+    },
+    "type": "base",
+    "unit": "inr",
+    "variant": null
+   },
+   "credit_note_value": {
+    "agg": "sum",
+    "breakdowns": [
+     "customer",
+     "plant",
+     "region",
+     "segment"
+    ],
+    "definition_hash": "1c855c5963743fd3",
+    "description": "",
+    "dialect": "mysql",
+    "family": "net_revenue",
+    "grain": "month",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "erp_db (MySQL)"
+    ],
+    "listed": false,
+    "name": "Credit notes",
+    "run_location": "runs in place on erp_db (MySQL) · read-only",
+    "scale": "1",
+    "source": "erp_db",
+    "source_id": "ac985f43-c786-4241-8757-bf86644479cc",
+    "source_label": "erp_db (MySQL)",
+    "sources": [
+     "erp_db"
+    ],
+    "status": "active",
+    "table": {
+     "name": "credit_notes",
+     "schema": "erp_db",
+     "stable_key": "cc1ff601fa4def0d"
+    },
+    "type": "base",
+    "unit": "inr",
+    "variant": "credit_notes"
+   },
+   "dispatch_time": {
+    "agg": "avg",
+    "at_stake": {
+     "metric": "line_revenue"
+    },
+    "breakdowns": [
+     "plant"
+    ],
+    "definition_hash": "a2936b35efbf8bae",
+    "description": "Days from order to dispatch, average and spread",
+    "dialect": "postgres",
+    "family": null,
+    "grain": "day",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "sales_dw (PostgreSQL)"
+    ],
+    "listed": true,
+    "name": "Dispatch time",
+    "run_location": "runs in place on sales_dw (PostgreSQL) · read-only",
+    "scale": "1",
+    "source": "sales_dw",
+    "source_id": "783e02ce-d561-4f58-bf6c-1e242354157f",
+    "source_label": "sales_dw (PostgreSQL)",
+    "sources": [
+     "sales_dw"
+    ],
+    "status": "active",
+    "table": {
+     "name": "fact_dispatch",
+     "schema": "sales_dw",
+     "stable_key": "d03b05c0f2cea7b2"
+    },
+    "type": "base",
+    "unit": "days",
+    "variant": null
+   },
+   "dispatch_time_spread": {
+    "agg": "stddev",
+    "breakdowns": [
+     "plant"
+    ],
+    "definition_hash": "67e536be18c0793e",
+    "description": "",
+    "dialect": "postgres",
+    "family": "dispatch_time",
+    "grain": "day",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "sales_dw (PostgreSQL)"
+    ],
+    "listed": false,
+    "name": "Dispatch time spread",
+    "run_location": "runs in place on sales_dw (PostgreSQL) · read-only",
+    "scale": "1",
+    "source": "sales_dw",
+    "source_id": "783e02ce-d561-4f58-bf6c-1e242354157f",
+    "source_label": "sales_dw (PostgreSQL)",
+    "sources": [
+     "sales_dw"
+    ],
+    "status": "active",
+    "table": {
+     "name": "fact_dispatch",
+     "schema": "sales_dw",
+     "stable_key": "d03b05c0f2cea7b2"
+    },
+    "type": "base",
+    "unit": "days",
+    "variant": "spread"
+   },
+   "dso": {
+    "breakdowns": [],
+    "components": [
+     "net_revenue",
+     "receivables_open"
+    ],
+    "definition_hash": "6a6f8d0ddddda1e9",
+    "description": "Receivables ÷ net revenue × days in period",
+    "dialect": "duckdb",
+    "family": null,
+    "grain": "month",
+    "headline": true,
+    "kind": "flow",
+    "labels": [
+     "erp_db (MySQL)"
+    ],
+    "listed": true,
+    "name": "DSO",
+    "run_location": "joined in Othor AI from erp_db",
+    "source_label": "erp_db (MySQL) · derived",
+    "sources": [
+     "erp_db"
+    ],
+    "status": "active",
+    "type": "derived",
+    "unit": "days",
+    "variant": null
+   },
+   "export_invoiced": {
+    "agg": "sum",
+    "breakdowns": [],
+    "definition_hash": "83b47c9fe78c6a5f",
+    "description": "",
+    "dialect": "mysql",
+    "family": "net_revenue",
+    "grain": "month",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "erp_db (MySQL)"
+    ],
+    "listed": false,
+    "name": "Export invoiced value",
+    "run_location": "runs in place on erp_db (MySQL) · read-only",
+    "scale": "1",
+    "source": "erp_db",
+    "source_id": "ac985f43-c786-4241-8757-bf86644479cc",
+    "source_label": "erp_db (MySQL)",
+    "sources": [
+     "erp_db"
+    ],
+    "status": "active",
+    "table": {
+     "name": "invoices",
+     "schema": "erp_db",
+     "stable_key": "52a5a1033e5fc20a"
+    },
+    "type": "base",
+    "unit": "inr",
+    "variant": "export"
+   },
+   "export_share": {
+    "breakdowns": [],
+    "components": [
+     "export_invoiced",
+     "invoiced_value"
+    ],
+    "definition_hash": "b4fc98c4977a1c5a",
+    "description": "Export net revenue ÷ net revenue",
+    "dialect": "duckdb",
+    "family": null,
+    "grain": "month",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "erp_db (MySQL)"
+    ],
+    "listed": true,
+    "name": "Export share",
+    "run_location": "joined in Othor AI from erp_db",
+    "source_label": "erp_db (MySQL) · derived",
+    "sources": [
+     "erp_db"
+    ],
+    "status": "active",
+    "type": "derived",
+    "unit": "percent",
+    "variant": null
+   },
+   "freight": {
+    "agg": "sum",
+    "breakdowns": [
+     "plant"
+    ],
+    "definition_hash": "481a751c8ff51936",
+    "description": "",
+    "dialect": "mysql",
+    "family": null,
+    "grain": "month",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "erp_db (MySQL)"
+    ],
+    "listed": false,
+    "name": "Freight expense",
+    "run_location": "runs in place on erp_db (MySQL) · read-only",
+    "scale": "1",
+    "source": "erp_db",
+    "source_id": "ac985f43-c786-4241-8757-bf86644479cc",
+    "source_label": "erp_db (MySQL)",
+    "sources": [
+     "erp_db"
+    ],
+    "status": "active",
+    "table": {
+     "name": "cost_ledger",
+     "schema": "erp_db",
+     "stable_key": "2729d40ac1c7607e"
+    },
+    "type": "base",
+    "unit": "inr",
+    "variant": null
+   },
+   "freight_per_metre": {
+    "breakdowns": [
+     "plant"
+    ],
+    "components": [
+     "freight",
+     "metres_dispatched"
+    ],
+    "definition_hash": "175675372be29064",
+    "description": "Freight expense (account 5210) ÷ metres dispatched",
+    "dialect": "duckdb",
+    "family": null,
+    "grain": "month",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "erp_db (MySQL)",
+     "sales_dw (PostgreSQL)"
+    ],
+    "listed": true,
+    "name": "Freight per metre",
+    "run_location": "joined in Othor AI from erp_db and sales_dw",
+    "source_label": "erp_db (MySQL) + sales_dw (PostgreSQL) · derived",
+    "sources": [
+     "erp_db",
+     "sales_dw"
+    ],
+    "status": "active",
+    "type": "derived",
+    "unit": "inr_per_metre",
+    "variant": null
+   },
+   "gross_margin_per_metre": {
+    "breakdowns": [
+     "plant"
+    ],
+    "components": [
+     "cogs",
+     "metres_dispatched",
+     "net_revenue"
+    ],
+    "definition_hash": "9f2077f7cfe4499f",
+    "description": "(Net revenue − cost of goods) ÷ metres dispatched, at every grain; by plant, credit notes and rebates are allocated to plants (rule)",
+    "dialect": "duckdb",
+    "family": null,
+    "grain": "week",
+    "headline": true,
+    "kind": "flow",
+    "labels": [
+     "erp_db (MySQL)",
+     "sales_dw (PostgreSQL)"
+    ],
+    "listed": true,
+    "name": "Gross margin per metre",
+    "run_location": "joined in Othor AI from erp_db and sales_dw",
+    "source_label": "erp_db (MySQL) + sales_dw (PostgreSQL) · derived",
+    "sources": [
+     "erp_db",
+     "sales_dw"
+    ],
+    "status": "active",
+    "type": "derived",
+    "unit": "inr_per_metre",
+    "variant": null
+   },
+   "invoiced_value": {
+    "agg": "sum",
+    "breakdowns": [
+     "customer",
+     "region",
+     "segment"
+    ],
+    "definition_hash": "27164c5731ef5e8b",
+    "description": "",
+    "dialect": "mysql",
+    "evidence": "SELECT\n  `t`.`invoice_no` AS `invoice_no`,\n  `t`.`invoice_date` AS `invoice_date`,\n  `t`.`net_amount` AS `net_amount`\nFROM `erp_db`.`invoices` AS `t`\nWHERE\n  `t`.`status` <> 'X' AND `t`.`invoice_date` >= CAST(:from AS DATE)\nORDER BY\n  `t`.`invoice_date` DESC\nLIMIT 50",
+    "family": "net_revenue",
+    "grain": "month",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "erp_db (MySQL)"
+    ],
+    "listed": false,
+    "name": "Invoiced value",
+    "run_location": "runs in place on erp_db (MySQL) · read-only",
+    "scale": "1",
+    "source": "erp_db",
+    "source_id": "ac985f43-c786-4241-8757-bf86644479cc",
+    "source_label": "erp_db (MySQL)",
+    "sources": [
+     "erp_db"
+    ],
+    "status": "active",
+    "table": {
+     "name": "invoices",
+     "schema": "erp_db",
+     "stable_key": "52a5a1033e5fc20a"
+    },
+    "type": "base",
+    "unit": "inr",
+    "variant": "invoiced"
+   },
+   "line_revenue": {
+    "agg": "sum",
+    "breakdowns": [
+     "plant",
+     "product_family"
+    ],
+    "definition_hash": "95f4d17301ec77c3",
+    "description": "",
+    "dialect": "mysql",
+    "family": "net_revenue",
+    "grain": "month",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "erp_db (MySQL)"
+    ],
+    "listed": false,
+    "name": "Invoiced line value",
+    "run_location": "runs in place on erp_db (MySQL) · read-only",
+    "scale": "1",
+    "source": "erp_db",
+    "source_id": "ac985f43-c786-4241-8757-bf86644479cc",
+    "source_label": "erp_db (MySQL)",
+    "sources": [
+     "erp_db"
+    ],
+    "status": "active",
+    "table": {
+     "name": "invoice_lines",
+     "schema": "erp_db",
+     "stable_key": "8045829ae45554af"
+    },
+    "type": "base",
+    "unit": "inr",
+    "variant": "by_plant"
+   },
+   "metres_dispatched": {
+    "agg": "sum",
+    "breakdowns": [
+     "plant"
+    ],
+    "definition_hash": "205baec1e265761a",
+    "description": "Metres from fact_dispatch, yards converted at Coimbatore",
+    "dialect": "postgres",
+    "evidence": "SELECT\n  \"t\".\"order_no\" AS \"order_no\",\n  \"t\".\"dispatch_date\" AS \"dispatch_date\",\n  \"t\".\"plant\" AS \"plant\",\n  \"t\".\"uom\" AS \"uom\"\nFROM \"sales_dw\".\"fact_dispatch\" AS \"t\"\nWHERE\n  \"t\".\"dispatch_date\" >= CAST(:from AS DATE)\nORDER BY\n  \"t\".\"dispatch_date\" DESC NULLS LAST\nLIMIT 50",
+    "family": null,
+    "grain": "day",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "sales_dw (PostgreSQL)"
+    ],
+    "listed": true,
+    "name": "Metres dispatched",
+    "run_location": "runs in place on sales_dw (PostgreSQL) · read-only",
+    "scale": "1",
+    "source": "sales_dw",
+    "source_id": "783e02ce-d561-4f58-bf6c-1e242354157f",
+    "source_label": "sales_dw (PostgreSQL)",
+    "sources": [
+     "sales_dw"
+    ],
+    "status": "active",
+    "table": {
+     "name": "fact_dispatch",
+     "schema": "sales_dw",
+     "stable_key": "d03b05c0f2cea7b2"
+    },
+    "type": "base",
+    "unit": "metres",
+    "variant": null
+   },
+   "mis_net_revenue": {
+    "agg": "sum",
+    "breakdowns": [],
+    "definition_hash": "273cbc23b4896e94",
+    "description": "",
+    "dialect": "duckdb",
+    "family": "net_revenue",
+    "grain": "week",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "Google Sheets · MIS-Weekly"
+    ],
+    "listed": false,
+    "name": "Net revenue (MIS)",
+    "run_location": "read from Google Sheets · MIS-Weekly",
+    "scale": "1",
+    "source": "MIS-Weekly",
+    "source_id": "1b99ce0a-9f26-4138-a648-dd65d89cf66e",
+    "source_label": "Google Sheets · MIS-Weekly",
+    "sources": [
+     "MIS-Weekly"
+    ],
+    "status": "active",
+    "table": {
+     "name": "Sales",
+     "schema": "MIS-Weekly",
+     "stable_key": "7d8342fc0518228a"
+    },
+    "type": "base",
+    "unit": "inr",
+    "variant": "mis"
+   },
+   "net_revenue": {
+    "breakdowns": [
+     "customer",
+     "plant",
+     "region",
+     "segment"
+    ],
+    "components": [
+     "credit_note_value",
+     "invoiced_value",
+     "line_revenue",
+     "rebates"
+    ],
+    "definition_hash": "0f76c1cdfdcc98b8",
+    "description": "Invoice value net of credit notes and GST, by invoice date",
+    "dialect": "duckdb",
+    "family": "net_revenue",
+    "grain": "month",
+    "headline": true,
+    "kind": "flow",
+    "labels": [
+     "erp_db (MySQL)"
+    ],
+    "listed": true,
+    "name": "Net revenue",
+    "run_location": "joined in Othor AI from erp_db",
+    "source_label": "erp_db (MySQL) · derived",
+    "sources": [
+     "erp_db"
+    ],
+    "status": "active",
+    "type": "derived",
+    "unit": "inr",
+    "variant": null
+   },
+   "order_book": {
+    "agg": "sum",
+    "breakdowns": [
+     "customer"
+    ],
+    "definition_hash": "6b87cfc10ae8bd6e",
+    "description": "Orders placed and not yet invoiced, as of each day (sales_dw)",
+    "dialect": "postgres",
+    "family": "orders",
+    "grain": "day",
+    "headline": false,
+    "kind": "snapshot",
+    "labels": [
+     "sales_dw (PostgreSQL)"
+    ],
+    "listed": false,
+    "name": "Order book",
+    "run_location": "runs in place on sales_dw (PostgreSQL) · read-only",
+    "scale": "1",
+    "source": "sales_dw",
+    "source_id": "783e02ce-d561-4f58-bf6c-1e242354157f",
+    "source_label": "sales_dw (PostgreSQL)",
+    "sources": [
+     "sales_dw"
+    ],
+    "status": "active",
+    "table": {
+     "name": "fact_order",
+     "schema": "sales_dw",
+     "stable_key": "2726f8b82a96b722"
+    },
+    "type": "base",
+    "unit": "inr",
+    "variant": "book"
+   },
+   "order_book_value": {
+    "description": "Open orders not yet invoiced, by confirmed stage",
+    "family": null,
+    "grain": "day",
+    "headline": false,
+    "kind": "snapshot",
+    "listed": true,
+    "name": "Order book value",
+    "needs": "Order tracker FY27 · Open orders (Google Sheets)",
+    "run_location": null,
+    "source_label": "Needs a source",
+    "status": "needs_source",
+    "unit": "inr",
+    "variant": null
+   },
+   "orders": {
+    "agg": "count",
+    "breakdowns": [
+     "customer",
+     "region"
+    ],
+    "definition_hash": "5900c1d3d340efa2",
+    "description": "Count and value of orders booked",
+    "dialect": "postgres",
+    "family": "orders",
+    "grain": "day",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "sales_dw (PostgreSQL)"
+    ],
+    "listed": true,
+    "name": "Orders",
+    "run_location": "runs in place on sales_dw (PostgreSQL) · read-only",
+    "scale": "1",
+    "source": "sales_dw",
+    "source_id": "783e02ce-d561-4f58-bf6c-1e242354157f",
+    "source_label": "sales_dw (PostgreSQL)",
+    "sources": [
+     "sales_dw"
+    ],
+    "status": "active",
+    "table": {
+     "name": "fact_order",
+     "schema": "sales_dw",
+     "stable_key": "2726f8b82a96b722"
+    },
+    "type": "base",
+    "unit": "count",
+    "variant": null
+   },
+   "orders_segment": {
+    "agg": "count",
+    "breakdowns": [
+     "segment"
+    ],
+    "definition_hash": "304226da9b3e5a44",
+    "description": "",
+    "dialect": "postgres",
+    "family": "orders",
+    "grain": "day",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "sales_dw (PostgreSQL)"
+    ],
+    "listed": false,
+    "name": "Orders by segment",
+    "run_location": "runs in place on sales_dw (PostgreSQL) · read-only",
+    "scale": "1",
+    "source": "sales_dw",
+    "source_id": "783e02ce-d561-4f58-bf6c-1e242354157f",
+    "source_label": "sales_dw (PostgreSQL)",
+    "sources": [
+     "sales_dw"
+    ],
+    "status": "active",
+    "table": {
+     "name": "fact_order",
+     "schema": "sales_dw",
+     "stable_key": "2726f8b82a96b722"
+    },
+    "type": "base",
+    "unit": "inr",
+    "variant": "count_segment"
+   },
+   "orders_value": {
+    "agg": "sum",
+    "breakdowns": [
+     "customer",
+     "region",
+     "segment"
+    ],
+    "definition_hash": "79a874d55b3074fc",
+    "description": "",
+    "dialect": "postgres",
+    "family": "orders",
+    "grain": "day",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "sales_dw (PostgreSQL)"
+    ],
+    "listed": false,
+    "name": "Order value",
+    "run_location": "runs in place on sales_dw (PostgreSQL) · read-only",
+    "scale": "1",
+    "source": "sales_dw",
+    "source_id": "783e02ce-d561-4f58-bf6c-1e242354157f",
+    "source_label": "sales_dw (PostgreSQL)",
+    "sources": [
+     "sales_dw"
+    ],
+    "status": "active",
+    "table": {
+     "name": "fact_order",
+     "schema": "sales_dw",
+     "stable_key": "2726f8b82a96b722"
+    },
+    "type": "base",
+    "unit": "inr",
+    "variant": "value"
+   },
+   "rebates": {
+    "agg": "sum",
+    "breakdowns": [
+     "customer",
+     "plant",
+     "region",
+     "segment"
+    ],
+    "definition_hash": "4d844f04a1804a64",
+    "description": "",
+    "dialect": "mysql",
+    "family": "net_revenue",
+    "grain": "month",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "erp_db (MySQL)"
+    ],
+    "listed": false,
+    "name": "Rebates",
+    "run_location": "runs in place on erp_db (MySQL) · read-only",
+    "scale": "1",
+    "source": "erp_db",
+    "source_id": "ac985f43-c786-4241-8757-bf86644479cc",
+    "source_label": "erp_db (MySQL)",
+    "sources": [
+     "erp_db"
+    ],
+    "status": "active",
+    "table": {
+     "name": "cost_ledger",
+     "schema": "erp_db",
+     "stable_key": "2729d40ac1c7607e"
+    },
+    "type": "base",
+    "unit": "inr",
+    "variant": "rebates"
+   },
+   "receivables_open": {
+    "agg": "sum",
+    "breakdowns": [
+     "customer",
+     "region"
+    ],
+    "definition_hash": "1ca3698a494edcbf",
+    "description": "",
+    "dialect": "mysql",
+    "family": "receivables",
+    "grain": "day",
+    "headline": false,
+    "kind": "snapshot",
+    "labels": [
+     "erp_db (MySQL)"
+    ],
+    "listed": false,
+    "name": "Open receivables",
+    "run_location": "runs in place on erp_db (MySQL) · read-only",
+    "scale": "1",
+    "source": "erp_db",
+    "source_id": "ac985f43-c786-4241-8757-bf86644479cc",
+    "source_label": "erp_db (MySQL)",
+    "sources": [
+     "erp_db"
+    ],
+    "status": "active",
+    "table": {
+     "name": "receivables",
+     "schema": "erp_db",
+     "stable_key": "a3bc4c0308a8d01b"
+    },
+    "type": "base",
+    "unit": "inr",
+    "variant": "open"
+   },
+   "receivables_over_60": {
+    "agg": "sum",
+    "breakdowns": [
+     "customer",
+     "region"
+    ],
+    "definition_hash": "695502cc935cdfb9",
+    "description": "Open invoices more than 60 days past due, ₹ and share",
+    "dialect": "mysql",
+    "family": "receivables",
+    "grain": "day",
+    "headline": true,
+    "kind": "snapshot",
+    "labels": [
+     "erp_db (MySQL)"
+    ],
+    "listed": true,
+    "name": "Receivables over 60 days",
+    "run_location": "runs in place on erp_db (MySQL) · read-only",
+    "scale": "1",
+    "source": "erp_db",
+    "source_id": "ac985f43-c786-4241-8757-bf86644479cc",
+    "source_label": "erp_db (MySQL)",
+    "sources": [
+     "erp_db"
+    ],
+    "status": "active",
+    "table": {
+     "name": "receivables",
+     "schema": "erp_db",
+     "stable_key": "a3bc4c0308a8d01b"
+    },
+    "type": "base",
+    "unit": "inr",
+    "variant": null
+   },
+   "receivables_share_over_60": {
+    "breakdowns": [],
+    "components": [
+     "receivables_open",
+     "receivables_over_60"
+    ],
+    "definition_hash": "a2650f8045e2d4e1",
+    "description": "",
+    "dialect": "duckdb",
+    "family": "receivables",
+    "grain": "day",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "erp_db (MySQL)"
+    ],
+    "listed": false,
+    "name": "Share over 60 days",
+    "run_location": "joined in Othor AI from erp_db",
+    "source_label": "erp_db (MySQL) · derived",
+    "sources": [
+     "erp_db"
+    ],
+    "status": "active",
+    "type": "derived",
+    "unit": "percent",
+    "variant": "share"
+   },
+   "returned_metres": {
+    "agg": "sum",
+    "breakdowns": [
+     "plant"
+    ],
+    "definition_hash": "9a7c2435c5817627",
+    "description": "",
+    "dialect": "postgres",
+    "family": null,
+    "grain": "month",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "sales_dw (PostgreSQL)"
+    ],
+    "listed": false,
+    "name": "Returned metres",
+    "run_location": "runs in place on sales_dw (PostgreSQL) · read-only",
+    "scale": "1",
+    "source": "sales_dw",
+    "source_id": "783e02ce-d561-4f58-bf6c-1e242354157f",
+    "source_label": "sales_dw (PostgreSQL)",
+    "sources": [
+     "sales_dw"
+    ],
+    "status": "active",
+    "table": {
+     "name": "fact_returns",
+     "schema": "sales_dw",
+     "stable_key": "f8709749c4714e8e"
+    },
+    "type": "base",
+    "unit": "metres",
+    "variant": null
+   },
+   "returns_rate": {
+    "breakdowns": [
+     "plant"
+    ],
+    "components": [
+     "metres_dispatched",
+     "returned_metres"
+    ],
+    "definition_hash": "f5968290b31f8c4b",
+    "description": "Returned metres ÷ dispatched metres",
+    "dialect": "duckdb",
+    "family": null,
+    "grain": "month",
+    "headline": false,
+    "kind": "flow",
+    "labels": [
+     "sales_dw (PostgreSQL)"
+    ],
+    "listed": true,
+    "name": "Returns rate",
+    "run_location": "joined in Othor AI from sales_dw",
+    "source_label": "sales_dw (PostgreSQL) · derived",
+    "sources": [
+     "sales_dw"
+    ],
+    "status": "active",
+    "type": "derived",
+    "unit": "percent",
+    "variant": null
+   },
+   "win_rate": {
+    "description": "Closed won ÷ closed deals",
+    "family": null,
+    "grain": "month",
+    "headline": false,
+    "kind": "flow",
+    "listed": true,
+    "name": "Win rate",
+    "needs": "Order tracker FY27 · Deals",
+    "run_location": null,
+    "source_label": "Needs a source",
+    "status": "needs_source",
+    "unit": "inr",
+    "variant": null
+   }
+  },
+  "owners": [
+   {
+    "areas": [
+     "Coimbatore",
+     "dispatch_time"
+    ],
+    "key": "arjun",
+    "name": "Aditya Naik",
+    "role": "Operations"
+   },
+   {
+    "areas": [
+     "cash_balance",
+     "collections",
+     "dispatch_invoice",
+     "dso",
+     "freight",
+     "freight_metres",
+     "mis_erp",
+     "net_revenue",
+     "receivables"
+    ],
+    "key": "lena",
+    "name": "Leela Tandon",
+    "role": "Head of Finance"
+   },
+   {
+    "areas": [
+     "average_order_value",
+     "customer",
+     "dispatch_invoice",
+     "missing_records",
+     "order_book",
+     "orders"
+    ],
+    "key": "priya",
+    "name": "Priya Menon",
+    "role": "Head of Sales"
+   }
+  ],
+  "probes": {
+   "entities": {
+    "customer": {
+     "active_values": [
+      "active"
+     ],
+     "metric": "invoiced_value",
+     "source": "erp_db"
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,28 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/onboarding.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% from "components/sources.html" import scan_label %}
+{% block title %}Connect Google Sheets · Set up {{ company.name }}{% endblock %}
+{% block main %}
+<h1>Connect Google Sheets</h1>
+{% call el("p", "lede") %}Source {{ fmt.num(source_no) }} · read-only · only the spreadsheets and tabs you pick{% endcall %}
+<div class="grid grid-cols-1 md:grid-cols-13 gap-16 mt-24 items-start">
+  <div class="md:col-span-8">{% set setup = True %}{% include "sources/_sheets_body.html" %}</div>
+  {% call el('aside', 'card board', layout='md:col-span-5 flex flex-col gap-8') %}
+    {% call el("p", "section-title") %}What Othor AI checks in a sheet{% endcall %}
+    <p>Title rows above the header</p><p>Merged cells, filled down</p><p>Total and subtotal rows, left out</p>
+    <p>Blank columns and notes beside the table</p><p>Units in the header, like “Value (₹ L)”</p><p>Dates in more than one format</p>
+    {% call el("p", "hint") %}You confirm the header and range once per tab.{% endcall %}
+  {% endcall %}
+</div>
+{% call el('div', 'onb-foot') %}
+  {% call el('a', 'link-u', attrs='href="/setup/sources/new"') %}Back{% endcall %}
+  <span class="flex items-center gap-16">
+  {% if not (src and rows) %}{% call el('span', 'hint') %}Pick a spreadsheet to continue{% endcall %}{% elif not selected %}{% call el('span', 'hint') %}Tick at least one tab{% endcall %}{% endif %}
+  {% if src and rows %}{% call el('button', 'btn primary lg', attrs={'type': 'submit', 'form': 'tabs-form', 'disabled': ((not selected) and true or none)}) %}{{ scan_label(to_check, selected) }}{% endcall %}
+  {% else %}{% call el('button', 'btn primary lg', attrs='type="button" disabled') %}Connect and scan{% endcall %}{% endif %}
+  </span>
+{% endcall %}
+{% if mode == "google" %}{% include "sources/_picker_google.html" %}{% endif %}
+{% endblock %}

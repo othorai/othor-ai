@@ -1,0 +1,111 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/forms.html" import chip %}{% from "components/buttons.html" import button %}
+{# 10r · Manage panel (680 px): tabs Overview · Connection · Tables · Sync (URL state), footer
+   pinned on every tab: Pause reading and Disconnect… on the left, Done on the right. #}
+{% set base = "/sources?panel=manage&s=" ~ sel.src.id %}
+{% set used = tl.rows | selectattr("t.use", "in", ["metric_source", "dimension"]) | map(attribute="t.name") | list %}
+{% set unit = "tabs" if sel.src.kind == "gsheets" else "tables" %}
+{% set mtabs = [] %}{% for key, label in manage_tabs.items() %}{% set _ = mtabs.append((label, base ~ "&tab=" ~ key)) %}{% endfor %}
+{% macro csrf_form(action) -%}<form method="post" action="/sources/{{ sel.src.id }}/action/{{ action }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ caller() }}</form>{%- endmacro %}
+
+{# rows shared by the Overview summaries and the full tabs #}
+{% macro connection_rows(full) -%}
+{% call el('dl', 'kv') %}
+{% if sel.src.kind == "gsheets" %}
+  <dt>Signed in as</dt><dd>{{ sel.src.config.account }}</dd>
+  <dt>Spreadsheets</dt><dd>{% for f in sel.src.config.files %}{{ f.title or f.id }}{% if not loop.last %}, {% endif %}{% endfor %}</dd>
+  {% if full %}<dt>Access</dt><dd>Google Sheets API · drive.file · only the files you picked</dd>{% endif %}
+{% else %}
+  <dt>Host</dt><dd>{{ sel.src.config.host }}:{{ sel.src.config.port }} · SSL {{ sel.src.config.ssl }}</dd>
+  <dt>User</dt><dd>{{ sel.src.config.user }}{% if sel.src.last_test and sel.src.last_test.ok %} · read-only verified{% endif %}</dd>
+  <dt>Reachable</dt><dd>{% if sel.src.last_test and sel.src.last_test.latency_ms is not none %}{{ fmt.num(sel.src.last_test.latency_ms) }} ms{% elif sel.src.last_test and sel.src.last_test.message %}{{ sel.src.last_test.message }}{% else %}–{% endif %}</dd>
+  {% if full %}<dt>Database</dt><dd>{{ sel.src.config.database }}{% if sel.src.config.schemas %} · {{ sel.src.config.schemas | join(", ") }}{% endif %}</dd>
+  <dt>Password</dt><dd>Encrypted, never shown back</dd>{% endif %}
+{% endif %}
+{% endcall %}
+{%- endmacro %}
+{% macro tables_rows(full) -%}
+{% call el('dl', 'kv') %}
+  <dt>Used</dt><dd>{% if full %}{{ used | join(", ") or "–" }}{% else %}{{ used[:6] | join(", ") or "–" }}{% if used | length > 6 %} and {{ fmt.num(used | length - 6) }} more{% endif %}{% endif %}</dd>
+  {% if full %}<dt>Ignored</dt><dd>{{ fmt.num(sel.ignored) }}</dd><dt>Excluded</dt><dd>{{ fmt.num(sel.excluded) }} · personal data, never read</dd>{% endif %}
+  <dt>Changed since scan</dt><dd>{% if sel.src.schema_change and not sel.src.schema_change.acknowledged %}The schema changed on {{ sel.src.schema_change.at[:10] }}{% else %}Nothing{% endif %}</dd>
+{% endcall %}
+{%- endmacro %}
+{% macro sync_rows(full) -%}
+{% call el('dl', 'kv') %}
+  <dt>Schedule</dt><dd>Nightly {{ fmt.clock(run_time) }} · before the {{ fmt.clock(company.brief_time) }} briefs</dd>
+  <dt>Mode</dt><dd>{{ "Whole tab each night" if sel.src.kind == "gsheets" else "Incremental by a date column where the scan found one" }}</dd>
+  <dt>Last 7 nights</dt><dd>{% if sel.src.health and sel.src.health.last_read %}last read {{ fmt.num(sel.src.health.last_read.rows) }} rows{% else %}No nightly reads yet{% endif %}</dd>
+  {% if full %}<dt>Reading</dt><dd>{{ "Paused" if sel.src.status == "paused" else "On" }}</dd>{% endif %}
+{% endcall %}
+{%- endmacro %}
+
+{% call(part) side_panel(kn[sel.src.kind] ~ " · " ~ (sel.src.config.database if sel.src.kind != "gsheets" else sel.title), ("Connected " ~ fmt.day_month(sel.src.connected_at.date()) if sel.src.connected_at else ("Connected" if sel.src.status in ("connected", "paused", "disconnected") or sel.src.last_read_at else "Not connected yet")) ~ (" by " ~ sel.connected_by if sel.connected_by else "") ~ " · read-only", sel.tile, "/sources?s=" ~ sel.src.id, tabs=mtabs, tab=manage_tabs[mtab]) %}
+{% if part == "body" %}
+  {% if mtab == "overview" %}
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+    {% call el("div", "stat") %}{% call el("p", "v") %}{{ sel.status[0] }}{% endcall %}{% call el("p", "hint") %}{% if sel.src.last_read_at %}last read {{ sel.last_read }}{% if sel.src.health and sel.src.health.last_read %} · {{ fmt.num(sel.src.health.last_read.rows) }} rows{% endif %}{% else %}at {{ fmt.clock(run_time) }}, then nightly{% endif %}{% endcall %}{% endcall %}
+    {% call el("div", "stat") %}{% call el("p", "v") %}{{ fmt.num(sel.tables_used) }} {{ unit }}{% endcall %}{% call el("p", "hint") %}used · {{ fmt.num(sel.ignored) }} ignored · {{ fmt.num(sel.excluded) }} excluded{% endcall %}{% endcall %}
+    {% call el("div", "stat") %}{% if sel.feeds %}{% call el("p", "v") %}{{ fmt.num(sel.feeds | length) }} number{{ "s" if sel.feeds | length != 1 else "" }}{% endcall %}{% call el("p", "hint") %}computed from it{% if sel.briefs %} · {{ fmt.num(sel.briefs | length) }} brief{{ "s" if sel.briefs | length != 1 else "" }}{% endif %}{% endcall %}{% else %}{% call el("p", "v") %}No numbers yet{% endcall %}{% call el("p", "hint") %}computed from it once metrics are confirmed{% endcall %}{% endif %}{% endcall %}
+  </div>
+  {# moved from the docked summary (owner, 12 Nov 2026: the panel opens only from Manage) #}
+  {% if sel.feeds %}
+  {% call el("p", "label-caps") %}Numbers it feeds · {{ fmt.num(sel.feeds | length) }}{% endcall %}
+  {% call el("div", "card flush") %}{% for f in sel.feeds %}{% call el("div", "trow", layout="justify-between") %}<span>{{ f }}</span>{{ chip("confirmed", dot="ok") }}{% endcall %}{% endfor %}{% endcall %}
+  {% endif %}
+      {% if matches.rows %}
+      {% call el("p", "hint") %}Matched with your other sources · {{ fmt.num(matches.rows | length) }}{% endcall %}
+      {% call el("div", "card flush found") %}{% for m in matches.rows %}{% call el("div", "found-row") %}{% call el("span", "chip soft") %}Match{% endcall %}
+        <div class="flex-1 min-w-0 flex flex-col gap-4"><p>{{ m.text }}</p>
+          {% if m.unmatched %}{% call el("p", "hint") %}{{ fmt.num(m.unmatched) }} not matched{% if m.examples %}: {{ m.examples[:5] | join(", ") }}{% if m.unmatched > 5 %} and {{ fmt.num(m.unmatched - 5) }} more{% endif %}{% endif %}{% endcall %}{% endif %}
+          {% if m.ambiguous_count %}{% call el("p", "hint") %}{{ fmt.num(m.ambiguous_count) }} ambiguous, left out: {% for a in m.ambiguous[:3] %}{{ a[0] }} ({{ a[1] | join(" or ") }}){{ ", " if not loop.last else "" }}{% endfor %}{% endcall %}{% endif %}
+          {% if m.joined %}{% call el("p", "hint") %}Already joined in your Ontology{% endcall %}{% endif %}
+        </div>{% endcall %}{% endfor %}{% endcall %}
+      {% endif %}
+      {% if matches.proposal %}{% set pr = matches.proposal %}
+      {% call el("div", "card flush found") %}
+        {% call el("div", "found-row") %}{% call el("span", "chip soft") %}Proposal{% endcall %}{% call el("p", "strong") %}{{ pr.text }}{% endcall %}
+          {% if pr.open > 1 %}<form method="post" action="/sources/{{ sel.src.id }}/proposals/{{ pr.id }}/accept" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Accept all", kind="primary", type="submit", size="sm") }}</form>{% endif %}{% endcall %}
+        {% for x in pr.tabs %}{% call el("div", "found-row") %}<span></span><p class="flex-1 min-w-0">{{ x.line }}</p>
+          {% if x.status == "open" %}<div class="flex items-center gap-8">
+            <form method="post" action="/sources/{{ sel.src.id }}/proposals/{{ pr.id }}/accept?tab={{ x.key | urlencode }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Accept", type="submit", size="sm") }}</form>
+            <form method="post" action="/sources/{{ sel.src.id }}/proposals/{{ pr.id }}/decline?tab={{ x.key | urlencode }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Decline", type="submit", size="sm") }}</form></div>
+          {% else %}{% call el("span", "hint") %}{{ x.status | capitalize }}{% endcall %}{% endif %}{% endcall %}{% endfor %}
+      {% endcall %}
+      {% endif %}
+  {% call el("p", "label-caps") %}Connection{% endcall %}
+  {{ connection_rows(False) }}
+  <div class="flex items-center gap-8">{% if sel.src.kind != "gsheets" %}{{ button("Edit credentials", href="/sources?panel=connect&kind=" ~ sel.src.kind ~ "&sid=" ~ sel.src.id) }}{% call csrf_form("test") %}{{ button("Test connection", type="submit") }}{% endcall %}{% else %}{{ button("Reconnect", href="/sources?panel=reconnect&s=" ~ sel.src.id) }}{% endif %}</div>
+  {% call el("div", "rule") %}{% endcall %}
+  {% call el("p", "label-caps") %}Tables{% endcall %}
+  {{ tables_rows(False) }}
+  <div class="flex items-center gap-8">{{ button("Change tables", href="/sources?panel=tables&s=" ~ sel.src.id) }}{% if sel.src.kind == "postgres" %}{{ button("Schemas", href="/sources?panel=schemas&s=" ~ sel.src.id) }}{% endif %}</div>
+  {% call el("div", "rule") %}{% endcall %}
+  {% call el("p", "label-caps") %}Sync{% endcall %}
+  {{ sync_rows(False) }}
+  <div>{% call csrf_form("read") %}{{ button("Read now", type="submit") }}{% endcall %}</div>
+  {% elif mtab == "connection" %}
+  {{ connection_rows(True) }}
+  <div class="flex items-center gap-8">{% if sel.src.kind != "gsheets" %}{{ button("Edit credentials", href="/sources?panel=connect&kind=" ~ sel.src.kind ~ "&sid=" ~ sel.src.id) }}{% call csrf_form("test") %}{{ button("Test connection", type="submit") }}{% endcall %}{% else %}{{ button("Reconnect", href="/sources?panel=reconnect&s=" ~ sel.src.id) }}{% endif %}</div>
+  {% elif mtab == "tables" %}
+  {{ tables_rows(True) }}
+  <div class="flex items-center gap-8">{{ button("Change tables", href="/sources?panel=tables&s=" ~ sel.src.id) }}{% if sel.src.kind == "postgres" %}{{ button("Schemas", href="/sources?panel=schemas&s=" ~ sel.src.id) }}{% endif %}{% call csrf_form("rescan") %}{{ button("Re-scan", type="submit") }}{% endcall %}</div>
+  {% else %}
+  {{ sync_rows(True) }}
+  <div>{% call csrf_form("read") %}{{ button("Read now", type="submit") }}{% endcall %}</div>
+  {% endif %}
+{% elif confirm == "disconnect" %}
+  {# #25: the question sits in the footer, where Disconnect… was clicked, never below the fold #}
+  {% call el('div', 'callout err', layout='flex flex-col gap-8 w-full', attrs={'id': 'disconnect', 'role': 'alertdialog', 'aria-label': 'Disconnect ' ~ (sel.title)}) %}
+    <p><b>Disconnect {{ sel.title }}?</b> Credentials are deleted; scan history and events are kept. {% if sel.feeds %}{{ fmt.num(sel.feeds | length) }} number{{ "s" if sel.feeds | length != 1 else "" }}{% if sel.briefs %} in {{ fmt.num(sel.briefs | length) }} brief{{ "s" if sel.briefs | length != 1 else "" }}{% endif %} will need a source.{% else %}No numbers or briefs use this source yet.{% endif %}</p>
+    <div class="flex items-center gap-8">{% call csrf_form("disconnect") %}{{ button("Disconnect", "danger", type="submit") }}{% endcall %}{{ button("Keep it", href=base ~ "&tab=" ~ mtab) }}</div>
+  {% endcall %}
+{% else %}
+  <span class="flex items-center gap-16">
+    {% call csrf_form("resume" if sel.src.status == "paused" else "pause") %}{% call el('button', 'link-u', attrs='type="submit"') %}{{ "Resume reading" if sel.src.status == "paused" else "Pause reading" }}{% endcall %}{% endcall %}
+    {% call el('a', 'link-u neg-text', attrs={'href': (base) ~ '&tab=' ~ (mtab) ~ '&confirm=disconnect#disconnect'}) %}Disconnect…{% endcall %}
+  </span>
+  {{ button("Done", "primary", href="/sources?s=" ~ sel.src.id) }}
+{% endif %}
+{% endcall %}

@@ -1,0 +1,73 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% from "components/panels.html" import pane, pane_title %}
+{% from "components/forms.html" import action_form %}
+{% from "components/home.html" import qp_steps, qp_pick, qp_nav %}
+{% from "components/brief.html" import nb_busy %}
+{% from "components/ontology.html" import record_card %}
+{# Check 2 of 3 · Decisions (#32): one decision per screen, in the questions panel's style
+   (docs/plans/questions-panel.md): "Decision 2 of 6 · 1 decided" and its segments, Back · Next
+   (Next only moves; Done on the last closes the panel). Each answer is saved as it's made, in
+   place, and the panel moves on to the next one still open; set-aside ones count as decided.
+   No option is preselected (owner, 8 Nov); the values are computed. #}
+{% set p = panel.view %}
+{% set here = "/setup/metrics?panel=decisions&d=" ~ (p.x.key if not p.empty else "") %}
+{% set back_next = "/setup/metrics?panel=decisions" %}
+{{ el('a', 'scrim', attrs={'href': '/setup/metrics', 'aria-label': 'Close'}) }}
+{% call el("aside", "panel chat", attrs={"aria-label": "Things only you can decide"}) %}
+{% call(part) pane("nb qp") %}
+{% if part == "head" %}
+  {{ pane_title("Nothing to decide" if p.empty else "Things only you can decide", "Your files and sources agree." if p.empty else "Only a disagreement between your files and sources blocks your first run.", "/setup/metrics", kicker="Check 2 of 3") }}
+  {% if not p.empty %}{{ qp_steps(p.at, p.total, p.decided, p.segs, noun="Decision", done="decided") }}{% endif %}
+{% elif part == "body" %}
+{% if p.empty %}
+  {% call el("p", "nb-lede") %}Nothing needs your answer.{% endcall %}
+{% else %}{% set x = p.x %}
+{% call el("div", layout="flex flex-col gap-24") %}
+  {% call el("div", layout="flex flex-col gap-12") %}
+    {% call el("p", "dec-k") %}{{ x.name }}{% if x.grain %} · {{ x.grain }}{% endif %} · {% call el("b") %}{{ "Required" if x.required else "Optional" }}{% endcall %}{% endcall %}
+    {% call el("h2", "nb-q", attrs={"id": "dp-q"}) %}{{ x.ask or x.question }}{% endcall %}
+    {% if x.open and x.kind == "conflict" %}{% call el("p", "nb-lede") %}{{ x.question }} The brief uses the one you pick.{% endcall %}
+    {% elif x.open and x.why %}{% call el("p", "nb-lede") %}{{ x.why }}{% endcall %}{% endif %}
+  {% endcall %}
+  {% if not x.open %}
+    {% call record_card(None, "", x.done, [x.note] if x.note else [], kicker="Set aside" if x.kind == "set_aside" else "You decided", title=None) %}
+      {% if x.change %}{% call action_form("/setup/metrics/" ~ x.key ~ "/reopen", csrf_token) %}{{ button(x.change, size="sm", type="submit") }}{% endcall %}{% endif %}
+    {% endcall %}
+  {% elif x.kind in ("conflict", "changed") %}
+  {% call action_form("/setup/metrics/decide", csrf_token, "qp-form", "flex flex-col gap-16") %}
+    <input type="hidden" name="d" value="{{ x.key }}">
+    {% if drafting %}{% call el("p", "nb-reply", attrs={"role": "status", "hx-get": here, "hx-trigger": "every 2s", "hx-select": "#overlay", "hx-target": "#overlay", "hx-swap": "outerHTML"}) %}Computing values. You can decide this in a moment.{% endcall %}{% endif %}
+    {% call el("fieldset", "qp-picks", layout="flex flex-col gap-8", attrs={"aria-labelledby": "dp-q"}) %}
+      {% call el("legend", "nb-label") %}Your answer{% endcall %}
+      {% if x.kind == "conflict" %}
+        {% for o in x.options %}{{ qp_pick("choice:" ~ x.key, o.id, o.label, sub=o.sub, aside=o.value, required=True) }}{% endfor %}
+      {% else %}
+        {{ qp_pick("changed:" ~ x.key, "accept", "Use the redrafted one", sub=x.after, required=True) }}
+        {{ qp_pick("changed:" ~ x.key, "reject", "Keep mine", sub=x.before, required=True) }}
+      {% endif %}
+    {% endcall %}
+    {% call el("div", layout="flex items-center gap-16 flex-wrap") %}
+      {{ nb_busy("Saving your answer…") }}
+      {% call el("span", layout="flex-1") %}{% endcall %}
+      {{ button("Use this answer", kind="primary nb-go", type="submit", disabled=drafting, attrs={"data-busy": "Saving…", "data-busy-say": "Saving your answer…"}) }}
+    {% endcall %}
+  {% endcall %}
+  {% else %}
+  {% call el("div", layout="flex items-center gap-16 flex-wrap") %}
+    {% call el("span", layout="flex-1") %}{% endcall %}
+    {% call action_form("/setup/metrics/" ~ x.key ~ "/skip", csrf_token) %}<input type="hidden" name="next" value="{{ back_next }}">{% call el("button", "nb-cancel", attrs={"type": "submit"}) %}Set aside for now{% endcall %}{% endcall %}
+    {% if x.kind == "needs_source" %}
+      {% if x.connect %}{{ button(x.connect[0], kind="primary nb-go", href=x.connect[1]) }}{% else %}{{ button(x.where_label or "Where is it?", kind="primary nb-go", href=x.where) }}{% endif %}
+    {% else %}
+      {% call action_form("/setup/metrics/" ~ x.key ~ "/without-personal", csrf_token) %}<input type="hidden" name="next" value="{{ back_next }}">{{ button("Use without personal columns", kind="primary nb-go", type="submit") }}{% endcall %}
+    {% endif %}
+  {% endcall %}
+  {% endif %}
+{% endcall %}
+{% endif %}
+{% else %}{% call el("div", layout="flex flex-col gap-12 w-full") %}{% if not p.empty %}{{ qp_nav(p.back, p.next, done="/setup/metrics", label="Decisions") }}{% endif %}{% endcall %}
+{% endif %}
+{% endcall %}
+{% endcall %}

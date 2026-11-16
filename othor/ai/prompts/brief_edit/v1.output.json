@@ -1,0 +1,17 @@
+{
+  "type": "object",
+  "properties": {
+    "name": {"type": "string"},
+    "question": {"type": "string"},
+    "add_headline": {"type": "array", "items": {"type": "string"}},
+    "remove_headline": {"type": "array", "items": {"type": "string"}},
+    "exclude": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string"}}},
+    "include": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string"}}},
+    "ask_owner": {"type": "string"},
+    "schedule": {"type": "string"},
+    "email_format": {"type": "string"},
+    "reply": {"type": "string"}
+  },
+  "required": ["reply"],
+  "additionalProperties": false
+}

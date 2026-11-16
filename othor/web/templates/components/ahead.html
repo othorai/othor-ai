@@ -1,0 +1,41 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{#- v0.19 (M19.4) · What's ahead: one row per headline number, after the findings. Plain words on
+   the surface (a sentence, a small chart, how sure); the method and the range behind
+   "How this forecast was made", in place. rows: the issue body's `ahead`. -#}
+{#- 16 Nov 2026 (owner): each row also shows Big Picture's forecast card (expected, likely range,
+   goal, how likely), with the line chart beside it, its likely range in the same cyan. -#}
+{% macro whats_ahead(rows, note=none) -%}
+{% if rows %}
+<section class="ahead" aria-label="What's ahead">
+  <p class="caps-title">What’s ahead</p>
+  <div class="ahead-rows">
+  {% for r in rows %}
+    <div class="ahead-row" id="ahead-{{ r.metric }}">
+      <div class="ahead-text">
+        <p class="ahead-says"><b>{{ r.name }}</b>{% if r.says %}: {{ r.says }}{% else %}: <span class="ahead-why">{{ r.why }}</span>{% endif %}</p>
+        {% if r.confidence %}<p class="ahead-conf"><span class="conf conf-{{ r.confidence.level }}">{{ r.confidence.word }}</span> {{ r.confidence.why }}</p>{% endif %}
+        {% if r.depth %}<details class="ahead-depth"><summary>How this forecast was made</summary>
+          <ul>
+            {% for k in ("method", "range", "last", "changed") %}{% if r.depth[k] %}<li>{{ r.depth[k] }}</li>{% endif %}{% endfor %}
+            {% if r.depth.parts %}<li>What drives it: {{ r.depth.parts | join(" · ") }}</li>{% endif %}
+          </ul>
+          {% if r.depth.technical %}<p class="ahead-tech">{{ r.depth.technical }}</p>{% endif %}
+          <p class="ahead-learn"><a class="link" href="{{ install.help_url }}/learn/forecasts" target="_blank" rel="noopener">How Othor AI forecasts →</a></p>
+        </details>{% endif %}
+      </div>
+      {% if r.card or r.chart %}<div class="ahead-visual">
+        {% if r.card %}{% set c = r.card %}<div class="ahead-card">
+          <span class="bp-forecast-label">{{ c.label }}</span>
+          <div class="bp-forecast-value"><span class="bp-big">{{ c.expected }}</span><span class="bp-muted">expected</span></div>
+          <div class="bp-range">{{ forecast_range(c) }}</div>
+          {% if c.verdict %}<p class="bp-verdict"><strong class="tone-{{ c.tone }}">{{ c.verdict }}</strong></p>{% endif %}
+        </div>{% endif %}
+        {% if r.chart %}<div class="ahead-chart" role="img" aria-label="{{ r.name }}">{{ stored_chart(r.chart, 360, 150) }}</div>{% endif %}
+      </div>{% endif %}
+    </div>
+  {% endfor %}
+  </div>
+  {% if note %}<p class="ahead-note">{{ note }}</p>{% endif %}
+</section>
+{% endif %}
+{%- endmacro %}

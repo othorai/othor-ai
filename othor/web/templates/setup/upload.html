@@ -1,0 +1,36 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/onboarding.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% from "components/icons.html" import icon %}
+{% block title %}Upload · Set up {{ company.name }}{% endblock %}
+{% block width %} col{% endblock %}
+{# M11c (2b): no files · a large drop zone, "Works best with" and the no-files line; with files ·
+   the list first, then a one-line drop zone (CSS on .upload:has(.file-row), no reload). #}
+{% block main %}
+<h1>Upload what you already have.</h1>
+{% call el("p", "lede") %}Your answers are drafted from these files.{% endcall %}
+{% call el("div", "upload", layout="mt-24") %}
+{% include "setup/_files.html" %}
+{% call el('form', 'drop', attrs='method="post" action="/setup/upload/files" enctype="multipart/form-data"\n  hx-post="/setup/upload/files" hx-encoding="multipart/form-data" hx-target="#files" hx-swap="outerHTML"') %}
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  {{ el('input', 'drop-input', attrs='id="f-files" type="file" name="files" multiple data-autosubmit aria-label="Choose files"\n    accept=".xlsx,.xlsm,.csv,.sql,.pdf,.docx,.png,.jpg,.jpeg,.webp,.txt,.md"') }}
+  {% call el('div', 'drop-body') %}
+    {{ icon("upload") }}
+    {% call el('p', 'drop-t') %}{% call el("span", "first") %}Upload your files{% endcall %}{% call el("span", "more") %}Upload more files{% endcall %}{% endcall %}
+    {% call el("label", "btn lg drop-browse", attrs='for="f-files"') %}Browse files{% endcall %}
+  {% endcall %}
+  <noscript>{% call el('button', 'btn', layout='mt-16', attrs='type="submit"') %}Upload{% endcall %}</noscript>
+{% endcall %}
+{% call el("div", "up-kinds") %}
+  {% call el("p", "hint") %}Works best with{% endcall %}
+  {% call el("div", "up-chips") %}{% for k in ["Dashboard screenshot", "Weekly MIS or Excel", "Board deck", "SQL or a report"] %}{% call el("span", "chip lg") %}{{ k }}{% endcall %}{% endfor %}{% endcall %}
+{% endcall %}
+{% call el("p", "up-nofiles") %}No files? Just continue — you’ll answer a few questions instead.{% endcall %}
+{% endcall %}
+{% call el('form', 'onb-foot', attrs='method="post" action="/setup/upload/continue"') %}
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  {% call el('a', 'link-u', attrs='href="/setup/company"') %}Back{% endcall %}
+  {{ button("Continue", "primary", "lg", type="submit") }}
+{% endcall %}
+{% endblock %}

@@ -1,0 +1,18 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* Element defaults (the base layer): box sizing, body type with tabular numbers, headings,
+   links, focus. Components and screens style on top of these. */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; }
+body { font-family: var(--font-sans); color: var(--color-ink); background: var(--color-bg); font-size: var(--text-14);
+  -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+h1 { font-size: var(--text-20); font-weight: var(--font-weight-semibold); }
+h2 { font-size: var(--text-16); }
+h3 { font-size: var(--text-14); }
+p { margin: 0; }
+input, select, textarea, button { font-family: inherit; font-size: var(--text-13); color: var(--color-ink); }
+a { color: var(--color-ink); }
+a:hover { color: var(--color-accent-deep); }
+:focus:not(:focus-visible) { outline: none; }
+/* keyboard focus is always visible (M11a); components with their own ring turn this off */
+:focus-visible { outline: 2px solid var(--color-accent-deep); outline-offset: 2px; }

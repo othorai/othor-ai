@@ -1,0 +1,6 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/forms.html" import select %}
+<div id="form-columns" class="grid grid-cols-1 md:grid-cols-2 gap-12">
+  {{ select("column", panel.cols, panel.vals.column, label="Column") }}
+  {{ select("date", panel.dates, panel.vals.date, label="Date column") }}
+</div>

@@ -1,0 +1,20 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{#- Settings › Licence (M20.3): the enterprise licence, and a key pasted in place. -#}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% from "components/forms.html" import text_area %}
+{% set L = licence %}
+{% call el('section', 'section lines', attrs={"id": "licence"}) %}
+  {% call el("div", "section-head") %}Licence{% endcall %}
+  {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}{% if L.st.state in ("valid", "grace") %}{{ L.st.customer }} · {{ L.st.edition | capitalize }}{% elif L.st.state == "expired" %}Expired{% elif L.st.state == "invalid" %}Not valid{% else %}No licence{% endif %}{% endcall %}
+    {% call el('p', 'sub') %}{% if L.st.state == "valid" %}{{ ("Until " ~ fmt.day_month_year(L.st.expires)) if L.st.expires else "No end date" }}{% elif L.st.state == "grace" %}Expired · {{ fmt.num(L.st.grace_left) }} days to renew{% elif L.st.state == "expired" %}Existing companies keep working; no new ones until it's renewed{% elif L.st.state == "invalid" %}{{ L.st.reason }}{% else %}Enterprise features are off{% endif %}{% if L.features %} · {{ L.features | join(", ") }}{% endif %}{% endcall %}</div>{% endcall %}
+  {% if L.from_env %}
+  {% call el('div', 'section-row') %}{% call el('p', 'sub') %}Set by the server (OTHOR_LICENCE).{% endcall %}{% endcall %}
+  {% else %}
+  {% call el("form", layout="flex flex-col gap-8", attrs={"hx-post": "/settings/licence", "hx-target": "#licence", "hx-swap": "outerHTML"}) %}
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    {{ text_area("key", "Paste a new licence key", "", placeholder="othor-licence-v1.…", rows=2, error=L.error or None, attrs='autocomplete="off" spellcheck="false"') }}
+    {% call el("div", layout="flex items-center gap-8") %}{{ button("Save the key", "primary", "sm", type="submit") }}{% if L.saved %}{% call el("p", "hint", attrs='role="status"') %}Saved{% endcall %}{% endif %}{% endcall %}
+  {% endcall %}
+  {% endif %}
+{% endcall %}

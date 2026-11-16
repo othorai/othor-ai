@@ -1,0 +1,10 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/auth.html" %}
+{% from "components/buttons.html" import button %}
+{% from "components/forms.html" import code_boxes %}
+{% from "components/blocks.html" import callout %}
+{% block title %}Enter the code · Othor AI{% endblock %}
+{% block auth_class %} roomy signin{% endblock %}
+{% block card %}
+{% include "partials/code_card.html" %}
+{% endblock %}

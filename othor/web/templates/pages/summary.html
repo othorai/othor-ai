@@ -1,0 +1,10 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/app.html" %}
+{% from "components/blocks.html" import page_title %}
+{% from "components/summary.html" import summary_controls, summary_body %}
+{% block title %}Summary · {{ company.name }}{% endblock %}
+{% block crumb %}Summary{% endblock %}
+{% block main %}
+{% call page_title("Summary", aside=sm.as_of) %}{{ summary_controls(sm, csrf_token) }}{% endcall %}
+{{ summary_body(sm, csrf_token) }}
+{% endblock %}

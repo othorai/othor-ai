@@ -1,0 +1,15 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/panels.html" import side_panel %}
+{% call(part) side_panel(panel.type, "What we found in your data", close="/setup/metrics") %}
+{% if part == "body" %}
+<p>{{ panel.text }}</p>
+{% call el("p", "hint") %}Found by a rule on your sources: the numbers in this sentence are computed. If you keep it, it is saved to your Ontology at Confirm.{% endcall %}
+{% else %}
+{% call el('a', 'btn', attrs='href="/setup/metrics"') %}Back{% endcall %}
+<form method="post" action="/setup/metrics/found/{{ panel.key }}/{{ 'keep' if panel.skipped else 'skip' }}" data-inplace>
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  {% call el('button', 'btn' ~ ((' primary' if panel.skipped else '') | string | e), attrs='type="submit"') %}{{ "Use this" if panel.skipped else "Don’t use this" }}{% endcall %}
+</form>
+{% endif %}
+{% endcall %}

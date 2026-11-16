@@ -1,0 +1,3 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/big_picture.html" import bp_report, bp_unavailable, bp_head_actions %}
+{% if report %}{{ bp_report(report) }}{{ bp_head_actions({"report": report, "extended": extended | default(false), "oob": true}, csrf_token, "/home") }}{% else %}{{ bp_unavailable() }}{% endif %}

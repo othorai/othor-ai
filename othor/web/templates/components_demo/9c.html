@@ -1,0 +1,70 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "base.html" %}
+{% from "components/tags.html" import state_tag, change_tag %}
+{% from "components/blocks.html" import chart_card, records, ask_today, why_unseen, watching, toast %}
+{% from "components/panels.html" import msg_user, msg_ai %}
+{% block title %}9c · Charts and data styles{% endblock %}
+{% block body %}
+<div class="board-page flex flex-col gap-16">
+  <div><h1 class="board-title">Charts and data styles</h1><p class="board-sub">Used by the brief, Sweep, the finding and metric panels, and emails</p></div>
+
+  <section class="card board flex flex-col gap-16"><p class="label-caps">A · Colour roles in data</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16">
+    {% for sw, name, code, text in [
+      ("positive", "Positive", "#2CCAFF", "Good movement: rising when rising is good, on track, West’s +1.21. Text in deep blue #0B7AA6."),
+      ("negative", "Negative", "#D64545", "Bad movement, a breach, the event date marker. At most one red story per chart."),
+      ("neutral", "Neutral", "#1F2A37", "Data with no good or bad meaning: totals, volumes, averages, the Measured tag."),
+      ("context", "Context", "#8A96A3", "Comparisons and no data: last period, forecast band at 18%, “no invoices”."),
+      ("grid", "Grid", "#EEF0F3", "Gridlines, at most three per chart. No chart borders."),
+      ("shade", "Period shade", "#F3F4F6", "A shaded window: “from 9 Oct”, “from 8 Sep”."),
+      ("check", "Check", "#E0A100", "Needs confirmation and to-check lines. Never used inside a chart."),
+      ("status", "Status only", "#1B8A4A", "Source health dots (Healthy, sources fresh). Not used in charts.")] %}
+      <div class="flex items-start gap-12"><span class="swatch {{ sw }}"></span><p class="hint"><b class="strong">{{ name }}</b> <span class="mono">{{ code }}</span><br>{{ text }}</p></div>
+    {% endfor %}</div>
+  </section>
+
+  <div class="grid gap-16 grid-cols-1 md:grid-cols-3">
+    <section class="card board flex flex-col gap-8"><p class="label-caps">B · States and change tags</p>
+      {% for tag, text in [(state_tag("measured"), "Computed from the source; no test."), (state_tag("assessed", "High"), "A test fired with stated confidence. Medium: q < 0.05."), (state_tag("not_determinable"), "The data can’t explain it; up to 3 hypotheses."), (state_tag("needs_confirmation"), "Two systems disagree; never one of a brief’s 4 items.")] %}
+      <div class="tag-row"><span>{{ tag }}</span><p class="hint">{{ text }}</p></div>{% endfor %}
+      <hr class="rule"><div class="flex items-center flex-wrap gap-8">{{ change_tag("new") }}{{ change_tag("worse") }}{{ change_tag("open", 11) }}{{ change_tag("better") }}{{ change_tag("resolved") }}</div>
+    </section>
+    <section class="card board md:col-span-2 flex flex-col gap-12"><p class="label-caps">C · Chart rules</p>
+      <ul class="rules">
+        <li>Label lines and bars directly. No legends.</li><li>One red story per chart; everything else neutral or context.</li>
+        <li>Event date = red dashed line with a short label; a period = grey shade.</li><li>Every value on a chart is computed; the chart links to its SQL.</li>
+        <li>Axis labels 9–10 px grey; values 11 px semibold; titles are sentences, outside the chart.</li><li>Trend lines in tiles: 6 points, last point dotted, band in context grey.</li>
+        <li>No chart when there are no rows: list the records instead.</li><li>Email: the same charts, rendered as images on the server.</li>
+      </ul>
+    </section>
+  </div>
+
+  <p class="label-caps">D · Chart library · one per kind of finding</p>
+  <div class="grid gap-16 grid-cols-1 md:grid-cols-3">
+    <div class="card board chart-card flex flex-col gap-12"><div class="flex items-center justify-between"><span class="card-title">Trend line in a number tile</span><span class="chart-kind">KPI tile</span></div>
+      <div class="flex items-center gap-12">{% for k, lbl in [("sparkline_below", "below band · red"), ("sparkline_neutral", "neutral · dark"), ("sparkline_on_track", "on track · blue")] %}<div class="flex flex-col gap-4"><span class="chart">{{ chart(specs[k], 120, 36) }}</span><span class="hint">{{ lbl }}</span></div>{% endfor %}</div>
+      <p class="caption">Headline numbers. Line in the role colour; band in context grey when there is a forecast.</p></div>
+    {{ chart_card("Split bars from zero", "Net hiding gross", chart(specs.bars_contribution, 380, 96), "When a total hides offsetting parts. Negative red, positive blue, total dark.") }}
+    {{ chart_card("Step line with event marker", "Changepoint", chart(specs.step, 400, 104), "When the baseline moved. Red line, red dashed marker on the date.") }}
+    {{ chart_card("Share bar, now vs then", "Concentration", chart(specs.bars_share, 300, 84), "When a few names carry most of the value. Now in dark, then in grey.") }}
+    {{ chart_card("Bars that stop", "Missing records · one account", chart(specs.gap_block, 400, 96), "When an expected event stops. Dark bars, a dashed box with “?” where data should be.") }}
+    {{ chart_card("Spread band around the average", "Rising variance", chart(specs.line_spread, 400, 100), "When spread widens before the average moves. Average dark, spread red.") }}
+    {{ chart_card("Two lines decoupling", "Broken relationship", chart(specs.line_decoupling, 400, 110), "When a relationship broke. The steady one dark, the one that broke away red; period shaded.") }}
+    {{ chart_card("Line against forecast band", "Forecast breach", chart(specs.line_forecast, 400, 100), "When actuals leave the band or a goal slips. Line dark, band grey, the breach point red.") }}
+    <div class="card board chart-card flex flex-col gap-12"><div class="flex items-center justify-between"><span class="card-title">No chart by design</span><span class="chart-kind">Missing records · many accounts</span></div>
+      {{ records([("Shree Varada Textiles", "12 Jul", fmt.inr(6200000, unit="cr")), ("Tidewell Garments", "2 Jul", fmt.inr(4800000, unit="cr"))], "These accounts produce no rows.") }}
+      <p class="caption">When the finding is that rows are missing. A short list in a dashed box, not a chart.</p></div>
+  </div>
+
+  <section class="card board flex flex-col gap-12"><p class="label-caps">E · Related components</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-16">
+      <div class="flex flex-col gap-8"><p class="hint">Question to ask today</p>{{ ask_today("Priya Menon · Head of Sales", "Have Ravira Exports, Tessora EU and Skarfab moved orders elsewhere, or are they on hold?") }}</div>
+      <div class="flex flex-col gap-8"><p class="hint">Watching line in a brief</p>{{ watching("Watching · 1 breached", "Dispatch spread, Coimbatore · " ~ fmt.days(6.3)) }}</div>
+      <div class="flex flex-col gap-8"><p class="hint">Why you haven’t seen this</p>{{ why_unseen("The MIS reports average dispatch days only, and the average has not moved.") }}</div>
+      <div class="flex flex-col gap-8"><p class="hint">Chat · 480 px</p><div class="card p-16 flex flex-col gap-12">{{ msg_user("Use net of GST.") }}{{ msg_ai("Then every brief uses net of GST. Here is October: " ~ fmt.inr(46200000) ~ ".") }}</div></div>
+      <div class="flex flex-col gap-8"><p class="hint">Toast</p><div>{{ toast("Export receivables created · first brief tomorrow 06:00", action="Undo") }}</div></div>
+      <div class="flex flex-col gap-8"><p class="hint">Panels</p><div class="grid grid-cols-1 md:grid-cols-2 gap-8"><div class="panel-kind"><b>480 px · chat</b><br><span class="hint">Fixes and questions; page stays live, no scrim</span></div><div class="panel-kind"><b>680 px · content</b><br><span class="hint">Connectors, findings, metrics, Edit brief, History; scrim behind</span></div></div></div>
+    </div>
+  </section>
+</div>
+{% endblock %}

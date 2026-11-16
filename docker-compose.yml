@@ -1,0 +1,141 @@
+# SPDX-License-Identifier: Apache-2.0
+# Local dev: app + metadata Postgres + sample sources (MySQL erp_db, Postgres sales_dw) + Mailpit.
+# Runs on OrbStack locally and plain Docker in CI; no OrbStack-only features here.
+# Host ports avoid the usual defaults (other local projects often hold 5432/1025/8025);
+# override any of them with OTHOR_*_PORT in the environment.
+name: othor
+
+services:
+  meta-db:
+    image: postgres:16.15-alpine@sha256:aa6cb33cf4c19c765cefcf48d96176258800870a9a1e930ad126200f9d825139
+    environment:
+      POSTGRES_USER: othor
+      POSTGRES_PASSWORD: othor
+      POSTGRES_DB: othor
+    ports: ["${OTHOR_META_DB_PORT:-5442}:5432"]
+    volumes: [meta-db:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U othor -d othor"]
+      interval: 2s
+      retries: 30
+
+  # Sample source: PostgreSQL sales_dw (schemas public + sales_dw). Loaded by `make seed`.
+  sales-dw:
+    image: postgres:16.15-alpine@sha256:aa6cb33cf4c19c765cefcf48d96176258800870a9a1e930ad126200f9d825139
+    environment:
+      POSTGRES_USER: dw_admin
+      POSTGRES_PASSWORD: dw_admin_dev
+      POSTGRES_DB: sales_dw
+    ports: ["${OTHOR_SALES_DW_PORT:-5443}:5432"]
+    volumes:
+      - sales-dw:/var/lib/postgresql/data
+      - ./docker/sample-postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dw_admin -d sales_dw"]
+      interval: 2s
+      retries: 30
+
+  # Sample source: MySQL erp_db. Loaded by `make seed`.
+  erp-db:
+    image: mysql:8.4.13@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902
+    environment:
+      MYSQL_ROOT_PASSWORD: root_dev
+      MYSQL_DATABASE: erp_db
+    command: ["--local-infile=1", "--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    ports: ["${OTHOR_ERP_DB_PORT:-3307}:3306"]
+    volumes:
+      - erp-db:/var/lib/mysql
+      - ./docker/sample-mysql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot_dev --silent"]
+      interval: 2s
+      retries: 60
+
+  # Dev mailbox: SMTP on host 1026, inbox at http://localhost:8026. Dev only.
+  mailpit:
+    image: axllent/mailpit:v1.33.0@sha256:9b3a463be15354c0f0eba91697d80e3e0d8a5623ef0e627cacc836bc17fd5231
+    ports: ["${OTHOR_SMTP_PORT:-1026}:1025", "${OTHOR_MAILPIT_PORT:-8026}:8025"]
+
+  app:
+    build: .
+    # The image's entrypoint is `othor`; dev runs migrate, then web with reload.
+    entrypoint: ["sh", "-c"]
+    command: ["othor migrate && othor web --host 0.0.0.0 --port 8000 --reload"]
+    environment:
+      OTHOR_ENV: dev
+      OTHOR_SIGNUP: open
+      OTHOR_DB_URL: postgresql+psycopg://othor:othor@meta-db:5432/othor
+      OTHOR_DATA_DIR: /data
+      OTHOR_BASE_DOMAIN: othor.localhost
+      OTHOR_MAIL_RELAY: smtp
+      OTHOR_SMTP_URL: smtp://mailpit:1025
+      OTHOR_PUBLIC_SCHEME: http
+      OTHOR_PUBLIC_PORT: ${OTHOR_APP_PORT:-8000}
+      OTHOR_MODEL_PROVIDER: ${OTHOR_MODEL_PROVIDER:-template}
+      OTHOR_MODEL_ID: ${OTHOR_MODEL_ID:-}
+      OTHOR_MODEL_API_KEY: ${OTHOR_MODEL_API_KEY:-}
+      OTHOR_PUBLIC_SITE: "1"  # the landing page on the root host (M11a)
+      # documentation addresses (RFC 5737/3849), shown on the connect forms in dev
+      OTHOR_EGRESS_IPS: ${OTHOR_EGRESS_IPS:-203.0.113.24,203.0.113.25,2a09:8280:1::24,2a09:8280:1::25}
+    ports: ["${OTHOR_APP_PORT:-8000}:8000"]
+    volumes:
+      - ./othor:/app/othor
+      - app-data:/data
+      - ./data/sample:/data/sample:ro  # the Sheets stand-in written by `make seed`
+    depends_on:
+      meta-db: {condition: service_healthy}
+      mailpit: {condition: service_started}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 3s
+      retries: 40
+
+  # Jobs: scans, Sheets reads, connection tests, AI labels. Holds source credentials in memory
+  # per job; the web process never decrypts them (docs/02). Same image, another command.
+  worker:
+    build: .
+    command: ["worker"]
+    # it waits out a database restart itself (#16); this brings it back if it stops anyway
+    restart: unless-stopped
+    environment:
+      OTHOR_ENV: dev
+      OTHOR_DB_URL: postgresql+psycopg://othor:othor@meta-db:5432/othor
+      OTHOR_DATA_DIR: /data
+      # the 06:00 delivery and owner alerts go to Mailpit; links point at the app (M9)
+      OTHOR_BASE_DOMAIN: othor.localhost
+      OTHOR_MAIL_RELAY: smtp
+      OTHOR_SMTP_URL: smtp://mailpit:1025
+      OTHOR_PUBLIC_SCHEME: http
+      OTHOR_PUBLIC_PORT: ${OTHOR_APP_PORT:-8000}
+      OTHOR_MODEL_PROVIDER: ${OTHOR_MODEL_PROVIDER:-template}
+      OTHOR_MODEL_ID: ${OTHOR_MODEL_ID:-}
+      OTHOR_MODEL_API_KEY: ${OTHOR_MODEL_API_KEY:-}
+    volumes:
+      - ./othor:/app/othor
+      - app-data:/data
+      - ./data/sample:/data/sample:ro
+    depends_on:
+      app: {condition: service_healthy}  # migrations have run
+      mailpit: {condition: service_started}
+      sales-dw: {condition: service_healthy}
+      erp-db: {condition: service_healthy}
+
+  # The stylesheet, rebuilt on every template or style change (scripts/build_css.py --watch).
+  css:
+    build: .
+    entrypoint: ["python", "scripts/build_css.py", "--watch"]
+    working_dir: /app
+    user: root  # writes the cache volume and the mounted static/css
+    environment:
+      OTHOR_CSS_CACHE: /cache
+    volumes:
+      - ./othor:/app/othor
+      - ./scripts:/app/scripts
+      - css-cache:/cache
+
+volumes:
+  meta-db:
+  sales-dw:
+  erp-db:
+  app-data:
+  css-cache:

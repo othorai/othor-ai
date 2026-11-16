@@ -1,0 +1,24 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/onboarding.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% from "components/sources.html" import kind_tile %}
+{% block title %}Redrafting · Set up {{ company.name }}{% endblock %}
+{% block width %} col{% endblock %}
+{% block main %}
+{# 2ne (M11c, owner 8 Nov): a simple loading screen in the step bar's width. The file being read,
+   then the metrics redrafted with it; when it's done the page goes back to Metrics by itself. #}
+<div id="redraft" class="flex flex-col"{% if pending %} hx-get="/setup/metrics/document" hx-trigger="every 1s" hx-select="#redraft" hx-swap="outerHTML"{% endif %}>
+  {% call el('div', 'col-head') %}<h1>Redrafting your metrics.</h1>{% call el("p", "lede") %}{% if pending %}With your document{% else %}{{ fmt.num(total) }} metrics redrafted{% endif %}{% endcall %}{% endcall %}
+  {% call el('div', 'run-card', layout='mt-24') %}
+    <div class="flex items-center gap-12">{{ kind_tile(doc.tile) }}<div class="flex-1 min-w-0">{% call el("p", "strong") %}{{ doc.filename }}{% endcall %}{% call el("p", "hint") %}{{ doc.line }}{% endcall %}</div></div>
+    {% call el('progress', 'bar', attrs={'max': total or 1, 'value': done if pending else (total or 1), 'aria-label': 'Redraft progress'}) %}{% endcall %}
+    {% call el("p", "hint") %}{% if pending %}{{ fmt.num(done) }} of {{ fmt.num(total) }} metrics{% else %}Done · back to Metrics{% endif %}{% endcall %}
+  {% endcall %}
+  {% if not pending %}<span data-panel-go="/setup/metrics" hidden></span>{% endif %}
+  {% call el('div', 'onb-foot', layout='mt-32') %}
+    {% call el('a', 'link-u', attrs='href="/setup/metrics"') %}Back{% endcall %}
+    <span class="flex items-center gap-16">{% if pending %}{% call el('span', 'hint') %}Ready in a moment{% endcall %}{% call el('button', 'btn primary lg', attrs='type="button" disabled') %}Review metrics{% endcall %}{% else %}{{ button("Review metrics", "primary", "lg", href="/setup/metrics") }}{% endif %}</span>
+  {% endcall %}
+</div>
+{% endblock %}

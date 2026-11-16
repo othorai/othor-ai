@@ -1,0 +1,18 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# el(tag, kind, layout, attrs): any element with a component look (kind: classes defined in
+   othor/web/styles/components.css) and layout utilities (layout:). ui() refuses anything else,
+   so pages compose shared components and never style.
+   attrs: a dict, each value escaped here (True → bare attribute; None or False → left out),
+   or a literal string of fixed attributes (no values from data).
+   Use: {% call el("p", "hint") %}…{% endcall %}
+        {% call el("a", "link", attrs={"href": url}) %}…{% endcall %} #}
+{% set VOID = ["input", "hr", "img", "br", "col", "meta", "link", "source"] %}
+{# attributes: a dict (values escaped; True → bare; None/False → left out) or a fixed string #}
+{% macro attrs_html(attrs) -%}
+{%- if attrs is mapping %}{% for k, v in attrs.items() %}{% if v is sameas true %} {{ k }}{% elif v is not none and v is not sameas false %} {{ k }}="{{ v }}"{% endif %}{% endfor %}
+{%- elif attrs %} {{ attrs | safe }}{% endif -%}
+{%- endmacro %}
+{% macro el(tag, kind="", layout="", attrs="", text=None) -%}
+<{{ tag }} class="{{ ui(kind, layout) }}"{{ attrs_html(attrs) }}>
+{%- if tag not in VOID %}{% if caller is defined %}{{ caller() }}{% else %}{{ text if text is not none else "" }}{% endif %}</{{ tag }}>{% endif %}
+{%- endmacro %}

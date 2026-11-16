@@ -1,0 +1,67 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/onboarding.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/icons.html" import icon %}
+{% from "components/sources.html" import kind_tile, src_row, other_connectors %}
+{% from "components/forms.html" import chip %}
+{% from "components/buttons.html" import button %}
+{% from "components/blocks.html" import banner %}
+{% from "components/panels.html" import side_panel %}
+{# Step 4 · Sources (M11c, p0–p3): Connected (once there is one), Suggested from your files (every
+   Connect plain, #19: the step's one main button is Continue),
+   Other connectors folded. PostgreSQL and MySQL connect in a side panel; Google Sheets keeps
+   its page. Tables and Schemas open in panels over the list. #}
+{% set base = "/setup/sources" %}
+{% set kn = {"postgres": "PostgreSQL", "mysql": "MySQL", "gsheets": "Google Sheets"} %}
+{% block title %}Sources · Set up {{ company.name }}{% endblock %}
+{% block width %} col{% endblock %}
+{% block main %}
+<h1>Connect where the numbers live.</h1>
+{% call el("p", "lede") %}Start with one. You can add more after.{% endcall %}
+<div class="flex flex-col gap-12 mt-24">
+  {% if connected %}
+  {% call el('section', 'src-box', attrs={'aria-label': 'Connected'}) %}
+    {% call el('div', 'box-head') %}<span>Connected · {{ fmt.num(connected | length) }}</span>{% endcall %}
+    {% for c in connected %}
+    {% call src_row(c.tile, c.title, c.sub, "Just added" if c.just_added else None) %}
+        {% if c.scanning %}{{ chip("Scanning", dot="warn") }}{{ button("Progress", "sm", href=base ~ "?panel=scan&s=" ~ c.src.id) }}{% else %}{{ chip("Connected", dot="ok") }}{% endif %}
+        {{ button("Tables", "sm", href=base ~ "?panel=tables&s=" ~ c.src.id) }}{% if c.src.kind == "postgres" and not c.scanning %}{{ button("Schemas", "sm", href=base ~ "?panel=schemas&s=" ~ c.src.id) }}{% endif %}
+    {% endcall %}
+    {% endfor %}
+  {% endcall %}
+  {% endif %}
+  {% if suggested %}
+  {% call el('section', 'src-box', attrs={'aria-label': 'Suggested from your files'}) %}
+    {% call el('div', 'box-head') %}<span>Suggested from your files · {{ fmt.num(suggested | length) }}</span>{% endcall %}
+    {% for x in suggested %}
+    {% call src_row(x.tile, x.title, x.line, "Start here" if loop.first and not connected else None, "start") %}{{ button("Connect", "", "sm", href=x.href, attrs={"data-no-panel": true} if x.kind == "gsheets" else "") }}{% endcall %}
+    {% endfor %}
+  {% endcall %}
+  {% endif %}
+  {% if creq and creq.requested %}{% set sent_msg %}<b>Request sent · {{ creq.requested }}</b> We build the most requested first and we’ll email you when it’s ready.{% endset %}{{ banner("ok", sent_msg) }}{% endif %}
+  {{ other_connectors(connectors, {"postgres": base ~ "?panel=connect&kind=postgres", "mysql": base ~ "?panel=connect&kind=mysql", "gsheets": "/setup/sources/sheets"}, open=not connected and not suggested, request="/setup/sources?panel=request") }}
+</div>
+{% call el('form', 'onb-foot', attrs='method="post" action="/setup/sources/continue"') %}
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  {% call el('a', 'link-u', attrs='href="/setup/business"') %}Back{% endcall %}
+  <span class="flex items-center gap-16">
+    {% call el('span', 'hint') %}{% if has_sources %}{{ fmt.num(connected | length) }} connected · you can add more later{% else %}Connect one source to continue{% endif %}{% endcall %}
+    {{ button("Continue", "primary", "lg", type="submit", disabled=not has_sources) }}
+  </span>
+{% endcall %}
+{% endblock %}
+
+{% block overlay %}
+{% if panel == "request" %}{% set rq_next, rq_close = "/setup/sources", "/setup/sources" %}{% include "sources/_request.html" %}{% endif %}
+{% if panel == "connect" and sql %}
+  {% with kind=sql.kind %}
+  {% call(part) side_panel("Connect " ~ sql.kind_name ~ (" · " ~ sql.for_name if sql.for_name else ""), "We read in place with a read-only " ~ ("role" if sql.kind == "postgres" else "user") ~ ", and test before connecting.", None, sql.close) %}
+  {% if part == "body" %}{% with kind=sql.kind, kind_name=sql.kind_name, src=sql.src, cfg=sql.cfg, ssl_options=sql.ssl_options, role_sql=sql.role_sql, egress=sql.egress, egress_v4=sql.egress_v4, egress_v6=sql.egress_v6, ips_url=sql.ips_url, test=sql.test, setup=True %}{% include "sources/_sql_form.html" %}{% endwith %}
+  {% else %}{% call el('span', 'hint') %}{{ sql.seen }}{% endcall %}<span class="flex items-center gap-8">{{ button("Cancel", href=sql.close) }}{{ button("Connect", "primary", type="submit", attrs={"form": "sql-form"}) }}</span>{% endif %}
+  {% endcall %}
+  {% endwith %}
+{% elif panel == "scan" %}{% include "sources/_panel_scan.html" %}
+{% elif panel == "schemas" %}{% include "sources/_panel_schemas.html" %}
+{% elif panel == "tables" %}{% include "sources/_panel_tables.html" %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,5 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# Google Picker (real mode): Sheets only, multi-select, drive.file. Loaded on this step only. #}
+<form id="picked-files" method="post" action="" hidden data-api-key="{{ google_api_key }}" data-app-id="{{ google_app_id }}"><input type="hidden" name="csrf" value="{{ csrf_token }}"></form>
+<script src="https://apis.google.com/js/api.js" defer></script>
+<script src="/static/js/picker.js" defer></script>

@@ -1,0 +1,84 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "base.html" %}
+{% from "components/buttons.html" import button, link, info, ai_button, top_menu, menu_link, link_menu %}
+{% from "components/big_picture.html" import bp_report, bp_writing, bp_unavailable %}
+{% from "components/forms.html" import chip, toggle %}
+{% from "components/home.html" import health_button %}
+{% from "components/icons.html" import icon %}
+{% set STATES = [("", "Default"), ("hover", "Hover"), ("focus", "Focus-visible"), ("active", "Pressed"), ("disabled", "Disabled")] %}
+{% macro cell(note) %}<div class="sw"><em>{{ note }}</em>{{ caller() }}</div>{% endmacro %}
+{% block title %}Component states{% endblock %}
+{% block body %}
+<div class="board-page">
+  <h1 class="board-title">Component states</h1>
+  <p class="board-sub">Every shared control in every state (UI foundation). Each state is the real CSS state, forced by its is-* class for review. 9b is the board; this page is the full grid.</p>
+  <div class="state-grid mt-12"><span class="label-caps">Control</span>{% for _, s in STATES %}<span class="label-caps">{{ s }}</span>{% endfor %}</div>
+
+  {% for kind, name in [("primary", "Primary button"), ("", "Button"), ("quiet", "Quiet button"), ("danger", "Danger button")] %}
+  <div class="state-grid"><p class="name">{{ name }}<small>button(…, "{{ kind }}")</small></p>
+    {% for st, note in STATES %}{% call cell(note) %}{{ button("Continue" if kind == "primary" else "Share", kind, state=st, disabled=(st == "disabled")) }}{% endcall %}{% endfor %}</div>
+  {% endfor %}
+
+  <div class="state-grid"><p class="name">AI button<small>ai_button(…)</small></p>
+    {% for st, note in STATES %}{% call cell(note) %}{{ ai_button("Big Picture Report", href="#", state=st, disabled=(st == "disabled")) }}{% endcall %}{% endfor %}</div>
+
+  <div class="state-grid"><p class="name">Link<small>link(…)</small></p>
+    {% for st, note in STATES[:4] %}{% call cell(note) %}{{ link("How is this calculated?", state=st) }}{% endcall %}{% endfor %}
+    {% call cell("Visited") %}{{ link("How is this calculated?", state="visited") }}{% endcall %}</div>
+
+  <div class="state-grid"><p class="name">Text input<small>input</small></p>
+    {% for st, note in [("", "Default"), ("hover", "Hover"), ("focus", "Focus-visible"), ("error", "Error"), ("disabled", "Disabled")] %}
+    {% call cell(note) %}<input class="input is-{{ st }}" value="uday@indigothread.example" aria-label="Example"{% if st == 'disabled' %} disabled{% endif %}>{% endcall %}{% endfor %}</div>
+
+  <div class="state-grid"><p class="name">Select<small>select</small></p>
+    {% for st, note in [("", "Default"), ("hover", "Hover"), ("focus", "Focus-visible"), ("error", "Error"), ("disabled", "Disabled")] %}
+    {% call cell(note) %}<select class="select is-{{ st }}" aria-label="Example"{% if st == 'disabled' %} disabled{% endif %}><option>April</option></select>{% endcall %}{% endfor %}</div>
+
+  <div class="state-grid"><p class="name">Textarea<small>textarea.input</small></p>
+    {% for st, note in [("", "Default"), ("hover", "Hover"), ("focus", "Focus-visible"), ("error", "Error"), ("disabled", "Disabled")] %}
+    {% call cell(note) %}<textarea class="input is-{{ st }}" rows="2" aria-label="Example"{% if st == 'disabled' %} disabled{% endif %}>We make fabrics…</textarea>{% endcall %}{% endfor %}</div>
+
+  <div class="state-grid"><p class="name">Input with suffix<small>suffix_input</small></p>
+    {% for st, note in [("", "Default"), ("hover", "Hover"), ("focus", "Focus-visible"), ("error", "Error"), ("disabled", "Disabled")] %}
+    {% call cell(note) %}<div class="input-group is-{{ st }}"><input value="indigothread" aria-label="Example"{% if st == 'disabled' %} disabled{% endif %}><span class="suffix">.othor.ai</span></div>{% endcall %}{% endfor %}</div>
+
+  <div class="state-grid"><p class="name">Toggle<small>toggle(…)</small></p>
+    {% for st, note, on, dis in [("", "On", True, False), ("hover", "Hover", True, False), ("focus", "Focus-visible", True, False), ("active", "Pressed", True, False), ("disabled", "Disabled", True, True)] %}
+    {% call cell(note) %}{{ toggle("t" ~ loop.index, on=on, state=st, disabled=dis, label="Example") }}{% endcall %}{% endfor %}</div>
+
+  <div class="state-grid"><p class="name">Chip<small>chip(…)</small></p>
+    {% for st, note in [("", "Default"), ("hover", "Hover"), ("focus", "Focus-visible"), ("on", "Selected"), ("disabled", "Disabled")] %}
+    {% call cell(note) %}<button type="button" class="chip lg is-{{ st }}"{% if st == 'disabled' %} disabled{% endif %}>Last 30 days</button>{% endcall %}{% endfor %}</div>
+
+  <div class="state-grid"><p class="name">Tab<small>tabs(…)</small></p>
+    {% for st, note in [("", "Default"), ("hover", "Hover"), ("focus", "Focus-visible"), ("on", "Selected"), ("disabled", "Disabled")] %}
+    {% call cell(note) %}<div class="tabs"><a class="tab is-{{ st }}" href="#">Product family</a></div>{% endcall %}{% endfor %}</div>
+
+  <div class="state-grid"><p class="name">Table row<small>.table tr</small></p>
+    {% for st, note in [("", "Default"), ("hover", "Hover"), ("focus", "Focus"), ("active", "Pressed"), ("selected", "Selected")] %}
+    {% call cell(note) %}<table class="table"><tbody><tr class="is-{{ st }}"><td>South</td><td class="num">₹1.4 Cr</td></tr></tbody></table>{% endcall %}{% endfor %}</div>
+
+  <div class="state-grid"><p class="name">Card (link)<small>a.card</small></p>
+    {% for st, note in STATES %}{% call cell(note) %}<a class="card p-16 is-{{ st }}" href="#"{% if st == 'disabled' %} aria-disabled="true"{% endif %}><span class="card-title">Leadership weekly</span></a>{% endcall %}{% endfor %}</div>
+
+  <div class="state-grid"><p class="name">Info button<small>info(…)</small></p>
+    {% for st, note in [("", "Default"), ("hover", "Hover"), ("focus", "Focus-visible"), ("active", "Pressed"), ("open", "Open")] %}
+    {% call cell(note) %}{{ info(st) }}{% endcall %}{% endfor %}</div>
+
+  <div class="state-grid"><p class="name">Sidebar item<small>.nav-item</small></p>
+    {% for st, note in [("", "Default"), ("hover", "Hover"), ("focus", "Focus-visible"), ("on", "Selected")] %}
+    {% call cell(note) %}<a class="nav-item{{ ' is-' ~ st if st else '' }}" href="#">{{ icon("brief") }}Morning Brief</a>{% endcall %}{% endfor %}</div>
+
+  {# v0.19 (M19.5): Big Picture, written and not available #}
+  <h2 class="board-title mt-12">Big Picture</h2>
+  {% set seg = [{"t": "South fell "}, {"t": "₹1.4 Cr", "href": "#"}, {"t": " while West’s growth hid it."}] %}
+  {{ bp_report({"id": "demo", "lang_attr": "en", "header": "Written by Othor AI from last night’s computed results · every number is computed, not written by AI", "h": {"one_line": "Summary by Othor AI", "happening": "What’s happening", "why_it_matters": "Why it matters", "look_first": "What to look at first", "coming": "What’s coming", "words": "Words used", "priority": "In priority order", "expected": "expected", "open": "Open"}, "one_line": seg, "summary": [seg], "kpis": [{"label": "Net revenue · Oct", "value": "₹4.62 Cr", "tone": "negative", "note": "−1% vs band"}, {"label": "DSO · Oct", "value": "46 d", "tone": "neutral", "note": "in band"}], "findings": [{"fact": "b1i1", "tag": "Net revenue", "title": [{"t": "South fell, and West made most of it back"}], "sentence": seg, "href": "#", "legend": [], "spec": none}], "stakes_note": [{"t": "Slower delivery tends to turn into complaints."}], "stakes": [{"value": "₹4.59 Cr", "unit": "at risk", "href": "#", "desc": [{"t": "orders that run through Coimbatore"}]}], "look_first": [{"text": seg, "href": "#", "tag": "Net revenue"}], "forecasts": [], "words": [{"term": [{"t": "Range"}], "meaning": [{"t": "Where the number will most likely land."}]}], "footer": "Run #0002 · spec v2 · big_picture@v1"}) }}
+  <div class="mt-12">{{ bp_unavailable() }}</div>
+  <h2 class="board-title mt-12">Top bar ⋯ menu</h2>
+  <div class="flex justify-end">{% call top_menu() %}{{ menu_link("History", "#") }}{{ button("Run again now", "opt") }}{% endcall %}</div>
+  <h2 class="board-title mt-12">System Health · all clear, amber, red</h2>
+  <div class="flex items-center gap-12">{{ health_button({"ok": True, "bad": False, "summary": "All clear", "lights": []}) }}{{ health_button({"ok": False, "bad": False, "summary": "1 thing needs you", "lights": [{"state": "warn"}]}) }}{{ health_button({"ok": False, "bad": True, "summary": "2 things need you", "lights": [{"state": "bad"}, {"state": "warn"}]}) }}</div>
+  <h2 class="board-title mt-12">Link menu</h2>
+  <div>{% call link_menu("2 earlier runs") %}{{ menu_link("#0010 · 03:40", "#") }}{{ menu_link("#0009 · 01:12", "#") }}{% endcall %}</div>
+</div>
+{% endblock %}

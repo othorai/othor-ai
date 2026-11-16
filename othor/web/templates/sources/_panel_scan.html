@@ -1,0 +1,29 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% from "components/icons.html" import icon %}
+{% from "components/panels.html" import side_panel %}
+{# The scanning panel (M11c, p2): Connect lands here. The lines poll while the scan runs; a
+   panel that watched it finish closes itself and the list shows the source (data-panel-go). #}
+{% set kn = {"postgres": "PostgreSQL", "mysql": "MySQL", "gsheets": "Google Sheets"} %}
+{% set name = card.title if psrc.kind == "gsheets" else (psrc.config.database or psrc.name) %}
+{% set unit = "tabs" if psrc.kind == "gsheets" else "tables" %}
+{% set here = base ~ "?panel=scan&s=" ~ psrc.id %}
+{% call(part) side_panel(("Connecting " if view.running else "Connected · ") ~ kn[psrc.kind] ~ " · " ~ name, "Scanning what the read-only " ~ ("access" if psrc.kind == "gsheets" else "role") ~ " can see." if view.running else "Scanned. Read nightly from now on.", None, base) %}
+{% if part == "body" %}
+  {% call el('div', '', layout='flex flex-col gap-20', attrs={'id': 'panel-scan', 'hx-get': (here ~ '&live=1') if view.running else none, 'hx-trigger': 'every 1s' if view.running else none, 'hx-select': '#panel-scan' if view.running else none, 'hx-swap': 'outerHTML' if view.running else none}) %}
+    {% call el('progress', 'bar', attrs={'value': [view.scanned, view.total] | min, 'max': [view.total, 1] | max, 'aria-label': 'Scan progress'}) %}{% endcall %}
+    {% call el('div', 'scan-steps') %}
+    {% for x in steps %}
+      {% call el('p', 'scan-step' ~ (' next' if x.state == 'next' else '')) %}{% if x.state == "now" %}{{ icon("loading") }}{% else %}{% call el('span', 'dot ' ~ ('ok' if x.state == 'done' else 'muted')) %}{% endcall %}{% endif %}<span>{{ x.label }}</span>{% if x.note %}{% call el('span', 'scan-note') %}{{ x.note }}{% endcall %}{% endif %}{% endcall %}
+    {% endfor %}
+    {% endcall %}
+    {% if view.running %}
+    {% call el('div', 'callout') %}<p>{% call el('span', 'strong') %}You can close this.{% endcall %}</p>Scanning carries on, and the source shows “Scanning” in the list until it’s done. Only names, counts and statistics are read here, never rows.{% endcall %}
+    {% elif request.query_params.get("live") %}<span data-panel-go="{{ done_url if done_url is defined else base ~ '?added=' ~ psrc.id }}" hidden></span>{% endif %}
+  {% endcall %}
+{% else %}
+  {% call el('span', 'hint') %}{% if view.running %}{{ (eta[:1] | upper) ~ eta[1:] if eta else "" }}{% else %}Scanned {{ fmt.num(view.total) }} {{ unit }}{% endif %}{% endcall %}
+  {{ button("Close", href=base) }}
+{% endif %}
+{% endcall %}

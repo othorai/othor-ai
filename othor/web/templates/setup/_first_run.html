@@ -1,0 +1,34 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/icons.html" import icon %}
+{% from "components/buttons.html" import button %}
+{% from "components/blocks.html" import callout %}
+{# 2o (M11c): polled while the run runs; the footer is inside so "Open the brief" turns on in
+   place. Every note is computed from the run's steps. #}
+{% set stages = view.stages %}
+{% call el('div', '', layout='flex flex-col', attrs={'id': 'first-run', 'hx-get': ('/setup/first-run/progress' if view.polling else none), 'hx-trigger': ('every 1s' if view.polling else none), 'hx-target': ('#first-run' if view.polling else none), 'hx-swap': ('outerHTML' if view.polling else none)}) %}
+  {% call el('div', 'col-head') %}<h1>{% if view.failed %}Your first run stopped.{% elif view.brief_ready or view.finished %}Your first brief is ready.{% else %}Writing your first brief.{% endif %}</h1>
+  {% call el("p", "lede") %}Every number is computed from your sources, never written by a model.{% endcall %}{% endcall %}
+  {% with mt="mt-24" %}{% include "setup/_run_card.html" %}{% endwith %}
+  {% if view.failed %}
+  {% call el("div", "callout err", layout="flex items-center justify-between gap-12 mt-16", attrs='role="alert"') %}
+    <span>{{ view.failed }}</span>
+    {% call el('form', '', attrs='data-inplace method="post" action="/setup/first-run/retry"') %}<input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Run again", type="submit") }}{% endcall %}
+  {% endcall %}
+  {% endif %}
+  {% if view.brief_note %}{% call el("p", "hint", layout="mt-12") %}{{ view.brief_note }}{% endcall %}{% endif %}
+  {% call el('details', 'run-details', layout='mt-24') %}
+    <summary>{{ icon("chevron-right") }}Run details</summary>
+    {% call el('div', '', layout='flex flex-col gap-8 mt-12') %}
+      {% call el('dl', 'kv') %}<dt>Run</dt><dd>{{ view.number }} · {{ view.kind }}</dd>{% if view.started %}<dt>Started</dt><dd>{{ view.started }} · {{ view.elapsed }}</dd>{% endif %}{% for c in view.columns %}<dt>{{ c.name }}</dt><dd>{{ c.line }}</dd>{% endfor %}{% endcall %}
+      {% if view.stale_note %}{{ callout(view.stale_note, "warn") }}{% endif %}
+      {% if view.forecast_note %}{{ callout(view.forecast_note, "warn") }}{% endif %}
+      {% if view.provenance %}{% call el("p", "mono") %}{{ view.provenance }}{% endcall %}{% endif %}
+    {% endcall %}
+  {% endcall %}
+  {% call el('form', 'onb-foot', layout='mt-32', attrs='method="post" action="/setup/first-run/continue"') %}
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    {% call el('button', 'link-u', attrs='type="submit"') %}{% if view.brief_ready %}Go to the app{% else %}Go to the app — we’ll tell you when it’s ready{% endif %}{% endcall %}
+    {% if features.BRIEFS %}{% if view.brief_ready %}{{ button("Open the brief", "primary", "lg", type="submit", attrs={"name": "next", "value": "/brief"}) }}{% else %}<span class="flex items-center gap-16">{% call el("span", "hint") %}The brief is still being written{% endcall %}{{ button("Open the brief", "primary", "lg", disabled=True) }}</span>{% endif %}{% endif %}
+  {% endcall %}
+{% endcall %}

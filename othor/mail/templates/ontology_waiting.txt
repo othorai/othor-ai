@@ -1,0 +1,10 @@
+{{ lead }}
+{% for r in rows %}
+- {{ r.name }} · {{ r.note }}{% endfor %}{% if more %}
+- and {{ fmt.num(more) }} more{% endif %}
+
+Review and confirm: {{ review_url }}
+
+—
+Sent by your Othor AI instance at {{ instance }} · Delivery preferences: {{ preferences }}
+This email contains business data; do not forward outside the company.

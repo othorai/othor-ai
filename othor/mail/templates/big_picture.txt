@@ -1,0 +1,31 @@
+Big Picture · {{ company_name }}
+{{ r.subtitle }}
+{{ r.header }}
+
+{{ r.h.one_line }}
+{{ plain(r.one_line) }}
+{% for x in r.summary %}{{ plain(x) }}
+{% endfor %}{% if r.kpis %}
+{% for k in r.kpis %}{{ k.label }}: {{ k.value }}{% if k.note %} ({{ k.note }}){% endif %}
+{% endfor %}{% endif %}{% if r.findings %}
+{{ r.h.happening }}
+{% for c in r.findings %}- {{ plain(c.title) }}: {{ plain(c.sentence) }}
+{% endfor %}{% endif %}{% if r.stakes %}
+{{ r.h.why_it_matters }}{% if r.stakes_note %}: {{ plain(r.stakes_note) }}{% endif %}
+{% for s in r.stakes %}- {{ s.value }}{% if s.unit %} {{ s.unit }}{% endif %}: {{ plain(s.desc) }}
+{% endfor %}{% endif %}{% if r.look_first %}
+{{ r.h.look_first }}
+{% for a in r.look_first %}{{ loop.index }}. {{ plain(a.text) }}
+{% endfor %}{% endif %}{% if r.forecasts %}
+{{ r.h.coming }}
+{% for c in r.forecasts %}- {{ c.label }}: {{ c.expected }} {{ r.h.expected }} ({{ c.low }} to {{ c.high }}){% if c.verdict %}. {{ c.verdict }}{% endif %}
+{% endfor %}{% endif %}{% if r.words %}
+{{ r.h.words }}
+{% for w in r.words %}{{ plain(w.term) }}: {{ plain(w.meaning) }}
+{% endfor %}{% endif %}
+Open in Othor AI: {{ open_url }}
+{{ r.footer }}
+
+—
+Sent by your Othor AI instance at {{ instance }} · Delivery preferences: {{ preferences }}
+This email contains business data; do not forward outside the company.

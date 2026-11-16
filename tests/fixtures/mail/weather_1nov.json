@@ -1,0 +1,255 @@
+{
+ "facts": {
+  "activity": {
+   "active": true,
+   "day": "2026-10-31",
+   "full_history": true,
+   "pattern": null,
+   "weekday_active": 12,
+   "weeks": 12
+  },
+  "at_stake": "63396561.51",
+  "checks": 11,
+  "checks_ran": 10,
+  "history_days": 2040,
+  "items": 7,
+  "material": 7,
+  "nearest": null,
+  "new_sources": [],
+  "recovered": [],
+  "resolved": 0,
+  "revenue": {
+   "metric": "net_revenue",
+   "month": "47037353.226667"
+  },
+  "run_kind": "nightly",
+  "unread": []
+ },
+ "file": "13-sunrise",
+ "format": 1,
+ "label": "First brief",
+ "line": "Your first brief: here’s how the business looks.",
+ "name": "Sunrise",
+ "outlook": {
+  "ahead": {
+   "item": "forecast:net_revenue",
+   "scene": "overcast",
+   "week": 1
+  },
+  "ahead_line": "Net revenue this week could be ₹0.15 Cr short of plan (80% band ₹0.7–1.5 Cr against ₹1.25 Cr) · in 7 days.",
+  "format": 1,
+  "plans": {
+   "dso": {
+    "direction": "at_most",
+    "goal": "dso_under_45",
+    "how": "the goal's target",
+    "value": "45.00"
+   },
+   "net_revenue": {
+    "direction": "at_least",
+    "goal": "fy27_net_revenue",
+    "how": "what is left of the goal, spread evenly over the days to its date",
+    "value": "12539816.76"
+   }
+  },
+  "weeks": [
+   {
+    "dates": "2–8 Nov",
+    "end": "2026-11-08",
+    "file": "03-overcast",
+    "items": [
+     {
+      "date": "2026-11-08",
+      "direction": "at_least",
+      "gap": "1515765.83",
+      "goal": "fy27_net_revenue",
+      "horizon": 2,
+      "key": "net_revenue",
+      "kind": "forecast",
+      "line": "Net revenue could be ₹0.15 Cr short of plan",
+      "lower": "7234742.786177",
+      "metric": "net_revenue",
+      "money": "1515765.826740",
+      "name": "Net revenue",
+      "plan": "12539816.76",
+      "point": "11024050.933260",
+      "scene": "overcast",
+      "unit": "inr",
+      "upper": "14813359.080343",
+      "verdict": "could"
+     },
+     {
+      "date": "2026-11-08",
+      "direction": "at_most",
+      "goal": "dso_under_45",
+      "horizon": 2,
+      "key": "dso",
+      "kind": "forecast",
+      "line": "DSO on plan: 44 d against 45 d",
+      "lower": "31.385021",
+      "metric": "dso",
+      "money": "0",
+      "name": "DSO",
+      "plan": "45.00",
+      "point": "44.125334",
+      "scene": "clear",
+      "unit": "days",
+      "upper": "56.865648",
+      "verdict": "on_plan"
+     }
+    ],
+    "label": "Under watch",
+    "line": "Net revenue could be ₹0.15 Cr short of plan",
+    "name": "This week",
+    "scene": "overcast",
+    "start": "2026-11-02",
+    "top": "forecast:net_revenue",
+    "week": 1
+   },
+   {
+    "dates": "9–15 Nov",
+    "end": "2026-11-15",
+    "file": "04-fog",
+    "items": [
+     {
+      "date": "2026-11-15",
+      "direction": "at_most",
+      "goal": "dso_under_45",
+      "horizon": 3,
+      "key": "dso",
+      "kind": "forecast",
+      "line": "Too uncertain to call · bands too wide this far out",
+      "lower": "28.521701",
+      "metric": "dso",
+      "money": "0",
+      "name": "DSO",
+      "plan": "45.00",
+      "point": "44.125334",
+      "scene": "fog",
+      "unit": "days",
+      "upper": "59.728968",
+      "verdict": "wide",
+      "why": "The band is 29–60 d wide; it narrows as more weeks of data come in."
+     },
+     {
+      "date": "2026-11-15",
+      "direction": "at_least",
+      "goal": "fy27_net_revenue",
+      "horizon": 3,
+      "key": "net_revenue",
+      "kind": "forecast",
+      "line": "Too uncertain to call · bands too wide this far out",
+      "lower": "6383115.213998",
+      "metric": "net_revenue",
+      "money": "0",
+      "name": "Net revenue",
+      "plan": "12539816.76",
+      "point": "11024050.933260",
+      "scene": "fog",
+      "unit": "inr",
+      "upper": "15664986.652522",
+      "verdict": "wide",
+      "why": "The band is ₹0.6–1.6 Cr wide; it narrows as more weeks of data come in."
+     }
+    ],
+    "label": "Limited view",
+    "line": "Too uncertain to call · bands too wide this far out",
+    "name": "Next week",
+    "scene": "fog",
+    "start": "2026-11-09",
+    "top": "forecast:dso",
+    "week": 2
+   },
+   {
+    "dates": "16–22 Nov",
+    "end": "2026-11-22",
+    "file": "04-fog",
+    "items": [
+     {
+      "date": "2026-11-22",
+      "direction": "at_most",
+      "goal": "dso_under_45",
+      "horizon": 4,
+      "key": "dso",
+      "kind": "forecast",
+      "line": "Too uncertain to call · bands too wide this far out",
+      "lower": "26.107811",
+      "metric": "dso",
+      "money": "0",
+      "name": "DSO",
+      "plan": "45.00",
+      "point": "44.125334",
+      "scene": "fog",
+      "unit": "days",
+      "upper": "62.142858",
+      "verdict": "wide",
+      "why": "The band is 26–62 d wide; it narrows as more weeks of data come in."
+     },
+     {
+      "date": "2026-11-22",
+      "direction": "at_least",
+      "goal": "fy27_net_revenue",
+      "horizon": 4,
+      "key": "net_revenue",
+      "kind": "forecast",
+      "line": "Too uncertain to call · bands too wide this far out",
+      "lower": "5665159.959645",
+      "metric": "net_revenue",
+      "money": "0",
+      "name": "Net revenue",
+      "plan": "12539816.76",
+      "point": "11024050.933260",
+      "scene": "fog",
+      "unit": "inr",
+      "upper": "16382941.906875",
+      "verdict": "wide",
+      "why": "The band is ₹0.6–1.6 Cr wide; it narrows as more weeks of data come in."
+     }
+    ],
+    "label": "Limited view",
+    "line": "Too uncertain to call · bands too wide this far out",
+    "name": "Week 3",
+    "scene": "fog",
+    "start": "2026-11-16",
+    "top": "forecast:dso",
+    "week": 3
+   },
+   {
+    "dates": "23–29 Nov",
+    "end": "2026-11-29",
+    "file": "01-clear",
+    "items": [],
+    "label": "All clear",
+    "line": "Nothing ahead on the forecasts or the open findings",
+    "name": "Week 4",
+    "scene": "clear",
+    "start": "2026-11-23",
+    "top": null,
+    "week": 4
+   }
+  ],
+  "worst": 1
+ },
+ "panel": "#2BCAFF",
+ "rule": "First brief: the first brief, or a source connected since the last one.",
+ "scene": "sunrise",
+ "settings": {
+  "active_share": "0.9",
+  "active_weeks": 12,
+  "big_share": "0.05",
+  "fog_band_share": "0.35",
+  "fog_history_days": 56,
+  "fog_ran_share": "0.5",
+  "large_share": "0.10",
+  "material_share": "0.01",
+  "near_days": 30,
+  "several": 3,
+  "sudden_days": 7,
+  "today_days": 7
+ },
+ "text": "#0B1220",
+ "why": [
+  "7 items",
+  "10 of 11 checks ran"
+ ]
+}

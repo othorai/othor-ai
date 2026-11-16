@@ -1,0 +1,194 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# The Morning Brief (4d, 4d0, 4d1, 10g, 10j, 10l). Every value is the stored issue's (the run
+   made it); charts are ChartSpecs rendered by render_svg. #}
+{% from "components/tags.html" import state_tag, change_tag %}
+{% from "components/sweep.html" import rows_table %}
+{% from "components/icons.html" import logo %}
+{% from "components/forms.html" import dialog %}
+
+{# t: brief_view.tiles() item; href: its number's panel (#38), none in the recipients' view.
+   M15.3 (v0.15 design): the name, the value, its period, the sparkline, then one comparison,
+   coloured by tiles.emphasis (red only for a clear move) #}
+{% macro brief_tile(t, href=None) -%}
+{% set parts = t.label.split(" · ", 1) %}
+{% if href %}<a class="brief-tile is-link" href="{{ href }}" aria-label="{{ t.label }}: open the number">{% else %}<div class="brief-tile">{% endif %}
+  <span class="l">{{ parts[0] }}</span>
+  <div class="row"><span class="v">{{ t.value }}</span>{% if t.stale %}<span class="stale-mark">{{ t.stale }}</span>{% endif %}</div>
+  {% if parts | length > 1 %}<span class="p">{{ parts[1] }}</span>{% endif %}
+  {% if t.comparison.kind == "history" %}<p class="history">{{ t.comparison.text }}</p>{% else %}{% if t.spark %}<span class="chart">{{ chart(t.spark, 220, 40) }}</span>{% endif %}<span class="c {{ t.role }}">{{ t.comparison.text }}</span>{% endif %}
+{% if href %}</a>{% else %}</div>{% endif %}
+{%- endmacro %}
+
+{# i: brief_view.items() item; href: its panel (Finding tab); calc: its Test tab (Possible reasons
+   only). M15.3 (v0.15 design): chart on top, 01 · label · money, tags, title, line, the
+   consequence, then More info, Snooze and Mute (owner, 13 Nov: More info kept, #36/#37).
+   hold: the owner's hold on it ("Snoozed until 20 Nov"); actions: (run number, brief id, csrf
+   token) or None on the recipients' view #}
+{% macro brief_item(i, href, calc, actions=None, hold=None) -%}
+<article class="brief-item has-visual" id="item-{{ i.rank }}">
+  {% if i.chart_spec %}<a class="chart visual" href="{{ href }}" aria-label="More about {{ i.title }}">{{ chart(i.chart_spec, 520, 150) }}</a>{% elif i.rows %}<div class="records visual">{{ rows_table(i.rows, compact=True) }}</div>{% endif %}
+  <div class="body">
+  <div class="head"><span class="kind"><span class="n">{{ "%02d" | format(i.rank) }}</span>{{ i.label }}</span><span class="money">{{ i.money }}</span></div>
+  <div class="tags">{{ state_tag(i.state, i.confidence | capitalize if i.confidence else None) }}{% if i.change_tag[0] in ("new", "worse", "better", "open", "back") %}{{ change_tag(i.change_tag[0], i.change_tag[1]) }}{% endif %}{% if i.stale %}<span class="stale-mark">stale</span>{% endif %}</div>
+  <a class="title" href="{{ href }}">{{ i.title }}</a>
+  {% if i.line %}<p class="line">{{ i.line }}</p>{% endif %}
+  {% if i.consequence and i.consequence.text %}<p class="consequence">{{ i.consequence.text }}</p>{% endif %}
+  <div class="actions">
+    {% if i.link == "reasons" %}<a class="calc" href="{{ calc }}">Possible reasons</a>{% else %}<a class="calc" href="{{ href }}">More info</a>{% endif %}
+    {% if actions %}{% set run, bid, tok = actions %}<span class="quiet-links">
+      {% if hold %}<span class="held">{{ hold }}</span>{{ _hold_btn("undo", i.fingerprint, run, bid, tok, "Undo") }}
+      {% else %}{{ _hold_btn("snooze", i.fingerprint, run, bid, tok, "Snooze") }}{{ _hold_btn("mute", i.fingerprint, run, bid, tok, "Mute") }}{% endif %}
+    </span>{% endif %}
+  </div>
+  </div>
+</article>
+{%- endmacro %}
+
+{% macro _hold_btn(action, fp, run, bid, tok, label) -%}
+<form method="post" action="/sweep/finding/{{ fp }}/{{ action }}?run={{ run }}&amp;back=brief-{{ bid }}" class="inline" data-inplace><input type="hidden" name="csrf" value="{{ tok }}"><button class="link-u" type="submit">{{ label }}</button></form>
+{%- endmacro %}
+
+{# title, small: the section line ("What needs you · 4", "ranked by money and how soon it bites") #}
+{% macro brief_section(title, small=None) -%}
+<div class="brief-section"><p class="t">{{ title }}{% if small %}<small>· {{ small }}</small>{% endif %}</p>{% if caller %}<p class="meta">{{ caller() }}</p>{% endif %}</div>
+{%- endmacro %}
+
+{# a state in place of a brief (4h): title, text, optional code line #}
+{% macro brief_state(title, text, code=None) -%}
+<div class="brief-state"><p class="t">{{ title }}</p><p>{{ text }}</p>{% if code %}<code>{{ code }}</code>{% endif %}{% if caller %}<div class="flex flex-wrap gap-8">{{ caller() }}</div>{% endif %}</div>
+{%- endmacro %}
+
+{# c: brief_view.listing() card #}
+{% macro brief_card(c, new=False) -%}
+{% set n = c.item_count or 0 %}<div class="card-stack{{ ' s2' if n > 2 else (' s1' if n == 2 else '') }}">
+<a class="brief-card has-visual" href="/brief/{{ c.id }}">
+  {% from "components/icons.html" import logo %}
+  {# #29: nothing to chart (a quiet day, or no issue yet): the faint Othor AI mark and a short line, as Home's cards (#21) #}
+  <div class="visual">{% if c.chart %}{{ chart(c.chart, 360, 152) }}{% else %}<span class="quiet"><span class="mark" aria-hidden="true">{{ logo() }}</span><span>{{ "Quiet day" if c.quiet else ("First issue at " ~ fmt.clock(c.time) if not c.ready else "Nothing to chart") }}</span></span>{% endif %}{% if n > 1 %}<span class="stack-count">1 of {{ fmt.num(n) }}</span>{% endif %}</div>
+  <div class="body">
+    <div class="head"><span class="brief-tag">{{ c.name }}</span>{% if new %}<span class="change new">New</span>{% endif %}{% if c.default %}<span class="chip soft">Default</span>{% endif %}<span class="status"><span class="dot {{ 'accent' if c.ready else 'muted' }}"></span>{{ ("Ready · " ~ fmt.clock(c.time)) if c.ready else "No issue yet" }}</span></div>
+    {% if c.title %}<p class="headline">{{ c.title }}</p>{% endif %}
+    <p class="meta">{% if c.ready and not c.quiet %}<span>{{ fmt.num(n) }} finding{{ "s" if n != 1 else "" }}</span>{% endif %}<span>{{ c.scope }}</span><span>{{ fmt.num(c.recipients) }} recipient{{ "s" if c.recipients != 1 else "" }}</span>{% if c.ask %}<span>Question for: {{ c.ask }}</span>{% endif %}</p>
+    <span class="open">Open brief →</span>
+  </div>
+</a>
+{%- if n > 1 %}<span class="stack-sheet one" aria-hidden="true"></span>{% endif %}{% if n > 2 %}<span class="stack-sheet two" aria-hidden="true"></span>{% endif %}
+</div>
+{%- endmacro %}
+
+{# New brief as a card in the grid (v0.15 design 5a, pulled into v0.11 by the owner, 12 Nov 2026):
+   the brief icon with a + badge and the name; the benefit line and "Create a brief" were removed
+   (owner, #44: "New Brief with icon is enough") #}
+{% macro new_brief_card() -%}
+{% from "components/icons.html" import icon %}
+<a class="brief-card new" href="/brief/new"><span class="new-mark">{{ icon("brief") }}<span class="plus" aria-hidden="true">+</span></span><b class="name">New brief</b></a>
+{%- endmacro %}
+
+{# A tick chip (4d3): a checkbox that reads as "✓ South" #}
+{% macro check_chip(name, value, label, on=False, form=None) -%}
+<label class="chip lg check-chip"><input type="checkbox" name="{{ name }}" value="{{ value }}"{% if on %} checked{% endif %}{% if form %} form="{{ form }}"{% endif %}>{{ label }}</label>
+{%- endmacro %}
+
+{# Tabs that submit the panel's form, so the draft travels with them (4d2–4d6) #}
+{% macro form_tabs(items, current) -%}
+<nav class="form-tabs">{% for key, label in items %}<button type="submit" name="goto" value="{{ key }}" class="{{ 'is-on' if key == current else '' }}">{{ label }}</button>{% endfor %}</nav>
+{%- endmacro %}
+
+{# "Today with this change · computed" (4d2–4d6) #}
+{% macro effect_box(effect, title, note) -%}
+<div class="effect-box"><span class="k">Today with this change · computed</span>{% if effect %}<span class="t">{{ effect }}</span>{% if title %}<span class="v">{{ title }}</span>{% endif %}{% else %}<span class="v">No changes yet</span>{% endif %}<span class="k">{{ note }}</span></div>
+{%- endmacro %}
+
+{# A headline number row (4d4) with its today value; the buttons submit the panel's form #}
+{% macro number_row(r, first=False) -%}
+<div class="edit-row"><div class="flex flex-col"><span class="name">{{ r.name }}</span><span class="how">{{ r.how }}</span></div><span class="today">{{ r.today }}</span>{% if not first %}<button class="btn quiet sm" type="submit" name="action" value="up:{{ r.key }}" aria-label="Move up">↑</button>{% endif %}<button class="btn quiet sm" type="submit" name="action" value="remove:{{ r.key }}" aria-label="Remove {{ r.name }}">×</button></div>
+{%- endmacro %}
+
+{# The one-line Othor AI box #}
+{% macro ai_line(placeholder) -%}
+<div class="ai-line"><span class="who">Othor AI</span><input name="line" placeholder="{{ placeholder }}" aria-label="Change anything in one line"><button class="btn sm" type="submit" name="action" value="ai">↵</button></div>
+{%- endmacro %}
+
+{# A suggested brief (4b): Create opens its draft (4c1), Dismiss hides it #}
+{% macro suggested_card(g, csrf_token) -%}
+<div class="brief-card">
+  <div class="head"><span class="name">{{ g.name }}</span><span class="chip soft">Suggested</span></div>
+  <p class="headline">{{ g.question }}</p>
+  {% if g.evidence %}<ul class="why-list">{% for w in g.evidence %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
+  <p class="meta">{% if g.draft.get("from") %}<span>From: {{ g.draft["from"] | join(" · ") }}</span>{% endif %}<span>{{ fmt.num(g.draft.get("headline", []) | length) }} metrics</span>{% if g.draft.get("area") %}<span>{{ g.draft["area"] }}</span>{% endif %}</p>
+  <div class="flex items-center gap-8">
+    <form method="post" action="/brief/new"><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="question" value="{{ g.question }}"><input type="hidden" name="suggestion" value="{{ g.id }}"><button class="btn primary sm" type="submit">Create</button></form>
+    <form method="post" action="/brief/suggested/{{ g.id }}/dismiss" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}"><button class="btn quiet sm" type="submit">Dismiss</button></form>
+  </div>
+</div>
+{%- endmacro %}
+
+{# --- New brief (4c, 4c1; v0.11, docs/plans/new-brief-panel.md): the questions-panel style --- #}
+
+{# "Step 1 of 2 · Your question" and one segment per step, filled up to this one #}
+{% macro nb_steps(now, total, label) -%}
+<div class="nb-steps"><p><b>Step {{ now }} of {{ total }}</b> · {{ label }}</p><ol class="segs" aria-label="Step {{ now }} of {{ total }}">{% for i in range(1, total + 1) %}<li class="seg{{ ' on' if i <= now else '' }}"{% if i == now %} aria-current="step"{% endif %}></li>{% endfor %}</ol></div>
+{%- endmacro %}
+
+{# The head: a row (the title, or the steps on the review) and the close ×, then the caller's lines.
+   Use: {% call(part) nb_head(close, title) %}{% if part == "row" %}…{% else %}…{% endif %}{% endcall %} #}
+{% macro nb_head(close, title=None) -%}
+<div class="nb-head-row">{% if title %}<p class="panel-title nb-title">{{ title }}</p>{% else %}{{ caller("row") }}{% endif %}<a class="btn quiet" href="{{ close }}" aria-label="Close">×</a></div>
+{{ caller("rest") }}
+{%- endmacro %}
+
+{# The Othor AI tag: the mark in a light-blue circle, then the wordmark, or a question's source
+   word (SWEEP, MORNING BRIEF …; one colour for all, docs/plans/questions-panel.md) #}
+{% macro nb_ai_tag(word="Othor AI") -%}<p class="nb-ai"><span class="mark">{{ logo() }}</span><span>{{ word }}</span></p>{%- endmacro %}
+
+{# A suggested question: fills the box (and the form's `suggestion`) when clicked; sends nothing #}
+{% macro nb_card(c) -%}
+<button class="nb-card" type="button" data-tell-fill="{{ c.q }}" data-suggestion="{{ c.id }}"><span class="q">{{ c.q }}</span><span class="from">{{ c.from }}</span></button>
+{%- endmacro %}
+
+{# What's happening while the form waits on the server (#27); othor.js shows it on submit #}
+{% macro nb_busy(text) -%}
+<p class="nb-busy" data-busy-line role="status" aria-live="polite" hidden><span class="spin" aria-hidden="true"></span><span data-busy-text>{{ text }}</span></p>
+{%- endmacro %}
+
+{# The draft's name, edited in place: an input that reads as the title, with the pencil #}
+{% macro nb_name(value) -%}
+<label class="nb-name"><input name="name" value="{{ value }}" maxlength="120" aria-label="Brief name" autocomplete="off"><span class="pen" aria-hidden="true">✎</span></label>
+{%- endmacro %}
+
+{# The draft as a table (#28): label · value with its quieter note · Change on hover and focus
+   (as on the Ontology page), which starts the line in Change anything (othor.js, data-tell-fill) #}
+{% macro draft_table(rows) -%}
+<div class="table-wrap nb-table"><table class="table ont-table"><tbody>
+{% for r in rows %}<tr><th scope="row">{{ r.k }}</th><td class="wrap">{{ r.v }}{% if r.n %}<span class="note"> · {{ r.n }}</span>{% endif %}</td><td class="act">{% if r.fill %}<button class="link ont-act nb-change" type="button" data-tell-fill="{{ r.fill }}" aria-label="Change {{ r.k | lower }}">Change</button>{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
+{%- endmacro %}
+
+{# Tomorrow's brief as a mini brief: kicker, title, the headline tiles (band sparklines, from
+   their ChartSpecs), up to 2 items, Ask today. pv: brief_view.new_preview() #}
+{% macro mini_brief(pv) -%}
+<div class="mini-brief">
+  <p class="kicker">{{ pv.kicker }}</p>
+  <p class="title">{{ pv.issue.title }}</p>
+  {% if pv.tiles %}<div class="tiles">{% for t in pv.tiles %}{{ brief_tile(t) }}{% endfor %}</div>{% endif %}
+  {% if pv.top_items %}<ol class="items">{% for i in pv.top_items %}<li><span class="n">{{ i.n }}</span><span><b>{{ i.title }}</b>{% if i.label %}<span class="note"> · {{ i.label }}</span>{% endif %}</span></li>{% endfor %}</ol>{% endif %}
+  {% if pv.issue.ask %}<p class="ask-line"><span class="who">Ask today{% if pv.issue.ask.to %} · {{ pv.issue.ask.to }}{% endif %}</span> {{ pv.issue.ask.text }}</p>{% endif %}
+</div>
+{%- endmacro %}
+
+{# The footer note where Othor AI drafts (non-negotiable 6): the quiet shared one #}
+{% macro nb_note() -%}{% from "components/panels.html" import draft_note %}{{ draft_note() }}{%- endmacro %}
+
+{# M15.7 · Download PDF: a button that opens a dialog with two ticks; the form is a plain GET, so
+   the browser downloads the file and the page stays. pdf: {action, hidden} (routes/brief.pdf_ctx) #}
+{% macro pdf_download(pdf, kind="") -%}
+<button type="button" class="btn{{ ' ' ~ kind if kind else '' }}" data-dialog-open="pdf-dlg">Download PDF</button>
+{% call dialog("pdf-dlg", "Download this brief as a PDF", foot="The same numbers as this page · run and spec on every page") %}
+<form method="get" action="{{ pdf.action }}" class="pdf-form" data-dialog-submit>
+  {% for k, v in pdf.hidden.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+  <label class="check-row"><input type="checkbox" name="charts" value="1" checked><span>Include charts<span class="sub">each finding’s chart, as on the page</span></span></label>
+  <label class="check-row"><input type="checkbox" name="appendix" value="1" checked><span>Include the appendix<span class="sub">how each number was computed: the test, its gates, the definition, the run</span></span></label>
+  <div class="pdf-go"><button type="submit" class="btn primary">Download</button></div>
+</form>
+{% endcall %}
+{%- endmacro %}

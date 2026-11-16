@@ -1,0 +1,62 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import attrs_html %}
+{# Buttons (9b). kind: '' | 'primary' | 'quiet' | 'danger'. state forces a 9b state for review pages. #}
+{% macro button(label, kind="", size="", state="", type="button", href=None, block=False, disabled=False, attrs="") -%}
+{%- set cls = ["btn", kind, size, ("wide" if block else ""), ("is-" ~ state if state else "")] | select | join(" ") -%}
+{%- if href -%}<a class="{{ cls }}" href="{{ href }}"{{ attrs_html(attrs) }}>{{ label }}</a>
+{%- else -%}<button class="{{ cls }}" type="{{ type }}"{% if disabled %} disabled{% endif %}{{ attrs_html(attrs) }}>{{ label }}</button>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro link(label, href="#", state="", muted=False) -%}
+<a class="{{ 'link-muted' if muted else 'link' }}{{ ' is-' ~ state if state else '' }}" href="{{ href }}">{{ label }}</a>
+{%- endmacro %}
+
+{# The (i) button. With `text`, a popover: opens on click or keyboard focus (M12). #}
+{% macro info(state="", text=None, id=None, label="How is this calculated?") -%}
+{% if text %}<span class="pop" x-data="popover"><button class="info{{ ' is-' ~ state if state else '' }}" type="button" aria-label="{{ label }}" aria-controls="{{ id or 'pop' }}" aria-expanded="false">i</button><span class="pop-body" role="tooltip" id="{{ id or 'pop' }}">{{ text }}</span></span>
+{%- else %}<button class="info{{ ' is-' ~ state if state else '' }}" type="button" aria-label="{{ label }}">i</button>{% endif %}
+{%- endmacro %}
+
+{# Run again now (v0.11): the nightly steps on demand. Posts in place; waits while a run runs.
+   a: othor.web.again_view.Again (no button before the first run has sealed). #}
+{% macro run_again(a, csrf, label="Run again now", kind="", next=None) -%}
+{% if a and a.shown %}<form class="contents" method="post" action="/runs/again" data-inplace><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="next" value="{{ next or a.next_url }}">{{ button("Running…" if a.busy else label, kind, type="submit", disabled=a.busy, attrs={"data-busy": "Starting…"}) }}</form>{% endif %}
+{%- endmacro %}
+
+
+{# M15.3 · a two-way view switch (Simple · Full detail): links styled as one segmented control.
+   items: [(label, href)]; current: the label shown #}
+{% macro view_switch(items, current, label="View") -%}
+<nav class="view-switch" aria-label="{{ label }}">{% for text, href in items %}<a href="{{ href }}"{% if text == current %} class="is-on" aria-current="page"{% endif %}>{{ text }}</a>{% endfor %}</nav>
+{%- endmacro %}
+
+
+{# AI-heavy features are marked (docs/07, owner 14 Nov 2026): the Othor AI mark inside, the website
+   hero's green-to-cyan gradient. The first is Big Picture (v0.19). #}
+{% macro ai_button(label, href=None, disabled=False, attrs="", state="") -%}
+{%- from "components/icons.html" import logo -%}
+{%- set cls = "btn ai" ~ (" is-" ~ state if state else "") -%}
+{%- if href and not disabled -%}<a class="{{ cls }}" href="{{ href }}"{{ attrs_html(attrs) }}>{{ logo() }}<span>{{ label }}</span></a>
+{%- else -%}<button class="{{ cls }}" type="button"{% if disabled %} disabled{% endif %}{{ attrs_html(attrs) }}>{{ logo() }}<span>{{ label }}</span></button>
+{%- endif -%}
+{%- endmacro %}
+
+
+{# The top bar's ⋯ menu (owner, 15 Nov 2026; Home first, the other top bars next): the page's
+   secondary actions as one menu at the top right. Items: links and forms as `opt` (menu_link,
+   or a button with kind="opt"). #}
+{% macro top_menu(label="More actions") -%}
+{%- from "components/icons.html" import icon -%}
+<details class="use top-more" x-data="menu"><summary class="btn" aria-label="{{ label }}">{{ icon("more") }}</summary><div class="use-menu" role="menu">{{ caller() }}</div></details>
+{%- endmacro %}
+
+{# A link that opens a small menu in place (owner, 16 Nov 2026): the Archive's "2 earlier runs" on
+   a day's row. Items as `menu_link`. #}
+{% macro link_menu(label, aria=None) -%}
+<details class="use" x-data="menu"><summary class="link"{% if aria %} aria-label="{{ aria }}"{% endif %}>{{ label }}</summary><div class="use-menu" role="menu">{{ caller() }}</div></details>
+{%- endmacro %}
+
+{% macro menu_link(label, href) -%}
+<a class="opt" role="menuitem" href="{{ href }}">{{ label }}</a>
+{%- endmacro %}

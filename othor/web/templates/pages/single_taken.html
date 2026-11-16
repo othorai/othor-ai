@@ -1,0 +1,15 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/auth.html" %}
+{# One company per install (M20.1, v0.20): once the company is set up, sign-up is closed. #}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% block title %}Already set up · Othor AI{% endblock %}
+{% block card %}
+{% call el('div', 'auth-card') %}
+  {% if title %}<h1>{{ title }}</h1>
+  {% call el("p", "hint") %}{{ text }} Companies already here sign in as usual.{% endcall %}
+  {% else %}<h1>{{ company_name }} is already set up</h1>
+  {% call el("p", "hint") %}This Othor AI runs one company. Sign in to it; for another company, set up a second Othor AI.{% endcall %}{% endif %}
+  {{ button("Sign in", "primary", href="/login") }}
+{% endcall %}
+{% endblock %}

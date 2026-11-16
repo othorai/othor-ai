@@ -1,0 +1,77 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/onboarding.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/icons.html" import icon %}
+{% from "components/buttons.html" import button %}
+{% from "components/sources.html" import kind_tile %}
+{# Step 5 · Metrics (M11c, m1–m2): three checks. A card is "Good to go" (blue) unless it blocks;
+   only an open conflict or a redrafted definition blocks (can_confirm). Each card opens its
+   panel. Under them, the quieter tools (owner, 8 Nov): Describe your data sources, Add a
+   metric, View Ontology draft, Redraft with Othor AI. #}
+{% block title %}Metrics · Set up {{ company.name }}{% endblock %}
+{% block width %} col{% endblock %}
+{% block main %}
+<h1>{{ title }}</h1>
+{% call el("p", "lede") %}{{ lede2 }}{% endcall %}
+
+{% if no_model %}
+{% call el('div', 'banner warn', layout='mt-16', attrs='role="status"') %}<span>{{ no_model }}</span>
+  {% if can_retry %}<form method="post" action="/setup/metrics/redraft" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{% call el('button', 'link-u', attrs='type="submit"') %}Try again{% endcall %}</form>{% endif %}{% endcall %}
+{% endif %}
+{% if drafting %}{% call el("div", "callout", layout="mt-16", attrs='hx-get="/setup/metrics" hx-trigger="every 2s" hx-select="main" hx-target="main" hx-swap="outerHTML"') %}Computing values…{% endcall %}{% endif %}
+{% if set_aside %}{% call el("div", "callout", layout="mt-16 flex items-center justify-between gap-12") %}<span>{{ fmt.num(set_aside) }} drafted metric{{ "s" if set_aside != 1 else "" }} set aside by the redraft.</span><form method="post" action="/setup/metrics/bring-back" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{% call el('button', 'link-u', attrs='type="submit"') %}Bring back{% endcall %}</form>{% endcall %}{% endif %}
+
+{% set cards = [
+  ("assumptions", checks.assumptions, "Assumptions"),
+  ("decisions", checks.decisions, "Decisions"),
+  ("confirm", checks.confirm, "Metrics to confirm"),
+] %}
+<div class="grid grid-cols-1 md:grid-cols-3 gap-12 mt-24">
+{% for key, c, label in cards %}
+  {% call el('section', 'check-card' ~ (' good' if c.good else ''), attrs={'aria-label': label}) %}
+    {% if c.good %}{% call el('p', 'check-status good') %}{{ icon("check") }}Good to go{% endcall %}
+    {% else %}{% call el('p', 'check-status needs') %}{% call el('span', 'dot warn') %}{% endcall %}Needs you{% endcall %}{% endif %}
+    {% call el('p', 'check-n') %}{{ fmt.num(c.n) }}{% endcall %}
+    {% call el('p', 'check-t') %}{{ label }}{% endcall %}
+    {% call el('p', 'check-sub') %}{{ c.text }}{% endcall %}
+    {{ button("Review", block=True, href="/setup/metrics?panel=" ~ key) }}
+  {% endcall %}
+{% endfor %}
+</div>
+
+{# owner's O1 (8 Nov): one line to the Ontology draft, then "Not quite right?" with Upload; no
+   separate Add a metric link #}
+{% call el('p', 'check-tools') %}See all of this together in your {% call el('a', 'link-u', attrs='href="/setup/metrics?panel=ontology"') %}Ontology draft{% endcall %}{% endcall %}
+{% set doc_form %}<form method="post" action="/setup/metrics/document" enctype="multipart/form-data" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{% call el('label', 'btn', layout='relative') %}{{ "Upload another" if doc else "Upload" }}{{ el('input', 'drop-input', attrs='type="file" name="file" data-autosubmit aria-label="Choose a document" accept=".pdf,.docx,.xlsx,.md,.txt"') }}{% endcall %}</form>{% endset %}
+{% if doc %}
+{% call el('div', 'card board describe', layout='mt-24') %}
+  <div class="flex items-center gap-12">{{ kind_tile(doc.tile) }}<div>{% call el("p", "strong") %}{{ doc.filename }}{% endcall %}{% call el("p", "hint") %}{{ doc.line }}{% if doc.changed %} · {% call el('a', 'link-u', attrs='href="/setup/metrics?panel=confirm"') %}See what changed{% endcall %}{% endif %}{% endcall %}</div></div>
+  {{ doc_form }}
+{% endcall %}
+{% else %}
+{% call el('div', 'card dashed describe', layout='mt-24') %}
+  <div>{% call el("p", "strong") %}Not quite right?{% endcall %}{% call el("p", "hint") %}Upload a data dictionary or field notes and we’ll redraft these metrics with it.{% endcall %}</div>
+  <div class="flex items-center gap-12">{% call el('span', 'hint') %}PDF · DOCX · XLSX · MD{% endcall %}{{ doc_form }}</div>
+{% endcall %}
+{% endif %}
+{% if doc_error %}{% call el('div', 'banner neg', layout='mt-8', attrs='role="alert"') %}<span>{{ doc_error }}</span>{% endcall %}{% endif %}
+{% if model and not by_rules %}{% call el('p', 'check-tools') %}<form method="post" action="/setup/metrics/redraft" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{% call el('button', 'link-u', attrs={'type': 'submit', 'disabled': drafting}) %}Redraft with Othor AI{% endcall %}</form>{% endcall %}{% endif %}
+
+{% call el('form', 'onb-foot', attrs='method="post" action="/setup/metrics/confirm"') %}
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  {% call el('a', 'link-u', attrs='href="/setup/sources"') %}Back{% endcall %}
+  <span class="flex items-center gap-16">{% call el('span', 'hint') %}{{ footer }}{% endcall %}{{ button(confirm_label, "primary", "lg", type="submit", disabled=not can_confirm) }}</span>
+{% endcall %}
+{% endblock %}
+
+{% block overlay %}
+{% if panel and panel.kind == "assumptions" %}{% include "setup/_check_assumptions.html" %}
+{% elif panel and panel.kind == "decisions" %}{% include "setup/_check_decisions.html" %}
+{% elif panel and panel.kind == "confirm" %}{% include "setup/_check_confirm.html" %}
+{% elif panel and panel.kind == "choose" %}{% include "setup/_choose.html" %}
+{% elif panel and panel.kind == "chat" %}{% include "setup/_chat.html" %}
+{% elif panel and panel.kind == "connect" %}{% include "setup/_connect.html" %}
+{% elif panel and panel.kind == "ontology" %}{% include "setup/_ontology_draft.html" %}
+{% elif panel and panel.kind == "form" %}{% include "setup/_metric_form.html" %}
+{% elif panel and panel.kind == "found" %}{% include "setup/_found.html" %}{% endif %}
+{% endblock %}

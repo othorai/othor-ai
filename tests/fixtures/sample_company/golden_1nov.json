@@ -1,0 +1,258 @@
+{
+  "nights": {
+    "findings": [
+      {
+        "detector": "net_hiding_gross",
+        "metric": "net_revenue",
+        "money_lakh": "140",
+        "pattern": "P1",
+        "state": "assessed"
+      },
+      {
+        "detector": "cross_source",
+        "metric": "dispatch_invoice",
+        "money_lakh": "190",
+        "pattern": "P10",
+        "state": "needs_confirmation"
+      },
+      {
+        "detector": "changepoint",
+        "metric": "receivables_over_60",
+        "money_lakh": "28",
+        "pattern": "P2",
+        "state": "measured"
+      },
+      {
+        "detector": "concentration",
+        "metric": "order_book",
+        "money_lakh": "91",
+        "pattern": "P3",
+        "state": "assessed"
+      },
+      {
+        "detector": "missing_records",
+        "metric": "invoiced_value",
+        "money_lakh": "36",
+        "pattern": "P4",
+        "state": "not_determinable"
+      },
+      {
+        "detector": "missing_records",
+        "metric": "invoiced_value",
+        "money_lakh": "360",
+        "pattern": "P5",
+        "state": "measured"
+      },
+      {
+        "detector": "broken_relationship",
+        "metric": "freight",
+        "money_lakh": "70",
+        "pattern": "P6",
+        "state": "assessed"
+      },
+      {
+        "detector": "rising_variance",
+        "metric": "dispatch_time",
+        "money_lakh": "459",
+        "pattern": "P7",
+        "state": "assessed"
+      }
+    ],
+    "resolved": [
+      {
+        "detector": "cross_source",
+        "metric": "mis_erp",
+        "money_lakh": "6",
+        "pattern": "P16",
+        "reason": "Cleared by data",
+        "state": "needs_confirmation"
+      },
+      {
+        "detector": "missing_records",
+        "metric": "invoiced_value",
+        "money_lakh": "18",
+        "pattern": "Skarfab",
+        "reason": "Explained by your answer",
+        "state": "not_determinable"
+      }
+    ],
+    "suppressed": {
+      "Diwali week: orders spike the week before and drop the week of": [
+        {
+          "detector": "forecast_breach",
+          "grain": "week",
+          "metric": "metres_dispatched",
+          "money_lakh": "57",
+          "window": [
+            "2026-10-19",
+            "2026-10-25"
+          ]
+        },
+        {
+          "detector": "forecast_breach",
+          "grain": "week",
+          "metric": "net_revenue",
+          "money_lakh": "71",
+          "window": [
+            "2026-10-19",
+            "2026-10-25"
+          ]
+        }
+      ],
+      "Surat plant shutdown, 10–24 August": [
+        {
+          "detector": "forecast_breach",
+          "grain": "week",
+          "metric": "metres_dispatched",
+          "money_lakh": "53",
+          "window": [
+            "2026-08-24",
+            "2026-08-30"
+          ]
+        }
+      ]
+    },
+    "watching": [
+      {
+        "label": "Active customers silent 90+ days",
+        "status": "breached"
+      },
+      {
+        "label": "Dispatch time spread, Coimbatore · 7 days",
+        "status": "breached"
+      },
+      {
+        "label": "Freight per metre vs 6-month average",
+        "status": "breached"
+      },
+      {
+        "label": "Receivables over 60 days, share",
+        "status": "within"
+      }
+    ]
+  },
+  "steady": {
+    "findings": [
+      {
+        "detector": "net_hiding_gross",
+        "metric": "net_revenue",
+        "money_lakh": "140",
+        "pattern": "P1",
+        "state": "assessed"
+      },
+      {
+        "detector": "cross_source",
+        "metric": "dispatch_invoice",
+        "money_lakh": "190",
+        "pattern": "P10",
+        "state": "needs_confirmation"
+      },
+      {
+        "detector": "changepoint",
+        "metric": "receivables_over_60",
+        "money_lakh": "28",
+        "pattern": "P2",
+        "state": "measured"
+      },
+      {
+        "detector": "concentration",
+        "metric": "order_book",
+        "money_lakh": "91",
+        "pattern": "P3",
+        "state": "assessed"
+      },
+      {
+        "detector": "missing_records",
+        "metric": "invoiced_value",
+        "money_lakh": "36",
+        "pattern": "P4",
+        "state": "not_determinable"
+      },
+      {
+        "detector": "missing_records",
+        "metric": "invoiced_value",
+        "money_lakh": "360",
+        "pattern": "P5",
+        "state": "measured"
+      },
+      {
+        "detector": "broken_relationship",
+        "metric": "freight",
+        "money_lakh": "70",
+        "pattern": "P6",
+        "state": "assessed"
+      },
+      {
+        "detector": "rising_variance",
+        "metric": "dispatch_time",
+        "money_lakh": "459",
+        "pattern": "P7",
+        "state": "assessed"
+      }
+    ],
+    "suppressed": {
+      "Diwali week: orders spike the week before and drop the week of": [
+        {
+          "detector": "forecast_breach",
+          "grain": "week",
+          "metric": "metres_dispatched",
+          "money_lakh": "54",
+          "window": [
+            "2026-10-19",
+            "2026-10-25"
+          ]
+        },
+        {
+          "detector": "forecast_breach",
+          "grain": "week",
+          "metric": "net_revenue",
+          "money_lakh": "67",
+          "window": [
+            "2026-10-19",
+            "2026-10-25"
+          ]
+        },
+        {
+          "detector": "forecast_breach",
+          "grain": "week",
+          "metric": "receivables_over_60",
+          "money_lakh": "16",
+          "window": [
+            "2026-10-19",
+            "2026-10-25"
+          ]
+        }
+      ],
+      "Surat plant shutdown, 10–24 August": [
+        {
+          "detector": "forecast_breach",
+          "grain": "week",
+          "metric": "metres_dispatched",
+          "money_lakh": "51",
+          "window": [
+            "2026-08-24",
+            "2026-08-30"
+          ]
+        }
+      ]
+    },
+    "watching": [
+      {
+        "label": "Active customers silent 90+ days",
+        "status": "breached"
+      },
+      {
+        "label": "Dispatch time spread, Coimbatore · 7 days",
+        "status": "breached"
+      },
+      {
+        "label": "Freight per metre vs 6-month average",
+        "status": "breached"
+      },
+      {
+        "label": "Receivables over 60 days, share",
+        "status": "within"
+      }
+    ]
+  }
+}

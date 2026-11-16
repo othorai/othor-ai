@@ -1,0 +1,40 @@
+Subject: South fell ₹1.4 Cr; West’s rise hid it · Leadership · Sun 1 Nov
+
+Leadership · Sun 1 Nov · 6:00 AM
+
+South fell ₹1.4 Cr while West’s growth hid it; three accounts carry 72% of the drop and none has invoiced since 9 Oct; one is Skarfab’s known pause to 1 Dec.
+
+DSO and gross margin per metre are on plan.
+
+1 number from a stale source: Net revenue · Oct as of Fri
+
+
+1. South fell ₹1.4 Cr; West’s rise hid it · ₹1.4 Cr
+   November close in 29 days · Assessed · High · New
+
+2. Dispatch time spread at Coimbatore tripled from 7 Sep while the average held at 4.3 days · ₹4.59 Cr at risk
+   Spread usually comes before complaints · Assessed · High · New
+
+3. 14 customers still marked active haven’t invoiced in 90+ days · ₹3.6 Cr
+   ₹3.6 Cr a year outside view · Measured · New
+
+4. Freight expense tracked metres dispatched for 20 weeks, then decoupled on 14 Sep · ₹5.8 L / month
+   November close in 29 days · Assessed · Medium · New
+
+What's ahead
+Net revenue: ₹56.7 Cr expected for FY27 (₹54.1–59.2 Cr) · 95% likely to miss the ₹60 Cr goal · mostly lower invoiced value · Reliable, tested on its last 11 periods: inside its range 10 times
+DSO: 44 d expected by Mar 2027 (37–50 d) · 61% likely to stay under 45 d · Reliable, tested on its last 11 periods: inside its range 9 times
+Gross margin per metre: ₹45.8–59.4 expected this week · Reliable, tested on its last 5 periods: inside its range 4 times
+Metres dispatched: 0.75–1.25 L m expected this week · Fair, tested on its last 5 periods: inside its range 4 times
+Receivables over 60 days: ₹0.8–1.2 Cr expected this week · Fair, tested on its last 5 periods: inside its range 4 times
+Known ahead for the whole business: Skarfab paused orders until 1 Dec (EU audit) (its effect not yet measured).
+
+Watching · 3 breached: Active customers silent 90+ days · 14 · alert above 8 · owner Priya Menon · 2 more
+
+Question to ask today · for Priya Menon · Head of Sales
+Have Tessora EU and Ravira Exports moved orders elsewhere, or are they on hold?
+
+Open the brief: https://indigothread.othor.ai/l/OPEN-TOKEN
+
+Every number is computed from your sources · run #0002 · spec v2 · replayable
+Unsubscribe: https://indigothread.othor.ai/u/UNSUB-TOKEN

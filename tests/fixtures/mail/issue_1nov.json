@@ -1,0 +1,426 @@
+{
+ "ahead": [
+  {
+   "card": {
+    "at": {
+     "expected": "56.6565",
+     "high": "59.2305",
+     "low": "54.0826",
+     "target": "60.0000"
+    },
+    "expected": "₹56.7 Cr",
+    "high": "₹59.2 Cr",
+    "label": "Net revenue · FY27",
+    "low": "₹54.1 Cr",
+    "target": "₹60 Cr",
+    "tone": "negative",
+    "verdict": "95% likely to miss the ₹60 Cr goal"
+   },
+   "chart": "{\"alt_text\":\"Net revenue: actuals to 1 Oct, then the forecast to 1 Mar with its likely range.\",\"annotations\":[],\"band\":{\"forecast_run_id\":null,\"label\":null,\"level\":\"0.800000\",\"lower\":[[\"2026-10-01\",\"4.619824\"],[\"2026-11-01\",\"4.434297\"],[\"2026-12-01\",\"4.307114\"],[\"2027-01-01\",\"4.209523\"],[\"2027-02-01\",\"4.127251\"],[\"2027-03-01\",\"4.054767\"]],\"role\":\"positive\",\"series_id\":\"forecast\",\"source\":\"forecast\",\"upper\":[[\"2026-10-01\",\"4.619824\"],[\"2026-11-01\",\"5.048389\"],[\"2026-12-01\",\"5.175571\"],[\"2027-01-01\",\"5.273162\"],[\"2027-02-01\",\"5.355435\"],[\"2027-03-01\",\"5.427918\"]]},\"categories\":[],\"explore\":{},\"id\":\"ahead:net_revenue:month:2027-03-01\",\"kind\":\"line\",\"period\":{\"from\":\"2025-11-01\",\"grain\":\"month\",\"to\":\"2027-03-01\",\"tz\":\"Asia/Kolkata\"},\"provenance\":{\"metric_id\":\"net_revenue\",\"source\":\"forecast v2\"},\"series\":[{\"emphasis\":false,\"id\":\"actual\",\"name\":\"Actual\",\"points\":[[\"2025-11-01\",\"4.532500\"],[\"2025-12-01\",\"4.717500\"],[\"2026-01-01\",\"4.486250\"],[\"2026-02-01\",\"4.532500\"],[\"2026-03-01\",\"5.226250\"],[\"2026-04-01\",\"4.656000\"],[\"2026-05-01\",\"4.752000\"],[\"2026-06-01\",\"4.896000\"],[\"2026-07-01\",\"4.752000\"],[\"2026-08-01\",\"4.464000\"],[\"2026-09-01\",\"4.810000\"],[\"2026-10-01\",\"4.619824\"]],\"role\":\"neutral\",\"style\":\"line\"},{\"emphasis\":false,\"id\":\"forecast\",\"name\":\"Forecast\",\"points\":[[\"2026-10-01\",\"4.619824\"],[\"2026-11-01\",\"4.741343\"],[\"2026-12-01\",\"4.741343\"],[\"2027-01-01\",\"4.741343\"],[\"2027-02-01\",\"4.741343\"],[\"2027-03-01\",\"4.741343\"]],\"role\":\"muted\",\"style\":\"dotted\"}],\"spec_version\":1,\"title\":\"Net revenue · what's ahead\",\"unit\":{\"code\":\"INR\",\"decimals\":2,\"scale\":\"cr\",\"type\":\"currency\"},\"x\":{\"label\":null,\"type\":\"time\"},\"y\":{\"label\":null,\"zero_based\":false}}",
+   "confidence": {
+    "level": "high",
+    "why": "tested on its last 11 periods: inside its range 10 times",
+    "word": "Reliable"
+   },
+   "depth": {
+    "method": "It follows the recent level, 27% more accurate on this number's own past than one that repeats the same period last year.",
+    "parts": [
+     "Invoiced value: ₹4.8 Cr expected",
+     "Credit notes: ₹7.7 L expected",
+     "Rebates: ₹1.5 L expected"
+    ],
+    "range": "The range held most past values without widening.",
+    "technical": "ETS(A,N,N) · 80% range (P10–P90) · calibration ×1.0 · tested on 11 periods"
+   },
+   "grain": "month",
+   "metric": "net_revenue",
+   "name": "Net revenue",
+   "says": "₹56.7 Cr expected for FY27 (₹54.1–59.2 Cr) · 95% likely to miss the ₹60 Cr goal · mostly lower invoiced value"
+  },
+  {
+   "card": {
+    "at": {
+     "expected": "43.5600",
+     "high": "50.2200",
+     "low": "36.8900",
+     "target": "45.0000"
+    },
+    "expected": "44 d",
+    "high": "50 d",
+    "label": "DSO · by Mar 2027",
+    "low": "37 d",
+    "target": "45 d",
+    "tone": "neutral",
+    "verdict": "61% likely to stay under 45 d"
+   },
+   "chart": "{\"alt_text\":\"DSO: actuals to 1 Oct, then the forecast to 1 Mar with its likely range, against the goal 45 d.\",\"annotations\":[{\"at\":null,\"from\":null,\"label\":\"goal 45 d\",\"role\":null,\"style\":null,\"to\":null,\"type\":\"threshold\",\"value\":\"45.000000\"}],\"band\":{\"forecast_run_id\":null,\"label\":null,\"level\":\"0.800000\",\"lower\":[[\"2026-10-01\",\"45.747824\"],[\"2026-11-01\",\"40.577446\"],[\"2026-12-01\",\"39.343405\"],[\"2027-01-01\",\"38.396492\"],[\"2027-02-01\",\"37.598207\"],[\"2027-03-01\",\"36.894904\"]],\"role\":\"positive\",\"series_id\":\"forecast\",\"source\":\"forecast\",\"upper\":[[\"2026-10-01\",\"45.747824\"],[\"2026-11-01\",\"46.535924\"],[\"2026-12-01\",\"47.769965\"],[\"2027-01-01\",\"48.716878\"],[\"2027-02-01\",\"49.515162\"],[\"2027-03-01\",\"50.218465\"]]},\"categories\":[],\"explore\":{},\"id\":\"ahead:dso:month:2027-03-01\",\"kind\":\"line\",\"period\":{\"from\":\"2025-11-01\",\"grain\":\"month\",\"to\":\"2027-03-01\",\"tz\":\"Asia/Kolkata\"},\"provenance\":{\"metric_id\":\"dso\",\"source\":\"forecast v2\"},\"series\":[{\"emphasis\":false,\"id\":\"actual\",\"name\":\"Actual\",\"points\":[[\"2025-11-01\",\"42.544085\"],[\"2025-12-01\",\"42.235082\"],[\"2026-01-01\",\"46.401272\"],[\"2026-02-01\",\"42.703717\"],[\"2026-03-01\",\"42.078624\"],[\"2026-04-01\",\"45.653345\"],[\"2026-05-01\",\"44.583937\"],[\"2026-06-01\",\"44.624571\"],[\"2026-07-01\",\"43.978112\"],[\"2026-08-01\",\"49.008141\"],[\"2026-09-01\",\"41.270425\"],[\"2026-10-01\",\"45.747824\"]],\"role\":\"neutral\",\"style\":\"line\"},{\"emphasis\":false,\"id\":\"forecast\",\"name\":\"Forecast\",\"points\":[[\"2026-10-01\",\"45.747824\"],[\"2026-11-01\",\"43.556685\"],[\"2026-12-01\",\"43.556685\"],[\"2027-01-01\",\"43.556685\"],[\"2027-02-01\",\"43.556685\"],[\"2027-03-01\",\"43.556685\"]],\"role\":\"muted\",\"style\":\"dotted\"}],\"spec_version\":1,\"title\":\"DSO · what's ahead\",\"unit\":{\"code\":null,\"decimals\":0,\"scale\":\"none\",\"type\":\"days\"},\"x\":{\"label\":null,\"type\":\"time\"},\"y\":{\"label\":null,\"zero_based\":false}}",
+   "confidence": {
+    "level": "high",
+    "why": "tested on its last 11 periods: inside its range 9 times",
+    "word": "Reliable"
+   },
+   "depth": {
+    "method": "It follows the recent level, 12% more accurate on this number's own past than one that repeats the same period last year.",
+    "range": "The range held most past values without widening.",
+    "technical": "ETS(A,N,N) · 80% range (P10–P90) · calibration ×1.0 · tested on 11 periods"
+   },
+   "grain": "month",
+   "metric": "dso",
+   "name": "DSO",
+   "says": "44 d expected by Mar 2027 (37–50 d) · 61% likely to stay under 45 d"
+  },
+  {
+   "card": {
+    "at": {
+     "expected": "52.5850",
+     "high": "59.3846",
+     "low": "45.7854"
+    },
+    "expected": "₹52.6",
+    "high": "₹59.4",
+    "label": "Gross margin per metre · this week",
+    "low": "₹45.8",
+    "target": null,
+    "tone": "neutral",
+    "verdict": null
+   },
+   "chart": "{\"alt_text\":\"Gross margin per metre: actuals to 19 Oct, then the forecast to 26 Oct with its likely range.\",\"annotations\":[],\"band\":{\"forecast_run_id\":null,\"label\":null,\"level\":\"0.800000\",\"lower\":[[\"2026-10-19\",\"52.928689\"],[\"2026-10-26\",\"45.785429\"]],\"role\":\"positive\",\"series_id\":\"forecast\",\"source\":\"forecast\",\"upper\":[[\"2026-10-19\",\"52.928689\"],[\"2026-10-26\",\"59.384551\"]]},\"categories\":[],\"explore\":{},\"id\":\"ahead:gross_margin_per_metre:week:2026-10-26\",\"kind\":\"line\",\"period\":{\"from\":\"2026-08-03\",\"grain\":\"week\",\"to\":\"2026-10-26\",\"tz\":\"Asia/Kolkata\"},\"provenance\":{\"metric_id\":\"gross_margin_per_metre\",\"source\":\"forecast v2\"},\"series\":[{\"emphasis\":false,\"id\":\"actual\",\"name\":\"Actual\",\"points\":[[\"2026-08-03\",\"38.762805\"],[\"2026-08-10\",\"46.382268\"],[\"2026-08-17\",\"42.235899\"],[\"2026-08-24\",\"38.709124\"],[\"2026-08-31\",\"47.664007\"],[\"2026-09-07\",\"41.930819\"],[\"2026-09-14\",\"40.846406\"],[\"2026-09-21\",\"41.391285\"],[\"2026-09-28\",\"52.516212\"],[\"2026-10-05\",\"54.195126\"],[\"2026-10-12\",\"53.751665\"],[\"2026-10-19\",\"52.928689\"]],\"role\":\"neutral\",\"style\":\"line\"},{\"emphasis\":false,\"id\":\"forecast\",\"name\":\"Forecast\",\"points\":[[\"2026-10-19\",\"52.928689\"],[\"2026-10-26\",\"52.584990\"]],\"role\":\"muted\",\"style\":\"dotted\"}],\"spec_version\":1,\"title\":\"Gross margin per metre · what's ahead\",\"unit\":{\"code\":null,\"decimals\":1,\"scale\":\"none\",\"type\":\"count\"},\"x\":{\"label\":null,\"type\":\"time\"},\"y\":{\"label\":null,\"zero_based\":false}}",
+   "confidence": {
+    "level": "high",
+    "why": "tested on its last 5 periods: inside its range 4 times",
+    "word": "Reliable"
+   },
+   "depth": {
+    "method": "It follows the trend, 7% more accurate on this number's own past than one that repeats the last period.",
+    "range": "The range held most past values without widening.",
+    "technical": "ETS(A,A,N) · 80% range (P10–P90) · calibration ×1.0 · tested on 5 periods"
+   },
+   "grain": "week",
+   "metric": "gross_margin_per_metre",
+   "name": "Gross margin per metre",
+   "says": "₹45.8–59.4 expected this week"
+  },
+  {
+   "card": {
+    "at": {
+     "expected": "100034.0171",
+     "high": "125289.8490",
+     "low": "74778.1853"
+    },
+    "expected": "1.00 L m",
+    "high": "1.25 L m",
+    "label": "Metres dispatched · this week",
+    "low": "74,778 m",
+    "target": null,
+    "tone": "neutral",
+    "verdict": null
+   },
+   "chart": "{\"alt_text\":\"Metres dispatched: actuals to 19 Oct, then the forecast to 26 Oct with its likely range.\",\"annotations\":[],\"band\":{\"forecast_run_id\":null,\"label\":null,\"level\":\"0.800000\",\"lower\":[[\"2026-10-19\",\"1.754356\"],[\"2026-10-26\",\"0.747782\"]],\"role\":\"positive\",\"series_id\":\"forecast\",\"source\":\"forecast\",\"upper\":[[\"2026-10-19\",\"1.754356\"],[\"2026-10-26\",\"1.252898\"]]},\"categories\":[],\"explore\":{},\"id\":\"ahead:metres_dispatched:week:2026-10-26\",\"kind\":\"line\",\"period\":{\"from\":\"2026-08-03\",\"grain\":\"week\",\"to\":\"2026-10-26\",\"tz\":\"Asia/Kolkata\"},\"provenance\":{\"metric_id\":\"metres_dispatched\",\"source\":\"forecast v2\"},\"series\":[{\"emphasis\":false,\"id\":\"actual\",\"name\":\"Actual\",\"points\":[[\"2026-08-03\",\"1.155576\"],[\"2026-08-10\",\"0.807480\"],[\"2026-08-17\",\"0.886923\"],[\"2026-08-24\",\"1.622504\"],[\"2026-08-31\",\"0.830714\"],[\"2026-09-07\",\"1.138707\"],[\"2026-09-14\",\"0.920792\"],[\"2026-09-21\",\"1.155969\"],[\"2026-09-28\",\"0.982713\"],[\"2026-10-05\",\"0.871850\"],[\"2026-10-12\",\"0.367346\"],[\"2026-10-19\",\"1.754356\"]],\"role\":\"neutral\",\"style\":\"line\"},{\"emphasis\":false,\"id\":\"forecast\",\"name\":\"Forecast\",\"points\":[[\"2026-10-19\",\"1.754356\"],[\"2026-10-26\",\"1.000340\"]],\"role\":\"muted\",\"style\":\"dotted\"}],\"spec_version\":1,\"title\":\"Metres dispatched · what's ahead\",\"unit\":{\"code\":null,\"decimals\":1,\"scale\":\"l\",\"type\":\"metres\"},\"x\":{\"label\":null,\"type\":\"time\"},\"y\":{\"label\":null,\"zero_based\":false}}",
+   "confidence": {
+    "level": "medium",
+    "why": "tested on its last 5 periods: inside its range 4 times",
+    "word": "Fair"
+   },
+   "depth": {
+    "method": "It follows the trend, easing off, 17% more accurate on this number's own past than one that repeats the last period.",
+    "range": "The range held most past values without widening.",
+    "technical": "ETS(A,Ad,N) · 80% range (P10–P90) · calibration ×1.0 · tested on 5 periods"
+   },
+   "grain": "week",
+   "metric": "metres_dispatched",
+   "name": "Metres dispatched",
+   "says": "0.75–1.25 L m expected this week"
+  },
+  {
+   "card": {
+    "at": {
+     "expected": "1.0238",
+     "high": "1.2399",
+     "low": "0.8077"
+    },
+    "expected": "₹1 Cr",
+    "high": "₹1.2 Cr",
+    "label": "Receivables over 60 days · this week",
+    "low": "₹0.81 Cr",
+    "target": null,
+    "tone": "neutral",
+    "verdict": null
+   },
+   "chart": "{\"alt_text\":\"Receivables over 60 days: actuals to 19 Oct, then the forecast to 26 Oct with its likely range.\",\"annotations\":[],\"band\":{\"forecast_run_id\":null,\"label\":null,\"level\":\"0.800000\",\"lower\":[[\"2026-10-19\",\"0.763830\"],[\"2026-10-26\",\"0.807714\"]],\"role\":\"positive\",\"series_id\":\"forecast\",\"source\":\"forecast\",\"upper\":[[\"2026-10-19\",\"0.763830\"],[\"2026-10-26\",\"1.239872\"]]},\"categories\":[],\"explore\":{},\"id\":\"ahead:receivables_over_60:week:2026-10-26\",\"kind\":\"line\",\"period\":{\"from\":\"2026-08-03\",\"grain\":\"week\",\"to\":\"2026-10-26\",\"tz\":\"Asia/Kolkata\"},\"provenance\":{\"metric_id\":\"receivables_over_60\",\"source\":\"forecast v2\"},\"series\":[{\"emphasis\":false,\"id\":\"actual\",\"name\":\"Actual\",\"points\":[[\"2026-08-03\",\"0.547020\"],[\"2026-08-10\",\"0.857748\"],[\"2026-08-17\",\"0.843067\"],[\"2026-08-24\",\"0.860994\"],[\"2026-08-31\",\"0.941518\"],[\"2026-09-07\",\"0.908622\"],[\"2026-09-14\",\"0.947445\"],[\"2026-09-21\",\"0.934171\"],[\"2026-09-28\",\"1.023793\"],[\"2026-10-05\",\"0.959937\"],[\"2026-10-12\",\"0.980790\"],[\"2026-10-19\",\"0.763830\"]],\"role\":\"neutral\",\"style\":\"line\"},{\"emphasis\":false,\"id\":\"forecast\",\"name\":\"Forecast\",\"points\":[[\"2026-10-19\",\"0.763830\"],[\"2026-10-26\",\"1.023793\"]],\"role\":\"muted\",\"style\":\"dotted\"}],\"spec_version\":1,\"title\":\"Receivables over 60 days · what's ahead\",\"unit\":{\"code\":\"INR\",\"decimals\":2,\"scale\":\"cr\",\"type\":\"currency\"},\"x\":{\"label\":null,\"type\":\"time\"},\"y\":{\"label\":null,\"zero_based\":false}}",
+   "confidence": {
+    "level": "medium",
+    "why": "tested on its last 5 periods: inside its range 4 times",
+    "word": "Fair"
+   },
+   "depth": {
+    "method": "It repeats the last period: nothing tested beat that on this number's own past.",
+    "range": "The range held most past values without widening.",
+    "technical": "naive · 80% range (P10–P90) · calibration ×1.0 · tested on 5 periods"
+   },
+   "grain": "week",
+   "metric": "receivables_over_60",
+   "name": "Receivables over 60 days",
+   "says": "₹0.8–1.2 Cr expected this week"
+  }
+ ],
+ "ahead_note": "Known ahead for the whole business: Skarfab paused orders until 1 Dec (EU audit) (its effect not yet measured).",
+ "ask": {
+  "role": "Head of Sales",
+  "text": "Have Tessora EU and Ravira Exports moved orders elsewhere, or are they on hold?",
+  "to": "Priya Menon"
+ },
+ "brief": {
+  "name": "Leadership",
+  "version": 1
+ },
+ "checks": {
+  "ask": [],
+  "title": []
+ },
+ "date": "2026-11-01",
+ "format": 1,
+ "goals": [
+  {
+   "key": "dso_under_45",
+   "on_track": true,
+   "text": "DSO · 45 d target by 31 Mar · tracking 41 d (80% band 36–47 d)",
+   "tone": "risk"
+  },
+  {
+   "key": "fy27_net_revenue",
+   "on_track": false,
+   "text": "Net revenue FY27 · ₹60 Cr target · tracking ₹57.2 Cr (80% band ₹56.8–57.6 Cr)",
+   "tone": "off"
+  }
+ ],
+ "items": [
+  {
+   "change": "New",
+   "chart": "{\"alt_text\":\"Net revenue change, Oct vs Sep: South −₹1.40 Cr, West +₹1.21 Cr, Total −₹19 L.\",\"annotations\":[],\"band\":null,\"categories\":[{\"key\":\"South\",\"label\":null,\"role\":\"negative\",\"total\":false,\"value\":\"-1.400000\"},{\"key\":\"West\",\"label\":null,\"role\":\"positive\",\"total\":false,\"value\":\"1.210000\"},{\"key\":\"Total\",\"label\":null,\"role\":\"neutral\",\"total\":true,\"value\":\"-0.190000\"}],\"explore\":{},\"id\":\"finding:2b7b32c5f8a79322b25382aa\",\"kind\":\"bars_contribution\",\"period\":{\"from\":null,\"grain\":\"month\",\"to\":null,\"tz\":\"Asia/Kolkata\"},\"provenance\":{\"finding\":\"2b7b32c5f8a79322b25382aa\",\"metric_id\":\"net_revenue\"},\"series\":[],\"spec_version\":1,\"title\":\"Net revenue change by breakdown · Oct vs Sep\",\"unit\":{\"code\":\"INR\",\"decimals\":2,\"scale\":\"cr\",\"type\":\"currency\"},\"x\":{\"label\":null,\"type\":\"category\"},\"y\":{\"label\":null,\"zero_based\":false}}",
+   "confidence": "high",
+   "consequence": {
+    "date": "2026-11-30",
+    "text": "November close in 29 days"
+   },
+   "detector": "net_hiding_gross",
+   "fingerprint": "2b7b32c5f8a79322b25382aa",
+   "label": "Net hiding gross",
+   "line": "Net revenue moved −₹0.19 Cr from September to October: South −₹1.4 Cr, West +₹1.21 Cr. Three accounts carry 72% of the drop. None has invoiced since 9 Oct. Skarfab is on a known pause to 1 Dec (your answer, 30 Oct).",
+   "link": "calc",
+   "metric": "net_revenue",
+   "money": "₹1.4 Cr",
+   "rank": 1,
+   "rows": null,
+   "score": "14000001.60",
+   "stale": false,
+   "state": "assessed",
+   "title": "South fell ₹1.4 Cr; West’s rise hid it"
+  },
+  {
+   "change": "New",
+   "chart": "{\"alt_text\":\"Dispatch time at Coimbatore: the p10–p90 spread widened from 7 Sep while the average held at 4.3 days.\",\"annotations\":[{\"at\":\"2026-09-07\",\"from\":null,\"label\":\"7 Sep · spread starts widening\",\"role\":\"negative\",\"style\":\"dashed\",\"to\":null,\"type\":\"vline\",\"value\":null}],\"band\":{\"forecast_run_id\":null,\"label\":\"p10–p90\",\"level\":\"0.800000\",\"lower\":[[\"2026-08-02\",\"3.600000\"],[\"2026-08-09\",\"3.870000\"],[\"2026-08-16\",\"3.800000\"],[\"2026-08-23\",\"3.800000\"],[\"2026-08-30\",\"3.780000\"],[\"2026-09-06\",\"3.720000\"],[\"2026-09-13\",\"3.640000\"],[\"2026-09-20\",\"3.260000\"],[\"2026-09-27\",\"3.110000\"],[\"2026-10-04\",\"3.660000\"],[\"2026-10-11\",\"3.550000\"],[\"2026-10-18\",\"3.460000\"],[\"2026-10-25\",\"3.280000\"]],\"role\":\"negative\",\"series_id\":\"avg\",\"source\":\"p10-p90\",\"upper\":[[\"2026-08-02\",\"4.640000\"],[\"2026-08-09\",\"4.340000\"],[\"2026-08-16\",\"4.340000\"],[\"2026-08-23\",\"4.280000\"],[\"2026-08-30\",\"4.280000\"],[\"2026-09-06\",\"4.590000\"],[\"2026-09-13\",\"4.460000\"],[\"2026-09-20\",\"4.920000\"],[\"2026-09-27\",\"4.960000\"],[\"2026-10-04\",\"4.870000\"],[\"2026-10-11\",\"4.730000\"],[\"2026-10-18\",\"4.700000\"],[\"2026-10-25\",\"4.720000\"]]},\"categories\":[],\"explore\":{},\"id\":\"finding:83f4e966442fc01cd415cf2c\",\"kind\":\"line\",\"period\":{\"from\":\"2026-08-02\",\"grain\":\"week\",\"to\":\"2026-10-25\",\"tz\":\"Asia/Kolkata\"},\"provenance\":{\"finding\":\"83f4e966442fc01cd415cf2c\",\"metric_id\":\"dispatch_time\"},\"series\":[{\"emphasis\":false,\"id\":\"avg\",\"name\":\"average 4.3 d\",\"points\":[[\"2026-08-02\",\"4.110000\"],[\"2026-08-09\",\"4.110000\"],[\"2026-08-16\",\"4.080000\"],[\"2026-08-23\",\"4.090000\"],[\"2026-08-30\",\"4.090000\"],[\"2026-09-06\",\"4.110000\"],[\"2026-09-13\",\"4.120000\"],[\"2026-09-20\",\"4.460000\"],[\"2026-09-27\",\"4.420000\"],[\"2026-10-04\",\"4.210000\"],[\"2026-10-11\",\"4.250000\"],[\"2026-10-18\",\"4.100000\"],[\"2026-10-25\",\"4.450000\"]],\"role\":\"neutral\",\"style\":\"line\"}],\"spec_version\":1,\"title\":\"Dispatch time, Coimbatore · 2-week window\",\"unit\":{\"code\":null,\"decimals\":1,\"scale\":\"none\",\"type\":\"days\"},\"x\":{\"label\":null,\"type\":\"time\"},\"y\":{\"label\":null,\"zero_based\":false}}",
+   "confidence": "high",
+   "consequence": {
+    "date": null,
+    "text": "Spread usually comes before complaints"
+   },
+   "detector": "rising_variance",
+   "fingerprint": "83f4e966442fc01cd415cf2c",
+   "label": "Rising variance",
+   "line": "The slowest tenth now take 4.9 days, up from 4.6 days.",
+   "link": "calc",
+   "metric": "dispatch_time",
+   "money": "₹4.59 Cr at risk",
+   "rank": 2,
+   "rows": null,
+   "score": "13766785.73",
+   "stale": false,
+   "state": "assessed",
+   "title": "Dispatch time spread at Coimbatore tripled from 7 Sep while the average held at 4.3 days"
+  },
+  {
+   "change": "New",
+   "chart": null,
+   "confidence": null,
+   "consequence": {
+    "date": null,
+    "text": "₹3.6 Cr a year outside view"
+   },
+   "detector": "missing_records",
+   "fingerprint": "317748fe74417267983c0570",
+   "label": "Missing records",
+   "line": "Together ₹3.6 Cr over the last 12 months.",
+   "link": "calc",
+   "metric": "invoiced_value",
+   "money": "₹3.6 Cr",
+   "rank": 3,
+   "rows": {
+    "headers": [
+     "Account",
+     "Last invoice",
+     "Last 12 m"
+    ],
+    "more": 11,
+    "note": "No chart by design: these accounts produce no rows.",
+    "noun": "accounts",
+    "rows": [
+     [
+      "Shree Varada Textiles",
+      "12 Jul",
+      "₹0.62 Cr"
+     ],
+     [
+      "Tidewell Garments",
+      "2 Jul",
+      "₹0.48 Cr"
+     ],
+     [
+      "Anvika Knit Works",
+      "28 Jun",
+      "₹0.41 Cr"
+     ]
+    ],
+    "total": 14
+   },
+   "score": "10800000.00",
+   "stale": false,
+   "state": "measured",
+   "title": "14 customers still marked active haven’t invoiced in 90+ days"
+  },
+  {
+   "change": "New",
+   "chart": "{\"alt_text\":\"Freight expense per unit of metres dispatched rose +32% from 14 Sep; correlation fell from 0.78 to −0.03.\",\"annotations\":[{\"at\":null,\"from\":\"2026-09-14\",\"label\":\"from 14 Sep · r 0.78 → −0.03\",\"role\":null,\"style\":null,\"to\":\"2026-10-19\",\"type\":\"region\",\"value\":null}],\"band\":null,\"categories\":[],\"explore\":{},\"id\":\"finding:b7f229a33df8c44eb13dc757\",\"kind\":\"line\",\"period\":{\"from\":\"2026-07-27\",\"grain\":\"week\",\"to\":\"2026-10-19\",\"tz\":\"Asia/Kolkata\"},\"provenance\":{\"finding\":\"b7f229a33df8c44eb13dc757\",\"metric_id\":\"freight\"},\"series\":[{\"emphasis\":false,\"id\":\"b\",\"name\":\"metres dispatched\",\"points\":[[\"2026-07-27\",\"100.000000\"],[\"2026-08-03\",\"112.600000\"],[\"2026-08-10\",\"78.600000\"],[\"2026-08-17\",\"86.400000\"],[\"2026-08-24\",\"158.000000\"],[\"2026-08-31\",\"80.900000\"],[\"2026-09-07\",\"110.900000\"],[\"2026-09-14\",\"89.700000\"],[\"2026-09-21\",\"112.600000\"],[\"2026-09-28\",\"95.700000\"],[\"2026-10-05\",\"84.900000\"],[\"2026-10-12\",\"35.800000\"],[\"2026-10-19\",\"170.900000\"]],\"role\":\"neutral\",\"style\":\"line\"},{\"emphasis\":false,\"id\":\"ratio\",\"name\":\"freight expense per unit +32%\",\"points\":[[\"2026-07-27\",\"100.000000\"],[\"2026-08-03\",\"101.000000\"],[\"2026-08-10\",\"134.600000\"],[\"2026-08-17\",\"110.600000\"],[\"2026-08-24\",\"89.600000\"],[\"2026-08-31\",\"109.600000\"],[\"2026-09-07\",\"106.300000\"],[\"2026-09-14\",\"179.500000\"],[\"2026-09-21\",\"62.500000\"],[\"2026-09-28\",\"105.500000\"],[\"2026-10-05\",\"87.000000\"],[\"2026-10-12\",\"317.900000\"],[\"2026-10-19\",\"87.100000\"]],\"role\":\"negative\",\"style\":\"line\"}],\"spec_version\":1,\"title\":\"Freight expense per unit and Metres dispatched · index\",\"unit\":{\"code\":null,\"decimals\":0,\"scale\":\"none\",\"type\":\"ratio\"},\"x\":{\"label\":null,\"type\":\"time\"},\"y\":{\"label\":null,\"zero_based\":false}}",
+   "confidence": "medium",
+   "consequence": {
+    "date": "2026-11-30",
+    "text": "November close in 29 days"
+   },
+   "detector": "broken_relationship",
+   "fingerprint": "b7f229a33df8c44eb13dc757",
+   "label": "Broken relationship",
+   "line": "Correlation fell from 0.78 to −0.03. Freight expense per metre is up 32%.",
+   "link": "calc",
+   "metric": "freight",
+   "money": "₹5.8 L / month",
+   "rank": 4,
+   "rows": null,
+   "score": "4909546.03",
+   "stale": false,
+   "state": "assessed",
+   "title": "Freight expense tracked metres dispatched for 20 weeks, then decoupled on 14 Sep"
+  }
+ ],
+ "line": "DSO and gross margin per metre are on plan.",
+ "more_in_sweep": 4,
+ "prose": {
+  "source": "template"
+ },
+ "question": "Are we on track for ₹60 Cr this year, and where do I need to step in?",
+ "quiet": false,
+ "since": {
+  "better": 0,
+  "new": 8,
+  "open": 0,
+  "resolved": 0,
+  "worse": 0
+ },
+ "situation": "Net revenue moved −₹0.19 Cr from September to October: South −₹1.4 Cr, West +₹1.21 Cr. Three accounts carry 72% of the drop. None has invoiced since 9 Oct. Skarfab is on a known pause to 1 Dec (your answer, 30 Oct). The slowest tenth now take 4.9 days, up from 4.6 days. Together ₹3.6 Cr over the last 12 months. Correlation fell from 0.78 to −0.03. Freight expense per metre is up 32%.",
+ "stale": [],
+ "tests": 362,
+ "tiles": [
+  {
+   "chart": "{\"alt_text\":\"Net revenue, last 12 months to Oct: ₹4.62 Cr against its forecast band.\",\"annotations\":[],\"band\":{\"forecast_run_id\":null,\"label\":null,\"level\":\"0.800000\",\"lower\":[[\"2026-08-01\",\"4.425789\"],[\"2026-09-01\",\"4.821438\"],[\"2026-10-01\",\"4.672684\"]],\"role\":\"muted\",\"series_id\":\"net_revenue\",\"source\":\"forecast\",\"upper\":[[\"2026-08-01\",\"4.525230\"],[\"2026-09-01\",\"4.919295\"],[\"2026-10-01\",\"4.772796\"]]},\"categories\":[],\"explore\":{},\"id\":\"tile:net_revenue:month:2026-10-01\",\"kind\":\"sparkline\",\"period\":{\"from\":\"2025-11-01\",\"grain\":\"month\",\"to\":\"2026-10-01\",\"tz\":\"Asia/Kolkata\"},\"provenance\":{\"metric_id\":\"net_revenue\"},\"series\":[{\"emphasis\":false,\"id\":\"net_revenue\",\"name\":\"Net revenue\",\"points\":[[\"2025-11-01\",\"4.532500\"],[\"2025-12-01\",\"4.717500\"],[\"2026-01-01\",\"4.486250\"],[\"2026-02-01\",\"4.532500\"],[\"2026-03-01\",\"5.226250\"],[\"2026-04-01\",\"4.656000\"],[\"2026-05-01\",\"4.752000\"],[\"2026-06-01\",\"4.896000\"],[\"2026-07-01\",\"4.752000\"],[\"2026-08-01\",\"4.464000\"],[\"2026-09-01\",\"4.810000\"],[\"2026-10-01\",\"4.619824\"]],\"role\":\"negative\",\"style\":\"line\"}],\"spec_version\":1,\"title\":\"Net revenue · monthly\",\"unit\":{\"code\":\"INR\",\"decimals\":2,\"scale\":\"cr\",\"type\":\"currency\"},\"x\":{\"label\":null,\"type\":\"time\"},\"y\":{\"label\":null,\"zero_based\":false}}",
+   "comparison": {
+    "kind": "band",
+    "text": "−1% vs band"
+   },
+   "grain": "month",
+   "label": "Net revenue · Oct",
+   "metric": "net_revenue",
+   "period": "2026-10-01",
+   "raw": "46198243.180000",
+   "role": "negative",
+   "stale": null,
+   "value": "₹4.62 Cr"
+  },
+  {
+   "chart": "{\"alt_text\":\"DSO, last 12 months to Oct: 46 d against its forecast band.\",\"annotations\":[],\"band\":{\"forecast_run_id\":null,\"label\":null,\"level\":\"0.800000\",\"lower\":[[\"2026-08-01\",\"41.312053\"],[\"2026-09-01\",\"41.160246\"],[\"2026-10-01\",\"41.026961\"]],\"role\":\"muted\",\"series_id\":\"dso\",\"source\":\"forecast\",\"upper\":[[\"2026-08-01\",\"45.717624\"],[\"2026-09-01\",\"46.368813\"],[\"2026-10-01\",\"46.285226\"]]},\"categories\":[],\"explore\":{},\"id\":\"tile:dso:month:2026-10-01\",\"kind\":\"sparkline\",\"period\":{\"from\":\"2025-11-01\",\"grain\":\"month\",\"to\":\"2026-10-01\",\"tz\":\"Asia/Kolkata\"},\"provenance\":{\"metric_id\":\"dso\"},\"series\":[{\"emphasis\":false,\"id\":\"dso\",\"name\":\"DSO\",\"points\":[[\"2025-11-01\",\"42.544085\"],[\"2025-12-01\",\"42.235082\"],[\"2026-01-01\",\"46.401272\"],[\"2026-02-01\",\"42.703717\"],[\"2026-03-01\",\"42.078624\"],[\"2026-04-01\",\"45.653345\"],[\"2026-05-01\",\"44.583937\"],[\"2026-06-01\",\"44.624571\"],[\"2026-07-01\",\"43.978112\"],[\"2026-08-01\",\"49.008141\"],[\"2026-09-01\",\"41.270425\"],[\"2026-10-01\",\"45.747824\"]],\"role\":\"neutral\",\"style\":\"line\"}],\"spec_version\":1,\"title\":\"DSO · monthly\",\"unit\":{\"code\":null,\"decimals\":0,\"scale\":\"none\",\"type\":\"days\"},\"x\":{\"label\":null,\"type\":\"time\"},\"y\":{\"label\":null,\"zero_based\":false}}",
+   "comparison": {
+    "kind": "band",
+    "text": "in band"
+   },
+   "grain": "month",
+   "label": "DSO · Oct",
+   "metric": "dso",
+   "period": "2026-10-01",
+   "raw": "45.747824",
+   "role": "neutral",
+   "stale": null,
+   "value": "46 d"
+  },
+  {
+   "chart": "{\"alt_text\":\"Gross margin per metre, last 12 weeks to week of 19 Oct: ₹52.9 against its forecast band.\",\"annotations\":[],\"band\":{\"forecast_run_id\":null,\"label\":null,\"level\":\"0.800000\",\"lower\":[[\"2026-08-03\",\"40.938961\"],[\"2026-08-10\",\"40.765250\"],[\"2026-08-17\",\"40.604705\"],[\"2026-08-24\",\"38.797021\"],[\"2026-08-31\",\"38.298775\"],[\"2026-09-07\",\"38.066518\"],[\"2026-09-14\",\"40.534377\"],[\"2026-09-21\",\"40.506265\"],[\"2026-09-28\",\"40.498905\"],[\"2026-10-05\",\"40.544960\"],[\"2026-10-12\",\"50.232932\"],[\"2026-10-19\",\"50.718180\"]],\"role\":\"muted\",\"series_id\":\"gross_margin_per_metre\",\"source\":\"forecast\",\"upper\":[[\"2026-08-03\",\"42.595509\"],[\"2026-08-10\",\"42.554920\"],[\"2026-08-17\",\"42.507519\"],[\"2026-08-24\",\"40.804954\"],[\"2026-08-31\",\"40.310002\"],[\"2026-09-07\",\"40.073062\"],[\"2026-09-14\",\"42.407681\"],[\"2026-09-21\",\"42.377375\"],[\"2026-09-28\",\"42.362610\"],[\"2026-10-05\",\"43.685293\"],[\"2026-10-12\",\"53.613277\"],[\"2026-10-19\",\"54.087738\"]]},\"categories\":[],\"explore\":{},\"id\":\"tile:gross_margin_per_metre:week:2026-10-19\",\"kind\":\"sparkline\",\"period\":{\"from\":\"2026-08-03\",\"grain\":\"week\",\"to\":\"2026-10-19\",\"tz\":\"Asia/Kolkata\"},\"provenance\":{\"metric_id\":\"gross_margin_per_metre\"},\"series\":[{\"emphasis\":false,\"id\":\"gross_margin_per_metre\",\"name\":\"Gross margin per metre\",\"points\":[[\"2026-08-03\",\"38.762805\"],[\"2026-08-10\",\"46.382268\"],[\"2026-08-17\",\"42.235899\"],[\"2026-08-24\",\"38.709124\"],[\"2026-08-31\",\"47.664007\"],[\"2026-09-07\",\"41.930819\"],[\"2026-09-14\",\"40.846406\"],[\"2026-09-21\",\"41.391285\"],[\"2026-09-28\",\"52.516212\"],[\"2026-10-05\",\"54.195126\"],[\"2026-10-12\",\"53.751665\"],[\"2026-10-19\",\"52.928689\"]],\"role\":\"neutral\",\"style\":\"line\"}],\"spec_version\":1,\"title\":\"Gross margin per metre · weekly\",\"unit\":{\"code\":null,\"decimals\":1,\"scale\":\"none\",\"type\":\"count\"},\"x\":{\"label\":null,\"type\":\"time\"},\"y\":{\"label\":null,\"zero_based\":false}}",
+   "comparison": {
+    "kind": "band",
+    "text": "in band"
+   },
+   "grain": "week",
+   "label": "Gross margin per metre · week of 19 Oct",
+   "metric": "gross_margin_per_metre",
+   "period": "2026-10-19",
+   "raw": "52.928689",
+   "role": "neutral",
+   "stale": null,
+   "value": "₹52.9"
+  },
+  {
+   "chart": "{\"alt_text\":\"Metres dispatched, last 12 weeks to week of 19 Oct: 1,75,436 m against its forecast band.\",\"annotations\":[],\"band\":{\"forecast_run_id\":null,\"label\":null,\"level\":\"0.800000\",\"lower\":[[\"2026-08-03\",\"66737.924475\"],[\"2026-08-10\",\"67200.759209\"],[\"2026-08-17\",\"67823.685137\"],[\"2026-08-24\",\"68588.840286\"],[\"2026-08-31\",\"69288.728570\"],[\"2026-09-07\",\"70493.831772\"],[\"2026-09-14\",\"71455.923814\"],[\"2026-09-21\",\"71975.651398\"],[\"2026-09-28\",\"73012.502728\"],[\"2026-10-05\",\"73607.952397\"],[\"2026-10-12\",\"74128.049188\"],[\"2026-10-19\",\"74498.252649\"]],\"role\":\"muted\",\"series_id\":\"metres_dispatched\",\"source\":\"forecast\",\"upper\":[[\"2026-08-03\",\"117633.730756\"],[\"2026-08-10\",\"118131.375341\"],[\"2026-08-17\",\"118783.700289\"],[\"2026-08-24\",\"119571.382279\"],[\"2026-08-31\",\"120301.429597\"],[\"2026-09-07\",\"121496.621288\"],[\"2026-09-14\",\"122410.624987\"],[\"2026-09-21\",\"122846.169043\"],[\"2026-09-28\",\"123868.002626\"],[\"2026-10-05\",\"124374.782901\"],[\"2026-10-12\",\"124809.039869\"],[\"2026-10-19\",\"125089.531447\"]]},\"categories\":[],\"explore\":{},\"id\":\"tile:metres_dispatched:week:2026-10-19\",\"kind\":\"sparkline\",\"period\":{\"from\":\"2026-08-03\",\"grain\":\"week\",\"to\":\"2026-10-19\",\"tz\":\"Asia/Kolkata\"},\"provenance\":{\"metric_id\":\"metres_dispatched\"},\"series\":[{\"emphasis\":false,\"id\":\"metres_dispatched\",\"name\":\"Metres dispatched\",\"points\":[[\"2026-08-03\",\"115557.629920\"],[\"2026-08-10\",\"80748.012240\"],[\"2026-08-17\",\"88692.319440\"],[\"2026-08-24\",\"162250.351840\"],[\"2026-08-31\",\"83071.379520\"],[\"2026-09-07\",\"113870.656480\"],[\"2026-09-14\",\"92079.173520\"],[\"2026-09-21\",\"115596.879920\"],[\"2026-09-28\",\"98271.300080\"],[\"2026-10-05\",\"87185.029280\"],[\"2026-10-12\",\"36734.609440\"],[\"2026-10-19\",\"175435.604400\"]],\"role\":\"muted\",\"style\":\"line\"}],\"spec_version\":1,\"title\":\"Metres dispatched · weekly\",\"unit\":{\"code\":null,\"decimals\":0,\"scale\":\"none\",\"type\":\"metres\"},\"x\":{\"label\":null,\"type\":\"time\"},\"y\":{\"label\":null,\"zero_based\":false}}",
+   "comparison": {
+    "kind": "band",
+    "text": "+40% vs band · Diwali week"
+   },
+   "grain": "week",
+   "label": "Metres dispatched · week of 19 Oct",
+   "metric": "metres_dispatched",
+   "period": "2026-10-19",
+   "raw": "175435.604400",
+   "role": "muted",
+   "stale": null,
+   "value": "1,75,436 m"
+  },
+  {
+   "chart": "{\"alt_text\":\"Receivables over 60 days, last 12 days to 31 Oct: ₹0.8 Cr.\",\"annotations\":[],\"band\":null,\"categories\":[],\"explore\":{},\"id\":\"tile:receivables_over_60:day:2026-10-31\",\"kind\":\"sparkline\",\"period\":{\"from\":\"2026-10-20\",\"grain\":\"day\",\"to\":\"2026-10-31\",\"tz\":\"Asia/Kolkata\"},\"provenance\":{\"metric_id\":\"receivables_over_60\"},\"series\":[{\"emphasis\":false,\"id\":\"receivables_over_60\",\"name\":\"Receivables over 60 days\",\"points\":[[\"2026-10-20\",\"0.890108\"],[\"2026-10-21\",\"0.880951\"],[\"2026-10-22\",\"0.844120\"],[\"2026-10-23\",\"0.802176\"],[\"2026-10-24\",\"0.763830\"],[\"2026-10-25\",\"0.763830\"],[\"2026-10-26\",\"0.742653\"],[\"2026-10-27\",\"0.749699\"],[\"2026-10-28\",\"0.746744\"],[\"2026-10-29\",\"0.743772\"],[\"2026-10-30\",\"0.792526\"],[\"2026-10-31\",\"0.797761\"]],\"role\":\"neutral\",\"style\":\"line\"}],\"spec_version\":1,\"title\":\"Receivables over 60 days · daily\",\"unit\":{\"code\":\"INR\",\"decimals\":2,\"scale\":\"cr\",\"type\":\"currency\"},\"x\":{\"label\":null,\"type\":\"time\"},\"y\":{\"label\":null,\"zero_based\":false}}",
+   "comparison": {
+    "kind": "period",
+    "text": "+1% vs 30 Oct"
+   },
+   "grain": "day",
+   "label": "Receivables over 60 days",
+   "metric": "receivables_over_60",
+   "period": "2026-10-31",
+   "raw": "7977607.450000",
+   "role": "neutral",
+   "stale": null,
+   "value": "₹0.8 Cr"
+  }
+ ],
+ "time": "06:00",
+ "title": "South fell ₹1.4 Cr while West’s growth hid it; three accounts carry 72% of the drop and none has invoiced since 9 Oct; one is Skarfab’s known pause to 1 Dec.",
+ "watching": [
+  {
+   "id": "a492b3bb-9623-403e-942a-523f05d04ae4",
+   "label": "Active customers silent 90+ days",
+   "text": "Active customers silent 90+ days · 14 · alert above 8 · owner Priya Menon"
+  },
+  {
+   "id": "cc996647-1029-45d0-bd21-c704d5fd904c",
+   "label": "Dispatch time spread, Coimbatore · 7 days",
+   "text": "Dispatch time spread, Coimbatore · 7 days · 2.2 · alert above 1.6 · owner Aditya Naik"
+  },
+  {
+   "id": "f63ae869-9699-4767-ad3a-fa6f443313e7",
+   "label": "Freight per metre vs 6-month average",
+   "text": "Freight per metre vs 6-month average · +13% · alert above +10% · owner Leela Tandon"
+  }
+ ]
+}

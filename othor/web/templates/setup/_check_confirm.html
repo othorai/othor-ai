@@ -1,0 +1,73 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/icons.html" import icon %}
+{% from "components/buttons.html" import button, run_again %}
+{% from "components/panels.html" import side_panel %}
+{% from "components/tags.html" import change_tag %}
+{# Check 3 of 3 · Metrics to confirm (M11c m5, m7, m8). Each row: name, grain, definition, the
+   latest computed value and where it's read. Confirm one, or "Confirm the N remaining": one
+   request, one event per metric; the toast's Undo puts the batch back. #}
+{# One template for setup and the app (M11c G, 6h): `cm` names the URLs and words; without it,
+   setup's. In the app a Confirm only stages a row; "Add N to the Ontology" applies them. #}
+{% set cm = cm if cm is defined and cm else {
+  "c": checks.confirm, "here": "/setup/metrics?panel=confirm", "close": "/setup/metrics",
+  "kicker": "Check 3 of 3", "confirm": "/setup/metrics/{key}/confirm", "unconfirm": "/setup/metrics/unconfirm",
+  "all": "/setup/metrics/confirm-all", "intro": None, "app": False,
+  "subtitle": "Each one goes into your brief once it’s confirmed. Confirm the ones that look right; edit or leave the rest for Confirm and continue."} %}
+{% set c = cm.c %}
+{% set here = cm.here %}
+{% macro row(m) -%}
+{% call el('div', 'cm-row', attrs={'data-row': m.key}) %}
+  <div class="flex-1 min-w-0 flex flex-col gap-2">
+    <p class="flex items-center gap-6 flex-wrap">{% call el('span', 'strong') %}{{ m.name }}{% endcall %}{% if m.grain %} {% call el('span', 'hint') %}{{ m.grain }}{% endcall %}{% endif %}{% if m.doc_changed %}{{ change_tag("changed") }}{% endif %}</p>
+    {% if m.definition %}<p>{{ m.definition }}</p>{% endif %}
+    {% if m.value %}{% call el('p', 'strong') %}{{ m.value }}{% endcall %}{% endif %}
+    {% if m.doc_note %}{% call el('p', 'hint') %}{{ m.doc_note }}{% endcall %}{% endif %}
+    {% for c in (m.cites if m.cites else ([m.source] if m.source else [])) %}{% call el('p', 'mono') %}{{ c }}{% endcall %}{% endfor %}
+  </div>
+  <div class="flex items-center gap-8">
+  {% if m.confirmed %}
+    {% call el('span', 'chip done') %}{{ icon("check") }}Confirmed{% endcall %}
+    <form method="post" action="{{ cm.unconfirm }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="key" value="{{ m.key }}"><input type="hidden" name="next" value="{{ here }}">{{ button("Undo", "quiet sm", type="submit") }}</form>
+  {% else %}
+    {% if m.blocked %}{% call el('span', 'hint') %}{{ m.blocked }}{% endcall %}{% else %}<form method="post" action="{{ cm.confirm | replace('{key}', m.key) }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="next" value="{{ here }}">{{ button("Confirm", "sm", type="submit", disabled=drafting) }}</form>{% endif %}
+    {{ button("Edit", "quiet sm", href=m.edit) }}
+  {% endif %}
+  </div>
+{% endcall %}
+{%- endmacro %}
+{% call(part) side_panel("Metrics to confirm", cm.subtitle, cm.tile, cm.close, kicker=cm.kicker) %}
+{% if part == "body" %}
+  {% if cm.intro %}{% include cm.intro %}{% endif %}
+  {% for title, group in (cm.groups or [("Matched in your files", c.files), ("Found in your databases", c.databases)]) if group %}
+  {% call el('section', 'cm-group', attrs={'aria-label': title, 'data-rows': true}) %}
+    {% call el('p', 'label-caps') %}{{ title }} · {{ fmt.num(group | length) }}{% endcall %}
+    {% for m in group %}{{ row(m) }}{% endfor %}
+  {% endcall %}
+  {% else %}
+  {% if not cm.app %}{% call el('p', 'hint') %}No metrics to confirm yet.{% endcall %}{% endif %}
+  {% endfor %}
+  {% if cm.app and c.added %}
+  {% call el('div', 'toast-dock') %}{% call el('div', 'toast', attrs='role="status"') %}{% call el('span', 'dot accent') %}{% endcall %}<span>{{ fmt.num(c.added.n) }} metric{{ "s" if c.added.n != 1 else "" }} added to the Ontology{% call el('span', 'sub') %}Ontology v{{ c.added.version }} · in tonight’s run{% if again is defined and again and again.shown %}, or run now with them{% endif %}{% endcall %}</span>
+    <form method="post" action="{{ cm.undo }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="version" value="{{ c.added.version }}">{% call el('button', 'action btn quiet', attrs='type="submit"') %}Undo{% endcall %}</form>
+    {% if again is defined %}{{ run_again(again, csrf_token, label="Run now", kind="primary", next="/brief") }}{% endif %}{% endcall %}{% endcall %}
+  {% elif not cm.app and panel.done %}
+  {% call el('div', 'toast-dock') %}{% call el('div', 'toast', attrs='role="status"') %}{% call el('span', 'dot accent') %}{% endcall %}<span>{{ fmt.num(panel.done | length) }} metric{{ "s" if panel.done | length != 1 else "" }} confirmed{% call el('span', 'sub') %}Each one is saved with your name and the time.{% endcall %}</span>
+    <form method="post" action="/setup/metrics/unconfirm" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{% for k in panel.done %}<input type="hidden" name="key" value="{{ k }}">{% endfor %}<input type="hidden" name="next" value="{{ here }}">{% call el('button', 'action btn quiet', attrs='type="submit"') %}Undo{% endcall %}</form>{% endcall %}{% endcall %}
+  {% endif %}
+{% elif cm.app %}
+  {% call el('span', 'hint', layout='flex flex-col') %}<span>{% if drafting %}Still drafting · you can confirm once it’s done{% elif c.staged %}{{ fmt.num(c.staged | length) }} of {{ fmt.num(c.n) }} confirmed · nothing changes until you add them{% elif c.n %}None confirmed yet{% else %}Nothing to add{% endif %}</span><span>You can change any of these later in the Ontology.</span>{% endcall %}
+  <span class="flex items-center gap-8">
+    {% if c.remaining %}<form method="post" action="{{ cm.all }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{% for k in c.remaining %}<input type="hidden" name="key" value="{{ k }}">{% endfor %}{{ button("Confirm the " ~ fmt.num(c.remaining | length) ~ " remaining", "" if c.staged else "primary", type="submit", disabled=drafting) }}</form>{% endif %}
+    {% if c.staged %}<form method="post" action="{{ cm.add }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Add " ~ fmt.num(c.staged | length) ~ " to the Ontology", "primary", type="submit", disabled=drafting) }}</form>
+    {% elif not c.remaining %}{{ button("Done", "primary", href=cm.close) }}{% endif %}
+  </span>
+{% else %}
+  {% call el('span', 'hint', layout='flex flex-col') %}<span>{% if drafting %}Still drafting · you can confirm once it’s done{% else %}{{ fmt.num(c.confirmed) }} of {{ fmt.num(c.n) }} confirmed · values computed from your sources{% endif %}</span><span>You can change any of these later in the Ontology.</span>{% endcall %}
+  <span class="flex items-center gap-8">
+    {% if c.remaining %}{{ button("Done", href=cm.close) }}
+    <form method="post" action="{{ cm.all }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{% for k in c.remaining %}<input type="hidden" name="key" value="{{ k }}">{% endfor %}{{ button("Confirm the " ~ fmt.num(c.remaining | length) ~ " remaining", "primary", type="submit", disabled=drafting) }}</form>
+    {% else %}{{ button("Done", "primary", href=cm.close) }}{% endif %}
+  </span>
+{% endif %}
+{% endcall %}

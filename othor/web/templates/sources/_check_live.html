@@ -1,0 +1,37 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/forms.html" import chip %}
+<div id="check-live" class="grid grid-cols-1 md:grid-cols-13 gap-16 mt-24 items-start"{% if running %} hx-get="{{ request.url.path }}" hx-trigger="every 1s" hx-select="#check-live" hx-swap="outerHTML"{% endif %}>
+  <div class="md:col-span-8 flex flex-col gap-8">
+    {% call el('div', 'card flush table-wrap') %}{% call el('table', 'grid-sheet') %}
+      <thead><tr>{% call el('th', 'rn') %}{% endcall %}{% for c in v.columns %}<th>{{ c.letter }}</th>{% endfor %}</tr></thead>
+      <tbody>{% for row in v.grid %}
+      {% call el('tr', ((row.cls) | string | e)) %}{% call el('td', 'rn') %}{{ row.n }}{% endcall %}{% for c in row.cells %}{% call el('td', ((c.cls) | string | e), attrs={'title': (c.v)}) %}{{ c.v }}{% endcall %}{% endfor %}{% endcall %}
+      {% endfor %}</tbody>
+    {% endcall %}{% endcall %}
+    {% call el("p", "legend") %}<span class="flex items-center gap-4">{% call el('span', 'sw-head') %}{% endcall %}header</span><span><s>struck</s> left out</span>{% call el("span", "pos-text") %}blue{% endcall %}<span>filled down</span>{% endcall %}
+  </div>
+  {% call el('aside', 'card board', layout='md:col-span-5 flex flex-col gap-12') %}
+    {% call el("p", "section-title") %}What we read{% endcall %}
+    {% if running %}{% call el("p", "progress-line") %}Reading the tab again…{% endcall %}{% endif %}
+    {% call el("dl", "kv ruled") %}{% for k, val, sub in v.read %}<dt>{{ k }}</dt><dd>{{ val }}{% if sub %}{% call el("span", "hint") %}<br>{{ sub }}{% endcall %}{% endif %}</dd>{% endfor %}{% endcall %}
+    {% call el("div", "rule") %}{% endcall %}
+    <div class="flex items-center gap-12 flex-wrap">
+      <form class="flex items-center gap-8" method="post" action="/setup/sources/{{ src.id }}/check/{{ tab.id }}/shape" data-inplace>
+        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+        {% call el("span", "hint") %}Header row{% endcall %}
+        {% call el("span", "stepper") %}<button type="submit" name="header_row" value="{{ [tab.header_row - 1, 1] | max }}" aria-label="Header row up">−</button><b>{{ tab.header_row }}</b><button type="submit" name="header_row" value="{{ tab.header_row + 1 }}" aria-label="Header row down">+</button>{% endcall %}
+      </form>
+      <form class="flex items-center gap-8" method="post" action="/setup/sources/{{ src.id }}/check/{{ tab.id }}/shape" data-inplace>
+        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+        <input type="hidden" name="header_row" value="{{ tab.header_row }}">
+        {% call el("label", "hint", attrs='for="f-last"') %}Last row{% endcall %}
+        {% call el('select', 'select compact', attrs='id="f-last" name="last_row" data-autosubmit') %}
+          <option value="">{{ v.last_row_label }}</option>
+          {% for n in range((tab.header_row or 1) + 1, (max_row or 0) + 1) | reverse %}{% if loop.index <= 40 %}<option value="{{ n }}">Row {{ n }}</option>{% endif %}{% endfor %}
+        {% endcall %}
+      </form>
+    </div>
+    {% call el("p", "hint") %}Not right? Tell Othor AI in a line, e.g. “values are in ₹ crore”.{% endcall %}
+  {% endcall %}
+</div>

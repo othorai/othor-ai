@@ -1,0 +1,15 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import callout %}
+{# Run again now (v0.11), in #main of the brief page and Home. Set: again (othor.web.again_view).
+   The reason when a guard stopped the last press; while the run runs, its stages as the first run
+   shows them (2o), and the whole page part re-reads itself every 2 seconds: when the run is done
+   the remade brief is in place, with nothing reloaded. #}
+{% if again and again.reason %}{{ callout(again.reason, "warn") }}{% endif %}
+{% if again and again.run %}
+{% call el("section", layout="flex flex-col gap-8", attrs=({"aria-label": "Run again now", "aria-live": "polite", "hx-get": again.poll_url, "hx-trigger": "every 2s", "hx-select": "#main", "hx-select-oob": "#app-actions", "hx-target": "#main", "hx-swap": "outerHTML"} if again.polling else {"aria-label": "Run again now"})) %}
+  {% call el("p", "strong") %}{% if again.run.failed %}Run again stopped.{% else %}Running again with every source · the brief updates here when it’s done{% endif %}{% endcall %}
+  {% with view = again.run %}{% include "setup/_run_card.html" %}{% endwith %}
+  {% if again.run.failed %}{{ callout(again.run.failed ~ " The brief from earlier stays.", "err") }}{% endif %}
+{% endcall %}
+{% endif %}

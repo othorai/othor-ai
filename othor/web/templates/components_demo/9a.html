@@ -1,0 +1,19 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "base.html" %}
+{% from "components/blocks.html" import banner, empty_state, skeleton, toast, callout, stale %}
+{% block title %}9a · System states{% endblock %}
+{% block body %}
+<div class="board-page flex flex-col gap-20">
+  <div class="flex flex-col gap-10"><p class="label-code">Banners (full width, above page content)</p>
+  {{ banner("ok", "<b>First run in progress</b> · detectors 11 of 11 · brief being written", "Watch") }}</div>
+  <div class="grid gap-16 grid-cols-1 md:grid-cols-3">
+    <div class="card board min-h-300">{{ empty_state("Empty · no sources", "No sources connected", "Connect your ERP, CRM or warehouse.", "Add a source", primary=True) }}</div>
+    <div class="card board min-h-300">{{ empty_state("Empty · no findings yet", "Nothing has fired yet", "Detectors run tonight at 02:00.", "See what will be tested") }}</div>
+    <div class="card board min-h-300 flex flex-col gap-12"><p class="label-code">Loading skeleton</p>{{ skeleton() }}</div>
+    <div class="card board min-h-230 flex flex-col gap-12"><p class="label-code">Error toast</p>{{ toast("Couldn't save the Ontology line", "err", sub="Validation: metric name already exists (net_revenue).", retry="Retry") }}</div>
+    <div class="card board min-h-230 not-found">{{ empty_state("404 · not found", "There's no brief for 31 Feb", None, "Today's brief") }}</div>
+    <div class="card board min-h-230 flex flex-col gap-12"><p class="label-code">Offline (browser)</p>{{ callout("You're offline.", "warn") }}</div>
+    <div class="card board min-h-230 flex flex-col gap-12"><p class="label-code">Stale page</p>{{ stale("A newer run finished.") }}</div>
+  </div>
+</div>
+{% endblock %}

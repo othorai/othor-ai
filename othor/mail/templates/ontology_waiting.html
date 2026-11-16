@@ -1,0 +1,13 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{#- 8d · the Ontology is waiting for confirmation (setup left at Metrics for over 24 hours). -#}
+{% import "_email.html" as e with context %}
+{% call e.page(subject, preheader, company_name, logo_cid) %}
+{% call e.row("24px 24px 0") %}{{ e.para(lead, color="#1F2A37") }}{% endcall %}
+{% call e.row("16px 24px 0") %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #DDE2E8;border-radius:8px;border-collapse:separate">
+{% for r in rows %}<tr><td style="padding:12px 14px;{{ 'border-top:1px solid #E3E6EA;' if not loop.first else '' }}font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;color:#1F2A37">{{ r.name }}</td><td align="right" style="padding:12px 14px;{{ 'border-top:1px solid #E3E6EA;' if not loop.first else '' }}font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;color:#8A96A3">{{ r.note }}</td></tr>{% endfor %}
+{% if more %}<tr><td colspan="2" style="padding:12px 14px;border-top:1px solid #E3E6EA;font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;color:#5B6B7B">and {{ fmt.num(more) }} more</td></tr>{% endif %}
+</table>{% endcall %}
+{% call e.row("20px 24px 24px") %}{{ e.button("Review and confirm", review_url) }}{% endcall %}
+{{ e.owner_footer(instance, preferences) }}
+{% endcall %}

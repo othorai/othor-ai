@@ -1,0 +1,179 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* The Othor AI design tokens: the only source of colours, type, radii and shadows.
+   Values come from the boards (scripts/board_scale.py counts them) and docs/07-ui-system.md.
+   Tailwind's defaults are removed (--*: initial): a value that isn't here doesn't exist.
+   `static` emits every token as a CSS custom property, so pages and charts read the same
+   values (othor/charts/tokens.py parses this file for the SVG/PNG renderers). */
+@theme static {
+  --*: initial;
+
+  /* spacing: utility numbers are pixels (gap-12 = 12 px, mt-24 = 24 px, max-w-1240) */
+  --spacing: 1px;
+
+  /* breakpoints: phone ≤ 640, tablet 641–1024, desktop above (md: tablet up, lg: desktop) */
+  --breakpoint-md: 641px;
+  --breakpoint-lg: 1025px;
+
+  /* colours: one light theme. Data roles: positive = accent, negative = neg, neutral = ink.
+     ok (green) is for status dots only, never data. */
+  --color-bg: #FFFFFF;
+  --color-white: #FFFFFF;
+  --color-ink: #1F2A37;
+  --color-on-accent: #0B1220;  /* text on the cyan buttons: 9.8:1 (white was 1.9:1; owner, 12 Nov 2026) */
+  --color-ink-2: #3B4756;
+  --color-slate: #0F172A;
+  --color-muted: #5B6B7B;
+  --color-muted-2: #6A737D;  /* WCAG AA 4.5:1 on white and surface (M11a; was #8A96A3) */
+  --color-accent: #2CCAFF;
+  --color-accent-hover: #17B9EE;
+  --color-accent-active: #0FA6D9;
+  --color-accent-deep: #0A78A4;  /* AA on accent-tint (M11a; was #0B7AA6) */
+  --color-accent-visited: #086A90;
+  --color-accent-tint: #E8F8FF;
+  --color-accent-tint-2: #F2FBFF;
+  --color-glow-cyan: rgba(44, 202, 255, 0.18);  /* the app's sign-in and onboarding background (owner, 10 Nov 2026) */
+  --color-glow-green: rgba(0, 255, 153, 0.12);
+  --color-accent-border: #BFEFFF;
+  --color-select-tint: #E6F7FF;
+  --color-border: #DDE2E8;
+  --color-border-input: #D9DEE4;
+  --color-border-hover: #C9CFD6;
+  --color-border-strong: #C9D3DC;
+  --color-rule: #E3E6EA;
+  --color-row: #EEF0F3;
+  --color-surface: #F8F9FA;
+  --color-surface-2: #F3F4F6;
+  --color-surface-0: #FBFCFD;
+  --color-neg: #D64545;
+  --color-neg-alt: #C0392B;
+  --color-neg-tint: #FDF1EF;
+  --color-neg-tint-2: #FFF8F6;
+  --color-neg-text: #B33A3A;
+  --color-neg-ink: #8A2A1E;
+  --color-neg-border: #F0CFC9;
+  --color-neg-border-2: #F0D0CC;
+  --color-warn: #E0A100;
+  --color-warn-tint: #FFF8E6;
+  --color-warn-text: #8A5E00;
+  --color-warn-ink: #6B4F00;
+  --color-warn-mark: #9A7200;
+  --color-warn-border: #F0DFAE;
+  --color-ok: #1B8A4A;
+  --color-ok-tint: #EEF8F1;
+  --color-ok-border: #C9E6D2;
+  --color-ok-text: #1E5A36;
+  --color-ok-mark: #1E7F4F;
+  --color-neg-press: #F9DDD9;
+  --color-neg-press-border: #E8B4AE;
+  --color-placeholder: #AAAAAA;
+  --color-mark: #FFF1B8;
+  --color-native: #767676;
+  --color-scrim: rgba(16, 32, 44, 0.28);
+  /* connector tiles only (M11c, owner 8 Nov 2026): one hue per connector, line icon on a light tint.
+     Never data, never status. */
+  --color-conn-pg: #336791;
+  --color-conn-pg-tint: #EAF0F6;
+  --color-conn-my: #C26A00;
+  --color-conn-my-tint: #FCF1E3;
+  --color-conn-gs: #188038;
+  --color-conn-gs-tint: #E7F3EB;
+  --color-conn-xl: #0F766E;
+  --color-conn-xl-tint: #E5F2F1;
+
+  /* the public website only (othor.ai, M11d; design/site): never used inside the app */
+  --color-site-head: #111827;     /* headlines */
+  --color-site-grey: #64748B;     /* the grey half of a two-tone headline, secondary text (AA on white) */
+  --color-site-faint: #94A3B8;    /* the grey half on dark bands */
+  --color-site-blue: #1C8FD9;     /* icons, and headline text at 40 px and up (3:1, large text only) */
+  --color-site-violet: #6D4AFF;
+  --color-site-violet-2: #8B72FF;
+  --color-site-hair: #E2E8F0;
+  --color-site-hair-2: #CBD5E1;
+  --color-site-button-line: #D4D4D4;
+  --color-site-card: #F8FAFC;
+  --color-site-night: #0B0B0C;    /* dark bands */
+  --color-site-ink-0: #050608;    /* the first fold's near-black (owner, 10 Nov 2026) */
+  --color-site-deep: #151033;     /* the deep violet under See / Hear */
+  --color-site-panel: #111827;    /* dark cards */
+  --color-site-panel-2: #1E293B;
+  --color-site-on-dark: #CBD5E1;  /* body text on dark */
+  --color-site-violet-tint: #F3F0FF;  /* the "On the roadmap" tag */
+  --color-site-violet-ink: #5B3FD6;
+  --color-site-violet-line: #DCD3FF;
+  --color-site-violet-soft: #B7A8FF;  /* the tag on dark */
+
+  /* type: Inter for everything, Geist Mono for SQL and code; tabular numbers everywhere */
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  /* type scale: 7 sizes, each with a role */
+  --text-11: 11px;  /* labels (caps), meta */
+  --text-12: 12px;  /* secondary text, hints */
+  --text-13: 14px;  /* tables, controls, dense body (14px since 12 Nov 2026, owner: one scale with the panels) */
+  --text-14: 15px;  /* body (15px since 12 Nov 2026) */
+  --text-15: 15px;  /* sign-up and company sign-in only: subtitle, inputs, button (owner, 10 Nov 2026; guard) */
+  --text-16: 16px;  /* card, section and panel titles */
+  --text-20: 20px;  /* page titles */
+  --text-24: 24px;  /* sign-up and company sign-in card title only (owner, 10 Nov 2026; guard) */
+  --text-28: 28px;  /* large figures */
+  --text-40: 40px;  /* the public website's headline only (othor.ai, M11a) */
+  /* the public website only (M11d, design/site) */
+  --text-site-15: 15px;   /* nav, buttons */
+  --text-site-18: 18px;   /* lede, hero pillars */
+  --text-site-24: 24px;   /* card titles */
+  --text-site-28: 28px;   /* large card titles */
+  --text-site-36: 36px;   /* section headlines on phones */
+  --text-site-56: 56px;   /* section headlines, stats */
+  --text-site-64: 64px;   /* See / Hear */
+  --text-site-88: 88px;   /* the hero */
+  --leading-tight: 1.3;
+  --leading-snug: 1.35;
+  --leading-cozy: 1.4;
+  --leading-normal: 1.45;
+  --leading-body: 1.5;
+  --leading-relaxed: 1.55;
+  --tracking-tighter: -0.03em;
+  --tracking-tight: -0.02em;
+  --tracking-snug: -0.01em;
+  --tracking-wide: 0.04em;
+  --tracking-wider: 0.06em;
+
+  /* radii: chips and tags 4, controls 6, cards 8, panels 12, the onboarding box 16, round things full */
+  --radius-4: 4px;
+  --radius-6: 6px;
+  --radius-8: 8px;
+  --radius-12: 12px;
+  --radius-16: 16px;  /* the onboarding box (owner, 10 Nov 2026) */
+  --radius-full: 9999px;
+
+  /* shadows */
+  --shadow-panel: -16px 0 40px rgba(16, 32, 44, 0.18);
+  --shadow-chat: -12px 0 32px rgba(16, 32, 44, 0.10);
+  --shadow-pop: 0 16px 32px rgba(16, 32, 44, 0.14);
+  --shadow-menu: 0 8px 24px rgba(16, 32, 44, 0.15);
+  --shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-lift: 0 4px 12px rgba(16, 32, 44, 0.10);
+  --shadow-knob: 0 1px 3px rgba(16, 32, 44, 0.35);
+  --shadow-error: 0 0 0 3px rgba(214, 69, 69, 0.18);
+  --shadow-focus: 0 0 0 3px rgba(44, 202, 255, 0.35);
+  --shadow-focus-neg: 0 0 0 3px rgba(214, 69, 69, 0.25);
+
+  /* motion (M12 adds more) */
+  --ease-quick: cubic-bezier(0.2, 0, 0, 1);
+  --transition-quick: 120ms ease;
+  /* motion (M12): panels slide in over 180 ms ease-out; swaps fade over 150 ms; controls 120 ms (9b).
+     prefers-reduced-motion sets them to 0 (components.css). */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-control: 120ms;
+  --dur-panel: 180ms;
+  --dur-swap: 150ms;
+}
+
+/* Reduced motion (M12): every duration is 0. Outside @theme, and doubled :root so it beats the
+   token block whatever order the build emits them in. */
+@media (prefers-reduced-motion: reduce) {
+  :root:root { --dur-control: 0s; --dur-panel: 0s; --dur-swap: 0s; --transition-quick: 0s; }
+}

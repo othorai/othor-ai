@@ -1,0 +1,138 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/app.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import tabs as tabs_bar, banner, empty_state, watching, ask_today %}
+{% from "components/buttons.html" import button, link, run_again, view_switch %}
+{% from "components/forms.html" import action_form %}
+{% from "components/sweep.html" import overlay, more_menu %}
+{% from "components/tags.html" import state_tag, change_tag %}
+{% from "components/brief.html" import brief_tile, brief_item, brief_section, brief_state, check_chip, form_tabs, effect_box, number_row, ai_line, pdf_download %}
+{% from "components/panels.html" import pane, pane_title %}
+{% from "components/forms.html" import text_input, select, listbox %}
+{% from "components/weather.html" import forecast_panel %}
+{% block title %}{{ bv.brief.name }} · Morning Brief · {{ company.name }}{% endblock %}
+{% block crumb %}Morning Brief{% endblock %}
+{% block crumb_after %}{% call el("p", "crumbs", layout="hidden md:flex") %}{% call el("span", "crumb-sep") %}/{% endcall %}<span>{{ bv.brief.name }}</span>{% if date_label %}{% call el("span", "crumb-sep") %}/{% endcall %}<span>{{ date_label }}</span>{% endif %}{% endcall %}{% endblock %}
+{% block actions %}
+{# M15.3 (v0.15 design, owner 13 Nov: tabs kept): Simple · Full detail, Recipients · N, Edit brief;
+   Yesterday, Recipients' view and Run again under More #}
+<div class="flex items-center gap-8">
+  {% if bv.issue %}{{ view_switch([("Simple", base ~ "?" ~ q), ("Full detail", base ~ "?" ~ q ~ "&view=full")], "Full detail" if view == "full" else "Simple") }}{% endif %}
+  {{ button("Recipients · " ~ fmt.num(recipients), href=base ~ "/edit?tab=delivery") }}
+  {{ button("Edit brief", href=base ~ "/edit") }}
+  {% if pdf %}{{ pdf_download(pdf) }}{% endif %}
+  {% call more_menu(label="More") %}
+    {% if bv.previous %}{{ link("‹ Yesterday" if (bv.issue.date - bv.previous).days == 1 else "‹ " ~ fmt.day_month(bv.previous), base ~ "?date=" ~ bv.previous.isoformat() ~ ("&view=full" if view == "full" else "")) }}{% endif %}
+    {% if bv.issue %}{{ link("Recipients’ view", base ~ "/shared?" ~ q) }}{% endif %}
+    {{ run_again(again, csrf_token, next=base) }}
+  {% endcall %}
+</div>
+{% endblock %}
+{% block main %}
+{% if bv.run and not request.query_params.get("date") %}<span data-run="{{ bv.run.number }}" hidden></span>{% endif %}
+<div class="flex flex-col gap-20">
+{# New brief as the blue button beside the brief tabs, as on the Morning Brief page (owner, 13 Nov 2026) #}
+{% call el("div", layout="flex items-center justify-between gap-12") %}{% call el("div", layout="flex-1 min-w-0") %}{{ tabs_bar(tabs, bv.brief.name) }}{% endcall %}{% if not readonly %}{{ button("New brief", href="/brief/new", kind="primary") }}{% endif %}{% endcall %}
+{% if saved %}{{ banner("ok", "<b>Saved as v" ~ saved ~ "</b> · applies from tomorrow’s run", "Edit again", base ~ "/edit") }}{% endif %}
+{% include "partials/run_again.html" %}
+{# Run again now's brief isn't emailed unless the owner sends it (v0.11) #}
+{% if send %}
+  {% set who = fmt.num(send.recipients) ~ " recipient" ~ ("s" if send.recipients != 1 else "") %}
+  {% if send.state == "offer" %}
+  {% call el("div", layout="flex items-center gap-8 flex-wrap") %}
+    {% call el("div", layout="flex-1 min-w-0") %}{{ banner("note", "<b>Send the updated brief to " ~ who ~ "?</b> · This morning’s " ~ fmt.clock(b.time) ~ " email isn’t sent again on its own.") }}{% endcall %}
+    {% call action_form(base ~ "/issues/" ~ send.issue_id ~ "/send", csrf_token) %}{{ button("Send", kind="primary", type="submit", attrs={"data-busy": "Sending…"}) }}{% endcall %}
+    {% call action_form(base ~ "/issues/" ~ send.issue_id ~ "/keep", csrf_token) %}{{ button("Not now", kind="quiet", type="submit") }}{% endcall %}
+  {% endcall %}
+  {% elif send.state == "sending" %}{% call el("div", attrs={"hx-get": base, "hx-trigger": "every 2s", "hx-select": "#main", "hx-select-oob": "#app-actions", "hx-target": "#main", "hx-swap": "outerHTML"}) %}{{ banner("note", "Sending the updated brief to " ~ who ~ "…") }}{% endcall %}
+  {% else %}{{ banner("ok", "<b>Sent the updated brief</b> · to " ~ fmt.num(send.sent) ~ " of " ~ who) }}{% endif %}
+{% endif %}
+
+{% if bv.failed %}
+  {# M15.7c: a Weekly or Monthly brief's last issue is last week's or last month's #}
+  {% set last_word = ((bv.issue.body.period or {}).word if bv.issue else none) or "yesterday" %}
+  {% call brief_state("No brief this morning.", "Run #" ~ "%04d" | format(bv.failed.run) ~ " failed " ~ bv.failed.step ~ ". " ~ ((last_word | capitalize) ~ "’s brief stays available below." if bv.issue else "When the source is fixed, the next run writes the brief."), bv.failed.error or None) %}
+    {{ button("Fix source", href="/sources", kind="primary") }}{% if bv.issue %}{{ button("Open " ~ last_word ~ "’s brief", href=base ~ "?date=" ~ bv.issue.date.isoformat()) }}{% endif %}
+  {% endcall %}
+{% endif %}
+
+{% set readonly = False %}
+{% include "brief/_issue.html" %}
+{% if metric %}{% include "ontology/_metric.html" %}{% endif %}
+</div>
+{% endblock %}
+
+{% block overlay %}
+{% if edit %}
+{% set e = edit %}{% set d = e.draft %}
+{% set close = base %}
+{% call overlay("Edit brief", close) %}
+<form method="post" action="/brief/{{ e.brief.id }}/edit" class="contents" data-inplace>
+<input type="hidden" name="csrf" value="{{ csrf_token }}">
+<input type="hidden" name="tab" value="{{ e.tab }}">
+<input type="hidden" name="draft" value="{{ d | tojson | forceescape }}">
+{% call(part) pane() %}
+{% if part == "head" %}
+  {{ pane_title("Edit brief · " ~ e.brief.name, e.changed, close) }}
+  {{ form_tabs([("question", "Question"), ("scope", "Scope"), ("numbers", "Numbers"), ("delivery", "Delivery")], "numbers" if e.tab == "add" else e.tab) }}
+{% elif part == "body" %}
+<div class="flex flex-col gap-16">
+  {{ ai_line("Change anything in one line: “leave out Export”, “add DSO”…") }}
+  {% if e.reply %}{% call el("p", "hint") %}{{ e.reply }}{% endcall %}{% endif %}
+  {% if e.tab == "question" %}
+    {{ text_input("question", "The question this brief answers", value=d.question) }}
+    {{ text_input("name", "Name", value=d.name) }}
+    <div class="flex flex-col gap-8">{% call el("p", "label-caps") %}Deadlines it watches · goals in your Ontology{% endcall %}
+      <div class="flex flex-wrap gap-8">{% for g in e.goals %}{{ check_chip("goals", g.key, g.name, g.key in d.goals) }}{% endfor %}</div></div>
+    <div class="flex flex-col gap-8">{% call el("p", "label-caps") %}Ask today goes to{% endcall %}
+      {{ listbox("ask_owner", owner_options, d.ask_owner) }}
+      {% if b and b.ask and b.ask.to %}{% call el("p", "hint") %}Today: {{ b.ask.to }}{% if b.ask.role %} · {{ b.ask.role }}{% endif %}{% endcall %}{% endif %}</div>
+  {% elif e.tab == "scope" %}
+    {% for b, vals in e.options.items() %}
+    <div class="flex flex-col gap-8">{% call el("p", "label-caps") %}{{ b | replace("_", " ") | capitalize }}{% endcall %}
+      <div class="flex flex-wrap gap-8">{% for v in vals %}{{ check_chip("keep:" ~ b, v, v, v not in (d.scope.exclude[b] if b in d.scope.exclude else [])) }}{% endfor %}</div></div>
+    {% endfor %}
+    {% if e.totals %}<div class="flex flex-col gap-8">{% call el("p", "label-caps") %}In scope today · computed{% endcall %}
+      {% for t in e.totals %}{% call el("div", "edit-row") %}<div class="flex flex-col">{% call el("span", "name") %}{{ t.name }} · {{ t.period.strftime("%b") }}{% endcall %}{% call el("span", "how") %}{{ fmt.pct(t.share) }} of the whole company{% endcall %}</div>{% call el("span", "today") %}{{ fmt.inr(t.kept, unit="cr", decimals=2) }}{% if t.kept != t.total %} · was {{ fmt.inr(t.total, unit="cr", decimals=2) }}{% endif %}{% endcall %}{% endcall %}{% endfor %}</div>{% endif %}
+  {% elif e.tab == "numbers" %}
+    <div class="flex flex-col">{% call el("p", "label-caps") %}Headline numbers · {{ fmt.num(e.headline | length) }} of up to 6{% endcall %}
+      {% for r in e.headline %}{{ number_row(r, loop.first) }}{% endfor %}</div>
+    {% if e.headline | length < 6 %}{{ button("+ Add a headline number", type="submit", attrs={"name": "goto", "value": "add"}) }}{% endif %}
+    {% call el("p", "hint") %}Up to 4 items a day · floor {{ e.floor }}{% endcall %}
+  {% elif e.tab == "add" %}
+    {% call el("div", layout="flex items-end gap-8") %}{{ text_input("q", "Add a headline number", value=e.q, placeholder="Search your metrics") }}{{ button("Search", type="submit", attrs={"name": "goto", "value": "add"}) }}{% endcall %}
+    {% for fam in e.families %}
+    <div class="flex flex-col">{% call el("p", "label-caps") %}{{ fam.family }} · {{ fmt.num(fam.metrics | length) }} variant{{ "s" if fam.metrics | length != 1 else "" }}{% endcall %}
+      {% for m in fam.metrics %}{% call el("div", "edit-row") %}<div class="flex flex-col">{% call el("span", "name") %}{{ m.name }}{% endcall %}{% call el("span", "how") %}{{ m.grain }}ly{{ " · " ~ m.source if m.source else "" }}{{ "" if m.active else " · needs a source" }}{% endcall %}</div>{% if m.added %}{% call el("span", "today") %}In this brief{% endcall %}{% elif m.active %}{{ button("Add", type="submit", attrs={"name": "action", "value": "add:" ~ m.key}) }}{% endif %}{% endcall %}{% endfor %}</div>
+    {% else %}{% call el("p", "hint") %}No metric matches “{{ e.q }}”.{% endcall %}{% endfor %}
+  {% elif e.tab == "delivery" %}
+    {% call el("div", layout="grid grid-cols-1 md:grid-cols-3 gap-12") %}
+      {{ select("schedule", [("daily", "Every day"), ("weekdays", "Weekdays"), ("weekly", "Weekly"), ("monthly", "Monthly")], d.schedule, label="How often", attrs="data-autosubmit") }}
+      {% if e.on_options %}{{ select("on", e.on_options, d.on, label="On") }}{% endif %}
+      {{ text_input("time", "Time", value=d.time) }}
+      {{ select("email_format", [("simple", "Simple · charts"), ("full", "Full detail")], d.email_format, label="Email shows") }}
+    {% endcall %}
+    <div class="flex flex-col">{% call el("p", "label-caps") %}Recipients · {{ fmt.num(e.recipients | selectattr("status", "equalto", "active") | list | length) }}{% endcall %}
+      {% for r in e.recipients %}{% set ws = (r.name or r.email).split() %}{% call el("div", "edit-row") %}{% call el("span", "avatar", layout="flex-none inline-flex items-center justify-center") %}{{ (ws[0][:1] ~ (ws[1][:1] if ws | length > 1 else "")) | upper }}{% endcall %}<div class="flex flex-col flex-1 min-w-0">{% call el("span", "name") %}{{ r.name or r.email }}{% endcall %}{% call el("span", "how") %}{{ r.email }}{{ " · " ~ r.role if r.role else "" }}{% if r.status == "unsubscribed" %} · Unsubscribed{% if r.unsubscribed_at %} · {{ fmt.date_short(r.unsubscribed_at.date()) }}{% endif %}{% elif r.status == "bounced" %} · Bounced{% if r.bounced_at %} · {{ fmt.date_short(r.bounced_at.date()) }}{% endif %} · emails to this address fail{% endif %}{% endcall %}</div>{% if r.status == "active" %}{{ button("×", kind="quiet", size="sm", type="submit", attrs={"form": "rm-" ~ r.id, "aria-label": "Remove " ~ r.email}) }}{% else %}{{ button("Add back", size="sm", type="submit", attrs={"form": "back-" ~ r.id}) }}{% endif %}{% endcall %}{% endfor %}
+      {% call el("div", layout="flex items-end gap-8 flex-wrap") %}{{ text_input("r_name", "Name", attrs='form="add-recipient"') }}{{ text_input("r_email", "Email", type="email", attrs='form="add-recipient"') }}{{ button("Add", type="submit", attrs={"form": "add-recipient"}) }}{% endcall %}
+      {% call el("p", "hint") %}Recipients get the email and a read-only link. Adding or removing one applies at once.{% endcall %}</div>
+  {% endif %}
+</div>
+{% else %}
+{% call el("div", layout="flex flex-col gap-12 w-full") %}
+  {{ effect_box(e.effect, e.preview_title, "Applies from tomorrow’s run" ~ (" · saves as v" ~ (e.version + 1) if e.dirty else "")) }}
+  {% call el("div", layout="flex items-center justify-end gap-8") %}{% if not e.dirty %}{% call el("span", "hint", layout="mr-auto") %}Change something to save{% endcall %}{% endif %}{{ button("Cancel", href=close) }}{{ button("Preview", type="submit", attrs={"name": "action", "value": "preview"}) }}{{ button("Save changes", kind="primary", type="submit", disabled=not e.dirty, attrs={"name": "action", "value": "save"}) }}{% endcall %}
+{% endcall %}
+{% endif %}
+{% endcall %}
+</form>
+{% for r in e.recipients %}{% if r.status == "active" %}<form id="rm-{{ r.id }}" method="post" action="/brief/{{ e.brief.id }}/recipients/{{ r.id }}/remove" class="hidden" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}"></form>{% else %}<form id="back-{{ r.id }}" method="post" action="/brief/{{ e.brief.id }}/recipients" class="hidden" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="r_email" value="{{ r.email }}"><input type="hidden" name="r_name" value="{{ r.name }}"></form>{% endif %}{% endfor %}
+<form id="add-recipient" method="post" action="/brief/{{ e.brief.id }}/recipients" class="hidden" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}"></form>
+{% endcall %}
+{% elif fpanel %}{{ forecast_panel(fpanel, wx_close) }}
+{% elif panel %}
+{% set close = base ~ "?" ~ q %}
+{% set fbase = base ~ "/finding/" %}{% set fq = q %}
+{% include "sweep/_panel.html" %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,149 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# Form controls (9b). #}
+{% macro text_input(name, label=None, value="", type="text", placeholder="", state="", error=None, hint=None, autofocus=False, disabled=False, attrs="") -%}
+<div class="field">
+  {% if label %}<label for="f-{{ name }}">{{ label }}</label>{% endif %}
+  <input class="input{{ ' is-' ~ state if state else '' }}{{ ' is-error' if error else '' }}" id="f-{{ name }}" name="{{ name }}" type="{{ type }}"
+    value="{{ value }}"{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if error %} aria-invalid="true" aria-describedby="e-{{ name }}"{% endif %}{% if autofocus %} autofocus{% endif %}{% if disabled %} disabled{% endif %} {{ attrs | safe }}>
+  {% if error %}<p class="field-error" id="e-{{ name }}">{{ error }}</p>{% endif %}
+  {% if hint %}<p class="hint">{{ hint }}</p>{% endif %}
+</div>
+{%- endmacro %}
+
+{# A multi-line text field (4c's question), like text_input. #}
+{% macro text_area(name, label=None, value="", placeholder="", rows=3, error=None, autofocus=False, attrs="") -%}
+<div class="field">
+  {% if label %}<label for="f-{{ name }}">{{ label }}</label>{% endif %}
+  <textarea class="input{{ ' is-error' if error else '' }}" id="f-{{ name }}" name="{{ name }}" rows="{{ rows }}"{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if error %} aria-invalid="true" aria-describedby="e-{{ name }}"{% endif %}{% if autofocus %} autofocus{% endif %} {{ attrs | safe }}>{{ value }}</textarea>
+  {% if error %}<p class="field-error" id="e-{{ name }}">{{ error }}</p>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro suffix_input(name, label, value="", suffix="", state="", attrs="") -%}
+<div class="field">
+  <label for="f-{{ name }}">{{ label }}</label>
+  <div class="input-group{{ ' is-' ~ state if state else '' }}"><input id="f-{{ name }}" name="{{ name }}" value="{{ value }}" autocomplete="off" spellcheck="false" {{ attrs | safe }}><span class="suffix">{{ suffix }}</span></div>
+  {{ caller() if caller else "" }}
+</div>
+{%- endmacro %}
+
+{% macro select(name, options, selected=None, label=None, small=False, attrs="", id=None) -%}
+{% set fid = "f-" ~ (id or name) %}
+{% if label %}<div class="field"><label for="{{ fid }}">{{ label }}</label>{% endif %}
+<select class="select{{ ' sm' if small else '' }}" id="{{ fid }}" name="{{ name }}" {{ attrs | safe }}>
+  {% for value, text in options %}<option value="{{ value }}"{% if value == selected %} selected{% endif %}>{{ text }}</option>{% endfor %}
+</select>
+{% if label %}</div>{% endif %}
+{%- endmacro %}
+
+{# A select with our own open list (M11c, docs/07). The native <select> stays in the form and is
+   what the page submits; on a fine pointer the listbox component draws the list (keyboard, typing
+   a letter, Escape) and keeps the select in step. Phones and no-JS keep the native list.
+   options: (value, text) or (value, text, sub) or (value, text, sub, group); `note` sits under
+   the list. #}
+{% macro listbox(name, options, selected=None, label=None, id=None, note=None, small=False, attrs="") -%}
+{% set fid = "f-" ~ (id or name) %}
+{% if label %}<div class="field"><label for="{{ fid }}">{{ label }}</label>{% endif %}
+<div class="lb" x-data="listbox"{% if note %} data-note="{{ note }}"{% endif %}>
+<select class="select{{ ' sm' if small else '' }}" id="{{ fid }}" name="{{ name }}" {{ attrs | safe }}>
+  {%- set ns = namespace(group=None) -%}
+  {%- for o in options -%}
+  {%- set g = o[3] if o | length > 3 else None -%}
+  {%- if g != ns.group -%}{%- if ns.group is not none %}</optgroup>{% endif %}{%- if g %}<optgroup label="{{ g }}">{% endif %}{%- set ns.group = g -%}{%- endif -%}
+  <option value="{{ o[0] }}"{% if o[0] == selected %} selected{% endif %}{% if o | length > 2 and o[2] %} data-sub="{{ o[2] }}"{% endif %}>{{ o[1] }}</option>
+  {%- endfor -%}
+  {%- if ns.group %}</optgroup>{% endif -%}
+</select>
+</div>
+{% if label %}</div>{% endif %}
+{%- endmacro %}
+
+{# A popup (M11c): the native <dialog>, opened by any button with data-dialog-open="<id>".
+   Escape, the close button or a click on the backdrop closes it; focus stays inside while open
+   and returns to the button. Use: {% call dialog("ex", "An example message") %}…{% endcall %} #}
+{% macro dialog(id, title, foot=None) -%}
+<dialog class="dlg" id="{{ id }}" aria-labelledby="{{ id }}-t">
+  <header class="dlg-head"><h2 class="panel-title" id="{{ id }}-t">{{ title }}</h2><form method="dialog"><button class="btn quiet" aria-label="Close">×</button></form></header>
+  <div class="dlg-body">{{ caller() }}</div>
+  <footer class="dlg-foot"><span class="hint">{{ foot or "" }}</span><form method="dialog"><button class="btn">Close</button></form></footer>
+</dialog>
+{%- endmacro %}
+
+{% macro toggle(name, on=True, state="", disabled=False, label="", attrs="") -%}
+<input type="checkbox" role="switch" class="toggle{{ ' is-' ~ state if state else '' }}" name="{{ name }}" aria-label="{{ label }}"{% if on %} checked{% endif %}{% if disabled %} disabled{% endif %} {{ attrs | safe }}>
+{%- endmacro %}
+
+{% macro chip(label, state="", href=None, dot=None, soft=False, mono=False) -%}
+{%- set cls = "chip" ~ (" soft" if soft else "") ~ (" mono-chip" if mono else "") ~ (" is-" ~ state if state else "") -%}
+{%- if href %}<a class="{{ cls }}" href="{{ href }}">{% else %}<span class="{{ cls }}">{% endif -%}
+{%- if dot %}<span class="dot {{ dot }}"></span>{% endif %}{{ label }}
+{%- if href %}</a>{% else %}</span>{% endif -%}
+{%- endmacro %}
+
+{# Six-digit code (1c, 1d). digits: list of strings; state: '' | 'error' | 'locked'; focus: index with the caret. #}
+{% macro code_boxes(digits=("", "", "", "", "", ""), state="", focus=None, compact=False, name="code") -%}
+<div class="code-boxes{{ ' is-' ~ state if state else '' }}{{ ' compact' if compact else '' }}" data-code-boxes>
+  {% for d in digits %}<input class="digit{{ ' is-focus' if focus == loop.index0 else '' }}" name="{{ name }}{{ loop.index0 }}" value="{{ d }}" inputmode="numeric" maxlength="1" autocomplete="{{ 'one-time-code' if loop.first else 'off' }}" aria-label="Digit {{ loop.index }}"{% if focus == loop.index0 and state != 'locked' %} autofocus{% endif %}{% if state == 'locked' %} disabled{% endif %}>{% endfor %}
+</div>
+{%- endmacro %}
+
+{# chips_input: removable chips plus "+ add" (2j Schemas, 10a1 Databases). The values travel as
+   one comma-separated hidden field, so the server reads the same thing as a text input.
+   fixed=True shows the chips without remove or add (a value set elsewhere). #}
+{% macro chips_input(name, label, values, placeholder="add", fixed=False, hint=None) -%}
+<div class="field">
+  <span class="field-label">{{ label }}</span>
+  <div class="chips-input{{ ' is-fixed' if fixed else '' }}" data-chips>
+    {% for v in values %}<span class="chip" data-chip="{{ v }}">{{ v }}{% if not fixed %}<button class="chip-x" type="button" aria-label="Remove {{ v }}" data-chip-remove>×</button>{% endif %}</span>{% endfor %}
+    {% if not fixed %}<input class="chips-add" type="text" placeholder="+ {{ placeholder }}" aria-label="Add to {{ label }}" data-chip-add>{% endif %}
+    <input type="hidden" name="{{ name }}" value="{{ values | join(', ') }}" data-chips-value>
+  </div>
+  {% if hint %}<p class="hint">{{ hint }}</p>{% endif %}
+</div>
+{%- endmacro %}
+
+
+{# action_form (M12b): every owner action is a post through this macro. In place by default:
+   othor.js posts it, follows the redirect and swaps #main and #overlay, so nothing reloads
+   (docs/07 "Actions happen in place"); without JavaScript it's the same plain post.
+   nav=True: a post that goes to another page (sign-in, Continue to the next step); a plain form.
+   csrf: the page's csrf_token (macros don't see the page context); kind and layout as el(). #}
+{% macro action_form(action, csrf, kind="", layout="", nav=False, attrs=None) -%}
+<form{% if kind or layout %} class="{{ (kind ~ ' ' ~ layout) | trim }}"{% endif %} method="post" action="{{ action }}"{% if not nav %} data-inplace{% endif %}{% for k, v in (attrs or {}).items() %}{% if v is sameas true %} {{ k }}{% elif v is not sameas false and v is not none %} {{ k }}="{{ v }}"{% endif %}{% endfor %}><input type="hidden" name="csrf" value="{{ csrf }}">{{ caller() if caller else "" }}</form>
+{%- endmacro %}
+
+{# Request access (M11d part C): the site's /request-access page and the sign-up page's
+   invitation-only state. A hidden honeypot field catches bots; no third-party CAPTCHA. #}
+{% macro access_request_fields(form, errors, csrf_token, sizes) -%}
+<input type="hidden" name="csrf" value="{{ csrf_token }}">
+{{ text_input("name", "Your name", form.name or "", error=errors.name, attrs='autocomplete="name"') }}
+{{ text_input("email", "Work email", form.email or "", type="email", error=errors.email, attrs='autocomplete="email"') }}
+{{ text_input("company", "Company", form.company or "", error=errors.company, attrs='autocomplete="organization"') }}
+<div class="field">
+  <label for="f-team_size">How many people work there</label>
+  <select class="select{{ ' is-error' if errors.team_size else '' }}" id="f-team_size" name="team_size"{% if errors.team_size %} aria-invalid="true" aria-describedby="e-team_size"{% endif %}>
+    <option value=""{% if not form.team_size %} selected{% endif %}>Choose</option>
+    {% for value, text in sizes %}<option value="{{ value }}"{% if value == form.team_size %} selected{% endif %}>{{ text }}</option>{% endfor %}
+  </select>
+  {% if errors.team_size %}<p class="field-error" id="e-team_size">{{ errors.team_size }}</p>{% endif %}
+</div>
+{{ text_input("runs_today", "What you run today", form.runs_today or "", error=errors.runs_today, placeholder="Your ERP, accounts, CRM, spreadsheets") }}
+{{ text_area("message", "Anything else (optional)", form.message or "", rows=4) }}
+<div class="sr-only" aria-hidden="true"><label for="f-website">Leave this empty</label><input id="f-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+{%- endmacro %}
+
+
+{# M15.3 · A dialog with a form: the body's fields, then Cancel and one action (primary, or danger
+   for a destructive confirm). It posts in place (data-inplace); Cancel and × close it without
+   sending (formmethod="dialog"). Opened like any dialog: data-dialog-open="<id>". PDF export
+   (M15.7) and the danger-zone confirms reuse it.
+   Use: {% call dialog_form("add-brief", "Add to a brief", "/x", csrf_token, "Add") %}…{% endcall %} #}
+{% macro dialog_form(id, title, action, csrf, submit, kind="primary", foot=None) -%}
+<dialog class="dlg" id="{{ id }}" aria-labelledby="{{ id }}-t">
+<form method="post" action="{{ action }}" data-inplace class="contents"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <header class="dlg-head"><h2 class="panel-title" id="{{ id }}-t">{{ title }}</h2><button class="btn quiet" type="submit" formmethod="dialog" formnovalidate aria-label="Close">×</button></header>
+  <div class="dlg-body">{{ caller() }}</div>
+  <footer class="dlg-foot"><span class="hint">{{ foot or "" }}</span><span class="flex items-center gap-8"><button class="btn" type="submit" formmethod="dialog" formnovalidate>Cancel</button><button class="btn {{ kind }}" type="submit" data-busy="{{ submit }}…">{{ submit }}</button></span></footer>
+</form>
+</dialog>
+{%- endmacro %}

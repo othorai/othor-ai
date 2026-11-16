@@ -1,0 +1,52 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{#- v0.19 (M19.5) · Big Picture, as stored, in the panel's layout (owner, 15 Nov 2026): written by
+    Othor AI, every number computed; tables and PNG charts so Gmail and Outlook show it as built. -#}
+{% import "_email.html" as e with context %}
+{%- set F = "Inter,'Segoe UI','Noto Sans Devanagari',Helvetica,Arial,sans-serif" -%}
+{%- set INK = "#1F2A37" -%}{%- set INK2 = "#3B4756" -%}{%- set MUTED = "#5B6B7B" -%}{%- set BORDER = "#DDE2E8" -%}{%- set ROW = "#EEF0F3" -%}
+{%- set NEG = "#B33A3A" -%}{%- set POS = "#0A78A4" -%}
+{% macro sentence(segs) -%}{% for s in segs %}{% if s.get('href') %}<a href="{{ base }}{{ s.href }}" style="color:{{ INK }};font-weight:600;text-decoration:none">{{ s.t }}</a>{% else %}{{ s.t }}{% endif %}{% endfor %}{%- endmacro %}
+{% macro label(text, note=None) -%}<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="font-family:{{ F }};font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:{{ MUTED }}">{{ text }}</td>{% if note %}<td align="right" style="font-family:{{ F }};font-size:12px;color:{{ MUTED }}">{{ note }}</td>{% endif %}</tr></table>{%- endmacro %}
+{% macro tone(t) -%}{{ NEG if t == "negative" else (POS if t == "positive" else INK) }}{%- endmacro %}
+{% macro tiles(items, kind) -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border-spacing:0 10px">
+{% for row in items | batch(2) %}<tr>{% for k in row %}<td width="50%" valign="top" style="width:50%;padding:{{ '0 5px 0 0' if loop.first else '0 0 0 5px' }}"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid {{ BORDER }};border-radius:12px;border-collapse:separate"><tr><td style="padding:14px 16px;font-family:{{ F }}">
+{% if kind == "kpi" %}<p style="margin:0;font-size:12px;color:{{ INK2 }}">{{ k.label }}</p><p style="margin:4px 0 0;font-size:20px;font-weight:600;color:{{ tone(k.tone) }}">{{ k.value }}</p>{% if k.note %}<p style="margin:4px 0 0;font-size:12px;color:{{ MUTED }}">{{ k.note }}</p>{% endif %}
+{% else %}<p style="margin:0;font-size:20px;font-weight:600;color:{{ INK }}">{{ k.value }}{% if k.unit %} <span style="font-size:13px;font-weight:500;color:{{ MUTED }}">{{ k.unit }}</span>{% endif %}</p><p lang="{{ r.lang_attr }}" style="margin:4px 0 0;font-size:12px;line-height:1.45;color:{{ INK2 }}">{{ sentence(k.desc) }}</p>{% endif %}
+</td></tr></table></td>{% if row | length == 1 %}<td width="50%" style="width:50%"></td>{% endif %}{% endfor %}</tr>{% endfor %}
+</table>
+{%- endmacro %}
+{% macro card() -%}<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid {{ BORDER }};border-radius:12px;border-collapse:separate;margin:0 0 12px"><tr><td style="padding:20px;font-family:{{ F }}">{{ caller() }}</td></tr></table>{%- endmacro %}
+{% macro tag(text) -%}<span style="display:inline-block;padding:2px 8px;border-radius:6px;background:#F3F4F6;font-family:{{ F }};font-size:12px;font-weight:500;color:{{ INK2 }}">{{ text }}</span>{%- endmacro %}
+{% call e.page(subject, preheader, company_name, logo_cid) %}
+{% call e.row("22px 24px 0") %}<p style="margin:0;font-family:{{ F }};font-size:20px;font-weight:600;color:{{ INK }}">Big Picture</p><p style="margin:4px 0 0;font-family:{{ F }};font-size:13px;color:{{ MUTED }}">{{ r.subtitle }}</p><p style="margin:10px 0 0;font-family:{{ F }};font-size:12px;color:{{ MUTED }}">{{ r.header }}</p>{% endcall %}
+{% call e.row("16px 24px 0") %}<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#EEFBF6;border:1px solid #BFEFE3;border-radius:14px;border-collapse:separate"><tr><td style="padding:22px 24px;font-family:{{ F }}">
+<p style="margin:0;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#0A78A4">{{ r.h.one_line }}</p>
+<p lang="{{ r.lang_attr }}" style="margin:10px 0 0;font-size:21px;line-height:1.35;font-weight:600;color:{{ INK }}">{{ sentence(r.one_line) }}</p>
+{% for x in r.summary %}<p lang="{{ r.lang_attr }}" style="margin:10px 0 0;font-size:15px;line-height:1.6;color:{{ INK2 }}">{{ sentence(x) }}</p>{% endfor %}
+</td></tr></table>{% endcall %}
+{% if r.kpis %}{% call e.row("8px 24px 0") %}{{ tiles(r.kpis, "kpi") }}{% endcall %}{% endif %}
+{% if r.findings %}{% call e.row("18px 24px 0") %}{{ label(r.h.happening) }}<div style="height:10px;line-height:10px;font-size:0">&nbsp;</div>
+{% for c in r.findings %}{% call card() %}{% if c.tag %}{{ tag(c.tag) }}{% endif %}
+<p lang="{{ r.lang_attr }}" style="margin:10px 0 0;font-size:17px;line-height:1.4;font-weight:600;color:{{ INK }}">{{ sentence(c.title) }}</p>
+<p lang="{{ r.lang_attr }}" style="margin:6px 0 0;font-size:14px;line-height:1.6;color:{{ INK2 }}">{{ sentence(c.sentence) }}</p>
+{% if c.legend %}<p style="margin:12px 0 0;font-size:12px;color:{{ INK2 }}">{% for l in c.legend %}<span style="display:inline-block;width:14px;height:{{ '10px' if l.mark == 'area' else '2px' }};vertical-align:middle;background:{{ '#D64545' if l.role == 'negative' else ('#2CCAFF' if l.role == 'positive' else INK) }};opacity:{{ '0.3' if l.mark == 'area' else '1' }}"></span>&nbsp;{{ l.name }}{% if not loop.last %}&nbsp;&nbsp;&nbsp;{% endif %}{% endfor %}</p>{% endif %}
+{% set img = charts.get(c.fact) %}{% if img %}<img src="cid:{{ img.cid }}" width="{{ img.width }}" height="{{ img.height }}" alt="{{ img.alt }}" style="display:block;border:0;width:100%;max-width:{{ img.width }}px;height:auto;margin:12px 0 0">{% endif %}
+{% endcall %}{% endfor %}{% endcall %}{% endif %}
+{% if r.stakes %}{% call e.row("8px 24px 0") %}{{ label(r.h.why_it_matters, plain(r.stakes_note) if r.stakes_note else None) }}{{ tiles(r.stakes, "stake") }}{% endcall %}{% endif %}
+{% if r.look_first %}{% call e.row("10px 24px 0") %}{{ label(r.h.look_first, r.h.priority) }}<div style="height:10px;line-height:10px;font-size:0">&nbsp;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid {{ BORDER }};border-radius:12px;border-collapse:separate">
+{% for a in r.look_first %}<tr><td valign="top" width="26" style="padding:14px 0 14px 16px;{{ '' if loop.first else 'border-top:1px solid ' ~ ROW ~ ';' }}"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td width="26" height="26" align="center" valign="middle" style="width:26px;height:26px;border-radius:13px;background:{{ INK }};font-family:{{ F }};font-size:13px;font-weight:600;color:#FFFFFF">{{ loop.index }}</td></tr></table></td>
+<td valign="top" style="padding:14px 16px;font-family:{{ F }};{{ '' if loop.first else 'border-top:1px solid ' ~ ROW ~ ';' }}"><p lang="{{ r.lang_attr }}" style="margin:0;font-size:15px;line-height:1.5;color:{{ INK }}">{{ sentence(a.text) }}</p>{% if a.tag %}<p style="margin:6px 0 0">{{ tag(a.tag) }}</p>{% endif %}{% if a.href %}<p style="margin:6px 0 0"><a href="{{ base }}{{ a.href }}" style="font-family:{{ F }};font-size:13px;font-weight:500;color:{{ POS }};text-decoration:none">{{ r.h.open }} →</a></p>{% endif %}</td></tr>{% endfor %}
+</table>{% endcall %}{% endif %}
+{% if r.forecasts %}{% call e.row("18px 24px 0") %}{{ label(r.h.coming) }}<div style="height:10px;line-height:10px;font-size:0">&nbsp;</div>
+{% for c in r.forecasts %}{% call card() %}<p style="margin:0;font-size:13px;font-weight:500;color:{{ INK2 }}">{{ c.label }}</p>
+<p style="margin:6px 0 0;font-size:24px;font-weight:600;color:{{ INK }}">{{ c.expected }} <span style="font-size:13px;font-weight:400;color:{{ MUTED }}">{{ r.h.expected }}</span></p>
+{% set img = ranges[loop.index0] %}<img src="cid:{{ img.cid }}" width="{{ img.width }}" height="{{ img.height }}" alt="{{ img.alt }}" style="display:block;border:0;width:{{ img.width }}px;height:{{ img.height }}px;margin:10px 0 0">
+{% if c.verdict %}<p style="margin:12px 0 0;padding-top:10px;border-top:1px solid {{ ROW }};font-size:13px;line-height:1.5;font-weight:600;color:{{ tone(c.tone) }}">{{ c.verdict }}</p>{% endif %}
+{% endcall %}{% endfor %}{% endcall %}{% endif %}
+{% if r.words %}{% call e.row("10px 24px 0") %}{{ label(r.h.words) }}{% for w in r.words %}<p lang="{{ r.lang_attr }}" style="margin:8px 0 0;font-family:{{ F }};font-size:13px;line-height:1.5;color:{{ INK2 }}"><b style="font-weight:600;color:{{ INK }}">{{ sentence(w.term) }}</b> · {{ sentence(w.meaning) }}</p>{% endfor %}{% endcall %}{% endif %}
+{% call e.row("20px 24px 8px") %}{{ e.button("Open in Othor AI", open_url) }}{% endcall %}
+{% call e.row("4px 24px 20px") %}<p style="margin:0;font-family:'Geist Mono',Menlo,Consolas,monospace;font-size:11px;color:{{ MUTED }}">{{ r.footer }}</p>{% endcall %}
+{{ e.owner_footer(instance, preferences) }}
+{% endcall %}

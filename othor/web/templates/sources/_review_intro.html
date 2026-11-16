@@ -1,0 +1,16 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import empty_state %}
+{# 6h: above the Metrics to confirm rows in the app — what the scan found; while drafting, the
+   panel re-reads itself until the drafts land. #}
+{% set rv = review %}
+<div class="flex flex-col gap-8"{% if rv.drafting %} hx-get="/sources?panel=review&s={{ sel.src.id }}" hx-trigger="every 1s" hx-select="aside.panel" hx-target="closest aside.panel" hx-swap="outerHTML"{% endif %}>
+  {% call el("p", "strong") %}{{ sel.title }} is connected.{% endcall %}
+  {% call el("p", "hint") %}Scanned {{ fmt.num(sel.tables_total) }} {{ "tabs" if sel.src.kind == "gsheets" else "tables" }}, {{ fmt.num(sel.tables_used) }} used{% if sel.excluded %} · {{ fmt.num(sel.excluded) }} excluded, personal data{% endif %}{% if sel.src.last_read_at %} · read now, then nightly at {{ fmt.clock(run_time) }}{% else %} · first read tonight at {{ fmt.clock(run_time) }}{% endif %}{% endcall %}
+  {% if rv.found %}
+  {% call el('div', 'card flush found') %}{% for d in rv.found %}{% call el('div', 'found-row') %}{% call el("span", "chip soft") %}{{ d.type }}{% endcall %}<p class="flex-1 min-w-0">{{ d.text }}</p>{% endcall %}{% endfor %}{% endcall %}
+  {% endif %}
+  {% call el("p", "hint") %}Matching with your other sources runs tonight. Results tomorrow on this source and on Home.{% endcall %}
+  {% if rv.drafting %}{% call el("p", "progress-line") %}Drafting metrics from {{ sel.title }}…{% endcall %}
+  {% elif not rv.n %}{% call el("div", "card dashed") %}{{ empty_state(None, "No metrics from this source yet", "Nothing in it adds up to a metric on its own. Add one by form in the Ontology.") }}{% endcall %}{% endif %}
+</div>

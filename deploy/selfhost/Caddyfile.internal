@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# Othor AI on a network only your people reach (M20.4): no Let's Encrypt. Caddy signs the
+# certificate with its own local CA; install its root once on your computers (docs/self-host.md).
+# To use your own certificate instead, put cert.pem and key.pem in ./certs (OTHOR_CERTS_DIR)
+# and swap the `tls internal` line for:  tls /certs/cert.pem /certs/key.pem
+{$OTHOR_DOMAIN} {
+	tls internal
+	encode zstd gzip
+	reverse_proxy web:8000
+}

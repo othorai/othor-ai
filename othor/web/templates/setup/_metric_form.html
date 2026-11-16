@@ -1,0 +1,34 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/panels.html" import side_panel %}
+{% from "components/forms.html" import select, text_input %}
+{% call(part) side_panel("Add a metric" if not panel.editing else "Edit by form", "Pick the table, the column and how to add it up. The value is computed by SQL.", close="/setup/metrics") %}
+{% if part == "body" %}
+{% if not panel.simple %}
+{% call el("div", "callout") %}This definition has more than the form can show: a calculated amount, a snapshot, a formula or several filters. Add a new metric by form, or change this one with Othor AI.{% endcall %}
+<p>{% call el('a', 'btn', attrs='href="/setup/metrics?panel=form"') %}Add a new metric{% endcall %}</p>
+{% else %}
+<form id="metric-form" class="flex flex-col gap-16" method="post" action="/setup/metrics/form" data-inplace>
+  <input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="key" value="{{ panel.key or '' }}">
+  {% if panel.error %}{% call el("div", "callout err") %}{{ panel.error }}{% endcall %}{% endif %}
+  {{ text_input("name", "Name", panel.vals.name or "", placeholder="e.g. Net revenue") }}
+  {{ select("table", panel.tables, panel.vals.table, label="Table", attrs='hx-get="/setup/metrics/form-columns" hx-target="#form-columns" hx-swap="outerHTML" hx-include="this"') }}
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+    {{ select("agg", panel.aggs, panel.vals.agg or "sum", label="How to add it up") }}
+    {{ select("grain", panel.grains, panel.vals.grain or "month", label="Grain") }}
+  </div>
+  {% include "setup/_form_columns.html" %}
+  {{ text_input("breakdowns", "Breakdowns", panel.vals.breakdowns or "", placeholder="e.g. region, plant", hint="Columns of the same table, separated by commas.") }}
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+    {{ text_input("filter_column", "Filter column", panel.vals.filter_column or "", placeholder="e.g. status") }}
+    {{ select("filter_op", [("=", "is"), ("<>", "is not"), (">", "more than"), ("<", "less than")], panel.vals.filter_op or "=", label="Rule") }}
+    {{ text_input("filter_value", "Value", panel.vals.filter_value or "", placeholder="e.g. X") }}
+  </div>
+  {% call el("p", "hint") %}Personal columns are never shown or read.{% endcall %}
+</form>
+{% endif %}
+{% else %}
+{% call el('a', 'btn', attrs='href="/setup/metrics"') %}Back{% endcall %}
+{% if panel.simple %}{% call el('button', 'btn primary', attrs='type="submit" form="metric-form"') %}Save{% endcall %}{% endif %}
+{% endif %}
+{% endcall %}

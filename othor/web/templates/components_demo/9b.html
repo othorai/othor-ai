@@ -1,0 +1,102 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "base.html" %}
+{% from "components/buttons.html" import button, link, info, ai_button %}
+{% from "components/forms.html" import chip, toggle, listbox, dialog %}
+{% from "components/sources.html" import kind_tile %}
+{% from "components/icons.html" import icon %}
+{% set STATES = [("", "Default"), ("hover", "Hover"), ("focus", "Focus"), ("active", "Active"), ("disabled", "Disabled")] %}
+{% macro cell(note) %}<div class="sw"><em>{{ note }}</em>{{ caller() }}</div>{% endmacro %}
+{% block title %}9b · Interactive states{% endblock %}
+{% block body %}
+<div class="board-page">
+  <div class="flex items-start justify-between"><div><h1 class="board-title">Interactive states</h1>
+    <p class="board-sub">Hover, focus, active, selected and disabled, for every control that has them. Transitions 120 ms ease; focus ring only on keyboard focus (:focus-visible).</p></div>
+    <div class="flex items-center gap-6"><span class="key-chip"><span class="dot accent"></span>key #2CCAFF</span><span class="key-chip"><span class="dot accent"></span>hover #17B9EE</span><span class="key-chip"><span class="dot accent"></span>active #0FA6D9</span><span class="key-chip"><span class="dot muted"></span>tint #E6F7FF</span></div></div>
+  <div class="state-grid mt-12"><span class="label-caps">Control</span>{% for s in ["Default", "Hover", "Focus", "Active / selected", "Disabled / other"] %}<span class="label-caps">{{ s }}</span>{% endfor %}</div>
+
+  {% for kind, name, cls, notes in [
+      ("primary", "Primary button", ".btn.primary", ["Default", "Hover · #17B9EE", "Focus · 3px ring 35%", "Active · #0FA6D9", "Disabled · 45%"]),
+      ("", "Secondary button", ".btn", ["Default", "Hover · #F8F9FA, border #C9CFD6", "Focus", "Active · #F3F4F6", "Disabled"]),
+      ("quiet", "Quiet button", ".btn.quiet", ["Default", "Hover · #F3F4F6", "Focus", "Active · #E3E6EA", "Disabled"]),
+      ("danger", "Danger button", ".btn.danger", ["Default", "Hover · #FDF1EF", "Focus · red ring", "Active", "Disabled"])] %}
+  {% set label = {"primary": "Send me a code", "": "Share", "quiet": "‹ Yesterday", "danger": "Remove source"}[kind] %}
+  <div class="state-grid"><p class="name">{{ name }}<small>{{ cls }}</small></p>
+    {% for st, _ in STATES %}{% call cell(notes[loop.index0]) %}{{ button(label, kind, state=st, block=True) }}{% endcall %}{% endfor %}</div>
+  {% endfor %}
+
+  {# v0.19 (M19.5): AI-heavy features are marked (docs/07): the Othor AI mark and the hero gradient #}
+  <div class="state-grid"><p class="name">AI button<small>.btn.ai</small></p>
+    {% for st, note in [("", "Default · gradient"), ("hover", "Hover · gradient slides"), ("focus", "Focus · ring"), ("active", "Active"), ("disabled", "Disabled · model unavailable")] %}
+    {% call cell(note) %}{{ ai_button("Big Picture Report", href="#", state=st, disabled=(st == "disabled")) }}{% endcall %}{% endfor %}</div>
+
+  <div class="state-grid"><p class="name">Sidebar item<small>.side a</small></p>
+    {% for st, note in [("", "Default"), ("hover", "Hover · #F3F4F6"), ("focus", "Focus"), ("on", "Selected · #E6F7FF"), ("on", "Selected + hover (same)")] %}
+    {% call cell(note) %}<a class="nav-item{{ ' is-' ~ st if st else '' }}" href="#">{{ icon("brief") }}Morning Brief</a>{% endcall %}{% endfor %}</div>
+
+  <div class="state-grid"><p class="name">Text link<small>a</small></p>
+    {% for st, note in [("", "Default"), ("hover", "Hover · underline"), ("focus", "Focus · 2px outline"), ("visited", "Visited · #086A90")] %}
+    {% call cell(note) %}{{ link("How is this calculated?", state=st) }}{% endcall %}{% endfor %}
+    {% call cell("—") %}<span class="hint">no disabled state</span>{% endcall %}</div>
+
+  <div class="state-grid"><p class="name">Text input<small>input</small></p>
+    {% for st, note, val in [("", "Default", "uday@indigothread.example"), ("hover", "Hover · border #C9CFD6", "uday@indigothread.example"), ("focus", "Focus · sky border + ring", "uday@indigothread.example"), ("error", "Error · red", "uday@indigothread"), ("disabled", "Disabled · #F8F9FA", "othor_ro")] %}
+    {% call cell(note) %}<input class="input is-{{ st }}" value="{{ val }}" aria-label="Example input"{% if st == 'disabled' %} disabled{% endif %}>{% endcall %}{% endfor %}</div>
+
+  <div class="state-grid"><p class="name">Select<small>select</small></p>
+    {% for st, note in [("", "Default"), ("hover", "Hover · border #C9CFD6"), ("focus", "Focus · sky border + ring"), ("error", "Error · red"), ("disabled", "Disabled · #F8F9FA")] %}
+    {% call cell(note) %}<select class="select is-{{ st }}" aria-label="Example select"{% if st == 'disabled' %} disabled{% endif %}><option>Asia/Kolkata (IST, UTC+05:30)</option></select>{% endcall %}{% endfor %}</div>
+
+  <div class="state-grid"><p class="name">Select, small sizes<small>.select.compact · .select.sm</small></p>
+    {% call cell("Compact · 30 px") %}<select class="select compact" aria-label="Example compact select"><option>Last row: 412</option></select>{% endcall %}
+    {% call cell("Small · 26 px") %}<select class="select sm" aria-label="Example small select"><option>Monthly</option></select>{% endcall %}
+    {% call cell("Long value · ellipsis") %}<select class="select" aria-label="Example long select"><option>Sales incl. GST (₹ L) · MIS-Weekly-27Oct.xlsx · tab Sales</option></select>{% endcall %}
+    {% call cell("—") %}{% endcall %}{% call cell("—") %}{% endcall %}</div>
+
+  <div class="state-grid"><p class="name">Listbox<small>listbox() · M11c</small></p>
+    {% call cell("Fiscal year · open it") %}{{ listbox("demo_fy", [("1", "January"), ("2", "February"), ("3", "March"), ("4", "April"), ("5", "May"), ("6", "June"), ("7", "July"), ("8", "August"), ("9", "September"), ("10", "October"), ("11", "November"), ("12", "December")], "4", id="demo-fy", attrs='aria-label="Example fiscal year"') }}{% endcall %}
+    {% call cell("Time zone · groups, second line, note") %}{{ listbox("demo_tz", [("Asia/Kolkata", "India · IST", "Asia/Kolkata · UTC+05:30", "Detected from your browser"), ("Asia/Dubai", "Dubai", "Asia/Dubai · UTC+04:00", "Other time zones"), ("UTC", "UTC", "Coordinated Universal Time", "Other time zones")], "Asia/Kolkata", id="demo-tz", note="The nightly run starts at 02:00 and the brief goes out at 06:00 in this time zone.", attrs='aria-label="Example time zone"') }}{% endcall %}
+    {% call cell("Small · in a settings row") %}{{ listbox("demo_sm", [("daily", "Every day"), ("weekdays", "Weekdays")], "daily", id="demo-sm", small=True, attrs='aria-label="Example small listbox"') }}{% endcall %}
+    {% call cell("Phones · native picker") %}<span class="hint">On a touch screen the browser's own list opens.</span>{% endcall %}
+    {% call cell("—") %}{% endcall %}</div>
+
+  <div class="state-grid"><p class="name">Dialog<small>dialog() · M11c</small></p>
+    {% call cell("Opens a popup") %}<button class="btn" type="button" data-dialog-open="demo-dialog">See an example</button>{% call dialog("demo-dialog", "An example message", foot="Plain text. Write yours the same way, in your own words.") %}We make technical textiles at two plants and sell to exporters and garment makers.
+
+Every week we check net revenue, the order book, collections and overdue receivables.{% endcall %}{% endcall %}
+    {% call cell("Escape, × or the backdrop close it") %}<span class="hint">Focus stays inside and returns to the button.</span>{% endcall %}
+    {% call cell("—") %}{% endcall %}{% call cell("—") %}{% endcall %}{% call cell("—") %}{% endcall %}</div>
+
+  <div class="state-grid"><p class="name">Connector tile<small>kind_tile() · M11c</small></p>
+    {% call cell("PostgreSQL") %}{{ kind_tile("PG") }}{% endcall %}
+    {% call cell("MySQL") %}{{ kind_tile("MY") }}{% endcall %}
+    {% call cell("Google Sheets") %}{{ kind_tile("GS") }}{% endcall %}
+    {% call cell("An upload's file type") %}{{ kind_tile("PDF") }}{% endcall %}
+    {% call cell("—") %}{% endcall %}</div>
+
+  <div class="state-grid"><p class="name">Filter chip<small>.chip</small></p>
+    {% for st, note in [("", "Default"), ("hover", "Hover"), ("focus", "Focus"), ("on", "Selected · #E6F7FF + sky border")] %}
+    {% call cell(note) %}<span class="chip lg w-full is-{{ st }}">Last 30 days</span>{% endcall %}{% endfor %}
+    {% call cell("—") %}<span class="hint">chips never disable; they hide</span>{% endcall %}</div>
+
+  <div class="state-grid"><p class="name">Table row<small>.tr</small></p>
+    {% for st, note in [("", "Default"), ("hover", "Hover · #F8F9FA"), ("focus", "Focus · inset ring"), ("selected", "Selected · #E6F7FF")] %}
+    {% call cell(note) %}<div class="trow is-{{ st }}"><span class="dot accent"></span>South down ₹1.4 Cr</div>{% endcall %}{% endfor %}<span class="hint">—</span></div>
+
+  <div class="state-grid"><p class="name">Info button (i)<small>.info</small></p>
+    {% for st, note in [("", "Default"), ("hover", "Hover · #F3F4F6"), ("focus", "Focus"), ("open", "Panel open · #E6F7FF")] %}
+    {% call cell(note) %}{{ info(st) }}{% endcall %}{% endfor %}<span class="hint">—</span></div>
+
+  <div class="state-grid"><p class="name">Toggle<small>.toggle</small></p>
+    {% for st, note, on, dis in [("", "On", True, False), ("hover", "Hover · knob shadow", True, False), ("focus", "Focus", True, False), ("off", "Off", False, False), ("disabled", "Disabled", True, True)] %}
+    {% call cell(note) %}{{ toggle("t" ~ loop.index, on=on, state=st, disabled=dis, label="Example toggle") }}{% endcall %}{% endfor %}</div>
+
+  <div class="state-grid"><p class="name">Brief card<small>.card (link)</small></p>
+    {% for st, note in [("", "Default"), ("hover", "Hover · lift 1px + shadow"), ("focus", "Focus")] %}
+    {% call cell(note) %}<a class="card p-16 is-{{ st }}" href="#"><span class="card-title">Leadership weekly</span><br><br><br></a>{% endcall %}{% endfor %}<span class="hint">—</span><span class="hint">—</span></div>
+
+  <div class="state-grid"><p class="name">Tab<small>.tab</small></p>
+    {% call cell("Default") %}<a class="tab" href="#">Product family</a>{% endcall %}
+    {% call cell("Hover · ink text") %}<a class="tab is-hover" href="#">Product family</a>{% endcall %}
+    {% call cell("Selected · sky underline") %}<a class="tab is-on" href="#">Executive summary</a>{% endcall %}<span class="hint">—</span><span class="hint">—</span></div>
+</div>
+{% endblock %}

@@ -1,0 +1,146 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# Cards, sections, banners, toasts, empty states and the brief/finding blocks (9a, 9c E). #}
+{% macro banner(kind, text, action=None, href="#") -%}
+<div class="banner {{ kind }}" role="status"><span class="banner-text">{% if kind in ("neg", "warn", "ok", "note") %}<span class="dot {{ 'accent' if kind == 'note' else kind }}"></span>{% endif %}<span>{{ text | safe }}</span></span>{% if action %}<a href="{{ href }}">{{ action }}</a>{% endif %}</div>
+{%- endmacro %}
+
+{% macro callout(text, kind="") -%}<div class="callout {{ kind }}" role="status">{{ text | safe }}</div>{%- endmacro %}
+
+{% macro toast(text, kind="info", sub=None, action=None, href="#", retry=None) -%}
+<div class="toast{{ ' err' if kind == 'err' else '' }}" role="status">
+  <span class="dot {{ 'neg' if kind == 'err' else 'accent' }}"></span>
+  <span>{{ text }}{% if sub %}<span class="sub">{{ sub }}</span>{% endif %}</span>
+  {% if action %}<a class="action" href="{{ href }}">{{ action }}</a>{% endif %}
+  {% if retry %}<button class="btn quiet retry" type="button">{{ retry }}</button>{% endif %}
+  {% if caller %}{{ caller() }}{% endif %}{# an action that posts, e.g. Undo (4c2, M12b) #}
+</div>
+{%- endmacro %}
+
+{% macro empty_state(code, title, text=None, action=None, href="#", primary=False, more=None, ref=None) -%}
+<div class="empty">
+  {% if code %}<p class="label-code">{{ code }}</p>{% endif %}
+  <p class="empty-title">{{ title }}</p>
+  {% if text %}<p class="empty-text">{{ text }}</p>{% endif %}
+  {% if ref %}<p class="empty-text mono">Reference {{ ref }}</p>{% endif %}
+  {% if action %}<div class="empty-action"><a class="btn{{ ' primary' if primary else '' }}" href="{{ href }}">{{ action }}</a>{% for label, to in more or [] %} <a class="btn" href="{{ to }}">{{ label }}</a>{% endfor %}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro skeleton() -%}
+<div class="flex flex-col gap-12"><div class="skeleton line mid"></div><div class="skeleton line short"></div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mt-12">{% for _ in range(4) %}<div class="skeleton tile"></div>{% endfor %}</div>
+<div class="skeleton box mt-4"></div></div>
+{%- endmacro %}
+
+{% macro stale(text, action="Reload", href="") -%}
+<div class="stale" role="status">{{ text }} <a class="link-u" href="{{ href }}">{{ action }}</a></div>
+{%- endmacro %}
+
+{% macro watching(summary, detail, action="Watching →", href="#") -%}
+<div class="watching"><span class="dot neg"></span><b>{{ summary }}</b><span>{{ detail }}</span>{% if action %}<a class="action" href="{{ href }}">{{ action }}</a>{% endif %}</div>
+{%- endmacro %}
+
+{# `person`: "Name · Role", or empty when the person has no name (then no "for" chip).
+   `settles`: the line under the question ("Settles item 01. …", M15.3). #}
+{% macro ask_today(person, question, settles=None) -%}
+<div class="ask"><div class="flex-1 min-w-0"><p class="who">Question to ask today{% if person %} · <span class="chip soft">for {{ person }}</span>{% endif %}</p><p class="q">{{ question }}</p>{% if settles %}<p class="settles">{{ settles }}</p>{% endif %}</div>
+<button class="btn" type="button" data-copy>Copy</button></div>
+{%- endmacro %}
+
+{# M15.3 · Ask today, compact, under a brief's title (owner, 11 Nov 2026): the person, the
+   question, "Settles 01 ↓" (to the item it settles) and Copy #}
+{% macro ask_line(person, question, settles_href=None) -%}
+<div class="ask-line"><span class="who">Ask today{% if person %} · {{ person.split(" · ")[0] }}{% endif %}</span><span class="q">{{ question }}</span>{% if settles_href %}<a class="settles" href="{{ settles_href }}">Settles 01 ↓</a>{% endif %}<button class="btn primary sm" type="button" data-copy="{{ question }}">Copy</button></div>
+{%- endmacro %}
+
+{# M15.3 · a goal under the headline numbers: its text and a tag (Off track, At risk, On track) #}
+{% macro goal_line(text, tone) -%}
+<div class="goal-line"><span class="k">Goal</span><span class="t">{{ text }}</span><span class="tag-goal {{ tone }}">{{ {"off": "Off track", "risk": "At risk"}.get(tone, "On track") }}</span></div>
+{%- endmacro %}
+
+{% macro why_unseen(text) -%}<p class="why"><b>Why you haven’t seen this.</b> {{ text }}</p>{%- endmacro %}
+
+{# rows: list of (name, date, money); "No chart by design" (9c D). #}
+{% macro records(rows, note=None, headers=("Account", "Last invoice", "Last 12 m")) -%}
+<div class="records">
+  <div class="head"><span>{{ headers[0] }}</span><span class="num">{{ headers[1] }}</span><span class="num">{{ headers[2] }}</span></div>
+  {% for name, d, money in rows %}<div class="rec"><span>{{ name }}</span><span class="num">{{ d }}</span><span class="num strong">{{ money }}</span></div>{% endfor %}
+  {% if note %}<p class="note">{{ note }}</p>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro kpi(label, value, chart_svg=None) -%}
+<div class="kpi"><span class="l">{{ label }}</span><span class="v">{{ value }}</span>{% if chart_svg %}<span class="chart">{{ chart_svg }}</span>{% endif %}</div>
+{%- endmacro %}
+
+{# A chart card: title (a sentence, outside the chart), kind label, the rendered spec, caption. #}
+{% macro chart_card(title, kind_label, chart_svg, caption=None) -%}
+<div class="card board chart-card flex flex-col gap-12">
+  <div class="flex items-start justify-between"><span class="card-title">{{ title }}</span><span class="chart-kind">{{ kind_label }}</span></div>
+  <div class="chart">{{ chart_svg }}</div>
+  {% if caption %}<p class="caption">{{ caption }}</p>{% endif %}
+</div>
+{%- endmacro %}
+
+{# tabs: list of (label, href); current: label #}
+{% macro tabs(items, current, state=None) -%}
+<nav class="tabs" x-data="tabs">{% for label, href in items %}<a class="tab{{ ' is-on' if label == current else '' }}{{ ' is-' ~ state if state and label != current else '' }}" href="{{ href }}"{% if label == current %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
+{%- endmacro %}
+
+{# Onboarding step bar: steps = list of labels; now = 1-based index of the current step. #}
+{% macro step_bar(steps, now) -%}
+<ol class="steps" aria-label="Setup steps">
+  {% for label in steps %}{% if not loop.first %}<li class="step-sep" aria-hidden="true"></li>{% endif %}
+  <li class="step{{ ' done' if loop.index < now else (' now' if loop.index == now else '') }}"{% if loop.index == now %} aria-current="step"{% endif %}><span class="n">{% if loop.index < now %}<svg class="icon" aria-hidden="true" focusable="false"><use href="{{ asset('icons/sprite.svg') }}#check"></use></svg><span class="sr-only">{{ loop.index }}</span>{% else %}{{ loop.index }}{% endif %}</span><span class="step-label">{{ label }}</span></li>{% endfor %}
+</ol>
+{%- endmacro %}
+
+{# The onboarding step bar (M11c): "Step N of 6 · Name", "Next: …", one segment per step (done,
+   current half filled, to come). It sits at the top of the page column, not in the header. #}
+{% macro column_steps(steps, now) -%}
+<nav class="col-steps" aria-label="Setup progress">
+  <p class="row"><span><b>Step {{ now }} of {{ steps | length }}</b> <span class="now">· {{ steps[now - 1] }}</span></span><span class="next">{% if now < steps | length %}Next: {{ steps[now] }}{% else %}Last step{% endif %}</span></p>
+  <ol class="segs">{% for label in steps %}<li class="seg{{ ' done' if loop.index < now else (' now' if loop.index == now else '') }}"{% if loop.index == now %} aria-current="step"{% endif %}><span class="sr-only">{{ label }}{{ ", done" if loop.index < now else "" }}</span></li>{% endfor %}</ol>
+</nav>
+{%- endmacro %}
+
+{# A recipient page (10e, 10f): one card under the shared header. The caller adds the actions and,
+   for 10f, link_others(). pill: a status chip above the title ("Unsubscribed"). #}
+{% macro link_card(title, lede=None, kicker=None, pill=None, fine=None) -%}
+<div class="link-main"><div class="link-card">
+{%- if pill %}<span class="chip"><span class="dot accent"></span>{{ pill }}</span>{% endif %}
+{%- if kicker %}<p class="k">{{ kicker }}</p>{% endif %}<h1>{{ title }}</h1>
+{%- if lede %}<p class="lede">{{ lede }}</p>{% endif %}
+{%- if caller is defined %}{{ caller() }}{% endif %}
+{%- if fine %}<p class="fine">{{ fine }}</p>{% endif %}
+</div></div>
+{%- endmacro %}
+
+{# "Other briefs you get" on 10f: rows of (label, form id); each form posts its own unsubscribe. #}
+{% macro link_others(rows) -%}
+<div class="others"><p class="h">Other briefs you get</p>
+{%- for label, form in rows %}<div class="row"><span>{{ label }}</span><button class="link-plain" type="submit" form="{{ form }}">Unsubscribe</button></div>{% endfor %}</div>
+{%- endmacro %}
+
+{# a form button that reads as a link (Unsubscribe in a footer) #}
+{% macro plain_button(label, form) -%}<button class="link-plain" type="submit" form="{{ form }}">{{ label }}</button>{%- endmacro %}
+
+{# The page's title row (owner, 13 Nov 2026): one height with or without an action beside it, so a
+   title sits at the same place on every page; `{% call page_title("Data sources") %}{{ button(…) }}{% endcall %}`.
+   `lede` and `note`: the page's one-line description and a quiet line under it, 40 px above the content.
+   `info`: the page's description behind an (i) beside the title instead (owner, #43, #45). #}
+{% macro page_title(title, lede=None, note=None, info=None, aside=None) -%}
+{%- from "components/buttons.html" import info as info_pop -%}
+{%- set h -%}{% if info or aside %}<span class="flex {{ 'items-baseline gap-12' if aside else 'items-center gap-8' }}"><h1>{{ title }}</h1>{% if aside %}<span class="aside">{{ aside }}</span>{% endif %}{% if info %}{{ info_pop(text=info, id="page-info", label="About this page") }}{% endif %}</span>{% else %}<h1>{{ title }}</h1>{% endif %}{%- endset -%}
+{%- if lede or note -%}
+<div class="page-head"><div class="page-title">{{ h }}{% if caller is defined %}{{ caller() }}{% endif %}</div>{% if lede %}<p class="page-lede">{{ lede }}</p>{% endif %}{% if note %}<p class="hint">{{ note }}</p>{% endif %}</div>
+{%- else -%}
+<div class="page-title">{{ h }}{% if caller is defined %}{{ caller() }}{% endif %}</div>
+{%- endif -%}
+{%- endmacro %}
+
+{# The company's logo (M15.7): a square mark, the PNG we re-encoded, by its hash; nothing when
+   there is none. size: sm (the link page) · md (Settings) · lg (sign-in) #}
+{% macro company_logo(company, size="sm") -%}
+{% if company and company.logo_sha %}<img class="co-logo {{ size }}" src="/logo/{{ company.logo_sha }}.png" alt="{{ company.name }} logo">{% endif %}
+{%- endmacro %}

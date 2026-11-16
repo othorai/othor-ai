@@ -1,0 +1,11 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/auth.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import empty_state %}
+{% block title %}Deleted · Othor AI{% endblock %}
+{% block card %}
+{# M18.2: after the owner deletes a company (its own host no longer resolves) #}
+{% call el('div', 'auth-card not-found') %}
+  {{ empty_state("Deleted", name ~ " is deleted", "Nightly runs and briefs have stopped and you’ve been signed out. Its data is removed for good on " ~ purge ~ ". To restore it before then, " ~ (("write to " ~ install.support_email) if install.support_email else "ask whoever runs this Othor AI") ~ ".", "Othor AI", "/") }}
+{% endcall %}
+{% endblock %}

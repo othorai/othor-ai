@@ -1,0 +1,28 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% from "components/panels.html" import side_panel %}
+{# The Schemas panel (M11c, g3): which schemas Othor AI reads. Every schema the read-only role
+   can see is read unless unticked; Save rescans when anything changed. #}
+{% set n_read = schemas | selectattr("read") | list | length %}
+{% call(part) side_panel("Schemas · PostgreSQL · " ~ (psrc.config.database or psrc.name), "Which schemas Othor AI reads. The read-only role can see " ~ fmt.num(schemas | length) ~ ".", None, base) %}
+{% if part == "body" %}
+  {% call el('form', 'src-box', attrs={'id': 'schemas-form', 'method': 'post', 'action': '/sources/' ~ psrc.id ~ '/schemas', 'data-inplace': true}) %}
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    {% for x in schemas %}
+    {% call el('label', 'schema-row' ~ ('' if x.read else ' off')) %}<input type="checkbox" name="schema" value="{{ x.name }}"{% if x.read %} checked{% endif %}>{% call el('span', 'mono-ink') %}{{ x.name }}{% endcall %}{% call el('span', 'hint') %}{{ fmt.num(x.tables) }} table{{ "s" if x.tables != 1 else "" }} · {% if x.read %}{{ fmt.num(x.used) }} used{% else %}not read{% endif %}{% endcall %}{% endcall %}
+    {% else %}
+    {% call el('p', 'schema-row') %}{% call el('span', 'hint') %}No schemas yet. They appear when the scan has read the catalog.{% endcall %}{% endcall %}
+    {% endfor %}
+  {% endcall %}
+  {% call el('p', 'hint') %}Untick a schema to stop reading it. Metrics that come from it are dropped at the next scan, and come back if you tick it again.{% endcall %}
+  {% call el('form', 'callout', layout='flex items-center justify-between gap-12', attrs={'method': 'post', 'action': '/sources/' ~ psrc.id ~ '/action/rescan', 'data-inplace': true}) %}
+    <input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="next" value="{{ base }}?panel=scan&s={{ psrc.id }}">
+    <div>{% call el('p', 'strong') %}Not seeing a schema?{% endcall %}{% call el('p', 'hint') %}Grant {{ psrc.config.user }} access to it in {{ psrc.config.database }}, then rescan.{% endcall %}</div>
+    {{ button("Rescan", type="submit") }}
+  {% endcall %}
+{% else %}
+  {% call el('span', 'hint') %}{{ fmt.num(n_read) }} of {{ fmt.num(schemas | length) }} schemas read · {{ fmt.num(card.tables_total) }} tables{% endcall %}
+  <span class="flex items-center gap-8">{{ button("Cancel", href=base) }}{{ button("Save", "primary", type="submit", attrs={"form": "schemas-form"}) }}</span>
+{% endif %}
+{% endcall %}

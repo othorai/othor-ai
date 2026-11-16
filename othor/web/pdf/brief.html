@@ -1,0 +1,160 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+<!doctype html>
+{#- M15.7 · one brief as a PDF. Read from the stored issue and its run (web/brief_pdf.py); every
+    number is the stored, computed one. Print styles only; the colours are the design tokens'. -#}
+<html lang="en"><head><meta charset="utf-8"><title>{{ m.brief_name }} · {{ fmt.date_short(m.date) }} {{ m.date.year }} · {{ company.name }}</title>
+<meta name="author" content="{{ company.name }}"><meta name="generator" content="Othor AI">
+<style>
+{% for name, uri in fonts.items() %}{% set fam, weight = name.rsplit("-", 1) %}
+@font-face { font-family: "{{ fam }}"; font-weight: {{ weight }}; src: url("{{ uri }}"); }
+{% endfor %}
+@page {
+  size: {{ paper }};
+  margin: 22mm 16mm 20mm;
+  @top-left { content: element(head); width: 100%; }
+  @bottom-left { content: "{{ footer }}"; font: 400 7.5pt "Inter"; color: #5B6B7B; }
+  @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 400 7.5pt "Inter"; color: #5B6B7B; }
+}
+@page :first { @top-left { content: none; } }
+html { font: 400 10pt/1.45 "Inter"; color: #1F2A37; }
+body { margin: 0; }
+.run-head { position: running(head); display: flex; align-items: center; gap: 8px; font-size: 7.5pt; color: #5B6B7B; white-space: nowrap; }
+.run-head img { width: 16px; height: 16px; border-radius: 3px; }
+.cover { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #E3E6EA; padding-bottom: 10px; margin-bottom: 14px; }
+.cover .co { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 11pt; }
+.cover .co img { width: 36px; height: 36px; border-radius: 6px; }
+.cover .co span { white-space: nowrap; }
+.cover .by { font-size: 8pt; font-weight: 600; letter-spacing: 0.06em; color: #5B6B7B; }
+.kicker { font: 500 8.5pt "GeistMono"; color: #5B6B7B; margin: 0 0 6px; }
+h1 { font-size: 17pt; line-height: 1.25; font-weight: 600; margin: 0 0 8px; }
+h2 { font-size: 12pt; font-weight: 600; margin: 18px 0 6px; }
+h3 { font-size: 10.5pt; font-weight: 600; margin: 14px 0 4px; }
+.caps { font-size: 7.5pt; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6B7B; margin: 16px 0 6px; }
+p { margin: 0 0 6px; }
+.muted { color: #5B6B7B; }
+.small { font-size: 8.5pt; }
+.tiles { display: flex; flex-wrap: wrap; gap: 8px; }
+.tile { flex: 1 1 30%; border: 1px solid #E3E6EA; border-radius: 6px; padding: 8px 10px; break-inside: avoid; }
+.tile .l { font-size: 8pt; color: #5B6B7B; }
+.tile .v { font-size: 14pt; font-weight: 600; }
+.tile .c { font-size: 8pt; color: #3B4756; }
+.tile .c.negative { color: #C73A3A; }
+table { width: 100%; border-collapse: collapse; }
+td, th { text-align: left; vertical-align: top; padding: 6px 6px 6px 0; border-top: 1px solid #E3E6EA; font-size: 9pt; }
+th { font-size: 7.5pt; font-weight: 600; color: #5B6B7B; text-transform: uppercase; letter-spacing: 0.05em; }
+.num { text-align: right; white-space: nowrap; }
+.tag { display: inline-block; font-size: 7.5pt; font-weight: 600; border: 1px solid #1F2A37; border-radius: 3px; padding: 0 4px; margin-right: 4px; }
+.tag.soft { border-color: #D5DAE0; color: #3B4756; font-weight: 500; }
+.ask { border: 1px solid #BFE9F7; background: #F2FBFF; border-radius: 6px; padding: 8px 10px; margin-top: 12px; break-inside: avoid; }
+.finding { break-before: page; }
+.ahead-pdf { break-before: page; }
+.finding-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.finding-head .money { font-size: 13pt; font-weight: 700; white-space: nowrap; }
+.chart { margin: 10px 0; break-inside: avoid; }
+.chart svg { width: 100%; height: auto; }
+/* What's ahead's forecast card beside its line (owner, 16 Nov 2026) */
+table.fc { width: 100%; border-collapse: separate; border-spacing: 0; margin: 8px 0 4px; break-inside: avoid; }
+td.fc-card { width: 46%; vertical-align: top; border: 1px solid #DDE2E8; border-radius: 8px; padding: 10px 12px; }
+td.fc-line { vertical-align: middle; padding-left: 12px; }
+td.fc-line svg, .fc-range svg { width: 100%; height: auto; display: block; }
+.fc-big { font-size: 15pt; font-weight: 600; margin: 2px 0 0; }
+.fc-range { margin: 6px 0 0; }
+.fc-verdict { margin: 6px 0 0; padding-top: 5px; border-top: 1px solid #EEF0F3; }
+.fc-verdict.neg { color: #B33A3A; }
+.kv td:first-child { width: 32%; color: #5B6B7B; }
+.gate .ok { color: #1B8A4A; font-weight: 700; }
+.appendix { break-before: page; }
+.appendix .item + .item { break-before: page; }
+.appendix.fc .item + .item { break-before: auto; margin-top: 10px; }
+.appendix.fc .item { break-inside: avoid; }
+.appendix tr { break-inside: avoid; }
+</style></head>
+<body>
+<div class="run-head">{% if logo %}<img src="{{ logo }}" alt=""> {% endif %}<span>{{ company.name }} · {{ kicker }}</span></div>
+
+<div class="cover">
+  <div class="co">{% if logo %}<img src="{{ logo }}" alt="">{% endif %}<span>{{ company.name }}</span></div>
+  <div class="by">OTHOR AI · MORNING BRIEF</div>
+</div>
+<p class="kicker">{{ kicker }}</p>
+<h1>{{ m.words.title }}</h1>
+{% if sources %}<p class="small muted">{% for x in sources %}{{ " · " if not loop.first }}{{ x }}{% endfor %}</p>{% endif %}
+{% if m.words.situation %}<p>{{ m.words.situation }}</p>{% endif %}
+
+{% if tiles %}<p class="caps">Headline numbers</p>
+<div class="tiles">{% for t in tiles %}<div class="tile"><div class="l">{{ t.label }}</div><div class="v">{{ t.value }}</div><div class="c {{ t.role }}">{{ t.comparison.text }}</div></div>{% endfor %}</div>{% endif %}
+
+{% if items %}<p class="caps">Needs attention · {{ fmt.num(items | length) }}</p>
+<table>{% for i in items %}<tr><td style="width:22px" class="muted">{{ i.rank }}</td><td>{{ i.title }}<br><span class="tag">{{ state_text(i.state, i.confidence) }}</span>{% if i.change %}<span class="tag soft">{{ i.change }}</span>{% endif %}{% if i.consequence and i.consequence.text %}<span class="small muted">{{ i.consequence.text }}</span>{% endif %}</td><td class="num"><b>{{ i.money }}</b></td></tr>{% endfor %}</table>
+{% if since %}<p class="small" style="margin-top:8px"><b>Since {{ since_word }}:</b> {{ since }}.</p>{% endif %}{% endif %}
+{% if b.ask %}<div class="ask"><p class="small muted">Ask today{% if b.ask.to %} · {{ b.ask.to }}{% if b.ask.role %} · {{ b.ask.role }}{% endif %}{% endif %}</p><p><b>{{ b.ask.text }}</b></p></div>{% endif %}
+
+{% for f in findings %}
+<section class="finding">
+  <p class="caps">{{ "%02d" | format(f.rank) if f.rank is number else f.rank }} · {{ f.label }}</p>
+  <div class="finding-head"><h2 style="margin-top:0">{{ f.title }}</h2><span class="money">{{ f.money }}</span></div>
+  <p><span class="tag">{{ f.state }}</span>{% if f.change %}<span class="tag soft">{{ f.change }}</span>{% endif %}{% if f.consequence %}<span class="small muted">{{ f.consequence }}</span>{% endif %}</p>
+  {% set st = f.story %}
+  {% if st.line %}<p>{{ st.line }}</p>{% endif %}
+  {% if st.why %}<p class="small muted">{{ st.why }}</p>{% endif %}
+  {% if f.chart %}<div class="chart">{{ f.chart | safe }}</div>{% endif %}
+  {% if st.measured %}<p class="caps">What is measured</p><table class="kv">{% for k, v in st.measured %}<tr><td>{{ k }}</td><td>{{ v }}</td></tr>{% endfor %}</table>{% endif %}
+  {% if st.reasons %}<p class="caps">{{ fmt.num(st.reasons | length) }} possible reasons</p><table>{% for r in st.reasons %}<tr><td style="width:22px" class="muted">{{ loop.index }}</td><td>{{ r.text }}{% if r.settle %}<br><span class="small muted">{{ r.settle }}</span>{% endif %}</td><td class="num small">{% if r.ruled_out is defined %}{{ "Ruled out" if r.ruled_out else "Open" }}{% endif %}</td></tr>{% endfor %}</table>{% endif %}
+  {% if st.rows and st.rows.rows %}<p class="caps">{{ st.rows.noun | capitalize }} · top {{ fmt.num(st.rows.rows | length) }} of {{ fmt.num(st.rows.total) }}</p>
+  <table><tr>{% for h in st.rows.headers %}<th class="{{ 'num' if loop.index > 2 }}">{{ h }}</th>{% endfor %}</tr>{% for r in st.rows.rows %}<tr>{% for c in r %}<td class="{{ 'num' if loop.index > 2 }}">{{ c }}</td>{% endfor %}</tr>{% endfor %}</table>{% endif %}
+  {% if st.question and st.question.text %}<div class="ask"><p class="small muted">Question to ask</p><p><b>{{ st.question.text }}</b></p></div>{% endif %}
+</section>
+{% endfor %}
+
+{% if ahead %}<section class="ahead-pdf">
+<h2 style="margin-top:0">What’s ahead</h2>
+{% for r in ahead %}<div class="item" style="break-inside: avoid">
+  <p><b>{{ r.name }}</b>: {{ r.get('says') or r.get('why') }}</p>
+  {% if r.get('confidence') %}<p class="small"><b>{{ r.confidence.word }}</b> · {{ r.confidence.why }}</p>{% endif %}
+  {% if r.get('card') %}{% set c = r.card %}<table class="fc"><tr>
+    <td class="fc-card"><p class="small">{{ c.label }}</p><p class="fc-big">{{ c.expected }} <span class="small muted">expected</span></p>
+      {% if r.range_svg %}<div class="fc-range">{{ r.range_svg | safe }}</div>{% endif %}
+      {% if c.verdict %}<p class="small fc-verdict{{ ' neg' if c.tone == 'negative' else '' }}"><b>{{ c.verdict }}</b></p>{% endif %}</td>
+    {% if r.chart_svg %}<td class="fc-line">{{ r.chart_svg | safe }}</td>{% endif %}
+  </tr></table>
+  {% elif r.chart_svg %}<div class="chart">{{ r.chart_svg | safe }}</div>{% endif %}
+</div>{% endfor %}
+{% if b.get('ahead_note') %}<p class="small muted">{{ b.ahead_note }}</p>{% endif %}
+</section>{% endif %}
+
+{% if appendix and findings %}
+<section class="appendix">
+  <h2 style="margin-top:0">Appendix · how each number was computed</h2>
+  <p class="small muted">{{ run_footer }}. Every figure here is computed by code from your sources; no number is written by a model.</p>
+  {% for f in findings %}{% set t = f.test %}{% set mt = f.metric %}
+  <div class="item">
+    <h3>{{ "%02d" | format(f.rank) if f.rank is number else f.rank }} · {{ f.title }}</h3>
+    {% if t.tested %}<p><span class="muted">What it tested:</span> {{ t.tested }}</p>{% endif %}
+    {% if t.chart_svg and t.moved %}<div class="chart">{{ t.chart_svg | safe }}</div><p class="small muted">{{ t.moved.line }}</p>{% endif %}
+    <p class="caps">{{ t.gates_title }}</p>
+    <table>{% for g in t.gates %}<tr class="gate"><td style="width:16px" class="ok">✓</td><td>{{ g.name }}<br><span class="small muted">{{ g.why }}</span></td><td class="num">{{ g.value }}</td></tr>{% endfor %}</table>
+    {% if t.money %}<p style="margin-top:6px"><b>Money at stake {{ t.money }}.</b> <span class="small">{{ t.stake or "" }}{% if t.state_note %} {{ t.state_note }}{% endif %}</span></p>{% endif %}
+    {% if t.moved %}<p class="caps">The numbers it used</p><table><tr>{% for h in t.moved.headers %}<th class="{{ 'num' if not loop.first }}">{{ h }}</th>{% endfor %}</tr>{% for r in t.moved.rows %}<tr>{% for c in r %}<td class="{{ 'num' if not loop.first }}">{{ c }}</td>{% endfor %}</tr>{% endfor %}</table>{% endif %}
+    <p class="caps">Method and settings</p>
+    <table class="kv">{% for k, v in t.settings %}<tr><td>{{ k }}</td><td>{{ v }}</td></tr>{% endfor %}</table>
+    {% if mt %}<p class="caps">The number · {{ mt.name }}</p>
+    {% if mt.description %}<p class="small">{{ mt.description }}</p>{% endif %}
+    <table class="kv">{% for k, v in mt.definition %}<tr><td>{{ k }}</td><td>{{ v }}</td></tr>{% endfor %}{% for k, v in mt.source %}<tr><td>{{ k }}</td><td>{{ v }}</td></tr>{% endfor %}{% for k, v in mt.version %}<tr><td>{{ k }}</td><td>{{ v }}</td></tr>{% endfor %}</table>
+    {% if mt.rules %}<p class="small muted" style="margin-top:4px">Rules from your Ontology: {% for r in mt.rules %}{{ "; " if not loop.first }}{{ r.text }}{% endfor %}</p>{% endif %}{% endif %}
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+{% if appendix and ahead | selectattr("depth", "defined") | selectattr("depth") | list %}
+<section class="appendix fc">
+  <h2 style="margin-top:0">Appendix · how each forecast was made</h2>
+  <p class="small muted">How Othor AI forecasts, in plain words: {{ help_url }}/learn/forecasts</p>
+  {% for r in ahead if r.get('depth') %}<div class="item">
+    <h3>{{ r.name }}</h3>
+    {% for k in ("method", "range", "last", "changed") %}{% if r.depth.get(k) %}<p class="small">{{ r.depth[k] }}</p>{% endif %}{% endfor %}
+    {% if r.depth.get('parts') %}<p class="small">What drives it: {{ r.depth.parts | join(" · ") }}</p>{% endif %}
+    {% if r.depth.get('technical') %}<p class="small muted">{{ r.depth.technical }}</p>{% endif %}
+  </div>{% endfor %}
+</section>
+{% endif %}
+</body></html>

@@ -1,0 +1,29 @@
+{% if wx %}{{ wx.kicker }}
+{{ wx.line }}
+{% if wx.ahead %}Ahead: {{ wx.ahead }}
+{% endif %}
+{% endif %}{{ brief_name }} · {{ date_label }} · {{ fmt.time_hm(b.time) }}
+
+{{ words.title }}
+{% if words.line %}
+{{ words.line }}
+{% endif %}{% if stale_line %}
+{{ stale_line }}
+{% endif %}
+{% for i in items %}
+{{ i.rank }}. {{ i.title }} · {{ i.money }}
+   {{ i.consequence.text }} · {{ i.state_text }}{% if i.change %} · {{ i.change }}{% endif %}
+{% endfor %}{% if ahead %}
+What's ahead
+{% for r in ahead %}{{ r.name }}: {{ r.get('says') or r.get('why') }}{% if r.get('confidence') %} · {{ r.confidence.word }}, {{ r.confidence.why }}{% endif %}
+{% endfor %}{% if ahead_note %}{{ ahead_note }}
+{% endif %}{% endif %}{% if b.watching %}
+Watching · {{ fmt.num(b.watching | length) }} breached: {{ b.watching[0].text }}{% if b.watching | length > 1 %} · {{ fmt.num(b.watching | length - 1) }} more{% endif %}
+{% endif %}{% if b.ask %}
+Question to ask today{% if b.ask.to %} · for {{ b.ask.to }}{% if b.ask.role %} · {{ b.ask.role }}{% endif %}{% endif %}
+{{ b.ask.text }}
+{% endif %}
+Open the brief: {{ open_url }}
+
+{{ footer }}
+Unsubscribe: {{ unsubscribe_url }}

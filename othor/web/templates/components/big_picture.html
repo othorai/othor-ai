@@ -1,0 +1,115 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{#- v0.19 (M19.5) · Big Picture, the owner's design (15 Nov 2026): a report written by Othor AI from
+   last night's computed results, in Home's side panel (880 px, or extended). The tiles, the money
+   at stake, the charts and the forecast cards are computed by code; the words are the model's,
+   every figure in them checked against the computed values and linked to where it came from. -#}
+{% from "components/icons.html" import logo, icon %}
+{% from "components/panels.html" import pane %}
+
+{# a sentence: its figures bold, each a link to where it came from (underlined on hover) #}
+{% macro bp_sentence(segs) -%}
+{% for s in segs %}{% if s.href %}<a class="bp-num" href="{{ s.href }}">{{ s.t }}</a>{% else %}{{ s.t }}{% endif %}{% endfor %}
+{%- endmacro %}
+
+{# a section's label, with an optional note on the right #}
+{% macro bp_label(text, note=None) -%}
+<div class="bp-label-row"><p class="bp-label">{{ text }}</p>{% if note %}<p class="bp-label-note">{{ note }}</p>{% endif %}</div>
+{%- endmacro %}
+
+{# Email it to me: the app's own button, in the panel's header; becomes "Sent to …" in place #}
+{% macro bp_email(rid, csrf) -%}
+<form id="bp-email" class="contents" method="post" action="/big-picture/{{ rid }}/email" hx-post="/big-picture/{{ rid }}/email" hx-target="#bp-email" hx-swap="outerHTML"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn" type="submit" data-busy="Sending…">{{ icon("mail") }}Email it to me</button></form>
+{%- endmacro %}
+
+{% macro bp_sent(text) -%}
+<p id="bp-email" class="bp-sent" role="status">{{ text }}</p>
+{%- endmacro %}
+
+{% macro bp_kpi(k) -%}
+<div class="bp-tile"><span class="bp-tile-label">{{ k.label }}</span><span class="bp-tile-value tone-{{ k.tone }}">{{ k.value }}</span>{% if k.note %}<span class="bp-tile-note">{{ k.note }}</span>{% endif %}</div>
+{%- endmacro %}
+
+{% macro bp_finding(c) -%}
+<article class="bp-card">
+  {% if c.tag %}<span class="bp-tag">{{ c.tag }}</span>{% endif %}
+  <div class="bp-card-text"><h3 class="bp-card-title"><a href="{{ c.href }}">{{ bp_sentence(c.title) }}</a></h3><p class="bp-card-line">{{ bp_sentence(c.sentence) }}</p></div>
+  {% if c.legend %}<ul class="bp-legend">{% for l in c.legend %}<li><span class="bp-key {{ l.mark }} role-{{ l.role }}"></span>{{ l.name }}</li>{% endfor %}</ul>{% endif %}
+  {% if c.spec %}{% set bars = c.spec.kind in ("bars_contribution", "bars_share") %}
+  {# drawn twice: wide for the panel, narrow for a phone, so the text stays readable at both #}
+  <div class="bp-chart bp-chart-wide">{{ chart(c.spec, 736, 176 if bars else 222, legend=True) }}</div>
+  <div class="bp-chart bp-chart-narrow">{{ chart(c.spec, 340, 150 if bars else 190, legend=True) }}</div>{% endif %}
+</article>
+{%- endmacro %}
+
+{% macro bp_stake(s) -%}
+<a class="bp-tile bp-stake" href="{{ s.href }}"><span class="bp-stake-value"><span class="bp-tile-value">{{ s.value }}</span>{% if s.unit %}<span class="bp-stake-unit">{{ s.unit }}</span>{% endif %}</span><span class="bp-tile-label">{{ bp_sentence(s.desc) }}</span></a>
+{%- endmacro %}
+
+{% macro bp_forecast(c, h) -%}
+<div class="bp-card bp-forecast">
+  <span class="bp-forecast-label">{{ c.label }}</span>
+  <div class="bp-forecast-value"><span class="bp-big">{{ c.expected }}</span><span class="bp-muted">{{ h.expected }}</span></div>
+  <div class="bp-range">{{ chart(c.range, 304, 64) }}</div>
+  {% if c.verdict %}<p class="bp-verdict"><strong class="tone-{{ c.tone }}">{{ c.verdict }}</strong></p>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro bp_report(r) -%}
+{% set head = r.header.split(" · ") %}
+<article class="bp" id="bp" lang="{{ r.lang_attr }}" aria-label="Big Picture">
+  <section class="bp-sec">
+    <p class="bp-prov"><span class="bp-chip">{{ logo() }}{{ head[0] }}</span>{% if head | length > 1 %}<span>{{ head[1][:1] | upper }}{{ head[1][1:] }}</span>{% endif %}</p>
+    {# the summary by Othor AI, first, on the AI tint (owner, 15 Nov 2026) #}
+    <section class="bp-summary" aria-label="{{ r.h.one_line }}">
+      <p class="bp-eyebrow">{{ logo() }}<span>{{ r.h.one_line }}</span></p>
+      <h2 class="bp-lead">{{ bp_sentence(r.one_line) }}</h2>
+      {% if r.summary %}<div class="bp-summary-text">{% for x in r.summary %}<p>{{ bp_sentence(x) }}</p>{% endfor %}</div>{% endif %}
+    </section>
+    {% if r.kpis %}<div class="bp-tiles">{% for k in r.kpis %}{{ bp_kpi(k) }}{% endfor %}</div>{% endif %}
+  </section>
+  {% if r.findings %}<section class="bp-sec" aria-label="{{ r.h.happening }}">{{ bp_label(r.h.happening) }}{% for c in r.findings %}{{ bp_finding(c) }}{% endfor %}</section>{% endif %}
+  {% if r.stakes %}<section class="bp-sec" aria-label="{{ r.h.why_it_matters }}">{{ bp_label(r.h.why_it_matters, bp_sentence(r.stakes_note) if r.stakes_note else None) }}<div class="bp-tiles">{% for s in r.stakes %}{{ bp_stake(s) }}{% endfor %}</div></section>{% endif %}
+  {% if r.look_first %}<section class="bp-sec" aria-label="{{ r.h.look_first }}">{{ bp_label(r.h.look_first, r.h.priority) }}
+    <ol class="bp-actions">{% for a in r.look_first %}<li><span class="bp-n" aria-hidden="true">{{ loop.index }}</span><div class="bp-action"><p>{{ bp_sentence(a.text) }}</p>{% if a.tag %}<span class="bp-tag">{{ a.tag }}</span>{% endif %}</div>{% if a.href %}<a class="bp-open" href="{{ a.href }}">{{ r.h.open }} {{ icon("arrow-right") }}</a>{% endif %}</li>{% endfor %}</ol></section>{% endif %}
+  {% if r.forecasts %}<section class="bp-sec" aria-label="{{ r.h.coming }}">{{ bp_label(r.h.coming) }}<div class="bp-forecasts">{% for c in r.forecasts %}{{ bp_forecast(c, r.h) }}{% endfor %}</div></section>{% endif %}
+  {% if r.words %}<section class="bp-sec bp-glossary" aria-label="{{ r.h.words }}">{{ bp_label(r.h.words) }}
+    <dl class="bp-words">{% for w in r.words %}<div><dt>{{ bp_sentence(w.term) }}</dt><dd>{{ bp_sentence(w.meaning) }}</dd></div>{% endfor %}</dl></section>{% endif %}
+  <p class="bp-meta">{{ r.footer }}</p>
+</article>
+{%- endmacro %}
+
+{# no report yet: written in place (one model call), never a reload #}
+{% macro bp_writing(csrf, extended=False) -%}
+<div class="bp-state" id="bp" hx-post="/big-picture/make" hx-trigger="load" hx-swap="outerHTML" hx-headers='{"X-CSRF-Token": "{{ csrf }}"}'{% if extended %} hx-vals='{"size": "extended"}'{% endif %} role="status" aria-live="polite">
+  <span class="spin" aria-hidden="true"></span><span>Othor AI is writing the report from last night’s results… about half a minute</span>
+</div>
+{%- endmacro %}
+
+{% macro bp_unavailable(text="Not available right now") -%}
+<div class="bp-state" id="bp" role="status"><span>{{ text }}. The briefs and their numbers aren’t affected.</span></div>
+{%- endmacro %}
+
+{# the header's actions: Email it to me (once a report exists), normal or extended width, close #}
+{% macro bp_head_actions(p, csrf, close) -%}
+{% set here = close ~ "?panel=big-picture" %}
+{% set expand = (here if p.extended else here ~ "&size=extended", "Normal width" if p.extended else "Extend the panel") %}
+<div class="bp-head-actions" id="bp-actions"{% if p.oob %} hx-swap-oob="true"{% endif %}>
+  {% if p.report %}{{ bp_email(p.report.id, csrf) }}{% endif %}
+  <a class="btn quiet bp-icon-btn" href="{{ expand[0] }}" aria-label="{{ expand[1] }}" title="{{ expand[1] }}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{% if p.extended %}<polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" x2="21" y1="10" y2="3"/><line x1="3" x2="10" y1="21" y2="14"/>{% else %}<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/>{% endif %}</svg></a>
+  <a class="btn quiet bp-icon-btn" href="{{ close }}" aria-label="Close">{{ icon("close") }}</a>
+</div>
+{%- endmacro %}
+
+{# Home's side panel: 880 px, or extended (owner, 15 Nov 2026) #}
+{% macro bp_panel(p, csrf, close="/home") -%}
+<a class="scrim" href="{{ close }}" aria-label="Close"></a>
+<aside class="panel wide bp-panel{{ ' extended' if p.extended else '' }}" aria-label="Big Picture">
+{% call(part) pane() -%}
+{%- if part == "head" -%}
+  <div class="bp-head"><div class="bp-head-title"><p class="panel-title">Big Picture</p>{% if p.as_of %}<p class="hint">{{ p.as_of }}</p>{% endif %}</div>{{ bp_head_actions(p, csrf, close) }}</div>
+{%- elif part == "body" -%}
+  {% if p.report %}{{ bp_report(p.report) }}{% elif p.writing %}{{ bp_writing(csrf, p.extended) }}{% else %}{{ bp_unavailable() }}{% endif %}
+{%- endif -%}
+{%- endcall %}
+</aside>
+{%- endmacro %}

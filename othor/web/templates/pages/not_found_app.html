@@ -1,0 +1,10 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/app.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import empty_state, page_title %}
+{% block title %}Not found · Othor AI{% endblock %}
+{% block crumb %}Not found{% endblock %}
+{% block main %}
+{{ page_title("Not found") }}
+{% call el("div", "card board") %}{{ empty_state("404 · not found", missing.what, None, missing.back, missing.href) }}{% endcall %}
+{% endblock %}

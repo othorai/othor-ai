@@ -1,0 +1,14 @@
+Subject: [Othor AI] sales_dw couldn’t be read last night
+
+Source not read · sales_dw · Sun 1 Nov 2:03 AM IST
+
+Last night’s run #0002 couldn’t read sales_dw. The run went on. The 6:00 AM IST brief still goes out, and the numbers that use sales_dw say which day they are from.
+
+    OperationalError
+
+Fix the source: https://indigothread.othor.ai/sources/3f2a
+Open the brief: https://indigothread.othor.ai/brief
+
+—
+Sent by your Othor AI instance at indigothread.othor.ai · Delivery preferences: https://indigothread.othor.ai/settings
+This email contains business data; do not forward outside the company.

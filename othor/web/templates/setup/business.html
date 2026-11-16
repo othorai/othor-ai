@@ -1,0 +1,28 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/onboarding.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% from "components/forms.html" import dialog %}
+{% block title %}Business · Set up {{ company.name }}{% endblock %}
+{% block width %} col{% endblock %}
+{# M11c (2d): the draft goes straight into the message box; no side panel, no Clear. #}
+{% block main %}
+<h1>Tell us about the business.</h1>
+{% call el("p", "lede") %}What you do and for whom, and the numbers you check every week. {% call el('button', 'link', attrs='type="button" data-dialog-open="biz-example"') %}See an example{% endcall %}{% endcall %}
+{% call dialog("biz-example", "An example message", foot="Plain text. Write yours the same way, in your own words.") %}{{ example }}{% endcall %}
+{% call el('form', 'onb-form', attrs='method="post" action="/setup/business/continue"') %}
+<input type="hidden" name="csrf" value="{{ csrf_token }}">
+{% call el('div', 'biz-col', layout='mt-24') %}
+  {% include "setup/_business_box.html" %}
+  {% call el('div', 'biz-where') %}
+    {% call el("label", "strong", attrs='for="f-data_lives"') %}Where does your data live?{% endcall %}
+    {{ el('input', 'input', attrs={'id': 'f-data_lives', 'name': 'data_lives', 'value': (data_lives), 'placeholder': 'e.g. erp_db for accounts, a PostgreSQL warehouse, Order tracker, the weekly MIS in Google Sheets'}) }}
+    {% if seen %}{% call el("p", "hint", layout="flex items-center flex-wrap gap-6") %}Seen in your files:{% for x in seen %}{% call el('button', 'chip', attrs={'type': 'button', 'data-append-to': '#f-data_lives', 'data-value': (x)}) %}+ {{ x }}{% endcall %}{% endfor %}{% endcall %}{% endif %}
+  {% endcall %}
+{% endcall %}
+{% call el('div', 'onb-foot') %}
+  {% call el('a', 'link-u', attrs='href="/setup/upload"') %}Back{% endcall %}
+  {% call el('span', 'biz-continue', attrs='id="biz-continue"') %}{% if box == "waiting" %}{% call el('span', 'hint') %}Continue opens when the draft is ready{% endcall %}{% else %}{% call el('span', 'hint') %}You can change this later in the Ontology.{% endcall %}{% endif %}{{ button("Continue", "primary", "lg", type="submit", disabled=(box == "waiting")) }}{% endcall %}
+{% endcall %}
+{% endcall %}
+{% endblock %}

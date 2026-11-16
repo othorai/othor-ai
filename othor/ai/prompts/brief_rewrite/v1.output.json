@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "properties": {
+    "title": {"type": "string"},
+    "line": {"type": "string"},
+    "situation": {"type": "string"}
+  },
+  "required": ["title", "line", "situation"],
+  "additionalProperties": false
+}

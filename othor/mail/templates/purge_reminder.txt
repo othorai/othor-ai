@@ -1,0 +1,9 @@
+{{ kicker }}
+
+{{ lead }}
+
+{{ after }}
+
+—
+Sent by your Othor AI instance at {{ instance }}
+This email contains business data; do not forward outside the company.

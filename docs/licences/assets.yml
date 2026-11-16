@@ -1,0 +1,38 @@
+# Bundled assets and tools that aren't Python packages (decided 5 Nov 2026).
+# kind: tool (used at build time, shipped as output only) · font · icons · script
+- name: Tailwind CSS standalone CLI
+  version: v4.3.3
+  kind: tool
+  licence: MIT
+  where: scripts/build_css.py (build only; the image ships the generated CSS)
+- name: Inter
+  kind: font
+  licence: OFL-1.1
+  where: othor/web/static/fonts/Inter-*
+- name: Inter Light (the public website only)
+  kind: font
+  licence: OFL-1.1
+  where: othor_site/static/fonts/site/Inter-*
+- name: JetBrains Mono (the public website only)
+  kind: font
+  licence: OFL-1.1
+  where: othor_site/static/fonts/site/JetBrainsMono-*
+- name: Geist Mono
+  kind: font
+  licence: OFL-1.1
+  where: othor/web/static/fonts/GeistMono-*
+- name: Lucide icons
+  version: 0.469.0
+  kind: icons
+  licence: ISC
+  where: othor/web/static/icons/sprite.svg
+- name: htmx
+  version: 2.0.4
+  kind: script
+  licence: 0BSD
+  where: othor/web/static/js/htmx.min.js
+- name: Alpine.js (CSP build, @alpinejs/csp)
+  version: 3.14.9
+  kind: script
+  licence: MIT
+  where: othor/web/static/js/alpine-csp.min.js

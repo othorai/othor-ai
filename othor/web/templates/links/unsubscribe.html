@@ -1,0 +1,14 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# 10f · one click from the email or the link page: off this brief from tomorrow, Undo, the
+   owner is told (Edit brief · Delivery and Home), the other briefs this address gets. #}
+{% extends "shells/shared.html" %}
+{% from "components/blocks.html" import link_card, link_others %}
+{% from "components/buttons.html" import button %}
+{% block title %}{{ brief_name }} brief · {{ company.name }}{% endblock %}
+{% block main %}
+{% call link_card(title, lede, pill=pill) %}
+  <form method="post" action="{{ action_url }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button(action_label, "primary" if action_primary else "", type="submit") }}</form>
+  {% if others %}{{ link_others(others) }}{% endif %}
+{% endcall %}
+{% for _label, form in others %}<form id="{{ form }}" method="post" action="{{ other_urls[form] }}" class="hidden" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}"></form>{% endfor %}
+{% endblock %}

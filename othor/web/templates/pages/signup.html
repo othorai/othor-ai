@@ -1,0 +1,40 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/auth.html" %}
+{# 1b sign-up (M1). By invitation (M11d part C): without a usable invitation the page explains
+   and offers Request access; with one, the form, the invited email filled in. #}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% from "components/forms.html" import text_input, access_request_fields %}
+{% block title %}{% if state %}Request access{% else %}Create your company{% endif %} · Othor AI{% endblock %}
+{% block auth_class %}{% if not state %} roomy{% endif %}{% endblock %}
+{% block card %}
+{% if state %}
+{% call el('form', 'auth-card', attrs='method="post" action="/request-access" novalidate') %}
+  {% if state == "bad_invite" %}
+  <h1>This invitation can’t be used</h1>
+  {% call el("p", "lede") %}Ask for a new one{% if access_form %}, or request access below{% endif %}.{% endcall %}
+  {% else %}
+  <h1>Othor AI is by invitation for now</h1>
+  {% call el("p", "lede") %}We’re working closely with our first companies. {% if access_form %}Tell us about yours and we’ll send an invitation when there’s a place.{% else %}Ask whoever runs Othor AI here for an invitation.{% endif %}{% endcall %}
+  {% endif %}
+  {% if access_form %}
+  {{ access_request_fields(form, errors, csrf_token) }}
+  {{ button("Request access", "primary", "lg", type="submit", block=True) }}
+  {% endif %}
+  {% call el("p", "foot") %}Have an invitation? Open the link in its email. Already on Othor AI? <a href="/login">Sign in</a>{% endcall %}
+{% endcall %}
+{% else %}
+{% call el('form', 'auth-card', attrs='method="post" action="/signup" novalidate') %}
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  {% if form.invite %}<input type="hidden" name="invite" value="{{ form.invite }}">{% endif %}
+  <h1>Create your company</h1>
+  {% call el("p", "lede") %}No credit card needed.{% endcall %}
+  {{ text_input("name", "Your name", form.name or "", error=errors.name, autofocus=True, attrs='autocomplete="name"') }}
+  {{ text_input("email", "Work email", form.email or "", type="email", error=errors.email, attrs='autocomplete="email"') }}
+  {{ text_input("company", "Company name", form.company or "", error=errors.company, attrs='autocomplete="organization"') }}
+  {{ button("Create company", "primary", "lg", type="submit", block=True) }}
+  {% if install.legal_url %}{% call el("p", "fine") %}By continuing you agree to the <a href="{{ install.legal_url }}/terms">Terms</a> and <a href="{{ install.legal_url }}/privacy">Privacy policy</a>.{% endcall %}{% endif %}
+  {% call el("p", "foot") %}Already on Othor AI? <a href="/login">Sign in</a>{% endcall %}
+{% endcall %}
+{% endif %}
+{% endblock %}

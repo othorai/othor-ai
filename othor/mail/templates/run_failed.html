@@ -1,0 +1,11 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{#- 8c · run failed, or a source disconnected (variant "source"). To the owner, at run end. -#}
+{% import "_email.html" as e with context %}
+{% call e.page(subject, preheader, company_name, logo_cid) %}
+{% call e.row("24px 24px 0") %}{{ e.kicker(kicker, mono=True, color="#B33A3A") }}{% endcall %}
+{% call e.row("14px 24px 0") %}<p style="margin:0;font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1F2A37">{{ lead }}{% if step %}<b style="font-weight:600">{{ step }}</b>.{% endif %} {{ after }}</p>{% endcall %}
+{% if error %}{% call e.row("14px 24px 0") %}{{ e.codebox(error) }}{% endcall %}{% endif %}
+{% if others %}{% call e.row("14px 24px 0") %}{{ e.para(others, color="#5B6B7B", size=14) }}{% endcall %}{% endif %}
+{% call e.row("20px 24px 24px") %}{{ e.buttons(actions) }}{% endcall %}
+{{ e.owner_footer(instance, preferences) }}
+{% endcall %}

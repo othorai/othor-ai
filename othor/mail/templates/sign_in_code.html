@@ -1,0 +1,10 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{#- 8a · the sign-in code. -#}
+{% import "_email.html" as e with context %}
+{% call e.page("Your Othor AI sign-in code", "Expires in 10 minutes. If you didn’t request it, ignore this email.", company_name, logo_cid) %}
+{% call e.row("28px 24px 8px") %}<p style="margin:0;font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;color:#1F2A37">Here is your sign-in code for <b style="font-weight:600">{{ company_name }}</b>:</p>{% endcall %}
+{% call e.row("12px 24px") %}<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F8F9FA;border:1px solid #DDE2E8;border-radius:8px;border-collapse:separate"><tr><td align="center" style="padding:22px 0;font-family:'Geist Mono',Menlo,Consolas,monospace;font-size:34px;letter-spacing:0.12em;color:#1F2A37">{{ code }}</td></tr></table>{% endcall %}
+{% call e.row("14px 24px 4px") %}{{ e.para("Expires in 10 minutes.", color="#5B6B7B", size=14) }}{% endcall %}
+{% call e.row("14px 24px 26px") %}{{ e.para("Didn’t request it? Ignore this email.", color="#5B6B7B", size=14) }}{% endcall %}
+{{ e.owner_footer(instance, preferences) }}
+{% endcall %}

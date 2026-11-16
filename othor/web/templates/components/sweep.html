@@ -1,0 +1,159 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# Sweep (5a–5f, 10i) and the finding panel (5b, 5c, 4f–4f3, 10p). Every value is computed
+   by the engine (othor.web.sweep_view); charts come from ChartSpec only. #}
+{% from "components/tags.html" import state_tag, change_tag %}
+{% from "components/blocks.html" import why_unseen %}
+{% from "components/buttons.html" import button %}
+{% from "components/buttons.html" import info %}
+
+{% macro stat(value, label, boxed=False) -%}
+<div class="sweep-stat{{ ' boxed' if boxed else '' }}"><span class="v">{{ value }}</span><span class="l">{{ label }}</span></div>
+{%- endmacro %}
+
+{% macro tags(state, confidence, change) -%}
+<span class="panel-tags">{{ state_tag(state, confidence | capitalize if confidence else None) }}{% if change[0] in ("new", "worse", "better", "open", "back") %}{{ change_tag(change[0], change[1]) }}{% endif %}</span>
+{%- endmacro %}
+
+{# rows: {"headers": [...], "rows": [[...]], "note", "more", "noun", "total"} #}
+{% macro rows_table(rows, compact=False, all_href=None) -%}
+{% if rows and rows.rows %}
+<div class="table-wrap"><table class="table{{ ' flush' if compact else '' }}">
+  <thead><tr>{% for h in rows.headers %}<th class="{{ 'num' if not loop.first and loop.index > 2 else '' }}">{{ h }}</th>{% endfor %}</tr></thead>
+  <tbody>{% for r in rows.rows %}<tr>{% for c in r %}<td class="{{ 'num' if not loop.first and loop.index > 2 else '' }}{{ ' whitespace-nowrap' if (c | string)[:1] in ('₹', '$') or (c | string)[:2] in ('−₹', '+₹', '<₹', '−$', '+$', '<$') else '' }}">{% if loop.last %}<b>{{ c }}</b>{% else %}{{ c }}{% endif %}</td>{% endfor %}</tr>{% endfor %}</tbody>
+</table></div>
+{% if rows.note %}<p class="footnote">{{ rows.note }}{% if rows.more and not all_href %} {{ fmt.num(rows.more) }} more in the finding.{% endif %}</p>{% endif %}
+{% if all_href and rows.total and rows.total > rows.rows | length %}<a class="link-u" href="{{ all_href }}">All {{ fmt.num(rows.total) }} {{ rows.noun or "rows" }}</a>{% endif %}
+{% endif %}
+{%- endmacro %}
+
+{% macro question_box(q) -%}
+{% if q and q.text %}
+<div class="ask"><div class="flex-1 min-w-0"><p class="who">Question to ask{% if q.to %} · <span class="chip soft">{% if q.to | length == 1 %}{{ q.to[0].name }}{{ " · " ~ q.to[0].role if q.to[0].role else "" }}{% else %}{{ q.to[:-1] | map(attribute="name") | join(", ") }} and {{ q.to[-1].name }}{% endif %}</span>{% endif %}</p><p class="q">{{ q.text }}</p></div></div>
+{% endif %}
+{%- endmacro %}
+
+{% macro hold_form(action, fp, run, label, csrf_token, kind="link") -%}
+<form method="post" action="/sweep/finding/{{ fp }}/{{ action }}?run={{ run }}" class="inline" data-inplace>
+<input type="hidden" name="csrf" value="{{ csrf_token }}">
+{% if kind == "link" %}<button class="link-u" type="submit">{{ label }}</button>{% else %}{{ button(label, type="submit") }}{% endif %}
+</form>
+{%- endmacro %}
+
+{# c: sweep_view.card(); run: the run number shown #}
+{% macro finding_card(c, run, csrf_token) -%}
+<article class="finding has-visual" id="f-{{ c.fp }}">
+  {% if c.chart or c.rows %}<div class="visual{{ ' no-chart' if not c.chart else '' }}">{% if c.chart %}{{ chart(c.chart, 520, 160) }}{% else %}{{ rows_table(c.rows, compact=True, all_href="/sweep/finding/" ~ c.fp ~ "?run=" ~ run) }}{% endif %}</div>{% endif %}
+  <div class="body">
+  <div class="finding-head"><span class="finding-kind"><span class="n">{{ c.number }}</span>{{ c.label }}</span><span class="finding-money">{{ c.money }}</span></div>
+  {{ tags(c.state, c.confidence, c.change) }}
+  <a class="finding-title" href="/sweep/finding/{{ c.fp }}?run={{ run }}">{{ c.title }}</a>
+  {% if c.line %}<p class="finding-line">{{ c.line }}</p>{% endif %}
+  {% if c.why %}{{ why_unseen(c.why) }}{% endif %}
+  {{ question_box(c.question) }}
+  {% if c.home_note %}<p class="home-note">{{ c.home_note }}</p>{% endif %}
+  <div class="finding-actions">
+    {{ button("Watch", href="/sweep/watch/" ~ c.fp ~ "?run=" ~ run) }}
+    {% if features.BRIEFS and c.state != "needs_confirmation" %}{{ button("Add to a brief", href="/sweep/finding/" ~ c.fp ~ "/brief?run=" ~ run) }}{% endif %}
+    <span class="quiet-links">{{ hold_form("snooze", c.fp, run, "Snooze", csrf_token) }}{{ hold_form("mute", c.fp, run, "Mute", csrf_token) }}</span>
+  </div>
+  </div>
+</article>
+{%- endmacro %}
+
+{# M15.2 · the status strip: st = sweep_view.strip(); text = the (i)'s words. M15.7b (owner,
+   13 Nov 2026): one square bar per detector with its short name under it; hover, tap or focus
+   opens its card: what it finds, its status, what it covered tonight, what it needs. #}
+{% macro detectors_strip(st, text) -%}
+<div class="checks-strip">
+  <p class="t">Total {{ fmt.num(st.total) }} detectors. {{ fmt.num(st.active) }} activated. <span class="off">{{ fmt.num(st.inactive) }} inactive.</span> <span class="held">{{ fmt.num(st.suppressed) }} suppressed.</span> {{ info(text=text, id="strip-info", label="What these are") }}</p>
+  <ul class="det-bars" aria-label="Detectors tonight">{% for r in st.segments %}<li class="det {{ r.kind }}{{ ' end' if loop.index > (loop.length + 1) // 2 else '' }}" x-data="popover" data-pop-hover data-key="{{ r.key }}"><button class="det-btn" type="button" aria-label="{{ r.label }}: {{ r.status }}" aria-controls="det-{{ r.key }}" aria-expanded="false"><i class="det-bar"></i><span class="det-name">{{ r.short }}</span></button><div class="det-card" role="tooltip" id="det-{{ r.key }}">
+    <p class="det-card-head"><b>{{ r.label }}</b><span class="det-status {{ r.kind }}">{{ r.status }}</span></p>
+    <p class="det-card-what">{{ r.catches }}</p>
+    {% if r.kind == "on" %}<p class="det-card-line">Tonight: {{ r.result }}</p>{% elif r.kind == "partly" %}<p class="det-card-line">Tonight: {{ r.covers }}</p>{% endif %}
+    {% if r.missing %}<p class="det-card-line muted">{{ r.missing[:1] | upper }}{{ r.missing[1:] }}</p>{% endif %}
+    {% if r.action %}<a class="link" href="{{ r.action[1] }}">{{ r.action[0] }}</a>{% endif %}
+  </div></li>{% endfor %}</ul>
+</div>
+{%- endmacro %}
+
+{# M15.2 · one finding in Sweep's list: c = sweep_view.finding_rows()[i] #}
+{% macro finding_row(c, run) -%}
+<article class="finding-row" id="f-{{ c.fp }}">
+  <div class="top"><span class="finding-kind">{{ c.label }}</span>{{ tags(c.state, c.confidence, c.change) }}{% if c.brief %}<span class="chip soft">In {{ c.brief }}</span>{% endif %}<span class="finding-money">{{ c.money }}</span></div>
+  <a class="finding-title" href="/sweep/finding/{{ c.fp }}?run={{ run }}">{{ c.title }}</a>
+  {% if c.line %}<p class="finding-line">{{ c.line }}</p>{% endif %}
+  <a class="link more" href="/sweep/finding/{{ c.fp }}?run={{ run }}">More info →</a>
+</article>
+{%- endmacro %}
+
+{# M15.2 · the detectors table: rows = sweep_view.detector_rows() #}
+{% macro detector_table(rows) -%}
+<div class="det-section"><p class="caps-title">Detectors · {{ fmt.num(rows | length) }}</p>
+<div class="table-wrap det-table" id="detectors"><table class="table flush">
+  <thead><tr><th>Detector</th><th>Status</th><th>Coverage</th><th>What it needs</th></tr></thead>
+  <tbody>{% for r in rows %}<tr class="{{ r.kind }}"><td><span class="dot {{ {'on': 'accent', 'partly': 'warn', 'off': 'muted'}[r.kind] }}"></span>{{ r.label }}</td><td class="status {{ r.kind }}">{{ r.status }}</td><td class="cov">{{ r.covers }}</td><td class="wrap need">{{ r.missing }}{% if r.action %} · <a class="link" href="{{ r.action[1] }}">{{ r.action[0] }}</a>{% endif %}</td></tr>{% endfor %}</tbody>
+</table></div></div>
+{%- endmacro %}
+
+{# reasons: [{"text", "settle", "ruled_out"}]; numbered (5c) or with a verdict (10p) #}
+{% macro reasons(items, verdicts=False) -%}
+<div class="reasons">
+  {% for r in items %}
+  <div class="reason"><span class="n">{% if verdicts %}<span class="dot {{ 'accent' if r.ruled_out else 'warn' }}"></span>{% else %}{{ loop.index }}{% endif %}</span><span>{{ r.text }}{% if verdicts and r.settle %}<span class="settle">{{ r.settle }}</span>{% endif %}</span>{% if verdicts %}<span class="verdict{{ ' out' if r.ruled_out else '' }}">{{ "Ruled out" if r.ruled_out else "Open" }}</span>{% else %}<span></span>{% endif %}</div>
+  {% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro kv(rows, ruled=True) -%}
+<dl class="kv{{ ' ruled' if ruled else '' }}">{% for k, v in rows %}{% if v %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endif %}{% endfor %}</dl>
+{%- endmacro %}
+
+{% macro status_pill(status) -%}
+<span class="status-pill {{ status }}"><span class="dot"></span>{{ {"breached": "Breached", "within": "Within", "no_value": "No value"}[status] }}</span>
+{%- endmacro %}
+
+{% macro held_rows(items) -%}
+<div class="section">{% for h in items %}<div class="held-row"><span>{{ h.title }}</span><span class="how">{{ h.how }}{% if h.undo %} · {{ h.undo }}{% endif %}</span></div>{% endfor %}</div>
+{%- endmacro %}
+
+{# Suppressed by your Ontology (5a): one item per known pattern, expanding to its metrics #}
+{% macro pattern_groups(items) -%}
+<div class="section lines">{% for h in items %}<details class="pattern-group"><summary class="held-row"><span>{{ h.label }}</span><span class="how">{{ h.tail }}</span></summary><ul class="pattern-metrics">{% for m in h.metrics %}<li>{{ m }}</li>{% endfor %}</ul></details>{% endfor %}</div>
+{%- endmacro %}
+
+{# Last 7 runs (5a header) #}
+{% macro runs_menu(runs, current) -%}
+<details class="use" x-data="menu">
+  <summary class="btn" aria-label="Show another run">Last 7 runs</summary>
+  <div class="use-menu" role="menu">{% for n, d, kind in runs %}<a class="opt{{ ' is-on' if n == current else '' }}" role="menuitem" href="/sweep?run={{ n }}">Run #{{ "%04d" | format(n) }}<span class="sub">{{ fmt.date_short(d) }}{% if kind %} · {{ kind }}{% endif %}</span></a>{% endfor %}</div>
+</details>
+{%- endmacro %}
+
+{# The finding panel head (5b, 5c, 4f, 10p): tags, kind, title, money, context, tabs #}
+{% macro panel_head(p, run, close, fbase="/sweep/finding/", fq=None) -%}
+{% set fq = fq or "run=" ~ run %}
+{% from "components/panels.html" import pane_title %}
+{% call pane_title(p.title, p.context, close, aside=p.money) %}{{ state_tag(p.state, p.confidence | capitalize if p.confidence else None) }}{% if p.change[0] in ("new", "worse", "better", "open", "back") %}{{ change_tag(p.change[0], p.change[1]) }}{% endif %}<span class="kind-chip">{{ p.label }}</span>{% endcall %}
+{% from "components/blocks.html" import tabs as tabs_bar %}
+<div class="pane-tabs">{{ tabs_bar([("Finding", fbase ~ p.fp ~ "?" ~ fq), ("Test", fbase ~ p.fp ~ "?" ~ fq ~ "&tab=test"), ("Metric", fbase ~ p.fp ~ "?" ~ fq ~ "&tab=metric"), ("SQL", fbase ~ p.fp ~ "?" ~ fq ~ "&tab=sql"), ("Run", fbase ~ p.fp ~ "?" ~ fq ~ "&tab=run")], p.tab | capitalize if p.tab != "sql" else "SQL") }}</div>
+{%- endmacro %}
+
+{% macro code(text, id=None) -%}<pre class="code-block"{% if id %} id="{{ id }}"{% endif %}>{{ text }}</pre>{%- endmacro %}
+
+{# The 680 px overlay shell for the finding and Watch panels (scrim + aside). #}
+{# The ⋯ menu in a panel footer on a phone (10h): Snooze and Mute. `layout` is a layout utility. #}
+{% macro more_menu(layout="", label="More actions") -%}
+<details class="foot-more {{ layout }}" x-data="menu"><summary class="btn" aria-label="{{ label }}">⋯</summary><div class="menu" role="menu">{{ caller() }}</div></details>
+{%- endmacro %}
+
+{% macro overlay(label, close) -%}
+<a class="scrim" href="{{ close }}" aria-label="Close"></a>
+<aside class="panel wide" aria-label="{{ label }}">{{ caller() }}</aside>
+{%- endmacro %}
+
+
+{# A run's phases as the owner reads them (4f3, 4e1, M12b): Read sources, Queries, Baselines,
+   Detectors, Forecasts, Brief; each a status dot and a line. The raw steps are in the run log. #}
+{% macro run_phases(cols) -%}
+<div class="table-wrap"><table class="table"><tbody>{% for c in cols %}<tr><td><span class="flex items-center gap-6"><span class="dot {{ c.dot }}"></span>{{ c.name }}</span></td><td>{{ c.line }}</td></tr>{% endfor %}</tbody></table></div>
+{%- endmacro %}

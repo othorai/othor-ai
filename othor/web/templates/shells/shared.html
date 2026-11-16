@@ -1,0 +1,14 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "base.html" %}
+{% from "components/icons.html" import logo %}
+{% from "components/blocks.html" import company_logo %}
+{% block body %}
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="onb-header">
+  <p class="flex items-center gap-12"><span class="brand">{{ logo() }}OTHOR AI</span><span class="quiet-text slash">/</span>{{ company_logo(company) }}<span class="title">{{ company.name }}</span></p>
+  <span></span>
+  <p class="quiet-text justify-self-end">{% block viewer %}{% endblock %}</p>
+</header>
+<main class="app-main" id="main">{% block main %}{% endblock %}</main>
+<div id="overlay">{% block overlay %}{% endblock %}</div>
+{% endblock %}

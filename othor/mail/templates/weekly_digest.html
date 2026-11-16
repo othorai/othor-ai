@@ -1,0 +1,16 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{#- 8e · the weekly digest (optional, off by default; Sundays, owner only). -#}
+{% import "_email.html" as e with context %}
+{% call e.page(subject, preheader, company_name, logo_cid) %}
+{% call e.row("24px 24px 0") %}{{ e.kicker("Weekly digest · " ~ week, mono=True) }}{% endcall %}
+{% call e.row("16px 24px 0") %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #DDE2E8;border-collapse:collapse"><tr>
+{% for k, v in stats %}<td valign="top" style="padding:12px 14px;border:1px solid #DDE2E8;font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif"><p style="margin:0 0 4px;font-size:13px;color:#5B6B7B">{{ k }}</p><p style="margin:0;font-size:20px;font-weight:700;color:#1F2A37">{{ v }}</p></td>{% endfor %}
+</tr></table>{% endcall %}
+{% for heading, rows in sections if rows %}
+{% call e.row("20px 24px 0") %}<p style="margin:0 0 4px;font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#5B6B7B">{{ heading }}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">{% for left, right in rows %}<tr><td style="padding:12px 0;border-bottom:1px solid #E3E6EA;font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;color:#1F2A37">{{ left }}</td><td align="right" style="padding:12px 0 12px 12px;border-bottom:1px solid #E3E6EA;font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;color:#8A96A3;white-space:nowrap">{{ right }}</td></tr>{% endfor %}</table>{% endcall %}
+{% endfor %}
+{% call e.row("20px 24px 24px") %}{{ e.button("Open Sweep", sweep_url, primary=False) }}{% endcall %}
+{{ e.owner_footer(instance, preferences) }}
+{% endcall %}

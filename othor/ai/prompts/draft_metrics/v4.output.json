@@ -1,0 +1,222 @@
+{
+  "type": "object",
+  "properties": {
+    "metrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "schema": {
+            "type": "string"
+          },
+          "table": {
+            "type": "string"
+          },
+          "column": {
+            "type": "string"
+          },
+          "agg": {
+            "type": "string",
+            "enum": [
+              "sum",
+              "count",
+              "count_distinct",
+              "avg",
+              "min",
+              "max"
+            ]
+          },
+          "date_column": {
+            "type": "string"
+          },
+          "grain": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month"
+            ]
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "inr",
+              "count",
+              "metres",
+              "days",
+              "ratio",
+              "percent"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "flow",
+              "snapshot"
+            ]
+          },
+          "breakdowns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "formula_op": {
+            "type": "string",
+            "enum": [
+              "",
+              "divide",
+              "subtract",
+              "add",
+              "multiply"
+            ]
+          },
+          "formula_a": {
+            "type": "string"
+          },
+          "formula_b": {
+            "type": "string"
+          },
+          "times_days_in_period": {
+            "type": "boolean"
+          },
+          "refs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string"
+                },
+                "locator": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "file",
+                "locator"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "high",
+              "check"
+            ]
+          },
+          "question": {
+            "type": "string"
+          },
+          "filter_column": {
+            "type": "string"
+          },
+          "filter_op": {
+            "type": "string",
+            "enum": [
+              "",
+              "=",
+              "<>",
+              ">",
+              "<"
+            ]
+          },
+          "filter_value": {
+            "type": "string"
+          },
+          "days_from": {
+            "type": "string"
+          },
+          "days_to": {
+            "type": "string"
+          },
+          "age_column": {
+            "type": "string"
+          },
+          "age_over_days": {
+            "type": "integer"
+          },
+          "area": {
+            "type": "string",
+            "enum": [
+              "Sales",
+              "Collections",
+              "Operations",
+              "Finance",
+              "Customers",
+              "Other"
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "description",
+          "source",
+          "schema",
+          "table",
+          "column",
+          "agg",
+          "date_column",
+          "grain",
+          "unit",
+          "kind",
+          "breakdowns",
+          "formula_op",
+          "formula_a",
+          "formula_b",
+          "times_days_in_period",
+          "refs",
+          "confidence",
+          "question",
+          "filter_column",
+          "filter_op",
+          "filter_value",
+          "days_from",
+          "days_to",
+          "age_column",
+          "age_over_days",
+          "area"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "missing": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "why"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "metrics",
+    "missing"
+  ],
+  "additionalProperties": false
+}

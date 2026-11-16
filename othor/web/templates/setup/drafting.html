@@ -1,0 +1,12 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/onboarding.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% block title %}Drafting · Set up {{ company.name }}{% endblock %}
+{% block main %}
+{% call el('div', 'narrow') %}
+<h1>Drafting your metrics</h1>
+{% call el("p", "lede") %}From your files, your answers and {{ source_names or "your sources" }}.{% endcall %}
+{% include "setup/_progress.html" %}
+{% endcall %}
+{% endblock %}

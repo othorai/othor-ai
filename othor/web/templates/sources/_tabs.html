@@ -1,0 +1,20 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{# The picked spreadsheets' tabs and what was found in each (10b, 6eb, 6f). #}
+{% from "components/forms.html" import chip %}
+{% call el('form', 'card flush', attrs={'id': 'tabs-form', 'method': 'post', 'action': '/sources/' ~ (src.id) ~ '/tabs'}) %}
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  {% call el("div", "box-head") %}{% call el("span", "hint") %}Tabs · {{ fmt.num(selected) }} of {{ fmt.num(rows | length) }} selected{% endcall %}{% call el("span", "hint") %}What we found in each tab{% endcall %}{% endcall %}
+  {% call el('table', 'table flush tabs-table') %}<thead><tr><th></th><th>Tab</th>{% call el("th", "nowrap") %}What we found{% endcall %}{% call el("th", "num") %}Use{% endcall %}</tr></thead><tbody>
+  {% for r in rows %}
+  <tr>
+    <td><input type="checkbox" name="tab" value="{{ r.tab.id }}" aria-label="Read {{ r.tab.tab_name }}"{% if r.tab.selected %} checked{% endif %}{% if r.disabled %} disabled{% endif %}></td>
+    {# the tab in the body font, its spreadsheet under it (owner, 12 Nov 2026: no code font here) #}
+    {% call el('td', 'tab-name') %}{% call el("span", "strong") %}{{ r.tab.tab_name }}{% endcall %}{% if picked | length > 1 %}{% call el("span", "hint") %}{{ r.tab.spreadsheet_title }}{% endcall %}{% endif %}{% endcall %}
+    {% call el('td', 'found hint') %}{{ r.found }}{% endcall %}
+    {# Check → under its chip, in the same cell, so it never runs off the card #}
+    {% call el('td', 'num tab-use') %}{% if r.chip.label %}{{ chip(r.chip.label, dot=r.chip.dot) }}{% endif %}{% if r.needs_check and r.tab.selected %}{% call el('a', 'link', attrs={'href': '/setup/sources/' ~ (src.id) ~ '/check/' ~ (r.tab.id)}) %}Check →{% endcall %}{% endif %}{% endcall %}
+  </tr>
+  {% endfor %}
+  </tbody>{% endcall %}
+{% endcall %}

@@ -1,0 +1,11 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "base.html" %}
+{% from "components/icons.html" import logo %}
+{% block body %}
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="auth{% block auth_class %}{% endblock %}">
+  <header class="topbar"><a class="brand" href="{{ root_url or '/' }}">{{ logo() }}OTHOR AI</a><a class="help" href="{{ ('mailto:' ~ install.support_email) if install.support_email else install.help_url }}">Help</a></header>
+  <main class="auth-main" id="main">{% block card %}{% endblock %}</main>
+  <footer class="footer">© 2026 Othor AI Private Limited</footer>
+</div>
+{% endblock %}

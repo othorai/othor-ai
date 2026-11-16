@@ -1,0 +1,42 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{# 10b / 6eb body: signed in, Choose spreadsheets (Picker), tabs. #}
+{% from "components/forms.html" import chip %}
+{% from "components/sources.html" import kind_tile %}
+{% from "components/buttons.html" import button %}
+<div class="flex flex-col gap-16" id="sheets-live"{% if running %} hx-get="{{ request.url.path }}?{{ request.url.query }}" hx-trigger="every 1s" hx-select="#sheets-live" hx-swap="outerHTML"{% endif %}>
+  {% call el('div', 'card board', layout='flex items-center justify-between') %}
+    {% if account %}
+    <div class="flex items-center gap-12">{{ kind_tile("GS") }}<div>{% call el('p', 'strong') %}Signed in as {{ account }}{% endcall %}{% call el('p', 'hint') %}Google · read-only access to the files you pick{% endcall %}</div></div>
+    <div class="flex items-center gap-12">{{ chip("Authorised", dot="ok") }}<form method="post" action="/sources/google/start"><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="setup" value="{{ '1' if setup else '' }}">{% if for_key %}<input type="hidden" name="for" value="{{ for_key }}">{% endif %}{% call el('button', 'link', attrs='type="submit"') %}Switch account{% endcall %}</form></div>
+    {% else %}
+    <div class="flex items-center gap-12">{{ kind_tile("GS") }}<div>{% call el('p', 'strong') %}Sign in with Google{% endcall %}{% call el('p', 'hint') %}Read-only, and only the spreadsheets you pick. Othor AI never searches your Drive.{% endcall %}</div></div>
+    <form method="post" action="/sources/google/start"><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="setup" value="{{ '1' if setup else '' }}">{% if for_key %}<input type="hidden" name="for" value="{{ for_key }}">{% endif %}{{ button("Sign in with Google", "primary", type="submit") }}</form>
+    {% endif %}
+  {% endcall %}
+  {% if account %}
+  <div class="flex flex-col gap-8">
+    {% call el("p", "field-label") %}Spreadsheet{{ "s" if picked | length > 1 else "" }}{% endcall %}
+    {% for f in picked %}
+    {% call el("div", "input", layout="flex items-center justify-between gap-8") %}<span>{{ f.title or f.id }}{% if f.edited %} · {{ f.edited }}{% endif %}</span><form method="post" action="/sources/{{ src.id }}/files/{{ f.id }}/remove" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{% call el("button", "link-muted", attrs={"type": "submit"}) %}Remove{% endcall %}</form>{% endcall %}
+    {% else %}
+    {% call el("div", "input") %}{% call el("span", "quiet-text") %}No spreadsheet chosen yet{% endcall %}{% endcall %}
+    {% endfor %}
+    {% set add = "Add another spreadsheet" if picked else "Choose a spreadsheet" %}
+    <div class="flex items-center gap-8">
+      {% if mode == "google" %}
+      {% call el('button', 'btn', attrs={'type': 'button', 'data-picker': true, 'data-mime': (sheets_mime), 'data-sid': (src.id)}) %}{{ add }}{% endcall %}
+      {% call el('button', 'btn', attrs={'type': 'button', 'data-picker': true, 'data-paste': true, 'data-mime': (sheets_mime), 'data-sid': (src.id)}) %}Paste a link{% endcall %}
+      {% else %}
+      {% call el('button', 'btn', attrs={'type': 'button', 'hx-get': '/sources/' ~ (src.id) ~ '/picker', 'hx-target': '#picker-slot'}) %}{{ add }}{% endcall %}
+      {% call el("button", "btn", attrs={"type": "button", "hx-get": "/sources/" ~ src.id ~ "/picker", "hx-target": "#picker-slot", "hx-prompt": "Paste the spreadsheet link"}) %}Paste a link{% endcall %}
+      {% endif %}
+    </div>
+    {% call el("p", "hint") %}Google adds one spreadsheet at a time. To read more than one, add them one after another; each is read with this connection.{% endcall %}
+  </div>
+  {% if running and not rows %}{% call el("p", "progress-line") %}Reading the tabs…{% endcall %}{% endif %}
+  {% if rows %}{% include "sources/_tabs.html" %}{% endif %}
+  {% call el("p", "hint") %}Read nightly at {{ fmt.clock(company.run_time) }}, whole tab each time. If someone renames a column or moves the header, the source card says so before any number breaks.{% endcall %}
+  {% endif %}
+  <div id="picker-slot"></div>
+</div>

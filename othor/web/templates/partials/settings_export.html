@@ -1,0 +1,14 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{#- M18.1 · Settings' Your data row: download at once, or (a large company) build it in a job
+   and email a link; the row swaps in place, and polls while the export is being prepared -#}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% set row_attrs = {"id": "export-row"} %}
+{% if export.status == "preparing" %}{% set row_attrs = {"id": "export-row", "hx-get": "/settings/export/row", "hx-trigger": "every 10s", "hx-target": "this", "hx-swap": "outerHTML"} %}{% endif %}
+{% call el('div', 'section-row', attrs=row_attrs) %}<div>{% call el('p', 'title') %}Download everything{% endcall %}{% call el('p', 'sub') %}{% if export.status == "preparing" %}Preparing your export · we’ll email you when it’s ready{% elif export.status == "ready" %}Ready · kept until {{ fmt.day_month(export.until_local.date()) }}, {{ fmt.clock(export.until_local.time()) }}{% else %}A zip of your Ontology, briefs, findings, forecasts, numbers, settings and history · no passwords, tokens or source rows{% endif %}{% endcall %}</div>
+  {% if export.status == "ready" %}{{ button("Download (zip)", size="sm", href="/settings/export/" ~ export.job_id, attrs={"download": True}) }}
+  {% elif export.status == "preparing" %}{{ button("Preparing…", size="sm", disabled=True) }}
+  {% elif export.large %}{% call el("form", attrs={"hx-post": "/settings/export", "hx-target": "#export-row", "hx-swap": "outerHTML"}) %}{{ button("Download (zip)", size="sm", type="submit") }}{% endcall %}
+  {% else %}{{ button("Download (zip)", size="sm", href="/settings/export", attrs={"download": True}) }}{% endif %}
+{% endcall %}
+{% if toast %}{% call el("div", "toast-dock", attrs='id="toast-dock" aria-live="polite" hx-swap-oob="innerHTML"') %}{% call el("div", "toast", attrs='role="status"') %}{% call el("span", "dot accent") %}{% endcall %}<span>{{ toast }}</span>{% endcall %}{% endcall %}{% endif %}

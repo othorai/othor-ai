@@ -1,0 +1,19 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "base.html" %}
+{% from "components/icons.html" import logo %}
+{% from "components/blocks.html" import column_steps %}
+{% set STEPS = ["Company", "Upload", "Business", "Sources", "Metrics", "First run"] %}
+{# M11c: a slim header (brand / company), the step bar at the top of the page column. A step in
+   the new layout sets {% block width %} col{% endblock %} (640 px, centred); the others keep the
+   wide column until they move. #}
+{% block body %}
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="onb-header">
+  <p class="flex items-center gap-12"><a class="brand" href="/settings">{{ logo() }}OTHOR AI</a><span class="quiet-text slash">/</span><span class="title">Set up {{ company.name }}</span></p>
+</header>
+<main class="onb-main{% block width %}{% endblock %}" id="main">
+  {{ column_steps(STEPS, step_index) }}
+  {% block main %}{% endblock %}
+</main>
+<div id="overlay">{% block overlay %}{% endblock %}</div>
+{% endblock %}

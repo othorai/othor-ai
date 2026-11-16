@@ -1,0 +1,733 @@
+# SPDX-License-Identifier: Apache-2.0
+"""render_svg(spec, size) -> SVG text. Pure Python and deterministic: the same spec always
+gives the same bytes (part of the replay check). Styling follows board 9c and docs/07.
+
+The renderer draws; it never computes a value. Text labels are formatted by othor.core.fmt.
+"""
+
+from __future__ import annotations
+
+import dataclasses
+import datetime as dt
+import itertools
+from html import escape
+
+from othor.charts.spec import Annotation, ChartSpec, Point, Unit
+from othor.charts.tokens import color
+from othor.core import fmt
+
+# colour roles (docs/07): positive = accent, negative = neg, neutral = ink; from theme.css
+ROLE = {
+    "positive": color("accent"),
+    "negative": color("neg"),
+    "neutral": color("ink"),
+    "muted": color("muted-2"),
+    "edge": color("ink"),  # just outside its band: dark, with a ring on the last point (M15.3)
+}
+GRID = color("row")
+SHADE = color("surface-2")
+TRACK = color("border")
+AXIS_TXT = color("muted-2")
+INK = color("ink")
+WHITE = color("white")
+FONT = "Inter, sans-serif"
+TEXT_W = 0.58  # Inter's average glyph width, as a share of the font size (label placement)
+Box = tuple[float, float, float, float]
+
+
+def _f(x: float) -> str:
+    s = f"{x:.2f}".rstrip("0").rstrip(".")
+    return "0" if s in ("-0", "") else s
+
+
+def _value(v: float, unit: Unit, *, sign: bool = False) -> str:
+    if unit.type == "percent":
+        return fmt.pct(v, decimals=unit.decimals, sign=sign)
+    if unit.type == "days":
+        return fmt.days(v, decimals=unit.decimals)
+    if unit.type == "ms":
+        return fmt.ms(v, decimals=unit.decimals)
+    if unit.type == "seconds":
+        return fmt.seconds(v, decimals=unit.decimals)
+    if unit.type == "metres" and unit.scale == "l":
+        return fmt.num(v, decimals=unit.decimals) + " L"  # lakh metres (M19.4)
+    return fmt.num(v, decimals=unit.decimals, sign=sign)
+
+
+def _box(x: float, y: float, s: str, size: int, anchor: str) -> Box:
+    w = len(s) * size * TEXT_W
+    x0 = {"start": x, "middle": x - w / 2, "end": x - w}[anchor]
+    return (x0, y - size * 0.8, x0 + w, y + size * 0.2)
+
+
+def _hit(a: Box, b: Box) -> bool:
+    return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
+
+
+class _Svg:
+    def __init__(self, w: int, h: int, spec: ChartSpec) -> None:
+        self.w, self.h, self.spec, self.parts = w, h, spec, []
+        self.taken: list[Box] = []  # labels and marks already placed (M12: no collisions)
+        self.labels: list[str] = []  # drawn last, on top of the lines
+
+    def add(self, s: str) -> None:
+        self.parts.append(s)
+
+    def reserve(self, box: Box) -> None:
+        self.taken.append(box)
+
+    def reserve_line(self, xy: list[tuple[float, float]]) -> None:
+        """A data line is an obstacle for labels: small boxes every few pixels along it."""
+        for (x0, y0), (x1, y1) in itertools.pairwise(xy):
+            n = max(1, int(max(abs(x1 - x0), abs(y1 - y0)) / 4))
+            for i in range(n + 1):
+                x, y = x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n
+                self.reserve((x - 1, y - 1.5, x + 1, y + 1.5))
+
+    def label(
+        self,
+        x: float,
+        y: float,
+        s: str,
+        *,
+        size: int = 10,
+        fill: str = AXIS_TXT,
+        anchor: str = "start",
+        weight: int = 400,
+    ) -> None:
+        """A text label that moves out of the way: it keeps inside the chart, then tries
+        one line below, one above, two below… until it overlaps nothing placed before it.
+        Deterministic: the same spec always places it the same way."""
+        step = size + 2
+        best = None
+        for k in (0, 1, -1, 2, -2, 3, -3, 4):
+            yy = y + k * step
+            b = _box(x, yy, s, size, anchor)
+            dx = max(0.0, 1 - b[0]) - max(0.0, b[2] - (self.w - 1))
+            dy = max(0.0, 1 - b[1]) - max(0.0, b[3] - (self.h - 1))
+            b = (b[0] + dx, b[1] + dy, b[2] + dx, b[3] + dy)
+            if best is None:
+                best = (x + dx, yy + dy, b)
+            if not any(_hit(b, t) for t in self.taken):
+                best = (x + dx, yy + dy, b)
+                break
+        assert best is not None
+        bx, by, b = best
+        self.reserve(b)
+        n = len(self.parts)
+        self.text(bx, by, s, size=size, fill=fill, anchor=anchor, weight=weight)
+        self.labels.append(self.parts.pop(n))
+
+    def text(
+        self,
+        x: float,
+        y: float,
+        s: str,
+        *,
+        size: int = 10,
+        fill: str = AXIS_TXT,
+        anchor: str = "start",
+        weight: int = 400,
+    ) -> None:
+        self.add(
+            f'<text x="{_f(x)}" y="{_f(y)}" font-size="{size}" fill="{fill}" '
+            f'text-anchor="{anchor}" font-weight="{weight}">{escape(s)}</text>'
+        )
+
+    def done(self) -> str:
+        alt = escape(self.spec.alt_text)
+        head = (
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{self.w}" height="{self.h}" '
+            f'viewBox="0 0 {self.w} {self.h}" role="img" aria-label="{alt}" '
+            f'font-family="{FONT}" data-chart="{escape(self.spec.id)}">'
+            f"<title>{alt}</title>"
+        )
+        return head + "".join(self.parts) + "".join(self.labels) + "</svg>"
+
+
+def _ord(d: str) -> int:
+    return dt.date.fromisoformat(d).toordinal()
+
+
+class _Scale:
+    def __init__(self, lo: float, hi: float, a: float, b: float) -> None:
+        self.lo, self.hi, self.a, self.b = lo, hi if hi != lo else lo + 1, a, b
+
+    def __call__(self, v: float) -> float:
+        return self.a + (v - self.lo) / (self.hi - self.lo) * (self.b - self.a)
+
+
+def _bounds(spec: ChartSpec) -> tuple[float, float]:
+    vals = [v for s in spec.series for _, v in s.points]
+    if spec.band:
+        vals += [v for _, v in spec.band.lower] + [v for _, v in spec.band.upper]
+    vals += [a.value for a in spec.annotations if a.type == "threshold" and a.value is not None]
+    lo, hi = min(vals), max(vals)
+    if spec.y.zero_based or spec.y.zero_line:
+        lo, hi = min(lo, 0.0), max(hi, 0.0)
+    pad = (hi - lo) * 0.08 or 1.0
+    return lo - (0 if spec.y.zero_based else pad), hi + pad
+
+
+def _poly(points: list[tuple[float, float]]) -> str:
+    return " ".join(f"{_f(x)},{_f(y)}" for x, y in points)
+
+
+def _band(svg: _Svg, spec: ChartSpec, xs: _Scale, ys: _Scale, *, legend: bool = False) -> None:
+    if not spec.band:
+        return
+    b = spec.band
+    colour, opacity = {
+        "negative": (ROLE["negative"], "0.12"),
+        # What's ahead (owner, 16 Nov 2026): the likely range in the range bar's cyan
+        "positive": (ROLE["positive"], "0.22"),
+    }.get(b.role, (ROLE["muted"], "0.18"))
+    up = [(xs(_ord(d)), ys(v)) for d, v in b.upper]
+    low = [(xs(_ord(d)), ys(v)) for d, v in reversed(b.lower)]
+    svg.add(f'<polygon points="{_poly(up + low)}" fill="{colour}" fill-opacity="{opacity}"/>')
+    if b.label and spec.kind != "sparkline" and not legend:
+        x, y = up[-1]
+        svg.label(x - 2, y - 5, b.label, fill=colour, anchor="end")
+
+
+def _spark_bars(spec: ChartSpec, w: int, h: int) -> str:
+    """One bar per point from a zero baseline (M15.8, the AI usage card); a zero is a hairline,
+    so every day shows."""
+    svg = _Svg(w, h, spec)
+    pts = list(spec.series[0].points)
+    top = max((v for _, v in pts), default=0.0) or 1.0
+    gap = 2.0
+    bw = (w - gap * (len(pts) - 1)) / max(len(pts), 1)
+    colour = ROLE[spec.series[0].role]
+    for i, (_d, v) in enumerate(pts):
+        bh = max(h * v / top, 1.0)
+        svg.add(
+            f'<rect x="{_f(i * (bw + gap))}" y="{_f(h - bh)}" width="{_f(bw)}" '
+            f'height="{_f(bh)}" rx="1" fill="{colour}"/>'
+        )
+    return svg.done()
+
+
+def _smooth(xy: list[tuple[float, float]]) -> str:
+    """A monotone cubic path through every point (Fritsch–Carlson): it passes through each value
+    and never overshoots between two of them, so the curve shows no value that isn't there."""
+    n = len(xy)
+    if n < 3:
+        return "M " + " L ".join(f"{_f(x)},{_f(y)}" for x, y in xy)
+    dx = [xy[i + 1][0] - xy[i][0] for i in range(n - 1)]
+    d = [(xy[i + 1][1] - xy[i][1]) / dx[i] if dx[i] else 0.0 for i in range(n - 1)]
+    m = [
+        d[0],
+        *[0.0 if d[i - 1] * d[i] <= 0 else (d[i - 1] + d[i]) / 2 for i in range(1, n - 1)],
+        d[-1],
+    ]
+    for i in range(n - 1):
+        if d[i] == 0:
+            m[i] = m[i + 1] = 0.0
+            continue
+        a, b = m[i] / d[i], m[i + 1] / d[i]
+        r = a * a + b * b
+        if r > 9:
+            t = 3 / r**0.5
+            m[i], m[i + 1] = t * a * d[i], t * b * d[i]
+    out = [f"M {_f(xy[0][0])},{_f(xy[0][1])}"]
+    for i in range(n - 1):
+        (x0, y0), (x1, y1) = xy[i], xy[i + 1]
+        h3 = dx[i] / 3
+        out.append(
+            f"C {_f(x0 + h3)},{_f(y0 + m[i] * h3)} {_f(x1 - h3)},{_f(y1 - m[i + 1] * h3)} "
+            f"{_f(x1)},{_f(y1)}"
+        )
+    return " ".join(out)
+
+
+def _trace(
+    svg: _Svg,
+    xy: list[tuple[float, float]],
+    colour: str,
+    smooth: bool,
+    width: str,
+    dotted: bool = False,
+) -> None:
+    if smooth or dotted:
+        dash = ' stroke-dasharray="1 5"' if dotted else ""
+        svg.add(
+            f'<path d="{_smooth(xy)}" fill="none" stroke="{colour}" stroke-width="{width}" '
+            f'stroke-linejoin="round" stroke-linecap="round"{dash}/>'
+        )
+    else:
+        svg.add(
+            f'<polyline points="{_poly(xy)}" fill="none" stroke="{colour}" '
+            f'stroke-width="{width}" stroke-linejoin="round" stroke-linecap="round"/>'
+        )
+
+
+def _sparkline(spec: ChartSpec, w: int, h: int) -> str:
+    if spec.series and spec.series[0].style == "bar":
+        return _spark_bars(spec, w, h)
+    svg = _Svg(w, h, spec)
+    pts = list(spec.series[0].points)
+    lo, hi = _bounds(spec)
+    xs = _Scale(_ord(pts[0][0]), _ord(pts[-1][0]), 3, w - 4)
+    ys = _Scale(lo, hi, h - 3, 3)
+    _band(svg, spec, xs, ys)
+    if spec.y.zero_line:
+        _zero(svg, ys(0.0), 0, w)
+    # a muted comparison behind the line (Summary, M16.3), on the same dates
+    for other in spec.series[1:]:
+        if other.role == "muted" and other.points:
+            oxy = [(xs(_ord(d)), ys(v)) for d, v in other.points]
+            _trace(svg, oxy, ROLE["muted"], other.style == "smooth", "1.5", other.style == "dotted")
+    colour = ROLE[spec.series[0].role]
+    xy = [(xs(_ord(d)), ys(v)) for d, v in pts]
+    _trace(svg, xy, colour, spec.series[0].style == "smooth", "2")
+    x, y = xy[-1]
+    if spec.series[0].role == "edge":
+        svg.add(
+            f'<circle cx="{_f(x)}" cy="{_f(y)}" r="5" fill="none" stroke="{colour}" '
+            f'stroke-width="1.5"/>'
+        )
+    svg.add(f'<circle cx="{_f(x)}" cy="{_f(y)}" r="2.5" fill="{colour}"/>')
+    return svg.done()
+
+
+def _month_ticks(points: list[Point]) -> list[tuple[int, str]]:
+    seen: list[tuple[int, str]] = []
+    for d, _ in points:
+        day = dt.date.fromisoformat(d)
+        label = f"{day:%b}"
+        if not seen or seen[-1][1] != label:
+            seen.append((day.toordinal(), label))
+    return seen
+
+
+def _region_labels(svg: _Svg, spec: ChartSpec, xs: _Scale, top: int = 18) -> None:
+    for a in spec.annotations:
+        if a.type == "region" and a.from_ and a.to and a.label and spec.kind != "gap_block":
+            svg.label(
+                xs(_ord(a.from_)) + 4, top + 4, a.label, fill=ROLE[a.role] if a.role else AXIS_TXT
+            )
+
+
+def _frame(
+    spec: ChartSpec, w: int, h: int, *, right_axis: bool = False
+) -> tuple[_Svg, _Scale, _Scale]:
+    svg = _Svg(w, h, spec)
+    left, right = (8, 34) if right_axis else (34, 8)
+    top, bottom = 18, 20
+    allpts = [p for s in spec.series for p in s.points]
+    xs = _Scale(min(_ord(d) for d, _ in allpts), max(_ord(d) for d, _ in allpts), left, w - right)
+    lo, hi = _bounds(spec)
+    ys = _Scale(lo, hi, h - bottom, top)
+    # regions first (behind everything)
+    for a in spec.annotations:
+        if a.type == "region" and a.from_ and a.to and spec.kind != "gap_block":
+            x0, x1 = xs(_ord(a.from_)), min(xs(_ord(a.to)), w - right)
+            svg.add(
+                f'<rect x="{_f(x0)}" y="{top - 6}" width="{_f(x1 - x0)}" '
+                f'height="{_f(h - bottom - top + 6)}" fill="{SHADE}"/>'
+            )
+    # three gridlines at most, at round values, labelled; whole numbers print without decimals
+    ticks = _nice_ticks(lo, hi)
+    tick_unit = spec.unit
+    if ticks and all(float(v).is_integer() for v in ticks):
+        tick_unit = _whole(spec.unit)
+    for v in ticks:
+        y = ys(v)
+        svg.add(f'<line x1="{left}" x2="{w - right}" y1="{_f(y)}" y2="{_f(y)}" stroke="{GRID}"/>')
+        txt = _value(v, tick_unit, sign=spec.y.zero_line and v != 0)
+        x, anchor = (w - 2, "end") if right_axis else (left - 6, "end")
+        svg.reserve(_box(x, y + 3, txt, 10, anchor))
+        svg.text(x, y + 3, txt, anchor=anchor)
+    if (
+        ticks
+        and spec.unit.type == "currency"
+        and spec.unit.scale in ("cr", "m", "b")
+        and not right_axis
+    ):
+        # the axis names its unit once, above the top tick (9c, M12b); the chart's own currency
+        sym = fmt.SYMBOL.get(spec.unit.code or "", fmt.currency_symbol())
+        word = {"cr": " Cr", "m": " M", "b": " B"}[spec.unit.scale]
+        svg.label(1, max(ys(max(ticks)) - 9, 9), f"{sym}{word}", size=9)
+    svg.reserve((0.0, h - 14.0, float(w), float(h)))  # the month row: no label lands on it (9c)
+    prev: Box | None = None
+    for o, label in _month_ticks(sorted(allpts)):
+        x, anchor = xs(o), "start"
+        if _box(x, h - 5, label, 10, "start")[2] > w - 1:
+            x, anchor = w - 1, "end"  # the last month at the right edge isn't cut off (6a2)
+        box = _box(x, h - 5, label, 10, anchor)
+        if prev is not None and box[0] < prev[2] + 4:
+            continue  # months too close to read apart: every other one (M19.4)
+        prev = box
+        svg.reserve(box)
+        svg.text(x, h - 5, label, anchor=anchor)
+    if spec.y.zero_line:
+        _zero(svg, ys(0.0), left, w - right)
+    return svg, xs, ys
+
+
+def _zero(svg: _Svg, y: float, x0: float, x1: float) -> None:
+    """The faint zero line of a chart of changes (#65): one grey line, no colour either side."""
+    svg.add(f'<line x1="{_f(x0)}" x2="{_f(x1)}" y1="{_f(y)}" y2="{_f(y)}" stroke="{TRACK}"/>')
+
+
+def _whole(unit: Unit) -> Unit:
+    return dataclasses.replace(unit, decimals=0)
+
+
+def _nice_ticks(lo: float, hi: float, most: int = 3) -> list[float]:
+    """Round tick values (1, 2, 2.5, 5 × 10^k) inside (lo, hi), at most `most` of them."""
+    import math
+
+    span = hi - lo
+    raw = span / (most + 1)
+    mag = 10 ** math.floor(math.log10(raw))
+    step = next(m * mag for m in (1, 2, 2.5, 5, 10) if m * mag >= raw)
+    first = math.ceil(lo / step) * step
+    ticks = []
+    v = first
+    while v < hi - step * 0.01:
+        if v > lo + step * 0.01:
+            ticks.append(round(v, 10))
+        v += step
+    while len(ticks) > most:
+        ticks = ticks[1::2]
+    return ticks
+
+
+def _points(svg: _Svg, spec: ChartSpec, xs: _Scale, ys: _Scale) -> None:
+    for a in spec.annotations:
+        if a.type == "point" and a.at and a.value is not None:
+            svg.add(
+                f'<circle cx="{_f(xs(_ord(a.at)))}" cy="{_f(ys(a.value))}" r="3.5" '
+                f'fill="{ROLE[a.role or "negative"]}"/>'
+            )
+
+
+def _vlines(svg: _Svg, spec: ChartSpec, xs: _Scale, h: int) -> None:
+    for a in spec.annotations:
+        if a.type == "vline" and a.at:
+            x = xs(_ord(a.at))
+            c = ROLE[a.role or "negative"]
+            dash = ' stroke-dasharray="4 3"' if (a.style or "dashed") == "dashed" else ""
+            svg.add(
+                f'<line x1="{_f(x)}" x2="{_f(x)}" y1="10" y2="{h - 20}" stroke="{c}"'
+                f' stroke-width="1"{dash}/>'
+            )
+            if a.label:
+                svg.label(x + 4, 12, a.label, fill=c)
+
+
+def _thresholds(svg: _Svg, spec: ChartSpec, ys: _Scale, w: int) -> None:
+    for a in spec.annotations:
+        if a.type == "threshold" and a.value is not None:
+            y = ys(a.value)
+            svg.add(
+                f'<line x1="34" x2="{w - 8}" y1="{_f(y)}" y2="{_f(y)}" stroke="{AXIS_TXT}" '
+                f'stroke-dasharray="3 3"/>'
+            )
+            if a.label:
+                svg.label(w - 8, y - 4, a.label, anchor="end")
+
+
+def _line(spec: ChartSpec, w: int, h: int, *, step: bool = False, legend: bool = False) -> str:
+    svg, xs, ys = _frame(spec, w, h, right_axis=step)
+    lines = []
+    for sr in spec.series:
+        xy = [(xs(_ord(d)), ys(v)) for d, v in sr.points]
+        if step:
+            stepped: list[tuple[float, float]] = []
+            for i, (x, y) in enumerate(xy):
+                if i:
+                    stepped.append((x, stepped[-1][1]))
+                stepped.append((x, y))
+            xy = stepped
+        lines.append((sr, xy))
+        svg.reserve_line(xy)
+    for a in spec.annotations:  # the marked points keep their space: no label on a breach
+        if a.type == "point" and a.at and a.value is not None:
+            cx, cy = xs(_ord(a.at)), ys(a.value)
+            svg.reserve((cx - 5, cy - 5, cx + 5, cy + 5))
+    _band(svg, spec, xs, ys, legend=legend)
+    _thresholds(svg, spec, ys, w)
+    _vlines(svg, spec, xs, h)
+    _region_labels(svg, spec, xs)
+    for sr, xy in lines:
+        c = ROLE[sr.role]
+        if sr.style in ("smooth", "dotted") and not step:  # Summary's opened row (M16.3)
+            _trace(svg, xy, c, True, "2" if sr.style == "smooth" else "1.5", sr.style == "dotted")
+        else:
+            svg.add(
+                f'<polyline points="{_poly(xy)}" fill="none" stroke="{c}" stroke-width="2" '
+                f'stroke-linejoin="round"/>'
+            )
+        if not step and not legend:  # label lines directly (9c); Big Picture: a legend above
+            x, y = xy[-1]
+            ly = y + 14 if y < 34 else y - 6
+            svg.label(x - 2, ly, sr.name, fill=c, anchor="end", size=10, weight=500)
+        if spec.y.zero_line and xy:  # a chart of changes marks where it ends (#65)
+            svg.add(f'<circle cx="{_f(xy[-1][0])}" cy="{_f(xy[-1][1])}" r="3" fill="{c}"/>')
+    _points(svg, spec, xs, ys)
+    return svg.done()
+
+
+def _contribution(spec: ChartSpec, w: int, h: int) -> str:
+    svg = _Svg(w, h, spec)
+    cats = spec.categories
+    label_w, pad = 56, 44
+    lo = min(0.0, *[c.value for c in cats])
+    hi = max(0.0, *[c.value for c in cats])
+    xs = _Scale(lo, hi, label_w + pad, w - pad)
+    row = h / len(cats)
+    x0 = xs(0)
+    svg.add(f'<line x1="{_f(x0)}" x2="{_f(x0)}" y1="4" y2="{_f(h - 4)}" stroke="{AXIS_TXT}"/>')
+    for i, c in enumerate(cats):
+        cy = row * i + row / 2
+        bh = 18.0
+        x1 = xs(c.value)
+        left, width = min(x0, x1), max(abs(x1 - x0), 1.0)
+        svg.add(
+            f'<rect x="{_f(left)}" y="{_f(cy - bh / 2)}" width="{_f(width)}" '
+            f'height="{_f(bh)}" fill="{ROLE[c.role]}"/>'
+        )
+        svg.text(4, cy + 4, c.key, size=11, fill=INK)
+        txt = _value(c.value, spec.unit, sign=True)
+        inside = width > 48 and c.role == "negative"
+        if inside:
+            svg.text(left + 6, cy + 4, txt, size=11, fill=WHITE, weight=600)
+        elif c.value < 0:
+            svg.text(left - 6, cy + 4, txt, size=11, fill=INK, anchor="end", weight=600)
+        else:
+            svg.text(left + width + 6, cy + 4, txt, size=11, fill=INK, weight=600)
+    return svg.done()
+
+
+def _waterfall(spec: ChartSpec, w: int, h: int) -> str:
+    """A total, each part's move from the running level, then the next total (M15.3). The axis
+    starts below the lowest level so the totals keep their height; the chart says where."""
+    svg = _Svg(w, h, spec)
+    cats = spec.categories
+    spans: list[tuple[float, float]] = []
+    run = 0.0
+    for c in cats:
+        if c.total:
+            spans.append((0.0, c.value))
+            run = c.value
+        else:
+            spans.append((run, run + c.value))
+            run += c.value
+    levels = [y for a, b in spans for y in (a, b) if not (a == 0.0 and y == 0.0)]
+    lo, hi = min(levels), max(levels)
+    base = max(0.0, lo - (hi - lo) * 0.6) if hi > lo else 0.0
+    ys = _Scale(base, hi, h - 26, 20)
+    col = (w - 8) / len(cats)
+    bw = col * 0.6
+    prev_top: float | None = None
+    for i, (c, (a, b)) in enumerate(zip(cats, spans, strict=True)):
+        x = 4 + col * i + (col - bw) / 2
+        y0, y1 = ys(max(a, base)), ys(max(b, base))
+        top, height = min(y0, y1), max(abs(y1 - y0), 1.0)
+        role = "neutral" if c.total else c.role
+        svg.add(
+            f'<rect x="{_f(x)}" y="{_f(top)}" width="{_f(bw)}" height="{_f(height)}" '
+            f'fill="{ROLE[role]}"/>'
+        )
+        if prev_top is not None:
+            yl = _f(ys(b if c.total else a))
+            svg.add(
+                f'<line x1="{_f(x - (col - bw))}" x2="{_f(x)}" y1="{yl}" y2="{yl}" '
+                f'stroke="{AXIS_TXT}" stroke-dasharray="2 2"/>'
+            )
+        prev_top = top
+        txt = _value(c.value, spec.unit, sign=not c.total)
+        svg.text(x + bw / 2, top - 6, txt, size=11, fill=INK, anchor="middle", weight=600)
+        svg.text(x + bw / 2, h - 8, c.key, size=11, fill=INK, anchor="middle")
+    if base > 0:
+        svg.text(
+            w - 4, 12, "axis from " + _value(base, spec.unit), size=10, fill=AXIS_TXT, anchor="end"
+        )
+    return svg.done()
+
+
+def _share(spec: ChartSpec, w: int, h: int) -> str:
+    svg = _Svg(w, h, spec)
+    label_w = 68
+    row = h / len(spec.categories)
+    track_w = w - label_w - 4
+    for i, c in enumerate(spec.categories):
+        cy = row * i + row / 2
+        bh = 26.0
+        svg.text(0, cy + 4, c.key, size=11, fill=INK)
+        svg.add(
+            f'<rect x="{label_w}" y="{_f(cy - bh / 2)}" width="{_f(track_w)}" '
+            f'height="{_f(bh)}" fill="{TRACK}"/>'
+        )
+        svg.add(
+            f'<rect x="{label_w}" y="{_f(cy - bh / 2)}" width="{_f(track_w * c.value)}" '
+            f'height="{_f(bh)}" fill="{ROLE[c.role]}"/>'
+        )
+        txt = c.label or _value(c.value, spec.unit)
+        fill = WHITE if c.role == "neutral" else INK
+        svg.text(label_w + 8, cy + 4, txt, size=11, fill=fill, weight=600)
+    return svg.done()
+
+
+def _gap(spec: ChartSpec, w: int, h: int) -> str:
+    svg = _Svg(w, h, spec)
+    pts = list(spec.series[0].points)
+    region = next((a for a in spec.annotations if a.type == "region"), None)
+    # the dashed box takes as many bar slots as its label needs (at least two)
+    box_slots = 0
+    if region:
+        need = len(region.label or "") * 10 * TEXT_W + 16
+        box_slots = 2
+        while (w - 8) / (len(pts) + box_slots) * box_slots - 8 < need and box_slots < len(pts):
+            box_slots += 1
+    slots = len(pts) + box_slots
+    slot = (w - 8) / slots
+    top, bottom = 8, 20
+    hi = max(v for _, v in pts) * 1.05
+    ys = _Scale(0, hi, h - bottom, top)
+    for i, (_d, v) in enumerate(pts):
+        x = 4 + slot * i + slot * 0.18
+        svg.add(
+            f'<rect x="{_f(x)}" y="{_f(ys(v))}" width="{_f(slot * 0.64)}" '
+            f'height="{_f(ys(0) - ys(v))}" fill="{ROLE[spec.series[0].role]}"/>'
+        )
+    for o, label in _month_ticks(pts):
+        i = next(k for k, (d, _) in enumerate(pts) if _ord(d) >= o)
+        svg.text(4 + slot * i + slot * 0.18, h - 5, label)
+    if region:
+        _gap_box(svg, region, 4 + slot * len(pts) + 4, top, slot * box_slots - 8, h - bottom - top)
+    return svg.done()
+
+
+def _gap_box(svg: _Svg, a: Annotation, x: float, y: float, w: float, h: float) -> None:
+    svg.add(
+        f'<rect x="{_f(x)}" y="{_f(y)}" width="{_f(w)}" height="{_f(h)}" fill="none" '
+        f'stroke="{AXIS_TXT}" stroke-dasharray="4 3"/>'
+    )
+    svg.text(x + w / 2, y + h / 2, "?", size=16, anchor="middle")
+    if a.label:
+        svg.text(x + w / 2, y + h / 2 + 16, a.label, anchor="middle")
+
+
+def _dumbbell(spec: ChartSpec, w: int, h: int) -> str:
+    """Each category a row: the first series a hollow dot, the second a filled dot, joined; the
+    second's value labelled after the row. A threshold annotation is a dashed vertical line.
+    Narrower than 480 px, each row's name sits above its dots (phones)."""
+    svg = _Svg(w, h, spec)
+    a, b = spec.series
+    rows = list(zip(a.points, b.points, strict=True))
+    size, bottom, top = 13, 26, 24
+    stacked = w < 480
+    label_w = 16.0 if stacked else max(len(k) for k, _ in a.points) * size * TEXT_W + 20
+    vals = [v for s in spec.series for _, v in s.points]
+    vals += [x.value for x in spec.annotations if x.type == "threshold" and x.value is not None]
+    hi = max(vals) * 1.04
+    ticks = [0.0, *_nice_ticks(0, hi, most=3 if stacked else 5)]
+    hi = max(hi, ticks[-1])
+    xs = _Scale(0, hi, label_w, w - 64)
+    row = (h - top - bottom) / len(rows)
+    for t in ticks:
+        x = xs(t)
+        svg.add(
+            f'<line x1="{_f(x)}" x2="{_f(x)}" y1="{top - 8}" y2="{h - bottom}" stroke="{GRID}"/>'
+        )
+        svg.text(x, h - 8, _value(t, _whole(spec.unit)), size=11, anchor="middle")
+    for x_ in spec.annotations:
+        if x_.type == "threshold" and x_.value is not None:
+            x = xs(x_.value)
+            svg.add(
+                f'<line x1="{_f(x)}" x2="{_f(x)}" y1="{top - 8}" y2="{h - bottom}" '
+                f'stroke="{INK}" stroke-dasharray="3 3"/>'
+            )
+            if x_.label:
+                svg.text(x - 5, top - 12, x_.label, size=11, fill=INK, anchor="end")
+    ca, cb = ROLE[a.role], ROLE[b.role]
+    for i, ((key, va), (_, vb)) in enumerate(rows):
+        mid = top + row * i + row / 2
+        cy = mid + 8 if stacked else mid
+        xa, xb = xs(va), xs(vb)
+        if stacked:
+            svg.text(label_w, mid - 6, key, size=size, fill=INK)
+        else:
+            svg.text(0, cy + 4.5, key, size=size, fill=INK)
+        svg.add(
+            f'<line x1="{_f(min(xa, xb))}" x2="{_f(max(xa, xb))}" y1="{_f(cy)}" y2="{_f(cy)}" '
+            f'stroke="{cb}" stroke-opacity="0.35" stroke-width="4" stroke-linecap="round"/>'
+        )
+        svg.add(
+            f'<circle cx="{_f(xa)}" cy="{_f(cy)}" r="5" fill="{WHITE}" stroke="{ca}" '
+            f'stroke-width="2"/>'
+        )
+        svg.add(f'<circle cx="{_f(xb)}" cy="{_f(cy)}" r="5" fill="{cb}"/>')
+        svg.text(max(xa, xb) + 10, cy + 4.5, _value(vb, spec.unit), size=12, fill=INK, weight=600)
+    return svg.done()
+
+
+def _range_bar(spec: ChartSpec, w: int, h: int) -> str:
+    """A forecast's likely range (M19.5): a grey track, the range in the positive colour, the
+    expected value as a dark dot with a white ring, the goal as a dashed line labelled above, the
+    range's ends labelled below. Every label is the computed text the categories carry."""
+    svg = _Svg(w, h, spec)
+    cat = {c.key: c for c in spec.categories}
+    lo, hi, mid = cat["low"], cat["high"], cat["expected"]
+    goal = next(
+        (a for a in spec.annotations if a.type == "threshold" and a.value is not None), None
+    )
+    vals = [lo.value, hi.value, mid.value] + (
+        [goal.value] if goal and goal.value is not None else []
+    )
+    a, b = min(vals), max(vals)
+    pad = (b - a) * 0.12 or abs(a) * 0.05 or 1.0
+    xs = _Scale(a - pad, b + pad, 8, w - 8)
+    ty = max(h / 2 - 2, 30.0)  # room for the goal's label above the track
+    svg.add(f'<rect x="8" y="{_f(ty - 4)}" width="{w - 16}" height="8" rx="4" fill="{GRID}"/>')
+    x0, x1 = xs(lo.value), xs(hi.value)
+    svg.add(
+        f'<rect x="{_f(x0)}" y="{_f(ty - 4)}" width="{_f(max(x1 - x0, 2))}" height="8" rx="4" '
+        f'fill="{ROLE["positive"]}" fill-opacity="0.45"/>'
+    )
+    if goal is not None and goal.value is not None:
+        gx = xs(goal.value)
+        c = ROLE["negative"]
+        svg.add(
+            f'<line x1="{_f(gx)}" x2="{_f(gx)}" y1="{_f(ty - 16)}" y2="{_f(ty + 16)}" '
+            f'stroke="{c}" stroke-width="1.5" stroke-dasharray="3 2"/>'
+        )
+        if goal.label:
+            svg.text(gx, ty - 20, goal.label, size=11, fill=c, anchor="middle", weight=600)
+    mx = xs(mid.value)
+    svg.add(
+        f'<circle cx="{_f(mx)}" cy="{_f(ty)}" r="6" fill="{INK}" stroke="{WHITE}" '
+        'stroke-width="2"/>'
+    )
+    svg.text(x0, h - 4, lo.label or "", size=11, anchor="start")
+    svg.text(x1, h - 4, hi.label or "", size=11, anchor="end")
+    return svg.done()
+
+
+def render_svg(spec: ChartSpec, size: tuple[int, int] = (400, 160), *, legend: bool = False) -> str:
+    """`legend`: series names and the band's label go to a legend the page draws above the chart,
+    not on the plot (Big Picture, owner 15 Nov 2026; other charts from the typography release)."""
+    w, h = size
+    if spec.kind == "range_bar":
+        return _range_bar(spec, w, h)
+    if spec.kind == "sparkline":
+        return _sparkline(spec, w, h)
+    if spec.kind == "line":
+        return _line(spec, w, h, legend=legend)
+    if spec.kind == "step":
+        return _line(spec, w, h, step=True)
+    if spec.kind == "bars_contribution":
+        return _contribution(spec, w, h)
+    if spec.kind == "bars_share":
+        return _share(spec, w, h)
+    if spec.kind == "waterfall":
+        return _waterfall(spec, w, h)
+    if spec.kind == "gap_block":
+        return _gap(spec, w, h)
+    if spec.kind == "dumbbell":
+        return _dumbbell(spec, w, h)
+    raise NotImplementedError(f"{spec.kind} is rendered from M6")

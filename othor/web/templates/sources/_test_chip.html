@@ -1,0 +1,14 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/forms.html" import chip %}
+{# Test connection's answer in the connect panel (M11c): Testing… (polls), the error, or
+   connected. With go=1 a passing test connects, and `next` takes the panel on to the scan
+   (othor.js: data-panel-go) without a reload. #}
+<span id="test-result" class="flex items-center gap-8 flex-wrap"
+  {%- if src and test and test.pending %} hx-get="/sources/{{ src.id }}/test-status{{ '?go=1' if go == '1' else '' }}" hx-trigger="load delay:800ms" hx-swap="outerHTML"{% endif %}>
+  {%- if src %}<input type="hidden" name="sid" value="{{ src.id }}" form="sql-form">{% endif %}
+  {%- if test and test.pending %}{{ chip("Testing the connection…", dot="muted") }}
+  {%- elif test and test.ok %}{{ chip(test.message, dot="ok") }}{% if test.latency_ms is not none %}{{ chip("Reachable · " ~ fmt.num(test.latency_ms) ~ " ms", dot="ok") }}{% endif %}
+  {%- elif test and test.message %}{% call el("span", "field-error") %}{{ test.message }}{% endcall %}{% endif %}
+  {%- if next %}<span data-panel-go="{{ next }}" hidden></span>{% endif %}
+</span>

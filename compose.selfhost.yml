@@ -1,0 +1,78 @@
+# SPDX-License-Identifier: Apache-2.0
+# Othor AI on your own server (M20.4; docs/self-host.md): Caddy (HTTPS) → web; the worker runs
+# the nightly run and the briefs; PostgreSQL holds the metadata; /data holds results and files.
+# Settings come from .env (copy .env.selfhost.example). One company per install.
+name: othor
+
+x-app: &app
+  image: ${OTHOR_IMAGE:-ghcr.io/othorai/othor}:${OTHOR_VERSION:?set OTHOR_VERSION in .env}
+  env_file: [{path: .env, format: raw}]
+  environment:
+    OTHOR_ENV: prod
+    OTHOR_TENANCY: single
+    OTHOR_BASE_DOMAIN: ${OTHOR_DOMAIN:?set OTHOR_DOMAIN in .env}
+    OTHOR_MAIL_FROM_DOMAIN: ${OTHOR_MAIL_FROM_DOMAIN:-${OTHOR_DOMAIN}}
+    OTHOR_PUBLIC_SCHEME: https
+    OTHOR_TRUST_PROXY: caddy
+    OTHOR_DB_URL: postgresql+psycopg://othor:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/othor
+  volumes: ["othor-data:/data"]
+  restart: unless-stopped
+  stop_grace_period: 30s
+
+services:
+  db:
+    image: postgres:16.15-alpine@sha256:aa6cb33cf4c19c765cefcf48d96176258800870a9a1e930ad126200f9d825139
+    environment:
+      POSTGRES_USER: othor
+      POSTGRES_DB: othor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes: ["db-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U othor -d othor"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  # brings the database up to this version, then exits (an upgrade is: new OTHOR_VERSION, up -d)
+  migrate:
+    <<: *app
+    command: ["migrate", "--create-key"]
+    restart: "no"
+    healthcheck: {disable: true}
+    depends_on:
+      db: {condition: service_healthy}
+
+  web:
+    <<: *app
+    command: ["web", "--host", "0.0.0.0", "--port", "8000"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+
+  worker:
+    <<: *app
+    command: ["worker"]
+    healthcheck: {disable: true}
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+
+  # HTTPS in front: a Let's Encrypt certificate for OTHOR_DOMAIN by default; for a server only
+  # your network reaches, CADDYFILE=Caddyfile.internal (Caddy's own CA or your certificate)
+  caddy:
+    image: caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
+    environment:
+      OTHOR_DOMAIN: ${OTHOR_DOMAIN}
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./deploy/selfhost/${CADDYFILE:-Caddyfile}:/etc/caddy/Caddyfile:ro
+      - ${OTHOR_CERTS_DIR:-./certs}:/certs:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [web]
+    restart: unless-stopped
+
+volumes:
+  othor-data:
+  db-data:
+  caddy-data:
+  caddy-config:

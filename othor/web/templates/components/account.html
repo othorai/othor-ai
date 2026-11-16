@@ -1,0 +1,51 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/icons.html" import icon %}
+{# Account menu (closed on every app board; drawn open on 4d1). One shared component. #}
+{% macro account_menu(user, csrf_token, open=False) -%}
+<details class="account" x-data="menu"{% if open %} open{% endif %}>
+  <summary class="account-trigger" aria-haspopup="menu" aria-label="Account menu for {{ user.name }}">
+    <span class="avatar" aria-hidden="true">{{ user.initials }}</span>
+    <span class="who"><span class="name">{{ user.name }}</span><span class="email">{{ user.email }}</span></span>
+    {{ icon("chevron-down", "caret") }}
+  </summary>
+  <div class="account-menu" role="menu" aria-label="Account menu">
+    <div class="account-head"><span class="name">{{ user.name }}</span><span class="email">{{ user.email }} · {{ user.role_label }}</span></div>
+    <a class="account-item" href="/account" role="menuitem">{{ icon("user") }}Account</a>
+    <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{ csrf_token }}">
+      <button class="account-item danger" type="submit" role="menuitem"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M16 16l4-4-4-4M20 12H9"/></svg>Sign out</button></form>
+  </div>
+</details>
+{%- endmacro %}
+
+{# The Account page (M15.8, roadmap Q5.5): acct = the /account route's view #}
+{% macro account_name(acct, csrf_token) -%}
+{% from "components/forms.html" import action_form, text_input %}
+{% from "components/buttons.html" import button %}
+{% from "components/blocks.html" import banner %}
+<section class="section lines acct-section" aria-label="Your name">
+  <div class="section-head">Your name</div>
+  {% if acct.saved %}{{ banner("ok", "Name saved") }}{% endif %}
+  {% call action_form("/account/name", csrf_token, layout="acct-name") %}
+    {{ text_input("name", "Name", value=acct.name, error=acct.error, attrs='autocomplete="name" maxlength="200"') }}
+    {{ button("Save", "primary", type="submit") }}
+  {% endcall %}
+  <p class="acct-email"><span>{{ acct.email }}</span> Your email signs you in; it can’t be changed here.</p>
+</section>
+{%- endmacro %}
+
+{% macro account_sessions(acct, csrf_token) -%}
+{% from "components/buttons.html" import button %}
+<section class="section lines acct-section" aria-label="Sessions">
+  <div class="section-head">Sessions · {{ fmt.num(acct.sessions | length) }}</div>
+  <div class="table-wrap"><table class="table flush stack">
+    <thead><tr><th>Device</th><th>Signed in</th><th>Last active</th></tr></thead>
+    <tbody>{% for x in acct.sessions %}<tr class="acct-session">
+      <td>{{ x.device }}{% if x.here %} <span class="chip soft">This device</span>{% endif %}</td>
+      <td>{{ fmt.day_month(x.since.date()) }} {{ fmt.clock(x.since) }}</td>
+      <td>{{ fmt.day_month(x.seen.date()) }} {{ fmt.clock(x.seen) }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  <form class="acct-everywhere" method="post" action="/logout/everywhere"><input type="hidden" name="csrf" value="{{ csrf_token }}">
+    {{ button("Sign out everywhere", type="submit") }}<span class="hint">Signs you out on every device, this one too.</span></form>
+</section>
+{%- endmacro %}

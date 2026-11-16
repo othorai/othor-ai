@@ -1,0 +1,44 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/icons.html" import icon %}
+{% from "components/buttons.html" import button %}
+{% from "components/panels.html" import side_panel %}
+{# Check 1 of 3 · What we assumed (M11c m3) and Change on one (m6: keep or drop only, owner
+   8 Nov). Each sentence was found by a rule; its numbers are computed. #}
+{% set a = checks.assumptions %}
+{% set one = a.rows | selectattr("key", "equalto", panel.key) | first if panel.key else None %}
+{% if one %}
+{% call(part) side_panel(one.type, one.text, None, "/setup/metrics", kicker="Check 1 of 3 · What we assumed") %}
+{% if part == "body" %}
+  {% call el('a', 'link-back', attrs='href="/setup/metrics?panel=assumptions"') %}{{ icon("chevron-left") }}All assumptions{% endcall %}
+  {% call el('form', '', layout='flex flex-col gap-12', attrs={'id': 'assume-form', 'method': 'post', 'action': '/setup/metrics/found/' ~ one.key ~ '/set', 'data-inplace': true}) %}
+    <input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="next" value="/setup/metrics?panel=assumptions">
+    {% call el('p', 'strong') %}Use this assumption?{% endcall %}
+    {% call el('label', 'opt-row') %}<input type="radio" name="use" value="keep"{% if not one.skipped %} checked{% endif %}><span>{% call el('span', 'opt-t') %}Use it{% if not one.skipped %} {% call el('span', 'tag new') %}Assumed{% endcall %}{% endif %}{% endcall %}{% call el('span', 'hint') %}Saved to your Ontology as a rule when you confirm Metrics.{% endcall %}</span>{% endcall %}
+    {% call el('label', 'opt-row') %}<input type="radio" name="use" value="skip"{% if one.skipped %} checked{% endif %}><span>{% call el('span', 'opt-t') %}Don’t use this rule{% endcall %}{% call el('span', 'hint') %}It isn’t saved to your Ontology. The metrics are computed without it.{% endcall %}</span>{% endcall %}
+  {% endcall %}
+  {% call el('p', 'hint') %}You can change it in the Ontology later.{% endcall %}
+{% else %}
+  {% call el('span', 'hint') %}{{ (a.rows | map(attribute="key") | list).index(one.key) + 1 }} of {{ fmt.num(a.n) }} assumptions{% endcall %}
+  <span class="flex items-center gap-8">{{ button("Back", href="/setup/metrics?panel=assumptions") }}{{ button("Save", "primary", type="submit", attrs={"form": "assume-form"}) }}</span>
+{% endif %}
+{% endcall %}
+{% else %}
+{% call(part) side_panel("What we assumed", "Each one becomes a rule in your Ontology. Change anything that’s wrong; the rest is used as is.", None, "/setup/metrics", kicker="Check 1 of 3") %}
+{% if part == "body" %}
+  {% if a.rows %}
+  {% call el('div', 'as-list') %}
+  {% for d in a.rows %}
+    {% call el('div', 'as-row' ~ (' off' if d.skipped else '')) %}
+      <div class="flex-1 min-w-0">{% call el('p', 'label-caps') %}{{ d.type }}{% if d.skipped %} · not used{% endif %}{% endcall %}<p>{{ d.text }}</p></div>
+      {{ button("Change", "sm", href="/setup/metrics?panel=assumptions&key=" ~ d.key) }}
+    {% endcall %}
+  {% endfor %}
+  {% endcall %}
+  {% else %}{% call el('p', 'hint') %}Nothing was assumed from your data.{% endcall %}{% endif %}
+{% else %}
+  {% call el('span', 'hint') %}{{ fmt.num(a.n) }} assumption{{ "s" if a.n != 1 else "" }}{% endcall %}
+  <span class="flex items-center gap-8">{{ button("Close", href="/setup/metrics") }}{{ button("Looks right", "primary", href="/setup/metrics") }}</span>
+{% endif %}
+{% endcall %}
+{% endif %}

@@ -1,0 +1,46 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/icons.html" import icon %}
+{# The connect panel's body for PostgreSQL and MySQL (M11c, p1), in setup and the app:
+   1 the read-only role and 2 the firewall start closed; 3 the details. The panel's Connect
+   submits this form with go=1: the details are saved, the test runs, and a passing test
+   connects (the chip below follows it). No schema field: the scan reads every schema the role
+   can see. #}
+{% from "components/forms.html" import text_input, select, chip %}
+{% from "components/buttons.html" import button %}
+{% set who = "role" if kind == "postgres" else "user" %}
+{% call el('form', '', layout='flex flex-col gap-16', attrs={'id': 'sql-form', 'hx-post': '/sources/sql/' ~ kind ~ '/test', 'hx-target': '#test-result', 'hx-swap': 'outerHTML'}) %}
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <input type="hidden" name="setup" value="{{ '1' if setup else '' }}">
+  <input type="hidden" name="go" value="1">
+  {% if src %}<input type="hidden" name="sid" value="{{ src.id }}">{% endif %}
+  {% call el('details', 'conn-step') %}
+    <summary>{% call el('span', 'conn-t') %}<span>{% call el('span', 'n') %}1 · {% endcall %}Create a read-only {{ who }}</span>{% call el('span', 'hint') %}Run this in {{ cfg.database or "the database" }} first. A {{ who }} that can write is refused.{% endcall %}{% endcall %}{{ icon("chevron-down") }}</summary>
+    {% call el('div', 'conn-body') %}
+      {% call el("pre", "code-block") %}{{ role_sql }}{% endcall %}
+      <div class="flex items-center gap-8">{{ button("Copy", attrs={"data-copy-text": role_sql}) }}</div>
+    {% endcall %}
+  {% endcall %}
+  {% call el('details', 'conn-step') %}
+    <summary>{% call el('span', 'conn-t') %}<span>{% call el('span', 'n') %}2 · {% endcall %}Behind a firewall? Allow our addresses</span>{% call el('span', 'hint') %}Skip if not.{% endcall %}{% endcall %}{{ icon("chevron-down") }}</summary>
+    {% call el('div', 'conn-body') %}
+      {% call el("p", "hint") %}Allow inbound on port {{ cfg.port }} from Othor AI (Mumbai):{% endcall %}
+      {% if egress %}
+      {% set v4, v6 = egress_v4 or [], egress_v6 or [] %}
+      {% call el("dl", "kv ips") %}{% if v4 %}<dt>IPv4</dt><dd>{% for ip in v4 %}{% call el("span", "ip") %}{{ ip }}{% endcall %}{{ " · " if not loop.last }}{% endfor %}</dd>{% endif %}{% if v6 %}<dt>IPv6</dt><dd>{% for ip in v6 %}{% call el("span", "ip") %}{{ ip }}{% endcall %}{{ " · " if not loop.last }}{% endfor %}</dd>{% endif %}{% endcall %}
+      <div class="flex items-center gap-8">{{ button("Copy", attrs={"data-copy-text": egress | join(" ")}) }}{% call el('span', 'hint') %}Also listed at {% call el('a', 'link', attrs={'href': (ips_url)}) %}{{ ips_url | replace("https://", "") }}{% endcall %}{% endcall %}</div>
+      {% else %}{% call el("p", "hint") %}Our addresses are listed at {% call el('a', 'link', attrs={'href': (ips_url)}) %}{{ ips_url | replace("https://", "") }}{% endcall %}.{% endcall %}{% endif %}
+    {% endcall %}
+  {% endcall %}
+  {% call el('section', 'conn-step') %}
+    {% call el('div', 'conn-head') %}{% call el('span', 'conn-t') %}<span>{% call el('span', 'n') %}3 · {% endcall %}Enter connection details</span>{% endcall %}{{ chip("Query in place", soft=True) }}{% endcall %}
+    {% call el('div', 'conn-body') %}
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-12"><div class="md:col-span-2">{{ text_input("host", "Host", cfg.host, placeholder="db.yourcompany.internal") }}</div>{{ text_input("port", "Port", cfg.port) }}</div>
+      {{ text_input("database", "Database", cfg.database) }}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-12">{{ text_input("user", "User", cfg.user) }}{{ text_input("password", "Password", "", type="password", placeholder="••••••••" if src else "") }}</div>
+      {{ select("ssl", ssl_options, cfg.ssl, label="SSL") }}
+      {% if kind == "mysql" %}{% call el("p", "hint") %}One source per database: add another source for a second one.{% endcall %}{% endif %}
+      {% with go="1" %}{% include "sources/_test_chip.html" %}{% endwith %}
+    {% endcall %}
+  {% endcall %}
+{% endcall %}

@@ -1,0 +1,22 @@
+{% if wx %}{{ wx.kicker }}
+{{ wx.line }}
+{% if wx.ahead %}Ahead: {{ wx.ahead }}
+{% endif %}
+{% endif %}{{ brief_name }} · {{ date_label }} · {{ fmt.time_hm(b.time) }}
+
+{{ words.title }}
+{% for t in tiles %}
+{{ t.label }}: {{ t.value }} · {{ t.comparison.text }}{% if t.stale %} · {{ t.stale }}{% endif %}{% endfor %}
+{% if words.line %}
+{{ words.line }}
+{% endif %}{% if ahead %}
+What's ahead
+{% for r in ahead %}{{ r.name }}: {{ r.get('says') or r.get('why') }}{% if r.get('confidence') %} · {{ r.confidence.word }}, {{ r.confidence.why }}{% endif %}
+{% endfor %}{% if ahead_note %}{{ ahead_note }}
+{% endif %}{% endif %}{% if b.watching %}
+Watching · {{ fmt.num(b.watching | length) }} breached: {{ b.watching[0].text }}{% if b.watching | length > 1 %} · {{ fmt.num(b.watching | length - 1) }} more{% endif %}
+{% endif %}
+Open the brief: {{ open_url }}
+
+{{ footer }}
+Unsubscribe: {{ unsubscribe_url }}

@@ -1,0 +1,25 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Othor AI{% endblock %}</title>
+<link rel="icon" href="/static/favicon.ico" sizes="48x48">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<link rel="stylesheet" href="/static/css/fonts.css">
+<link rel="stylesheet" href="{{ asset('app.css') }}">
+{% block robots %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block head %}{% endblock %}
+<script src="/static/js/htmx.min.js" defer></script>
+<script src="/static/js/othor.js" defer></script>
+<script src="/static/js/alpine-csp.min.js" defer></script>
+<meta name="htmx-config" content='{"allowEval": false, "includeIndicatorStyles": false}'>
+{% if csrf_token %}<meta name="csrf-token" content="{{ csrf_token }}">{% endif %}
+</head>
+<body{% if csrf_token %} hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'{% endif %}>
+{% block body %}{% endblock %}
+<div class="offline-slot" id="offline-slot" aria-live="polite" hidden><div class="callout warn" role="status">You’re offline.</div></div>
+</body>
+</html>

@@ -1,0 +1,156 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{#- The email design system (docs/09): one column, 640 px, tables only, inline CSS, light colours
+    that hold in dark mode (color-scheme light only), an MSO wrapper for Outlook, images by cid:
+    with width, height and alt. Colours are the tokens in othor/web/styles/theme.css. -#}
+{%- set INK = "#1F2A37" -%}{%- set INK2 = "#3B4756" -%}{%- set MUTED = "#5B6B7B" -%}{%- set MUTED2 = "#8A96A3" -%}
+{%- set BORDER = "#DDE2E8" -%}{%- set RULE = "#E3E6EA" -%}{%- set SURFACE = "#F8F9FA" -%}{%- set SURFACE2 = "#F3F4F6" -%}
+{%- set ACCENT = "#2CCAFF" -%}{%- set ACCENT_DEEP = "#0B7AA6" -%}{%- set ACCENT_TINT = "#E8F8FF" -%}
+{%- set NEG = "#D64545" -%}{%- set NEG_TEXT = "#B33A3A" -%}{%- set NEG_INK = "#8A2A1E" -%}{%- set NEG_TINT = "#FDF1EF" -%}{%- set NEG_BORDER = "#F0CFC9" -%}
+{%- set WARN_TINT = "#FFF8E6" -%}{%- set WARN_TEXT = "#8A5E00" -%}{%- set OK = "#1B8A4A" -%}
+{%- set FONT = "Inter,'Segoe UI',Helvetica,Arial,sans-serif" -%}{%- set MONO = "'Geist Mono',Menlo,Consolas,monospace" -%}
+
+{% macro page(title, preheader, company_name, logo_cid) -%}
+<!doctype html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:o="urn:schemas-microsoft-com:office:office"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light only"><title>{{ title }}</title>
+<!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]--></head>
+<body style="margin:0;padding:0;background:#FFFFFF;font-family:{{ FONT }};color:{{ INK }};-webkit-text-size-adjust:100%">
+<div style="display:none;max-height:0;max-width:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#FFFFFF">{{ preheader }}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FFFFFF"><tr><td align="center" style="padding:24px 12px">
+<!--[if mso]><table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+<table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:640px;border:1px solid {{ BORDER }};border-radius:12px;border-collapse:separate">
+  <tr><td style="padding:18px 24px;border-bottom:1px solid {{ RULE }}">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+      <td width="30" valign="middle" style="width:30px"><img src="cid:{{ logo_cid }}" width="22" height="22" alt="" style="display:block;border:0;width:22px;height:22px"></td>
+      <td valign="middle" style="font-family:{{ FONT }};font-size:13px;font-weight:600;letter-spacing:0.04em;color:{{ INK }}">OTHOR AI</td>
+      <td align="right" valign="middle" style="font-family:{{ FONT }};font-size:12px;color:{{ MUTED }}">{% if co_logo is defined and co_logo %}<img src="cid:{{ co_logo.cid }}" width="{{ co_logo.w }}" height="{{ co_logo.h }}" alt="" style="display:inline-block;border:0;width:{{ co_logo.w }}px;height:{{ co_logo.h }}px;vertical-align:middle;margin-right:8px;border-radius:4px">{% endif %}{{ company_name }}</td></tr></table></td></tr>
+{{ caller() }}
+</table>
+<!--[if mso]></td></tr></table><![endif]-->
+</td></tr></table>
+</body></html>
+{%- endmacro %}
+
+{# a row of the card: content inside padding #}
+{% macro row(pad="0 24px") -%}
+<tr><td style="padding:{{ pad }};font-family:{{ FONT }}">{{ caller() }}</td></tr>
+{%- endmacro %}
+
+{% macro kicker(text, mono=False, color=None) -%}
+{%- if mono -%}<p style="margin:0;font-family:{{ MONO }};font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:{{ color or MUTED }}">{{ text }}</p>
+{%- else -%}<p style="margin:0;font-family:{{ FONT }};font-size:13px;color:{{ color or MUTED }}">{{ text }}</p>{%- endif -%}
+{%- endmacro %}
+
+{% macro title(text, size=22) -%}
+<h1 style="margin:0;font-family:{{ FONT }};font-size:{{ size }}px;line-height:1.3;font-weight:700;color:{{ INK }}">{{ text }}</h1>
+{%- endmacro %}
+
+{% macro para(text, color=None, size=15) -%}
+<p style="margin:0;font-family:{{ FONT }};font-size:{{ size }}px;line-height:1.55;color:{{ color or INK2 }}">{{ text }}</p>
+{%- endmacro %}
+
+{# bulletproof button: a padded link in a coloured cell (Outlook keeps the cell colour) #}
+{% macro button(text, href, primary=True) -%}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+<td bgcolor="{{ ACCENT if primary else '#FFFFFF' }}" style="border-radius:6px;background:{{ ACCENT if primary else '#FFFFFF' }};{{ '' if primary else 'border:1px solid ' ~ BORDER ~ ';' }}"><a href="{{ href }}" style="display:inline-block;padding:11px 16px;font-family:{{ FONT }};font-size:15px;font-weight:500;color:{{ '#0B1220' if primary else INK }};text-decoration:none;border-radius:6px">{{ text }}</a></td></tr></table>
+{%- endmacro %}
+
+{% macro buttons(items) -%}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>{% for text, href, primary in items %}<td style="padding-right:12px">{{ button(text, href, primary) }}</td>{% endfor %}</tr></table>
+{%- endmacro %}
+
+{# state tag: Measured filled, Assessed outlined, Not determinable dashed (docs/07) #}
+{% macro state_tag(state, confidence) -%}
+{%- if state == "measured" -%}<span style="display:inline-block;padding:2px 7px;border-radius:4px;background:{{ INK }};border:1px solid {{ INK }};font-family:{{ FONT }};font-size:12px;font-weight:600;color:#FFFFFF">Measured</span>
+{%- elif state == "assessed" -%}<span style="display:inline-block;padding:2px 7px;border-radius:4px;border:1px solid {{ INK }};font-family:{{ FONT }};font-size:12px;font-weight:600;color:{{ INK }}">Assessed{% if confidence %} · {{ confidence | capitalize }}{% endif %}</span>
+{%- elif state == "not_determinable" -%}<span style="display:inline-block;padding:2px 7px;border-radius:4px;border:1px dashed {{ MUTED2 }};font-family:{{ FONT }};font-size:12px;font-style:italic;color:{{ MUTED }}">Not determinable</span>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro change_tag(change) -%}
+{%- if change == "New" -%}<span style="display:inline-block;padding:2px 7px;border-radius:4px;background:{{ ACCENT_TINT }};font-family:{{ FONT }};font-size:12px;color:{{ ACCENT_DEEP }}">New</span>
+{%- elif change == "Worse" -%}<span style="display:inline-block;padding:2px 7px;border-radius:4px;background:{{ NEG_TINT }};font-family:{{ FONT }};font-size:12px;color:{{ NEG_TEXT }}">Worse</span>
+{%- elif change == "Better" -%}<span style="display:inline-block;padding:2px 7px;border-radius:4px;background:{{ SURFACE2 }};font-family:{{ FONT }};font-size:12px;color:{{ OK }}">Better</span>
+{%- elif change -%}<span style="display:inline-block;padding:2px 7px;border-radius:4px;background:{{ SURFACE2 }};font-family:{{ FONT }};font-size:12px;color:{{ MUTED }}">{{ change }}</span>
+{%- endif -%}
+{%- endmacro %}
+
+{#- v0.19 (M19.4) · What's ahead: a row per headline number; the chart as a PNG; how sure in a
+   word; "How this forecast was made" lives in the app (the button below). -#}
+{% macro ahead(rows, note=none) -%}
+<p style="margin:0 0 6px;font-family:{{ FONT }};font-size:14px;font-weight:600;color:{{ INK }}">What’s ahead</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+{% for r in rows %}<tr><td style="padding:10px 0;border-top:1px solid #E3E6EA">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+    <td valign="top" style="font-family:{{ FONT }}">
+      <p style="margin:0;font-size:14px;line-height:1.45;color:{{ INK }}"><b style="font-weight:600">{{ r.name }}</b>: {{ r.get('says') or r.get('why') }}</p>
+      {% if r.get('confidence') %}<p style="margin:4px 0 0;font-size:12px;line-height:1.4;color:#5B6B7B"><b style="font-weight:600;color:{{ INK if r.confidence.level != 'low' else NEG_TEXT }}">{{ r.confidence.word }}</b> · {{ r.confidence.why }}</p>{% endif %}</td>
+    {% if r.get('img') and not r.get('card') %}<td valign="middle" width="{{ r.img.width }}" style="width:{{ r.img.width }}px;padding:0 0 0 12px"><img src="cid:{{ r.img.cid }}" width="{{ r.img.width }}" height="{{ r.img.height }}" alt="{{ r.img.alt }}" style="display:block;border:0;width:{{ r.img.width }}px;height:{{ r.img.height }}px"></td>{% endif %}
+  </tr></table>
+  {#- the forecast card (owner, 16 Nov 2026): Big Picture's card, the line beside it -#}
+  {% if r.get('card') %}{% set c = r.card %}<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:10px 0 0"><tr>
+    <td valign="top" style="border:1px solid {{ BORDER }};border-radius:12px;padding:16px;font-family:{{ FONT }}">
+      <p style="margin:0;font-size:12px;font-weight:500;color:{{ INK2 }}">{{ c.label }}</p>
+      <p style="margin:4px 0 0;font-size:22px;font-weight:600;color:{{ INK }}">{{ c.expected }} <span style="font-size:12px;font-weight:400;color:{{ MUTED }}">expected</span></p>
+      {% if r.get('range_img') %}<img src="cid:{{ r.range_img.cid }}" width="{{ r.range_img.width }}" height="{{ r.range_img.height }}" alt="{{ r.range_img.alt }}" style="display:block;border:0;width:{{ r.range_img.width }}px;height:{{ r.range_img.height }}px;margin:8px 0 0">{% endif %}
+      {% if c.verdict %}<p style="margin:10px 0 0;padding-top:8px;border-top:1px solid {{ RULE }};font-size:12px;line-height:1.5;font-weight:600;color:{{ NEG_TEXT if c.tone == 'negative' else INK }}">{{ c.verdict }}</p>{% endif %}
+    </td>
+    {% if r.get('img') %}<td valign="middle" width="{{ r.img.width }}" style="width:{{ r.img.width }}px;padding:0 0 0 12px"><img src="cid:{{ r.img.cid }}" width="{{ r.img.width }}" height="{{ r.img.height }}" alt="{{ r.img.alt }}" style="display:block;border:0;width:{{ r.img.width }}px;height:{{ r.img.height }}px"></td>{% endif %}
+  </tr></table>{% endif %}
+  </td></tr>
+{% endfor %}</table>
+{% if note %}<p style="margin:8px 0 0;font-family:{{ FONT }};font-size:12px;line-height:1.4;color:#5B6B7B">{{ note }}</p>{% endif %}
+{%- endmacro %}
+
+{% macro watching(rows) -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{{ NEG_TINT }};border:1px solid {{ NEG_BORDER }};border-radius:8px;border-collapse:separate"><tr>
+<td valign="top" width="12" style="padding:14px 0 14px 14px;font-size:14px;line-height:1.4;color:{{ NEG }}">&#9679;</td>
+<td valign="top" style="padding:14px 8px;font-family:{{ FONT }};font-size:14px;line-height:1.4;font-weight:600;color:{{ INK }};white-space:nowrap">Watching · {{ fmt.num(rows | length) }} breached</td>
+<td valign="top" style="padding:14px 14px 14px 4px;font-family:{{ FONT }};font-size:14px;line-height:1.45;color:{{ INK2 }}">{{ rows[0].text }}{% if rows | length > 1 %} · {{ fmt.num(rows | length - 1) }} more{% endif %}</td></tr></table>
+{%- endmacro %}
+
+{% macro ask(a) -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid {{ BORDER }};border-radius:8px;border-collapse:separate"><tr><td style="padding:16px">
+<p style="margin:0 0 8px;font-family:{{ FONT }};font-size:13px;color:{{ MUTED }}">Question to ask today{% if a.to %} · <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:{{ SURFACE2 }};color:{{ INK2 }}">for {{ a.to }}{% if a.role %} · {{ a.role }}{% endif %}</span>{% endif %}</p>
+<p style="margin:0;font-family:{{ FONT }};font-size:15px;line-height:1.5;color:{{ INK }}">{{ a.text }}</p></td></tr></table>
+{%- endmacro %}
+
+{# Business weather (v0.12 part 1c): the brief's scene as a picture (email clients ignore
+   background images), the kicker and the line as text under it on the scene's panel colour in
+   the scene's text colour; then the outlook as four rows (icon, week, label, line) and the Ahead
+   line. Rows of the card, so it sits right under the logo bar, above the brief's title. #}
+{% macro weather(w) -%}
+<tr><td style="padding:20px 20px 0;font-family:{{ FONT }}">
+<table role="presentation" width="{{ w.width }}" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:{{ w.width }}px;border-collapse:separate">
+<tr><td bgcolor="{{ w.panel }}" style="font-size:0;line-height:0;background:{{ w.panel }};border-radius:10px 10px 0 0"><img src="cid:{{ w.cid }}" width="{{ w.width }}" height="{{ w.height }}" alt="{{ w.alt }}" style="display:block;border:0;width:100%;max-width:{{ w.width }}px;height:auto;border-radius:10px 10px 0 0"></td></tr>
+<tr><td bgcolor="{{ w.panel }}" style="padding:12px 16px 14px;background:{{ w.panel }};border-radius:0 0 10px 10px;font-family:{{ FONT }}">
+<p style="margin:0;font-family:{{ FONT }};font-size:12px;line-height:1.4;font-weight:600;letter-spacing:0.08em;color:{{ w.text }}">{{ w.kicker }}</p>
+<p style="margin:4px 0 0;font-family:{{ FONT }};font-size:16px;line-height:1.45;font-weight:500;color:{{ w.text }}">{{ w.line }}</p></td></tr></table></td></tr>
+{%- if w.weeks %}
+<tr><td style="padding:14px 20px 0;font-family:{{ FONT }}">
+<p style="margin:0 0 4px;font-family:{{ FONT }};font-size:13px;font-weight:600;color:{{ INK }}">{{ w.title }} <span style="font-weight:400;color:{{ MUTED }}">· from forecasts, goals and deadlines</span></p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+{% for k in w.weeks %}<tr><td valign="top" width="{{ w.icon + 12 }}" style="width:{{ w.icon + 12 }}px;padding:8px 0;border-top:1px solid {{ RULE }}"><img src="cid:{{ k.cid }}" width="{{ w.icon }}" height="{{ w.icon }}" alt="{{ k.label }}" style="display:block;border:0;width:{{ w.icon }}px;height:{{ w.icon }}px"></td>
+<td valign="top" style="padding:8px 0;border-top:1px solid {{ RULE }};font-family:{{ FONT }}">
+<p style="margin:0;font-family:{{ FONT }};font-size:13px;line-height:1.4;color:{{ MUTED }}"><b style="color:{{ INK }}">{{ k.name }}</b> · {{ k.dates }} · <b style="color:{{ WARN_TEXT if k.worst else INK }}">{{ k.label }}</b></p>
+<p style="margin:2px 0 0;font-family:{{ FONT }};font-size:13px;line-height:1.45;color:{{ INK2 }}">{{ k.line }}</p></td></tr>
+{% endfor %}</table>
+{%- if w.ahead %}
+<p style="margin:8px 0 0;font-family:{{ FONT }};font-size:14px;line-height:1.5;color:{{ INK2 }}"><b style="color:{{ INK }}">Ahead:</b> {{ w.ahead }}</p>{% endif %}</td></tr>
+{%- endif %}
+{%- endmacro %}
+
+{# a red/neutral box with monospace text (8c's error) #}
+{% macro codebox(text) -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{{ NEG_TINT }};border:1px solid {{ NEG_BORDER }};border-radius:8px;border-collapse:separate"><tr><td style="padding:14px;font-family:{{ MONO }};font-size:13px;line-height:1.6;color:{{ NEG_INK }}">{{ text }}</td></tr></table>
+{%- endmacro %}
+
+{% macro brief_footer(text, unsubscribe) -%}
+<tr><td style="padding:16px 24px;border-top:1px solid {{ RULE }};font-family:{{ FONT }};font-size:12px;line-height:1.6;color:{{ MUTED2 }}">{{ text }} · <a href="{{ unsubscribe }}" style="color:{{ MUTED }};text-decoration:underline">Unsubscribe</a></td></tr>
+{%- endmacro %}
+
+{% macro owner_footer(instance, preferences) -%}
+<tr><td style="padding:16px 24px;border-top:1px solid {{ RULE }};font-family:{{ FONT }};font-size:12px;line-height:1.6;color:{{ MUTED2 }}">Sent by your Othor AI instance at {{ instance }} · <a href="{{ preferences }}" style="color:{{ MUTED }};text-decoration:underline">Delivery preferences</a> · This email contains business data; do not forward outside the company.</td></tr>
+{%- endmacro %}
+
+{% macro spacer(h=16) -%}<tr><td height="{{ h }}" style="height:{{ h }}px;font-size:0;line-height:0">&nbsp;</td></tr>{%- endmacro %}

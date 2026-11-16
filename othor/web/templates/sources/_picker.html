@@ -1,0 +1,16 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{# Fixture mode's stand-in for Google Picker: Google Sheets only, multi-select. #}
+{% call el("div", "scrim") %}{% endcall %}
+{% call el('aside', 'panel chat', attrs='aria-label="Choose spreadsheets" id="picker"') %}
+  {% call el('header', 'panel-head') %}<div>{% call el("p", "strong") %}Choose spreadsheets{% endcall %}{% call el("p", "hint") %}Google Sheets only · Othor AI sees only what you pick{% endcall %}</div>
+    {% call el('a', 'btn quiet', attrs='href="" aria-label="Close"') %}×{% endcall %}{% endcall %}
+  {% call el('form', 'panel-body', attrs={'method': 'post', 'action': '/sources/' ~ (sid) ~ '/files'}) %}
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    {% for f in files %}
+    {% call el('label', 'picker-tile') %}<input type="checkbox" name="file" value="{{ f.id }}"{% if f.id == pre %} checked{% endif %}>
+      <span class="flex-1 min-w-0"><span>{{ f.name }}</span>{% call el("span", "hint") %} · edited {{ fmt.day_month(f.modified.date()) if f.modified else "" }}{% if f.editor %} by {{ f.editor }}{% endif %}{% endcall %}</span>{% endcall %}
+    {% else %}{% call el("p", "hint") %}No spreadsheets. Run {% call el("span", "mono") %}make seed{% endcall %} for the sample ones.{% endcall %}{% endfor %}
+    <div class="flex items-center justify-end mt-16">{% call el('button', 'btn primary', attrs='type="submit"') %}Select{% endcall %}</div>
+  {% endcall %}
+{% endcall %}

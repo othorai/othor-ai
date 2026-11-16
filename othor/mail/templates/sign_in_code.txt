@@ -1,0 +1,11 @@
+Here is your sign-in code for {{ company_name }}:
+
+    {{ code }}
+
+Expires in 10 minutes.
+
+Didn’t request it? Ignore this email.
+
+—
+Sent by your Othor AI instance at {{ instance }} · Delivery preferences: {{ preferences }}
+This email contains business data; do not forward outside the company.

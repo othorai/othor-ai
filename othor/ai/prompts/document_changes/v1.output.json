@@ -1,0 +1,149 @@
+{
+  "type": "object",
+  "properties": {
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "metric": {
+            "type": "string"
+          },
+          "quote": {
+            "type": "string"
+          },
+          "patch": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "",
+                  "use_column",
+                  "add_filter",
+                  "exclude",
+                  "convert_units"
+                ]
+              },
+              "args": {
+                "type": "object",
+                "properties": {
+                  "table": {
+                    "type": "object",
+                    "properties": {
+                      "source": {
+                        "type": "string"
+                      },
+                      "schema": {
+                        "type": "string"
+                      },
+                      "table": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "source",
+                      "schema",
+                      "table"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "column": {
+                    "type": "string"
+                  },
+                  "date": {
+                    "type": "string"
+                  },
+                  "op": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "values": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "breakdown": {
+                    "type": "string"
+                  },
+                  "breakdowns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "when": {
+                    "type": "object",
+                    "properties": {
+                      "column": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "column",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "factor": {
+                    "type": "string"
+                  },
+                  "to_unit": {
+                    "type": "string"
+                  },
+                  "primary": {
+                    "type": "string"
+                  },
+                  "fallback": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "table",
+                  "column",
+                  "date",
+                  "op",
+                  "value",
+                  "values",
+                  "breakdown",
+                  "breakdowns",
+                  "when",
+                  "factor",
+                  "to_unit",
+                  "primary",
+                  "fallback",
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "kind",
+              "args"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "metric",
+          "quote",
+          "patch"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "changes"
+  ],
+  "additionalProperties": false
+}

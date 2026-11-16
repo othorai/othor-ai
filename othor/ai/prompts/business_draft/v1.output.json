@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "properties": {
+    "paragraphs": {"type": "array", "items": {"type": "string"}},
+    "not_covered": {"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["paragraphs", "not_covered"],
+  "additionalProperties": false
+}

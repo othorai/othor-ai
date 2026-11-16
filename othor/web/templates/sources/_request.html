@@ -1,0 +1,21 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# M15.4 · Request a connector (owner, 13 Nov 2026): from Add a source, in the app only. Four
+   fields, only the system required; stored, emailed to support and counted. No stopgap line until
+   file upload ships (Q2.1). Set: creq, rq_next ("/sources" or "/setup/sources"), rq_close. #}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% from "components/forms.html" import text_input, text_area, select %}
+{% from "components/panels.html" import side_panel %}
+{% call(part) side_panel("Request a connector", "Tell us which system you use. We build the most requested first.", "+", rq_close) %}
+{% if part == "body" %}
+<form method="post" action="/sources/request" id="request-form" data-inplace class="flex flex-col gap-16">
+  <input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="next" value="{{ rq_next }}">
+  {{ text_input("system", "System", placeholder="For example Zoho Books, Tally, SAP Business One", error=creq.error, autofocus=True) }}
+  {{ text_input("version", "Version (if you know it)", placeholder="For example 2024, Prime 4.1, cloud") }}
+  {{ text_area("wants", "What you want from it (optional)", placeholder="For example invoices and payments, so collections show in the brief", rows=3) }}
+  {{ select("reach", [("", "Choose…")] + creq.reach, label="How you reach it today (optional)") }}
+  {% call el("p", "hint") %}We build the most requested first and we’ll email you when it’s ready. Nothing is read from it until you connect it.{% endcall %}
+</form>
+{% else %}{% call el("span", "hint") %}Sent to Othor AI support{% endcall %}<span class="flex items-center gap-8">{{ button("Cancel", href=rq_close) }}{{ button("Send request", "primary", type="submit", attrs={"form": "request-form"}) }}</span>
+{% endif %}
+{% endcall %}

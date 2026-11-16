@@ -1,0 +1,166 @@
+[project]
+name = "othor"
+version = "0.19.0"
+description = "Othor AI v0.1"
+requires-python = "==3.12.*"
+# Every dependency is pinned exactly (non-negotiable 2: same inputs, same numbers).
+dependencies = [
+  "alembic==1.20.1",
+  "anthropic==2.4.0",
+  "apscheduler==3.11.0",
+  "cryptography==50.0.2",
+  "defusedxml==0.7.1",
+  "duckdb==2.0.0",
+  "fastapi==0.162.0",
+  "httpx==0.28.1",
+  "jinja2==3.1.6",
+  "numpy==2.5.4",
+  "openpyxl==3.1.5",
+  "pandas==3.1.0",
+  "pillow==13.0.0",
+  "psycopg[binary]==3.3.7",
+  "pydantic-settings==2.16.2",
+  "pymysql==1.2.3",
+  "pypdf==6.21.4",
+  "python-docx==1.1.2",
+  "python-multipart==0.0.33",
+  "resvg-py==0.5.0",
+  "ruptures==1.1.10",
+  "scipy==1.18.1",
+  "sqlalchemy==2.1.8",
+  "sqlglot==30.29.0",
+  "statsmodels==0.15.0",
+  "typer==0.27.3",
+  "uvicorn==0.54.0",
+  "weasyprint==70.0",
+]
+
+[project.scripts]
+othor = "othor.cli:app"
+
+# The othor.ai website, a private plug-in (M20.2): the public export drops this and othor_site/
+[project.entry-points."othor.plugins"]
+
+[dependency-groups]
+dev = [
+  "fpdf2==2.9.0",
+  "httpx==0.28.1",
+  "import-linter==2.15",
+  "mypy==2.4.1",
+  "pandas-stubs==3.1.0.261029",
+  "playwright==1.64.1",
+  "pytest==9.2.0",
+  "pyyaml==6.0.2",
+  "ruff==0.17.3",
+]
+
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["othor"]  # othor_site: private, the hosted build only (M20.2)
+
+[tool.uv]
+package = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["othor", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
+ignore = ["S101", "RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106", "S311", "S603", "S608"]
+"scripts/**" = ["E501", "S310"]
+"othor/web/components_demo.py" = ["E501"]  # chart data for the review pages
+"marketing/**" = ["E501"]  # the handbook's copy, one line per sentence
+# The fixture generator: closures are called inside their own loop iteration (bisection).
+"tests/fixtures/**" = ["S105", "S106", "S311", "S603", "S608", "E501", "B023"]
+"othor/migrations/**" = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = [
+  "othor.core", "othor.engine", "othor.connectors", "othor.jobs", "othor.ai", "othor.ontology",
+  "othor.setup", "othor.briefs",
+]
+plugins = []
+
+[[tool.mypy.overrides]]
+module = ["pymysql.*", "duckdb.*", "openpyxl.*", "apscheduler.*", "scipy.*", "ruptures.*", "statsmodels.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]  # othor_site: the private website's tests (M20.2)
+addopts = "-q --strict-markers"
+markers = [
+  "db: needs the docker compose services (make dev)",
+  "pg: runs against the metadata Postgres",
+  "browser: drives headless Chromium (playwright install chromium)",
+  "perf: server time per page against the 300 ms budget (M11a)",
+]
+filterwarnings = [
+  "error::DeprecationWarning:othor.*",
+  "ignore:Using `httpx` with `starlette.testclient`",
+]
+
+[tool.importlinter]
+root_packages = ["othor"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Engine, scheduler and charts never import the AI module or setup (non-negotiable 4)"
+type = "forbidden"
+source_modules = ["othor.engine", "othor.charts"]
+forbidden_modules = ["othor.ai", "othor.setup"]
+
+[[tool.importlinter.contracts]]
+name = "The brief the run makes never imports the AI module (M8: prose rewrites run after seal)"
+type = "forbidden"
+source_modules = [
+  "othor.briefs.step", "othor.briefs.assemble", "othor.briefs.service", "othor.briefs.rank",
+  "othor.briefs.tiles", "othor.briefs.title", "othor.briefs.consequence", "othor.briefs.scope",
+  "othor.briefs.weather", "othor.briefs.outlook",
+]
+forbidden_modules = ["othor.ai", "othor.setup"]
+
+[[tool.importlinter.contracts]]
+name = "Delivery never imports the AI module: emails repeat the stored issue (M9)"
+type = "forbidden"
+source_modules = ["othor.mail"]
+forbidden_modules = ["othor.ai", "othor.setup"]
+
+[[tool.importlinter.contracts]]
+name = "Connectors and the Ontology never import the AI module (the nightly run reads through them)"
+type = "forbidden"
+source_modules = ["othor.connectors", "othor.ontology"]
+forbidden_modules = ["othor.ai", "othor.setup"]
+
+[[tool.importlinter.contracts]]
+name = "Core is the bottom layer"
+type = "forbidden"
+source_modules = ["othor.core"]
+forbidden_modules = [
+  "othor.web", "othor.ontology", "othor.connectors", "othor.engine",
+  "othor.briefs", "othor.ai", "othor.mail", "othor.cli", "othor.charts",
+]
+
+[[tool.importlinter.contracts]]
+name = "Product code never imports tests"
+type = "forbidden"
+source_modules = [
+  "othor.core", "othor.web", "othor.ontology", "othor.connectors", "othor.engine",
+  "othor.briefs", "othor.ai", "othor.mail", "othor.charts", "othor.jobs", "othor.setup",
+]
+forbidden_modules = ["tests"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["othor", "tests"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Form", "fastapi.Query", "fastapi.File"]

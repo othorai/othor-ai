@@ -1,0 +1,30 @@
+{% if wx %}{{ wx.kicker }}
+{{ wx.line }}
+{% if wx.ahead %}Ahead: {{ wx.ahead }}
+{% endif %}
+{% endif %}{{ brief_name }} · {{ date_long }} · {{ fmt.time_hm(b.time) }} {{ tz_label }}
+
+{{ words.title }}
+{% if sources %}
+{% if stale_line %}{{ stale_line }}{% else %}Sources fresh{% endif %}{% for x in sources %} · {{ x }}{% endfor %}
+{% endif %}{% if words.situation %}
+{{ words.situation }}
+{% endif %}
+Needs attention · {{ fmt.num(items | length) }}
+{% for i in items %}
+{{ i.rank }}. {{ i.title }} · {{ i.money }}
+   {{ i.state_text }}{% if i.change %} · {{ i.change }}{% endif %}
+{% endfor %}{% if since %}
+Since {{ since_word }}, across every finding this brief covers: {{ since }}.
+{% endif %}{% if ahead %}
+What's ahead
+{% for r in ahead %}{{ r.name }}: {{ r.get('says') or r.get('why') }}{% if r.get('confidence') %} · {{ r.confidence.word }}, {{ r.confidence.why }}{% endif %}
+{% endfor %}{% if ahead_note %}{{ ahead_note }}
+{% endif %}{% endif %}{% if b.ask %}
+Question to ask today{% if b.ask.to %} · for {{ b.ask.to }}{% if b.ask.role %} · {{ b.ask.role }}{% endif %}{% endif %}
+{{ b.ask.text }}
+{% endif %}
+Open the brief: {{ open_url }}
+
+{{ footer }}
+Unsubscribe: {{ unsubscribe_url }}

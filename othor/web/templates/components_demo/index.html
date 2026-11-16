@@ -1,0 +1,71 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "base.html" %}
+{% from "components/buttons.html" import button, link, info %}
+{% from "components/forms.html" import text_input, suffix_input, select, toggle, chip, code_boxes %}
+{% from "components/tags.html" import state_tag, change_tag %}
+{% from "components/blocks.html" import banner, callout, toast, empty_state, kpi, tabs, step_bar, records, link_card, link_others, page_title %}
+{% from "components/panels.html" import chat_panel, wide_panel, msg_user, msg_ai, quick_replies, draft_card %}
+{% from "components/account.html" import account_menu %}
+{% from "components/sweep.html" import stat, finding_card, detectors_strip, finding_row, detector_table, reasons, kv, status_pill, rows_table, question_box, pattern_groups, runs_menu %}
+{% block title %}Components{% endblock %}
+{% block body %}
+<div class="board-page flex flex-col gap-24">
+  <div><h1 class="board-title">Components</h1><p class="board-sub">Every shared component. Boards: <a class="link" href="/_components/9a">9a</a> · <a class="link" href="/_components/9b">9b</a> · <a class="link" href="/_components/9c">9c</a></p></div>
+  <section class="flex flex-col gap-12"><p class="label-caps">Buttons and links</p>
+    <div class="flex items-center flex-wrap gap-8">{{ button("Send me a code", "primary", "lg") }}{{ button("Share") }}{{ button("‹ Yesterday", "quiet") }}{{ button("Remove source", "danger") }}{{ link("How is this calculated?") }}{{ info() }}{{ info(text="Net revenue: invoices less credit notes, computed in the nightly run.", id="pop-demo") }}</div></section>
+  <section class="flex flex-col gap-12"><p class="label-caps">Fields</p>
+    <div class="grid gap-16 grid-cols-1 md:grid-cols-3">{{ text_input("email", "Work email", "uday@indigothread.example") }}
+      {% call suffix_input("slug", "Company address", "indigothread", ".othor.ai") %}<p class="field-ok"><span class="dot ok"></span>indigothread.othor.ai is available</p>{% endcall %}
+      {{ select("fy", [("4", "April"), ("1", "January")], "4", "Fiscal year starts") }}
+      {{ text_input("bad", "Work email", "ravi@indigothread.example", error="This email isn’t part of Indigo Thread Co..") }}
+      <div class="field"><span class="field-label">6-digit code</span>{{ code_boxes(["4", "8", "2", "", "", ""], focus=3) }}</div><div class="field" data-demo="code-wrong"><span class="field-label">After a wrong code</span>{{ code_boxes(["8", "4", "6", "7", "9", "8"], state="error", name="wrong") }}</div>
+      <div class="flex items-center gap-12">{{ toggle("email", True, label="Email") }}{{ chip("Last 30 days") }}{{ chip("indigothread.othor.ai", mono=True) }}{{ chip("Healthy", dot="ok", soft=True) }}</div></div></section>
+  <section class="flex flex-col gap-12"><p class="label-caps">Tags</p><div class="flex items-center flex-wrap gap-8">{{ state_tag("measured") }}{{ state_tag("assessed", "Medium") }}{{ state_tag("not_determinable") }}{{ state_tag("needs_confirmation") }}{{ change_tag("new") }}{{ change_tag("worse") }}{{ change_tag("open", 11) }}{{ change_tag("better") }}{{ change_tag("resolved") }}{{ change_tag("changed") }}</div></section>
+  {% from "components/ontology.html" import ont_row %}
+  <section class="flex flex-col gap-12" data-demo="ont-long"><p class="label-caps">Ontology line, long (Read more, #48)</p>{{ ont_row("We are a textile company. " * 20, "Your Ontology") }}</section>
+  <section class="flex flex-col gap-12"><p class="label-caps">Page title row (with and without an action)</p>{{ page_title("Settings") }}{{ page_title("Ontology", info="What Othor AI knows about the company. Changes apply from the next run.") }}{% call page_title("Data sources") %}{{ button("Add a source", "primary") }}{% endcall %}</section>
+  <section class="flex flex-col gap-12"><p class="label-caps">Tabs and step bar</p>{{ tabs([("Executive summary", "#"), ("Product family", "#"), ("Region", "#")], "Executive summary") }}{{ step_bar(["Company", "Upload", "Business", "Sources", "Metrics", "First run"], 3) }}</section>
+  <section class="flex flex-col gap-12"><p class="label-caps">Banners, callouts, toasts</p>
+    {{ banner("neg", "erp_db could not be read at 02:03 · numbers from it are from Friday", "Reconnect") }}{{ banner("warn", "2 numbers need confirmation before the first brief", "Review") }}
+    <div class="flex items-center gap-12">{{ callout("Wrong code. 2 attempts left.", "err") }}{{ callout("Code expired.", "warn") }}{{ callout("New code sent. Resend in <span class='mono'>0:47</span>.") }}</div>
+    <div>{{ toast("Time zone saved", action="Undo") }}</div></section>
+  <section class="flex flex-col gap-12"><p class="label-caps">Table and KPI</p>
+    <div class="grid gap-16 grid-cols-1 md:grid-cols-2"><table class="table"><thead><tr><th>Account</th><th class="num">Last invoice</th><th class="num">Last 12 m</th></tr></thead>
+      <tbody><tr><td>Shree Varada Textiles</td><td class="num">12 Jul</td><td class="num">{{ fmt.inr(6200000, unit="cr") }}</td></tr><tr class="is-selected"><td>Tidewell Garments</td><td class="num">2 Jul</td><td class="num">{{ fmt.inr(4800000, unit="cr") }}</td></tr></tbody></table>
+      <div class="grid gap-16 grid-cols-1 md:grid-cols-2">{{ kpi("Net revenue · Oct", fmt.inr(46200000), chart(specs.sparkline_below, 120, 36)) }}{{ kpi("DSO", fmt.days(46, decimals=0), chart(specs.sparkline_on_track, 120, 36)) }}</div></div></section>
+  <section class="flex flex-col gap-12"><p class="label-caps">Account menu (open, as on 4d1)</p>
+    <div class="account-demo">{{ account_menu(demo_user, "", open=True) }}</div>
+    <div class="flex items-center gap-8">{{ runs_menu([(12, demo_date, "nightly"), (11, demo_date, "first run")], 12) }}</div></section>
+  <section class="flex flex-col gap-12"><p class="label-caps">Copy (one shared script: clipboard, “Copied” toast, select-all fallback)</p>
+    <div class="flex items-center gap-8">{{ button("Copy SQL", attrs={"data-copy-text": "SELECT 1", "id": "copy-demo"}) }}<pre class="code-block" id="copy-target">SELECT region, SUM(net_amount) FROM invoices GROUP BY 1</pre>{{ button("Copy the block", attrs={"data-copy-target": "#copy-target", "id": "copy-target-demo"}) }}</div>
+    <div id="toast-dock" class="toast-dock" aria-live="polite"></div>
+  </section>
+  <section class="flex flex-col gap-12"><p class="label-caps">Sweep (5a–5f, 10i, finding panel)</p>
+    {{ detectors_strip({"total": 11, "active": 3, "inactive": 8, "suppressed": 0, "segments": [{"key": "net_hiding_gross", "label": "Net hiding gross", "short": "Net/gross", "status": "Running", "kind": "on", "catches": "A flat total hiding moves that cancel out underneath", "result": "19 breakdowns · clean", "covers": "19 breakdowns", "missing": "", "action": None}, {"key": "changepoint", "label": "Changepoint", "short": "Shift", "status": "Partly", "kind": "partly", "catches": "The week a baseline moved, and stayed moved", "result": "", "covers": "3 of 14 series", "missing": "11 still building history", "action": None}, {"key": "lead_lag", "label": "Lead/lag", "short": "Lag", "status": "Could not run", "kind": "off", "catches": "One number that moves weeks before another", "result": "", "covers": "", "missing": "Needs two numbers that move together", "action": ("Answer 1 question →", "#")}]}, "Each detector is one way Sweep tests your numbers every night.") }}
+    <div class="grid gap-16 grid-cols-1 md:grid-cols-4">{{ stat("11", "detectors · 6 running fully", boxed=True) }}{{ stat("19 / 25", "metrics with enough history", boxed=True) }}</div>
+    <div class="grid gap-16 grid-cols-1 md:grid-cols-2">
+      {{ finding_card({"number": "01", "fp": "demo", "label": "Missing records", "money": "₹3.6 Cr", "state": "measured", "confidence": None, "change": ("new", None), "title": "14 customers still marked active haven’t invoiced in 90+ days", "line": "Together ₹3.6 Cr over the last 12 months.", "chart": None, "rows": {"headers": ["Account", "Last invoice", "Last 12 m"], "rows": [["Shree Varada Textiles", "12 Jul", "₹0.62 Cr"], ["Tidewell Garments", "2 Jul", "₹0.48 Cr"]], "note": "No chart by design: these accounts produce no rows.", "more": 12, "noun": "accounts", "total": 14}, "why": "erp_db has no churn status. Customers don’t cancel; they stop ordering, so no row is created.", "question": {"text": "Who owns an account that hasn’t cancelled but has stopped buying?", "to": [{"name": "Priya Menon", "role": "Head of Sales"}]}, "home_note": None}, 0, "") }}
+      {{ finding_card({"number": "02", "fp": "demo2", "label": "Rising variance", "money": "₹0.8 Cr at risk", "state": "assessed", "confidence": "high", "change": ("open", 4), "title": "Dispatch time spread at Coimbatore doubled from 12 Sep", "line": "The slowest tenth now take 7.9 days, up from 5.1.", "chart": specs.line_spread, "rows": None, "why": "Reports show the average, and the average has not moved.", "question": None, "home_note": "Added to Home as a question for Leela and Priya"}, 0, "") }}
+    </div>
+    <div class="flex flex-col">{{ finding_row({"fp": "demo", "label": "Net hiding gross", "state": "measured", "confidence": None, "change": ("new", None), "brief": "Leadership brief", "money": "₹1.4 Cr", "title": "South fell ₹1.4 Cr; West’s rise hid it", "line": "Total sales look flat for October; the regions moved apart."}, 1) }}</div>
+    {{ detector_table([{"label": "Net hiding gross", "status": "Running", "kind": "on", "covers": "10 breakdowns", "missing": "", "action": None}, {"label": "Changepoint", "status": "Partly", "kind": "partly", "covers": "67 of 69 series", "missing": "2 still building history · turns on fully around 9 Dec", "action": None}, {"label": "Concentration", "status": "Could not run", "kind": "off", "covers": "", "missing": "Needs your customer list", "action": ("Answer 1 question →", "#")}]) }}
+    <div class="grid gap-16 grid-cols-1 md:grid-cols-2">{{ reasons([{"text": "Invoicing is late.", "settle": "", "ruled_out": False}, {"text": "The orders were cancelled after dispatch.", "settle": "", "ruled_out": False}]) }}{{ reasons([{"text": "Orders moved to a competitor", "settle": "Needs deal activity or a call", "ruled_out": False}, {"text": "Billing moved to another entity", "settle": "No new customer with the same GSTIN", "ruled_out": True}], verdicts=True) }}</div>
+    <div class="grid gap-16 grid-cols-1 md:grid-cols-2">{{ kv([("Detector", "Net hiding gross · v1"), ("Window", "1 Sep – 31 Oct 2026")]) }}<div class="flex items-center gap-8">{{ status_pill("breached") }}{{ status_pill("within") }}</div></div>
+    {{ pattern_groups([{"label": "Surat plant shutdown, 10–24 August", "tail": "known pattern, confirmed 28 Oct", "metrics": ["metres dispatched (catch-up week of 24 Aug)"]}]) }}
+  </section>
+  <section class="flex flex-col gap-12"><p class="label-caps">Panels (shown inline here)</p>
+    <div class="grid gap-16 grid-cols-1 md:grid-cols-2">
+      {% call chat_panel("Fix with Othor AI", "Net revenue · conflict", inline=True) %}{{ msg_user("Use net of GST.") }}{{ msg_ai("Then every brief uses net of GST.") }}{{ draft_card("Net revenue = invoices − credit notes − rebates, net of GST", fmt.inr(46200000) ~ " in October") }}{{ quick_replies(["Apply", "Show the SQL"]) }}{% endcall %}
+      {% call wide_panel("Connect PostgreSQL", "Source 2 · read-only", inline=True) %}<p class="hint">Step content goes here.</p>{% endcall %}</div></section>
+  <section class="flex flex-col gap-12"><p class="label-caps">Recipients’ link pages (10e, 10f)</p>
+    <div class="grid gap-16 grid-cols-1 md:grid-cols-2">
+      <div>{% call link_card("This link has expired", "Brief links work for 7 days.", kicker="Leadership brief · Sat 1 Nov", fine="The new link goes only to priya@indigothread.example.") %}{{ button("Email me a new link", "primary") }}{% endcall %}</div>
+      <div>{% call link_card("You won’t get the Leadership brief", "priya@indigothread.example is off the Leadership brief from tomorrow.", pill="Unsubscribed") %}{{ button("Undo") }}{{ link_others([("Sales brief · daily 06:00", "demo-unsub")]) }}{% endcall %}</div></div></section>
+  {% from "components/home.html" import home_card, question_row, recent_row, qp_steps, qp_pick, qp_nav %}
+  <section class="flex flex-col gap-12"><p class="label-caps">Home (3a, 3aa, 3b)</p>
+    <div class="brief-cards home">{{ home_card("Leadership brief", "Revenue is under its band; South explains most of it.", "4 findings · sent 06:00 to 6", "#", flag=True) }}{{ home_card("Sweep", "212 tests last night · 7 detectors", "8 findings · 2 suppressed", "#", action="Open Sweep →") }}</div>
+    <div class="card">{{ question_row(1, "Is Skarfab’s invoicing gap since 9 Oct expected?", "Morning Brief") }}{{ question_row(2, "Is the Surat shutdown 10–24 Aug the same every year?", "Sweep") }}</div>
+    <div class="card">{{ recent_row("Sun 1 Nov", "Accepted on Home: Net revenue FY27 at risk", "Goal") }}</div>
+    <div class="flex flex-col gap-12">{{ qp_steps(2, 3, 1, ["done", "now", ""]) }}<div class="flex flex-col gap-8">{{ qp_pick("demo-pick", "a", "Billing is right", checked=True) }}{{ qp_pick("demo-pick", "b", "Erp is right") }}{{ qp_pick("demo-pick", "__other", "Something else…") }}</div>{{ qp_nav("#", "#") }}</div></section>
+</div>
+{% endblock %}

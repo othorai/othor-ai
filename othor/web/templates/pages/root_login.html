@@ -1,0 +1,22 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/auth.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% from "components/forms.html" import chip %}
+{% block title %}Sign in · Othor AI{% endblock %}
+{% block auth_class %} roomy signin{% endblock %}
+{% block card %}
+{% call el('form', 'auth-card', attrs='method="post" action="/login" novalidate') %}
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <h1>Sign in</h1>
+  {% call el("p", "lede") %}Enter your company’s Othor AI address.{% endcall %}
+  {% call el('div', 'field') %}
+    <label for="f-slug">Company address</label>
+    {% call el('div', 'input-group' ~ ((' is-error' if error else '') | string | e)) %}<input id="f-slug" name="slug" value="{{ value }}" autocomplete="off" spellcheck="false" autofocus{% if error %} aria-invalid="true" aria-describedby="e-slug"{% endif %}>{% call el("span", "suffix") %}.{{ base_domain }}{% endcall %}{% endcall %}
+    {% if error %}{% call el("p", "field-error", attrs='id="e-slug"') %}{{ error }}{% endcall %}{% endif %}
+  {% endcall %}
+  {{ button("Continue", "primary", "lg", type="submit", block=True) }}
+  {% if recent %}<div class="flex flex-col gap-8">{% call el('p', 'fine') %}Recent{% endcall %}<div class="flex items-center flex-wrap gap-8">{% for r in recent %}{% call el('button', 'chip mono-chip', attrs={'type': 'submit', 'name': 'slug', 'value': (r)}) %}{{ r }}.{{ base_domain }}{% endcall %}{% endfor %}</div></div>{% endif %}
+  {% call el("p", "foot") %}New to Othor AI? <a href="/signup">Create a company</a>{% endcall %}
+{% endcall %}
+{% endblock %}

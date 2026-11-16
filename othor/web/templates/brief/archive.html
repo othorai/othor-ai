@@ -1,0 +1,74 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/app.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import tabs as tabs_bar, empty_state, banner, page_title %}
+{% from "components/buttons.html" import button, link, link_menu, menu_link %}
+{% from "components/forms.html" import select %}
+{% from "components/panels.html" import pane, pane_title %}
+{% from "components/sweep.html" import stat, overlay, kv, run_phases %}
+{% block title %}Archive · Morning Brief · {{ company.name }}{% endblock %}
+{% block crumb %}Morning Brief{% endblock %}
+{% block crumb_after %}{% call el("p", "crumbs", layout="hidden md:flex") %}{% call el("span", "crumb-sep") %}/{% endcall %}<span>Archive</span>{% endcall %}{% endblock %}
+{% block main %}
+{% set bq = ("brief=" ~ picked_brief) if picked_brief else "" %}
+{# M12: before the first run there is nothing to pick or count; only the empty state shows #}
+{% set any_runs = stats.runs or rows or month_tabs %}
+{# the page style (owner, 13 Nov 2026): the brief filter on the title row's right #}
+{% call page_title("Archive") %}{% if any_runs %}{% call el("form", layout="flex items-center gap-8", attrs={"method": "get", "action": "/brief/archive"}) %}
+  {{ select("brief", brief_options, (picked_brief | string) if picked_brief else "", small=True, attrs='aria-label="Brief"') }}
+  {% if month %}<input type="hidden" name="month" value="{{ month.strftime('%Y-%m') }}">{% endif %}
+  {{ button("Show", type="submit") }}
+{% endcall %}{% endif %}{% endcall %}
+<div class="flex flex-col gap-20">
+
+  {% if month_tabs %}{{ tabs_bar(month_tabs, month_on) }}{% endif %}
+
+  {% if any_runs %}{% call el("div", "archive-stats") %}
+    {{ stat(fmt.num(stats.briefs), "briefs · " ~ fmt.num(stats.brief_kinds) ~ " brief" ~ ("s" if stats.brief_kinds != 1 else ""), boxed=True) }}
+    {{ stat(fmt.num(stats.runs_ok) ~ " / " ~ fmt.num(stats.runs), "runs OK · last 31 days", boxed=True) }}
+    {{ stat(fmt.num(stats.promoted), "findings promoted into briefs", boxed=True) }}
+    {{ stat((fmt.num(stats.identical) ~ " / " ~ fmt.num(stats.replayed)) if stats.replayed else "—", "replayed identical" if stats.replayed else "no replay checked yet", boxed=True) }}
+  {% endcall %}{% endif %}
+
+  {% if rows %}
+  {# M15.9 · the page style: the briefs under a caps title, 56 px below the stats, a flush table #}
+  {% call el("div", layout="flex flex-col gap-8 mt-36") %}{% call el("p", "caps-title") %}Briefs · {{ fmt.num(rows | length) }}{% endcall %}
+  {% call el("div", "table-wrap") %}{% call el("table", "table flush") %}<thead><tr><th>Date</th><th>Brief</th><th>Headline</th>{% call el("th", "num") %}Findings{% endcall %}<th>Run</th><th></th></tr></thead><tbody>
+  {% for r in rows %}<tr>
+    <td>{{ fmt.date_short(r.date) }}</td>
+    <td>{{ r.brief or "—" }}</td>
+    {% call el("td", "wrap") %}{{ r.title or "—" }}{% endcall %}
+    {% call el("td", "num") %}{{ (fmt.num(r.item_count) ~ " of " ~ fmt.num(r.tests)) if not r.failed else "—" }}{% endcall %}
+    <td>{% if r.run %}#{{ "%04d" | format(r.run) }}{% endif %}{% if r.failed %} · failed · not made{% elif r.rerun %} · updated{% elif r.stale %} · a source stale{% endif %}{% if r.earlier %} · {% call link_menu(fmt.num(r.earlier | length) ~ " earlier run" ~ ("s" if r.earlier | length != 1 else "")) %}{% for e in r.earlier %}{{ menu_link(("#" ~ ("%04d" | format(e.run)) ~ " · " if e.run else "") ~ e.at, "/brief/" ~ r.brief_id ~ "?date=" ~ r.date.isoformat() ~ "&issue=" ~ e.issue) }}{% endfor %}{% endcall %}{% endif %}</td>
+    <td>{% if r.failed %}{{ link("Why it failed", "/brief/archive?" ~ (query ~ "&" if query else "") ~ "failed=" ~ r.run) }}{% else %}{{ link("Open", "/brief/" ~ r.brief_id ~ "?date=" ~ r.date.isoformat() ~ ("&issue=" ~ r.issue if r.issue else "")) }}{% endif %}</td>
+  </tr>{% endfor %}
+  </tbody>{% endcall %}{% endcall %}{% endcall %}
+  {% else %}
+  {% call el("div", "card board") %}{{ empty_state(None, "No briefs this month" if any_runs else "No briefs yet", "Each night’s briefs are kept here by date.") }}{% endcall %}
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block overlay %}
+{% if failed_panel %}
+{% set f = failed_panel %}
+{% set close = "/brief/archive" ~ ("?" ~ query if query else "") %}
+{% call overlay("Why it failed", close) %}
+{% call(part) pane() %}
+{% if part == "head" %}
+  {% call pane_title("Run #" ~ ("%04d" | format(f.number)) ~ " · " ~ fmt.date_short(f.date), "Nightly run for " ~ (f.briefs | join(", ")), close) %}{% call el("span", "kind-chip") %}Failed · not sent{% endcall %}{% endcall %}
+{% elif part == "body" %}
+<div class="flex flex-col gap-16">
+  {{ banner("neg", ("<b>Failed while %s</b> · The run stopped before the brief was made, so no brief was sent." | safe) | format(f.step | e)) }}
+  {{ kv(f.facts) }}
+  {% if f.error %}{% call el("p", "label-caps") %}Error{% endcall %}{% call el("pre", "code-block") %}{{ f.error }}{% endcall %}{% endif %}
+  {% call el("p", "label-caps") %}Steps{% endcall %}
+  {{ run_phases(f.phases) }}
+</div>
+{% else %}
+{% call el("div", layout="flex items-center justify-between gap-12 w-full") %}{% call el("p", "prov-foot") %}Yesterday’s brief stays available{% endcall %}<div class="flex items-center gap-8">{% if f.rerunning %}{% call el("p", "prov-foot", attrs='role="status"') %}Re-running · the brief follows when it finishes{% endcall %}{% else %}{{ button("Fix source", href="/sources") }}{% if f.can_rerun %}{% call el("form", attrs='data-inplace method="post" action="/brief/archive/runs/' ~ f.number ~ '/rerun"') %}<input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Re-run now", "primary", type="submit") }}{% endcall %}{% endif %}{% endif %}</div>{% endcall %}
+{% endif %}
+{% endcall %}
+{% endcall %}
+{% endif %}
+{% endblock %}

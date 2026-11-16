@@ -1,0 +1,10 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/app.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import empty_state, page_title %}
+{% block title %}{{ title }} · {{ company.name }}{% endblock %}
+{% block crumb %}{{ title }}{% endblock %}
+{% block main %}
+{{ page_title(title) }}
+{% call el("div", "card board") %}{{ empty_state(None, empty, text, "Continue setup" if resume else None, resume or "#", primary=True) }}{% endcall %}
+{% endblock %}

@@ -1,0 +1,32 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% from "components/forms.html" import code_boxes %}
+{% from "components/blocks.html" import callout %}
+{% call el('div', 'auth-card' ~ ((' compact' if compact else '') | string | e)) %}
+  {% if label %}{% call el("p", "label-code") %}{{ label }}{% endcall %}{% endif %}
+  {% if state %}<h1>Enter the code</h1>{% call el("p", "lede") %}Sent to {{ email }}{% endcall %}
+  {% else %}<h1>Check your email</h1>{% call el("p", "lede") %}We sent a code to {% call el("b", "strong") %}{{ email }}{% endcall %}.{% endcall %}{% endif %}
+  <form class="flex flex-col gap-16" method="post" action="{{ action }}" novalidate>
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    {% call el('div', 'field') %}{% if not state %}{% call el("span", "field-label") %}6-digit code{% endcall %}{% endif %}
+      {{ code_boxes(digits if state != "locked" else ["·"] * 6, state={"wrong": "error", "locked": "locked"}.get(state, ""), focus=None if state not in ("", None, "wrong") else 0, compact=compact) }}{% endcall %}
+    {% if state == "wrong" %}{{ callout("Wrong code. " ~ attempts_left ~ (" attempt left." if attempts_left == 1 else " attempts left."), "err") }}
+      {{ button("Try again", "primary", "lg", type="submit", block=True) }}
+    {% elif state == "locked" %}{{ callout("Too many attempts. Try again in 15 minutes.", "err") }}
+    {% elif state == "expired" %}{{ callout("Code expired.", "warn") }}
+    {% elif state == "cooldown" %}{% call el("div", "callout", attrs='role="status"') %}New code sent. Resend in {% call el('span', 'mono', attrs={'data-countdown': (resend_in)}) %}{{ "%d:%02d" % (resend_in // 60, resend_in % 60) }}{% endcall %}.{% endcall %}
+    {% else %}{{ button("Continue", "primary", "lg", type="submit", block=True) }}{% endif %}
+  </form>
+  {% if state == "expired" %}
+  <form method="post" action="{{ resend_action }}"><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Send a new code", "primary", "lg", type="submit", block=True) }}</form>
+  {% elif state == "locked" %}<p>{% call el('a', 'link-muted', attrs='href="mailto:?subject=Othor%20AI%20sign-in%20locked"') %}Contact the company owner{% endcall %}</p>
+  {% elif state == "cooldown" %}
+  <form method="post" action="{{ resend_action }}"><input type="hidden" name="csrf" value="{{ csrf_token }}">{% call el('button', 'btn lg wide', attrs={'type': 'submit', 'data-resend': (resend_in), 'disabled': true}) %}Resend code{% endcall %}</form>
+  {% elif state == "wrong" %}
+  {% else %}
+  <form class="flex items-center justify-between" method="post" action="{{ resend_action }}"><input type="hidden" name="csrf" value="{{ csrf_token }}">
+    {% call el('button', 'link-muted', attrs={'type': 'submit', 'data-resend': (resend_in), 'disabled': ((resend_in) and true or none)}) %}Resend code{% if resend_in %} (<span data-countdown="{{ resend_in }}">{{ "%d:%02d" % (resend_in // 60, resend_in % 60) }}</span>){% endif %}{% endcall %}
+    {% call el('a', 'link-muted', attrs={'href': (back)}) %}Use a different email{% endcall %}</form>
+  {% endif %}
+{% endcall %}

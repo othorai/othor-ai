@@ -1,0 +1,20 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/auth.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% from "components/forms.html" import text_input %}
+{% from "components/blocks.html" import company_logo %}
+{% block title %}Sign in to {{ company.name }} · Othor AI{% endblock %}
+{% block auth_class %} roomy signin{% endblock %}
+{% block card %}
+{% call el('form', 'auth-card', attrs='method="post" action="/login" novalidate') %}
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  {% if company.logo_sha %}{{ company_logo(company, "lg") }}{% else %}{% call el("span", "tile-initials", attrs='aria-hidden="true"') %}{{ initials }}{% endcall %}{% endif %}
+  <h1>Sign in to {{ company.name }}</h1>
+  {% if signed_out %}{% call el("p", "lede") %}You’ve been signed out.{% endcall %}{% endif %}
+  {{ text_input("email", "Work email", email, type="email", error=error, autofocus=True, attrs='autocomplete="email"') }}
+  {{ button("Send me a code", "primary", "lg", type="submit", block=True) }}
+  {% if install.legal_url %}{% call el("p", "fine") %}By continuing you agree to the <a href="{{ install.legal_url }}/terms">Terms</a> and <a href="{{ install.legal_url }}/privacy">Privacy policy</a>.{% endcall %}{% endif %}
+  {% call el("p", "foot") %}Not {{ company.name }}? <a href="{{ root_url }}login">Use a different company address</a>{% endcall %}
+{% endcall %}
+{% endblock %}

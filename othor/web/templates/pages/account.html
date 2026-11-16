@@ -1,0 +1,13 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/app.html" %}
+{% from "components/blocks.html" import page_title %}
+{% from "components/account.html" import account_name, account_sessions %}
+{% block title %}Account · {{ company.name }}{% endblock %}
+{% block crumb %}Account{% endblock %}
+{% block main %}
+{{ page_title("Account") }}
+<div class="flex flex-col gap-56">
+  {{ account_name(acct, csrf_token) }}
+  {{ account_sessions(acct, csrf_token) }}
+</div>
+{% endblock %}

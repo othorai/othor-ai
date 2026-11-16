@@ -1,0 +1,56 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# AI usage (M15.8): u = the /usage route's view. Every figure is counted from the model call log;
+   a row shows the task and the counts only, never the input or the output. #}
+{% from "components/ui.html" import el %}
+{% from "components/forms.html" import select %}
+{% from "components/blocks.html" import empty_state %}
+{% from "components/sweep.html" import stat %}
+
+{% macro usage_filters(u) -%}
+<form class="use-filters" method="get" action="/usage" hx-get="/usage" hx-trigger="change" hx-target="#usage-body" hx-select="#usage-body" hx-swap="outerHTML" hx-push-url="true">
+  {{ select("month", u.months, u.month, small=True, attrs='aria-label="Month"') }}
+  {{ select("task", u.tasks, u.task, small=True, attrs='aria-label="Task"') }}
+  <noscript><button class="btn sm" type="submit">Show</button></noscript>
+</form>
+{%- endmacro %}
+
+{% macro usage_body(u) -%}
+{% set t = u.totals %}
+<div id="usage-body" class="use-body">
+  {# owner, 14 Nov 2026: the first section, tokens a day for the last 30 days, in grey #}
+  <section class="use-trend" aria-label="Tokens per day, last 30 days">
+    <div class="use-trend-head"><p class="caps-title">Last 30 days</p><span>{{ fmt.num(u.trend_total) }} tokens</span></div>
+    <div class="use-trend-chart" role="img" aria-label="{{ u.trend.alt_text }}">{{ chart(u.trend, 1040, 120) }}</div>
+    <div class="use-trend-axis"><span>{{ fmt.day_month(u.trend_from) }}</span><span>{{ fmt.day_month(u.trend_to) }}</span></div>
+  </section>
+  <div class="use-stats">
+    {{ stat(fmt.num(t.tokens), "tokens · " ~ fmt.num(t.tokens_in) ~ " in · " ~ fmt.num(t.tokens_out) ~ " out", boxed=True) }}
+    {{ stat(fmt.num(t.calls), "calls" if t.calls != 1 else "call", boxed=True) }}
+    {{ stat(fmt.num(u.nights), ("nightly run" if u.nights == 1 else "nightly runs") ~ " · none uses a model", boxed=True) }}
+  </div>
+  <p class="use-note">Numbers in your briefs never come from a model. Only setup drafting and optional brief wording use one.</p>
+  {% if u.rows %}
+  <div class="table-wrap"><table class="table flush stack use-table">
+    <thead><tr><th>When</th><th>Task</th><th>Model</th><th class="num">Tokens in</th><th class="num">Tokens out</th><th class="num">Time</th><th>Result</th></tr></thead>
+    <tbody>{% for r in u.rows %}<tr class="use-row" title="{{ r.prompt }}">
+      <td>{{ fmt.day_month(r.when.date()) }} {{ fmt.clock(r.when) }}</td>
+      <td>{{ r.task }}</td>
+      <td class="use-model">{{ r.model }}</td>
+      <td class="num">{{ fmt.num(r.tokens_in) }}</td>
+      <td class="num">{{ fmt.num(r.tokens_out) }}</td>
+      <td class="num">{{ r.seconds }} s</td>
+      <td class="use-result{{ '' if r.result == 'Used' else ' off' }}">{{ r.result }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% if u.more %}<button class="btn use-more" type="button" hx-get="/usage?month={{ u.month }}&amp;task={{ u.task }}&amp;upto={{ u.upto + 1 }}" hx-target="#usage-body" hx-select="#usage-body" hx-swap="outerHTML">Show more</button>{% endif %}
+  {% else %}
+  {{ empty_state(None, "No AI use this month", "Setup drafting and optional brief wording are the only things that use a model.") }}
+  {% endif %}
+</div>
+{%- endmacro %}
+
+{# The side menu's card (owner, 14 Nov 2026): tokens in the last 7 days and a bar a day; the
+   bars are a ChartSpec rendered by render_svg (`chart`). Filled after the page loads. #}
+{% macro usage_card(c) -%}
+<span class="nav-usage-num">{{ c.total }}</span><span class="nav-usage-chart" role="img" aria-label="{{ c.alt }}">{{ chart(c.spec, 180, 28) }}</span>
+{%- endmacro %}

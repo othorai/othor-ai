@@ -1,0 +1,38 @@
+# Reviewed licence exceptions (decided 5 Nov 2026). Each covers one package only, for the
+# version range given; a version whose licence differs from `licence` fails CI.
+# Exceptions are never patched or vendored with changes.
+- package: psycopg
+  versions: ">=3.3,<4"
+  licence: LGPL-3.0-only
+  use: unmodified, imported as a library
+  obligations: >-
+    Ship its licence text in THIRD_PARTY_LICENSES; keep it a separate, replaceable package
+    (installed from PyPI, never copied into othor/); no modifications.
+  approved_by: the owner, Othor AI Private Limited
+  approved_on: 2026-11-05
+- package: psycopg-binary
+  versions: ">=3.3,<4"
+  licence: LGPL-3.0-only
+  use: unmodified, imported as a library (psycopg's compiled implementation and libpq)
+  obligations: >-
+    As psycopg. libpq inside it is under the PostgreSQL License (allowed).
+  approved_by: the owner, Othor AI Private Limited
+  approved_on: 2026-11-05
+- package: certifi
+  versions: ">=2024"
+  licence: MPL-2.0
+  use: unmodified data file (the CA bundle)
+  obligations: Ship its licence text in THIRD_PARTY_LICENSES; no modifications.
+  approved_by: the owner, Othor AI Private Limited
+  approved_on: 2026-11-05
+- package: pyphen
+  versions: ">=0.17,<1"
+  licence: GPL-2.0-or-later OR LGPL-2.1-or-later OR MPL-1.1
+  use: >-
+    unmodified, imported as a library by WeasyPrint (the brief's PDF, M15.7); taken under
+    MPL-1.1, one of the three licences it is offered under
+  obligations: >-
+    Ship its licence text in THIRD_PARTY_LICENSES; keep it a separate, replaceable package
+    (installed from PyPI, never copied into othor/); no modifications.
+  approved_by: the owner, Othor AI Private Limited
+  approved_on: 2026-11-13

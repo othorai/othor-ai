@@ -1,0 +1,14 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/icons.html" import icon %}
+{# M11c (owner, 8 Nov): the owner left First run before the first brief was written. A slim strip
+   across the app follows the run in place and says when the brief is ready; opened or closed,
+   it goes. #}
+{% if view %}
+{% call el('div', 'run-strip' ~ (' ready' if view.brief_ready else (' err' if view.failed else '')), attrs={'id': 'run-strip', 'role': 'status', 'hx-get': '/first-run/strip' if view.polling else none, 'hx-trigger': 'every 2s' if view.polling else none, 'hx-swap': 'outerHTML' if view.polling else none}) %}
+  {% if view.brief_ready %}{% call el('span', 'run-ic done') %}{{ icon("check") }}{% endcall %}<span><b>Your first brief is ready.</b></span>{% call el('a', 'link-u', attrs='href="/first-run/open"') %}Open{% endcall %}
+  {% elif view.failed %}{% call el('span', 'dot neg') %}{% endcall %}<span><b>Your first run stopped.</b> {{ view.failed }}</span>{% call el('a', 'link-u', attrs='href="/first-run/open"') %}See it in Morning Brief{% endcall %}
+  {% else %}{{ icon("loading") }}<span><b>Writing your first brief</b> · {{ fmt.num(view.stages_done) }} of {{ fmt.num(view.stages | length) }} done</span>{% call el('a', 'link-u', attrs='href="/brief"') %}Watch it{% endcall %}{% endif %}
+  {% call el('a', 'btn quiet', attrs='href="/first-run/open?close=1" aria-label="Close"') %}×{% endcall %}
+{% endcall %}
+{% endif %}

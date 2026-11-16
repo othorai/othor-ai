@@ -1,0 +1,11 @@
+Othor AI
+Copyright 2026 Othor AI Private Limited
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+"Othor AI" and the Othor AI logo are registered trademarks of Othor AI Private Limited; the
+licences above grant no rights to them (see TRADEMARKS.md).
+
+This product bundles third-party software and assets (Python packages, fonts, icons, htmx and
+Alpine.js). Their licences and notices are listed in THIRD_PARTY_LICENSES, which every
+release image also carries.

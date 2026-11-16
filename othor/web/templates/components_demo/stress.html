@@ -1,0 +1,29 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "base.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import banner, empty_state, toast, callout, skeleton %}
+{% from "components/brief.html" import brief_tile, brief_card %}
+{% from "components/sweep.html" import rows_table %}
+{% from "components/home.html" import home_card, question_row %}
+{% from "components/ontology.html" import ont_row %}
+{% block title %}Stress · components{% endblock %}
+{% block body %}
+<div class="board-page flex flex-col gap-20" data-stress>
+  {{ banner("warn", "<b>" ~ long ~ " wasn’t read last night</b> · " ~ long ~ " are from Fri 30 Oct", "Reconnect →") }}
+  <div class="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">{% for t in tiles %}{{ brief_tile(t) }}{% endfor %}</div>
+  <div class="card board">{{ rows_table(rows, all_href="#") }}</div>
+  <div class="grid gap-16 grid-cols-1 lg:grid-cols-3">{% for c in cards %}{{ brief_card(c) }}{% endfor %}</div>
+  <div class="grid gap-16 grid-cols-1 lg:grid-cols-3">{% for c in cards %}{{ home_card(c.name, c.title, c.scope, "#", flag=loop.first) }}{% endfor %}</div>
+  <div class="card board flex flex-col gap-8">{% for i in range(3) %}{{ question_row(i + 1, "Have " ~ long ~ " and " ~ long ~ " moved orders elsewhere, or are they on hold?", "Morning Brief") }}{% endfor %}</div>
+  <div class="card board flex flex-col">{% for c in cards %}{{ ont_row(c.title, "erp_db.customers · " ~ long, lead=c.name ~ " · ", track="tracking " ~ fmt.inr(48e10), href="#") }}{% endfor %}</div>
+  <div class="grid gap-16 grid-cols-1 md:grid-cols-3">
+    <div class="card board">{{ empty_state("Empty · no sources", "No sources connected", "Connect your ERP, CRM or warehouse.", "Add a source", primary=True) }}</div>
+    <div class="card board">{{ empty_state("404 · not found", "There’s no brief for 31 Feb", None, "Today’s brief") }}</div>
+    <div class="card board">{{ empty_state("500 · our side", "Something went wrong on our side. Nothing you did was lost.", None, "Reload", "", primary=True, more=[("Home", "/")], ref="3f9a1c2b7d10") }}</div>
+  </div>
+  {{ toast("Couldn’t save the Ontology line · " ~ long, "err", sub="Reference 3f9a1c2b7d10", retry="Retry") }}
+  {{ callout("You’re offline.", "warn") }}
+  {{ callout("Couldn’t read " ~ long ~ ": the role othor_ro lost SELECT on erp_db.public.customer_invoices_with_a_very_long_table_name_2026", "err") }}
+  <div class="card board" data-skeleton>{{ skeleton() }}</div>
+</div>
+{% endblock %}

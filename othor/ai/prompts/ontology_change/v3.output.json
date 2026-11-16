@@ -1,0 +1,43 @@
+{
+  "type": "object",
+  "properties": {
+    "change": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "op": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            },
+            "body_json": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "type",
+            "key"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "reply": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "change",
+    "reply"
+  ],
+  "additionalProperties": false
+}

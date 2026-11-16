@@ -1,0 +1,108 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# Ontology (6a–6a4, 10n; M10b; cleaned up v0.11): sections, record lines, version and diff rows, record card. #}
+{% from "components/icons.html" import logo %}
+{# A section card: number, title, quieter sub; on the right its count and an optional link (See all →) #}
+{# a section's icon instead of its number (owner, #42) #}
+{# info: what the section is and its count, behind an (i) beside the title (#50) #}
+{% macro ont_section(n, title, count, sub=None, open=True, more=None, more_href=None, info=None) -%}
+{% from "components/icons.html" import icon %}
+{% from "components/buttons.html" import info as info_pop %}
+<section class="ont-section" aria-label="{{ title }}">
+  <div class="ont-head"><p class="t"><span class="n">{% if n %}{{ icon(n) }}{% endif %}</span>{{ title }}{% if sub %}<span class="s">{{ sub }}</span>{% endif %}{% if info %} {{ info_pop(text=info, id="info-" ~ (title | lower | replace(" ", "-")), label="About " ~ title) }}{% endif %}</p>{% if count or more %}<p class="c">{{ count or "" }}{% if more %}{{ " · " if count else "" }}<a class="link" href="{{ more_href }}">{{ more }}</a>{% endif %}</p>{% endif %}</div>
+  {{ caller() }}
+</section>
+{%- endmacro %}
+
+{# A row's action. Change shows on row hover and keyboard focus (always on devices without hover);
+   always=True keeps it visible (Fix on a number that needs a source). #}
+{% macro ont_act(label, href, always=False) -%}<a class="link{{ '' if always else ' ont-act' }}" href="{{ href }}">{{ label }}</a>{%- endmacro %}
+
+{# One line: text (optional bold lead, tracking, an amber sub-line) · where it came from · action #}
+{% macro ont_row(text, source, lead=None, track=None, tone="muted", sub=None, href=None, action="Change", warn=False) -%}
+<div class="ont-row{{ ' warn' if warn else '' }}">
+  {#- #48: a long line (the business description) is cut at 280 characters, at a word; Read more
+      shows the whole line in place #}
+  <span>{% if lead %}<b>{{ lead }}</b>{% endif %}{% if text | length > 280 %}<span x-data="readMore"><span class="ont-short" x-show="cut">{{ text | truncate(280, False, "", 0) | trim }}…</span><span x-show="more" x-cloak>{{ text }}</span> <button type="button" class="link-u" @click="toggle" x-text="label">Read more</button></span>{% else %}{{ text }}{% endif %}{% if track %} <span class="track {{ tone }}">· {{ track }}</span>{% endif %}{% if sub %}<span class="sub">{{ sub }}</span>{% endif %}</span>
+  <span class="src">{{ source }}</span>
+  {% if href %}{{ ont_act(action, href) }}{% else %}<span></span>{% endif %}
+</div>
+{%- endmacro %}
+
+{# Names and words: the term · its meaning · its origin · Change (#52: not bold) #}
+{% macro ont_term(term, meaning, source, href=None) -%}
+<tr><td class="term">{{ term or "" }}</td><td class="wrap">{{ meaning }}</td><td class="src">{{ source }}</td><td class="act">{% if href %}{{ ont_act("Change", href) }}{% endif %}</td></tr>
+{%- endmacro %}
+
+{# The waiting items as a pill beside the title: "4 questions waiting on Home →" #}
+{% macro ont_waiting(text, href="/home") -%}<a class="wait-pill" href="{{ href }}"><span class="dot accent"></span>{{ text }} →</a>{%- endmacro %}
+
+{# Tell Othor AI: the mark and label, one input, the Enter button; example chips fill the input (othor.js) #}
+{% macro tell_line(placeholder, examples=()) -%}
+<div class="tell">
+  <div class="tell-row"><label class="tell-box"><span class="who">{{ logo() }}<span>Othor AI</span></span><input name="line" placeholder="{{ placeholder }}" aria-label="Tell Othor AI what changed" autocomplete="off"></label><button class="btn tell-go" type="submit" name="action" value="ai" aria-label="Send to Othor AI">↵</button></div>
+  {% if examples %}<div class="tell-chips">{% for e in examples %}<button class="chip lg" type="button" data-tell-fill="{{ e }}">{{ e }}</button>{% endfor %}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{# Let Othor AI decide (v0.12): a decision to check, its computed evidence, Confirm · Change · Undo #}
+{% macro ont_decided(d, csrf) -%}
+<div class="ont-row ont-decided">
+  <span>{{ d.text }}{% if d.evidence %}<span class="ev">{{ d.evidence }}</span>{% endif %}</span>
+  <span class="src">{{ d.source }}</span>
+  <span class="acts"><form method="post" action="/ontology/decided/{{ d.id }}/confirm" data-inplace><input type="hidden" name="csrf" value="{{ csrf }}"><button class="link" type="submit">Confirm</button></form>{% if d.change %}<a class="link" href="{{ d.change }}">Change</a><form method="post" action="/home/questions/{{ d.question }}/undo" data-inplace><input type="hidden" name="csrf" value="{{ csrf }}"><button class="link" type="submit">Undo</button></form>{% endif %}</span>
+</div>
+{%- endmacro %}
+
+{# A section's column header row, like the Numbers table's (#51): labels for text, source #}
+{% macro ont_cols(labels) -%}
+<div class="ont-row ont-cols">{% for l in labels %}<span class="h">{{ l }}</span>{% endfor %}<span></span></div>
+{%- endmacro %}
+
+{% macro ont_sub(text) -%}<p class="ont-sub">{{ text }}</p>{%- endmacro %}
+
+{% macro metric_link(name, href) -%}<a class="metric-link" href="{{ href }}">{{ name }}</a>{%- endmacro %}
+
+{% macro ver_row(n, date, title, meta, current=False) -%}
+<div class="ver-row"><span class="n{{ ' now' if current else '' }}">v{{ n }}</span><span class="d">{{ date }}</span><span><b>{{ title }}</b><span class="meta">{{ meta }}</span></span><span class="flex items-center gap-8">{{ caller() if caller is defined else "" }}</span></div>
+{%- endmacro %}
+
+{% macro diff_row(op, before, after, detail=None, same=False) -%}
+<div class="diff-row"><span class="op">{{ op }}</span><span class="before{{ ' none' if not before else '' }}{{ ' same' if same else '' }}">{{ before or "—" }}</span><span class="after{{ ' none' if not after else '' }}">{{ after or "—" }}{% if detail %}<span class="hint">{{ detail }}</span>{% endif %}</span></div>
+{%- endmacro %}
+
+{% macro diff_head(a, b) -%}<div class="diff-head"><span></span><span>v{{ a }}</span><span>v{{ b }}</span></div>{%- endmacro %}
+
+{% macro confirm_box(text) -%}<div class="confirm-box"><span>{{ text }}</span><span class="flex items-center gap-8">{{ caller() }}</span></div>{%- endmacro %}
+
+{# The draft card (6a3; v0.11: the questions panel and Change with Othor AI share it): the typed
+   record that will be saved, its section, what it was, and its effect; the caller adds the
+   buttons (Apply · Edit, or Undo · Change answer once applied). `kicker` replaces
+   "Draft · will be saved · <section>"; `title` heads the effect lines. #}
+{% macro record_card(section, before, after, lines, note=None, kicker=None, title="Today · computed") -%}
+<div class="record-card"><p class="k">{{ kicker or "Draft · will be saved · " ~ section }}</p>
+  {% if before and before != after %}<p class="was">{{ before }}</p>{% endif %}<p><b>{{ after or "Removed" }}</b></p>
+  {% if lines or note %}<hr>{% if title %}<p class="hint"><b>{{ title }}</b></p>{% endif %}{% for l in lines %}<p>{{ l }}</p>{% endfor %}{% if note %}<p class="hint">{{ note }}</p>{% endif %}{% endif %}
+  {% if caller is defined %}<div class="record-acts">{{ caller() }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{# The metric panel's Area (M16.1): the area Summary groups the number under. The select saves on
+   change, in place; "Add an area" takes the owner's own short name. #}
+{% macro area_field(m, csrf) -%}
+{% from "components/forms.html" import select %}
+<div class="ont-area">
+  <form class="ont-area-form" data-inplace method="post" action="/ontology/metric/{{ m.key }}/area">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {{ select("area", m.area_options, m.area, small=True, attrs='data-autosubmit aria-label="Area"', id="area-" ~ m.key) }}
+    <noscript><button class="btn sm" type="submit">Save</button></noscript>
+  </form>
+  <details class="ont-area-new">
+    <summary>Add an area</summary>
+    <form class="ont-area-form" data-inplace method="post" action="/ontology/metric/{{ m.key }}/area">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input class="input sm" name="area" maxlength="40" required aria-label="New area" placeholder="A short name">
+      <button class="btn sm" type="submit">Add</button>
+    </form>
+  </details>
+</div>
+{%- endmacro %}

@@ -1,0 +1,92 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/app.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button, link %}
+{% from "components/blocks.html" import toast, callout, page_title %}
+{% from "components/ontology.html" import ont_section, ont_cols, ont_row, ont_sub, ont_term, ont_act, ont_waiting, tell_line, metric_link, ont_decided %}
+{% block title %}Ontology · {{ company.name }}{% endblock %}
+{% block crumb %}Ontology{% endblock %}
+{% block crumb_after %}{% if version %}{% call el("span", "chip soft") %}v{{ version }}{% if changed %} · {{ fmt.day_month(changed) }}{% endif %}{% endcall %}{% endif %}{% endblock %}
+{% block actions %}{{ button("History", href="/ontology?panel=history") }}{% endblock %}
+{% block main %}
+{% set q = "&numbers=" ~ filter if filter else "" %}
+{% set page_chat = "/ontology?panel=chat&subject=page" %}
+{# the page style (owner, 13 Nov 2026): the title row with what waits on Home as its button #}
+{# #43: the description behind an info icon beside the title #}
+{% call page_title("Ontology", info="What Othor AI knows about " ~ company.name ~ ("" if company.name.endswith(".") else ".") ~ " Every brief and every Sweep reads from it. Changes apply from the next run. Every version is kept; any brief can be replayed on the version it used.") %}{% if home_count %}{{ button(fmt.num(home_count) ~ " to review on Home", "primary", href="/home", attrs={"title": home_line}) }}{% endif %}{% endcall %}
+<div class="flex flex-col gap-56">
+  {% if note %}{{ callout(note | e) }}{% endif %}
+  {% if done and not chat %}
+  {% call el("div", layout="flex items-center gap-8 flex-wrap") %}{{ toast("Ontology v" ~ done.number ~ " · applies from tonight’s run", sub=done.reason) }}{% call el("form", attrs={"data-inplace": true, "method": "post", "action": "/ontology/versions/" ~ done.number ~ "/undo"}) %}<input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="back" value="/ontology">{{ button("Undo", type="submit") }}{% endcall %}{% endcall %}
+  {% endif %}
+
+  {% call el("form", attrs={"data-inplace": true, "method": "post", "action": "/ontology/chat"}) %}<input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="subject" value="page">{{ tell_line("Tell Othor AI what changed…", ["Kochi plant starts invoicing in December", "The Surat shutdown moves to September"]) }}{% endcall %}
+
+  {# Let Othor AI decide (v0.12): its decisions, listed to confirm or fix #}
+  {% if decided and not expanded %}
+  {% call el("div", attrs={"id": "decided"}) %}
+  {% call ont_section("check", "Decided by Othor AI", fmt.num(decided | length) ~ " to check", sub="check when you can") %}
+    {% for d in decided %}{{ ont_decided(d, csrf_token) }}{% endfor %}
+  {% endcall %}
+  {% endcall %}
+  {% endif %}
+
+  {% if expanded %}
+  <details>{% call el("summary", "caps-title") %}1 · The business · {{ fmt.num(business_count) }} lines{% endcall %}</details>
+  {% else %}
+  {% call ont_section("company", "The business", None) %}
+    {{ ont_cols(["Line", "Source"]) }}
+    {% for f in business %}{{ ont_row(f.text, f.source, href=page_chat) }}{% endfor %}
+    {% if goals %}{{ ont_sub("Goals this year") }}{% for g in goals %}{{ ont_row(g.text, g.source, track=(g.mark or g.track), tone=g.tone, href=page_chat) }}{% endfor %}{% endif %}
+  {% endcall %}
+  {% endif %}
+
+  {% set needs_text = (" · " ~ fmt.num(numbers_needs) ~ (" needs" if numbers_needs == 1 else " need") ~ " a source") if numbers_needs else "" %}
+  {% call ont_section("table", "Numbers", fmt.num(numbers_all) ~ " number" ~ ("s" if numbers_all != 1 else "") ~ needs_text, more=(None if expanded else "See all →"), more_href="/ontology?numbers=all") %}
+    {% if expanded %}
+    {% call el("div", layout="flex items-center gap-6 flex-wrap px-14 py-10") %}
+      {% for key, label in [("all", "All"), ("confirmed", "Confirmed"), ("needs", "Need a source"), ("unbriefed", "Not in a brief")] %}
+      {% call el("a", "chip lg" ~ (" is-on" if filter == key else ""), attrs={"href": "/ontology?numbers=" ~ key}) %}{{ label }} {{ fmt.num(counts[key]) }}{% endcall %}
+      {% endfor %}
+    {% endcall %}
+    {% endif %}
+    {% call el("div", "table-wrap") %}{% call el("table", "table flush ont-table") %}<thead><tr><th>Metric</th><th>Definition</th><th>Source</th>{% call el("th", "num") %}Latest{% endcall %}<th></th></tr></thead><tbody>
+    {% for r in numbers %}{% call el("tr", "needs" if r.needs else "") %}
+      {% call el("td", "wrap") %}{{ metric_link(r.name, "/ontology?metric=" ~ r.key ~ q) }}{% call el("span", "sub") %}{{ r.sub }}{% endcall %}{% endcall %}
+      {% call el("td", "wrap") %}{{ r.definition }}{% endcall %}
+      {% call el("td", "wrap") %}{{ r.source }}{% endcall %}
+      {% call el("td", "num" ~ (" nodata" if r.nodata else "")) %}{{ r.today }}{% endcall %}
+      {% call el("td", "act") %}{% if r.needs %}{{ ont_act("Fix", "/ontology?metric=" ~ r.key ~ q, always=True) }}{% else %}{{ ont_act("Change", "/ontology?panel=chat&subject=metric:" ~ r.key) }}{% endif %}{% endcall %}
+    {% endcall %}{% endfor %}
+    </tbody>{% endcall %}{% endcall %}
+    {% if expanded %}{% call el("div", "section-head") %}{{ link("+ Add a number", "/ontology?panel=chat&subject=add") }}{% endcall %}{% endif %}
+  {% endcall %}
+
+  {% if expanded %}
+  <details>{% call el("summary", "caps-title") %}3 · Names and words · {{ fmt.num(names | length) }} lines{% endcall %}</details>
+  <details>{% call el("summary", "caps-title") %}4 · Known patterns · {{ fmt.num(patterns | length) }} lines{% endcall %}</details>
+  {% else %}
+  {% call ont_section("chat", "Names and words", None) %}
+    {% call el("div", "table-wrap") %}{% call el("table", "table flush ont-table ont-terms") %}<thead><tr><th>Name</th><th>Words</th><th>Source</th><th></th></tr></thead><tbody>
+    {% for n in names %}{{ ont_term(n.term, n.meaning, n.source, href=page_chat) }}{% endfor %}
+    </tbody>{% endcall %}{% endcall %}
+  {% endcall %}
+  {% if patterns %}
+  {% call ont_section("calendar", "Known patterns", None, info="Sweep doesn’t flag these. " ~ fmt.num(patterns | length) ~ " known pattern" ~ ("s" if patterns | length != 1 else "") ~ " · suppressed " ~ fmt.num(suppressed) ~ " finding" ~ ("s" if suppressed != 1 else "") ~ " this month.") %}
+    {{ ont_cols(["Pattern", "Source"]) }}
+    {% for p in patterns %}{{ ont_row(p.text, p.source, sub=p.pending, warn=p.pending != "", href=page_chat) }}{% endfor %}
+  {% endcall %}
+  {% else %}
+  {% call ont_section("calendar", "Known patterns", None, info="Sweep doesn’t flag these. None yet.") %}
+    {% call el("p", "ont-empty") %}Sweep hasn’t learned any patterns yet.{% endcall %}
+  {% endcall %}
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block overlay %}
+{% if metric %}{% include "ontology/_metric.html" %}{% endif %}
+{% if history %}{% include "ontology/_history.html" %}{% endif %}
+{% if chat %}{% include "ontology/_chat.html" %}{% endif %}
+{% endblock %}

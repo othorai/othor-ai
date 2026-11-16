@@ -1,0 +1,58 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# 6a4 · History (680 px): every version, Compare (designed: no board) and Restore with an
+   inline confirm (designed: no board), the replay card. #}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button, link %}
+{% from "components/panels.html" import pane, pane_title %}
+{% from "components/sweep.html" import overlay %}
+{% from "components/blocks.html" import toast, callout %}
+{% from "components/ontology.html" import ver_row, diff_row, diff_head, confirm_box, ont_sub %}
+{% set h = history %}
+{% set current = (h.rows | first).number if h.rows else 0 %}
+{% call overlay("History", "/ontology") %}
+{% call(part) pane() %}
+{% if part == "head" %}
+  {{ pane_title("History", "Every change is a version. Briefs record the version they used.", "/ontology") }}
+{% elif part == "body" %}
+<div class="flex flex-col gap-16">
+  {% if note %}{{ callout(note | e) }}{% endif %}
+  {% if done %}{% call el("div", layout="flex items-center gap-8 flex-wrap") %}{{ toast("Restored as v" ~ done.number ~ " · applies from tonight’s run", sub=done.reason) }}{% call el("form", attrs={"data-inplace": true, "method": "post", "action": "/ontology/versions/" ~ done.number ~ "/undo"}) %}<input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="back" value="/ontology?panel=history">{{ button("Undo", type="submit") }}{% endcall %}{% endcall %}{% endif %}
+
+  {% if h.compare %}{% set c = h.compare %}
+  <div class="flex flex-col gap-6">
+    {% call el("div", layout="flex items-center justify-between gap-8") %}{{ ont_sub("Compare v" ~ c.a ~ " and v" ~ c.b) }}{{ link("Close compare", "/ontology?panel=history") }}{% endcall %}
+    {% if c.same %}{% call el("p", "hint") %}Same content: the two versions hold the same records.{% endcall %}{% endif %}
+    {% if not c.sections and not c.same %}{% call el("p", "hint") %}Only citations differ.{% endcall %}{% endif %}
+    {% for sec, rows in c.sections %}
+      {% call el("p", "caps-title", layout="mt-8") %}{{ sec }}{% endcall %}
+      {{ diff_head(c.a, c.b) }}
+      {% for r in rows %}{{ diff_row(r.op, r.before, r.after, r.detail, r.same_line) }}{% endfor %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# M15.9 · the page style: a caps title, then the versions under a grey header band #}
+  <div class="flex flex-col gap-8">{% call el("p", "caps-title") %}Versions · {{ fmt.num(h.rows | length) }}{% endcall %}
+  <div>
+  {% call el("div", "ver-row ver-head") %}<span>Version</span><span>Date</span><span>What changed</span><span></span>{% endcall %}
+  {% for r in h.rows %}
+    {% call ver_row(r.number, fmt.day_month(r.date), r.title, r.meta, r.current) %}
+      {{ link("Compare", "/ontology?panel=history&compare=" ~ r.number ~ "-" ~ current) if not r.current else "" }}
+      {% if not r.current %}{{ link("Restore", "/ontology?panel=history&restore=" ~ r.number) }}{% endif %}
+    {% endcall %}
+    {% if h.restore == r.number %}
+      {% call confirm_box("Restore v" ~ r.number ~ " as v" ~ (current + 1) ~ "? It applies from tonight’s run. Nothing is deleted.") %}
+        {{ button("Cancel", href="/ontology?panel=history") }}
+        {% call el("form", attrs={"data-inplace": true, "method": "post", "action": "/ontology/versions/" ~ r.number ~ "/restore"}) %}<input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Restore v" ~ r.number, kind="primary", type="submit") }}{% endcall %}
+      {% endcall %}
+    {% endif %}
+  {% endfor %}
+  </div></div>
+
+  {% if h.replay %}{% call el("div", "home-note box") %}<span>{{ h.replay.text }}</span>{{ link("Run #" ~ "%04d" | format(h.replay.run) ~ " →", "/sweep?run=" ~ h.replay.run) }}{% endcall %}{% endif %}
+</div>
+{% else %}
+  {% call el("div", layout="flex items-center justify-between gap-8 w-full") %}{% call el("span", "hint") %}Restore makes a new version; nothing is deleted{% endcall %}{{ button("Close", href="/ontology") }}{% endcall %}
+{% endif %}
+{% endcall %}
+{% endcall %}

@@ -1,0 +1,20 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/onboarding.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import empty_state %}
+{% from "components/buttons.html" import button %}
+{# Step 6 · First run (M11c, owner's O3, 8 Nov): one card with the run's five stages, Run details
+   folded, "Open the brief" when the brief is written. No preview. #}
+{% block title %}First run · Set up {{ company.name }}{% endblock %}
+{% block width %} col{% endblock %}
+{% block main %}
+{% if view %}
+{% include "setup/_first_run.html" %}
+{% else %}
+<h1>Your Ontology is confirmed.</h1>
+{% call el("div", "card dashed", layout="mt-24") %}{{ empty_state(None, "Your first run is tonight", "It runs at " ~ fmt.clock(company.run_time) ~ ".") }}{% endcall %}
+{% call el('form', 'onb-foot', attrs='method="post" action="/setup/first-run/continue"') %}
+  <input type="hidden" name="csrf" value="{{ csrf_token }}"><span></span>{{ button("Go to the app", "primary", "lg", type="submit") }}
+{% endcall %}
+{% endif %}
+{% endblock %}

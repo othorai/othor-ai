@@ -1,0 +1,10 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/auth.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import empty_state %}
+{% block title %}Too many attempts · Othor AI{% endblock %}
+{% block card %}
+{% call el('div', 'auth-card not-found') %}
+  {{ empty_state("429 · too many attempts", text, None, "Home", "/") }}
+{% endcall %}
+{% endblock %}

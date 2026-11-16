@@ -1,0 +1,14 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# State tags and change tags (docs/07 §6, 9c B). #}
+{% macro state_tag(state, confidence=None) -%}
+{%- if state == "measured" %}<span class="tag measured">Measured</span>
+{%- elif state == "assessed" %}<span class="tag assessed">Assessed{{ " · " ~ confidence if confidence else "" }}</span>
+{%- elif state == "not_determinable" %}<span class="tag not-determinable">Not determinable</span>
+{%- elif state == "needs_confirmation" %}<span class="tag needs-confirmation">Needs confirmation</span>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro change_tag(kind, day=None) -%}
+{%- set labels = {"new": "New", "worse": "Worse", "better": "Better", "resolved": "Resolved", "changed": "Changed", "back": "Came back"} -%}
+<span class="change {{ kind }}">{{ ("Open · day " ~ day) if kind == "open" else labels[kind] }}</span>
+{%- endmacro %}

@@ -1,0 +1,16 @@
+Subject: [Othor AI] Last night’s run failed · sales_dw couldn’t be read
+
+Run failed · #0028 · Thu 29 Oct 2:03 AM IST
+
+The nightly run stopped at reading sales_dw. No brief was made, so none goes out at 6:00 AM IST. Yesterday’s brief stays available.
+
+    sales_dw · OperationalError
+
+Other sources were read normally.
+
+Fix the source: https://indigothread.othor.ai/sources/3f2a
+Re-run now: https://indigothread.othor.ai/brief/archive?failed=28
+
+—
+Sent by your Othor AI instance at indigothread.othor.ai · Delivery preferences: https://indigothread.othor.ai/settings
+This email contains business data; do not forward outside the company.

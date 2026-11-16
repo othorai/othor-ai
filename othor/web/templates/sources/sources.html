@@ -1,0 +1,114 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/app.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/forms.html" import chip %}
+{% from "components/buttons.html" import button %}
+{% from "components/blocks.html" import empty_state, page_title, banner %}
+{% from "components/panels.html" import side_panel, pane %}
+{% from "components/sources.html" import kind_tile, table_list, src_row, other_connectors, scan_label %}
+{% block title %}Data sources · {{ company.name }}{% endblock %}
+{% block crumb %}Data sources{% endblock %}
+{% block actions %}
+<span class="flex items-center gap-8">
+  {% call el('form', 'hide-phone', attrs='data-inplace method="post" action="/sources/test-all"') %}<input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Test all connections", type="submit") }}{% endcall %}
+</span>
+{% endblock %}
+{% set kn = {"postgres": "PostgreSQL", "mysql": "MySQL", "gsheets": "Google Sheets"} %}
+{% block main %}
+{# owner, 13 Nov 2026: the Settings style, sections with rows; no tabs ("All connectors" is Add a
+   source); Suggested shows only while a source is waiting #}
+{# owner, 13 Nov 2026: "Data sources", with Add a source beside the heading #}
+{% call page_title("Data sources") %}{{ button("Add a source", "primary", href="/sources?panel=add") }}{% endcall %}
+<div class="flex flex-col gap-56">
+  {# owner, 13 Nov 2026: tabular, column names in the table-header style #}
+  <div class="flex flex-col gap-12">
+    {% call el("div", layout="flex items-baseline justify-between gap-12") %}{% call el("p", "caps-title") %}Connected · {{ fmt.num(cards | length) }}{% endcall %}{% call el("span", "hint") %}Read in place. Read-only.{% endcall %}{% endcall %}
+    {% if cards %}
+    {% call el('div', 'table-wrap') %}{% call el('table', 'table flush') %}
+      <thead><tr><th>Source</th><th>Status</th><th>Newest data</th><th>Last read</th><th>Feeds</th><th>Rows read nightly</th><th></th></tr></thead>
+      <tbody>{% for c in cards %}
+      <tr>
+        <td><div class="flex items-center gap-12">{{ kind_tile({"postgres": "PG", "mysql": "MY", "gsheets": "GS"}[c.src.kind]) }}<div class="min-w-0">{% call el("p", "src-name") %}{{ kn[c.src.kind] if c.src.kind != "gsheets" else c.title }}{% if c.src.kind != "gsheets" %} · {{ c.src.config.database }}{% endif %}{% endcall %}
+          {% call el("p", "hint") %}{% if c.src.kind == "gsheets" %}Google Sheets · {{ fmt.num(c.tables_used) }}{{ " tab" ~ ("s" if c.tables_used != 1 else "") ~ " read" }}{% else %}{{ fmt.num(c.tables_used) }} of {{ fmt.num(c.tables_total) }} tables{% endif %}{% endcall %}</div></div></td>
+        <td>{{ chip(c.status[0], dot=c.status[1]) }}</td>
+        <td>{{ newest.get(c.src.id | string, "–") }}</td>
+        <td>{{ c.last_read }}</td>
+        <td>{% if c.feeds %}{{ fmt.num(c.feeds | length) }} metric{{ "s" if c.feeds | length != 1 else "" }}{% else %}–{% endif %}</td>
+        <td>{% if c.src.health and c.src.health.last_read %}{{ fmt.num(c.src.health.last_read.rows) }}{% else %}–{% endif %}</td>
+        {% call el('td', 'num') %}<div class="flex items-center justify-end gap-6">{{ button("Tables", "", "sm", href="/sources?panel=tables&s=" ~ c.src.id) }}{% if c.src.kind == "postgres" %}{{ button("Schemas", "", "sm", href="/sources?panel=schemas&s=" ~ c.src.id) }}{% endif %}{{ button("Manage", "primary", "sm", href="/sources?panel=manage&s=" ~ c.src.id) }}</div>{% endcall %}
+      </tr>{% endfor %}</tbody>
+    {% endcall %}{% endcall %}
+    {% else %}
+    {{ empty_state(None, "No sources connected", "Connect PostgreSQL, MySQL or Google Sheets. Read-only, one at a time.", "Add a source", "/sources?panel=add", primary=True) }}
+    {% endif %}
+  </div>
+  {% if waiting %}
+  <div class="flex flex-col gap-12">
+    {% call el("p", "caps-title") %}Suggested · {{ fmt.num(waiting | length) }}{% endcall %}
+    {% call el('div', 'table-wrap') %}{% call el('table', 'table flush') %}
+      <thead><tr><th>Source</th><th>Status</th><th>Waiting</th><th></th></tr></thead>
+      <tbody>{% for w in waiting %}<tr>
+        <td>{% call el("p", "strong") %}{{ w.title }}{% endcall %}{% call el("p", "hint") %}{{ w.names }} {{ "is" if w.metrics | length == 1 else "are" }} waiting for it{% endcall %}</td>
+        <td>{{ chip("Not connected", dot="warn") }}</td>
+        <td>{{ fmt.num(w.metrics | length) }} metric{{ "s" if w.metrics | length != 1 else "" }} waiting</td>
+        {% call el('td', 'num') %}{{ button("Connect", "primary", "sm", href=w.href) }}{% endcall %}
+      </tr>{% endfor %}</tbody>
+    {% endcall %}{% endcall %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block overlay %}
+{% if panel == "request" %}{% set rq_next, rq_close = "/sources", "/sources?panel=add" %}{% include "sources/_request.html" %}{% endif %}
+{% if panel == "add" %}
+  {# 6e (M11c G): the onboarding's list in a panel — Suggested, Other connectors folded #}
+  {% call(part) side_panel("Add a source", "One at a time. Each source is scanned before it is used.", "+", "/sources") %}
+  {% if part == "body" %}
+    {% if creq and creq.requested %}{% set sent_msg %}<b>Request sent · {{ creq.requested }}</b> We build the most requested first and we’ll email you when it’s ready.{% endset %}{{ banner("ok", sent_msg) }}{% endif %}
+    {% if waiting %}
+    {% call el('section', 'src-box', attrs={'aria-label': 'Suggested from your Ontology'}) %}
+      {% call el('div', 'box-head') %}<span>Suggested from your Ontology · {{ fmt.num(waiting | length) }}</span>{% endcall %}
+      {% for w in waiting %}
+      {% call src_row(w.tile, w.title, fmt.num(w.metrics | length) ~ " metric" ~ ("s" if w.metrics | length != 1 else "") ~ " waiting · " ~ (w.metrics | join(", "))) %}{{ button("Connect", "primary" if loop.first else "", "sm", href=w.href) }}{% endcall %}
+      {% endfor %}
+    {% endcall %}
+    {% endif %}
+    {{ other_connectors(connectors, {"postgres": "/sources?panel=connect&kind=postgres", "mysql": "/sources?panel=connect&kind=mysql", "gsheets": "/sources?panel=sheets"}, open=not waiting, request="/sources?panel=request") }}
+    {{ slot("sources.add.kinds") }}
+  {% else %}{% call el("span", "hint") %}Read in place. Read-only.{% endcall %}{{ button("Cancel", href="/sources") }}
+  {% endif %}
+  {% endcall %}
+{% elif panel == "connect" and sql %}
+  {# M11c: the same connect panel as onboarding (p1) #}
+  {% call(part) side_panel("Connect " ~ sql.kind_name ~ (" · " ~ sql.for_name if sql.for_name else ""), "We read in place with a read-only " ~ ("role" if sql.kind == "postgres" else "user") ~ ", and test before connecting.", None, sql.close) %}
+  {% if part == "body" %}{% with kind=sql.kind, kind_name=sql.kind_name, src=sql.src, cfg=sql.cfg, ssl_options=sql.ssl_options, role_sql=sql.role_sql, egress=sql.egress, egress_v4=sql.egress_v4, egress_v6=sql.egress_v6, ips_url=sql.ips_url, test=sql.test, setup=False %}{% include "sources/_sql_form.html" %}{% endwith %}
+  {% else %}{% call el('span', 'hint') %}{{ sql.seen }}{% endcall %}<span class="flex items-center gap-8">{{ button("Cancel", href=sql.close) }}{{ button("Connect", "primary", type="submit", attrs={"form": "sql-form"}) }}</span>{% endif %}
+  {% endcall %}
+{% elif panel in ("schemas", "tables") and psrc %}
+  {% set base = "/sources" %}{% include "sources/_panel_" ~ panel ~ ".html" %}
+{% elif panel == "sheets" %}
+  {% call(part) side_panel("Connect Google Sheets", "Read-only · only the sheets you pick", "GS", "/sources") %}
+  {% if part == "body" %}{% with src=sheets_src, account=(sheets_src.config.account if sheets_src else None), picked=(sheets_src.config.files if sheets_src else []), selected=(rows | selectattr("tab.selected") | list | length), running=False, mode=(sheets_mode | default("fixture")), setup=False %}{% include "sources/_sheets_body.html" %}{% endwith %}{% if sheets_mode == "google" %}{% include "sources/_picker_google.html" %}{% endif %}
+  {% else %}{% if not (sheets_src and rows) %}{% call el("span", "hint") %}Pick a spreadsheet to continue{% endcall %}{% endif %}<span class="flex items-center gap-8">{{ button("Back", href="/sources?panel=add") }}{% if sheets_src and rows %}{% set tc = rows | selectattr("tab.selected") | selectattr("needs_check") | list | length %}{% call el('button', 'btn primary', attrs='type="submit" form="tabs-form"') %}{{ scan_label(tc, rows | selectattr("tab.selected") | list | length) }}{% endcall %}{% else %}{% call el('button', 'btn primary', attrs='type="button" disabled') %}Connect and scan{% endcall %}{% endif %}</span>{% endif %}
+  {% endcall %}
+{% elif panel == "scan" and psrc %}
+  {# M11c G: the onboarding's scanning panel; when it finishes it opens the review (6h) #}
+  {% set base = "/sources" %}{% set done_url = "/sources?panel=review&s=" ~ psrc.id %}{% include "sources/_panel_scan.html" %}
+{% elif panel == "review" and sel %}
+  {# 6h (M11c G): the onboarding's Metrics to confirm panel; Confirm stages, Add applies #}
+  {% set rv = review %}{% set drafting = rv.drafting %}
+  {% set base_cm = "/sources/" ~ sel.src.id ~ "/confirm-metrics" %}
+  {% set cm = {"c": rv, "here": "/sources?panel=review&s=" ~ sel.src.id, "close": "/sources?s=" ~ sel.src.id,
+    "kicker": "New from " ~ sel.title, "tile": sel.tile, "confirm": base_cm ~ "/{key}/stage", "unconfirm": base_cm ~ "/unstage",
+    "all": base_cm ~ "/stage-all", "add": base_cm, "undo": base_cm ~ "/undo", "intro": "sources/_review_intro.html", "app": True, "groups": [("From " ~ sel.title, rv.databases)],
+    "subtitle": "Confirm the ones that look right, then add them. Nothing changes until you do."} %}
+  {% include "setup/_check_confirm.html" %}
+{% elif panel == "chat" and chat_panel %}
+  {% with panel=chat_panel %}{% from "components/panels.html" import DRAFT_NOTE %}{% include "setup/_chat.html" %}{% endwith %}
+{% elif panel == "manage" and sel %}
+  {% include "sources/_manage.html" %}
+{% elif panel == "reconnect" and sel %}
+  {% include "sources/_reconnect.html" %}
+{% endif %}
+{% endblock %}

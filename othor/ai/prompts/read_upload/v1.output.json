@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {"type": "string", "enum": ["target", "metric", "dimension", "term"]},
+          "text": {"type": "string"},
+          "locator": {"type": "string"}
+        },
+        "required": ["kind", "text", "locator"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["items"],
+  "additionalProperties": false
+}

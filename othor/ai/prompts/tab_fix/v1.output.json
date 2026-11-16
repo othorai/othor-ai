@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "properties": {
+    "text": {"type": "string"},
+    "patch": {
+      "type": "object",
+      "properties": {
+        "header_row": {"type": "integer"},
+        "last_row": {"type": "integer"},
+        "units": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {"column": {"type": "string"}, "unit": {"type": "string"}},
+            "required": ["column", "unit"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["header_row", "last_row", "units"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["text", "patch"],
+  "additionalProperties": false
+}

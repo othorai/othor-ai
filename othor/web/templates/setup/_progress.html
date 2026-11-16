@@ -1,0 +1,30 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+<div id="progress" hx-get="/setup/metrics/progress" hx-trigger="every 1s" hx-target="#progress" hx-swap="outerHTML">
+  {# #31: what drafting is doing now and for how long, so the page never looks frozen #}
+  {% call el("p", "progress-line live", attrs={"role": "status"}) %}{% call el("span", "dots", attrs={"aria-hidden": "true"}) %}<i></i><i></i><i></i>{% endcall %}{{ stage }}{% if elapsed %}{% call el("span", "hint") %} · {{ elapsed }}{% endcall %}{% endif %}{% endcall %}
+  {% call el("div", "card", layout="p-16 mt-16") %}{% if total %}{% call el('progress', 'bar', attrs={'max': total, 'value': done, 'aria-label': 'Drafted'}) %}{% endcall %}{% else %}{% call el("div", "bar-moving", attrs={"aria-hidden": "true"}) %}<i></i>{% endcall %}{% endif %}{% endcall %}
+  {# M12: the list keeps its height while drafting; rows not drafted yet are skeletons #}
+  {% set slots = ([8, total] | min) if total else 3 %}
+  {% if items or slots %}
+  {% call el('div', 'card flush progress-list', layout='mt-16') %}
+    {% for i in items[:8] %}
+    {% call el('div', 'progress-row') %}
+      {% call el("span", "strong") %}{{ i.name }}{% endcall %}
+      <span>{% if i.kind == "done" %}{% call el('span', 'chip') %}{% call el('span', 'dot ' ~ (('warn' if i.check else 'ok') | string | e)) %}{% endcall %}Drafted{{ " · to check" if i.check else "" }}{% endcall %}
+        {% elif i.kind == "excluded" %}{% call el('span', 'chip') %}{% call el('span', 'dot neg') %}{% endcall %}HR table excluded{% endcall %}
+        {% elif i.kind == "missing" %}{% call el('span', 'chip') %}{% call el('span', 'dot muted') %}{% endcall %}No source has it{% endcall %}
+        {% else %}{% call el("span", "chip reading") %}Drafting…{% endcall %}{% endif %}</span>
+      {% call el("span", "hint") %}{% if i.kind in ("excluded", "missing") %}{{ i.note }}{% endif %}{% endcall %}
+    {% endcall %}
+    {% endfor %}
+    {% for _ in range(slots - (items[:8] | length)) %}{% call el('div', 'progress-row', attrs='aria-hidden="true"') %}{% call el('span', 'skeleton line mid') %}{% endcall %}{% call el('span', 'skeleton line short') %}{% endcall %}<span></span>{% endcall %}{% endfor %}
+    {% if items | length > 8 %}{% call el("div", "box-foot") %}{{ fmt.num(items | length - 8) }} more{% endcall %}{% endif %}
+  {% endcall %}
+  {% endif %}
+  <div class="flex items-center justify-end gap-12 mt-24">
+    {% call el('a', 'btn lg', attrs='href="/setup/sources"') %}Cancel{% endcall %}
+    {% call el("span", "hint") %}Ready when drafting finishes{% endcall %}
+    {% call el('button', 'btn primary lg', attrs='type="button" disabled') %}Review metrics{% endcall %}
+  </div>
+</div>

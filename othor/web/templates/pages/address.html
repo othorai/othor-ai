@@ -1,0 +1,38 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/auth.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% from "components/forms.html" import text_input, select, listbox %}
+{% block title %}Set up {{ company_name }} · Othor AI{% endblock %}
+{% block card %}
+{% call el('form', 'auth-card', attrs='method="post" action="/signup/address" novalidate') %}
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <h1>Set up {{ company_name }}</h1>
+  {# one company per install (M20.1): no address to pick; the slug is made from the name #}
+  {% if single %}<input type="hidden" name="slug" value="{{ v.slug }}">{% else %}
+  {% call el('div', 'field') %}
+    <label for="f-slug">Company address</label>
+    {% call el('div', 'input-group') %}<input id="f-slug" name="slug" value="{{ v.slug }}" autocomplete="off" spellcheck="false" autofocus
+      hx-get="/signup/address/check" hx-trigger="input changed delay:250ms" hx-target="#slug-check" hx-swap="outerHTML">{% call el("span", "suffix") %}.{{ base_domain }}{% endcall %}{% endcall %}
+    {% with slug=v.slug %}{% include "partials/slug_check.html" %}{% endwith %}
+    {% call el("p", "hint", layout="mt-12") %}Lowercase letters, numbers and hyphens.{% endcall %}
+  {% endcall %}
+  {% endif %}
+  {{ el('hr', 'rule') }}
+  {{ text_input("website", "Company website", v.website, type="url", attrs='autocomplete="url"') }}
+  {# M11c: the three settings as one line; Change opens them in place. The time zone is taken
+     from the browser when it's on the list (othor.js, data-tz-detect). #}
+  {% call el('details', 'settings-line', attrs={'data-settings-line': '', 'open': settings_open or none}) %}
+    {% call el('summary') %}{% call el('span', 'sl-text') %}Year starts in {% call el('span', attrs='data-sl="fy"') %}{{ fy_name }}{% endcall %} · {% call el('span', attrs={"data-sl": "cur", "data-lines": cur_lines | tojson}) %}{{ cur_line }}{% endcall %} · {% call el('span', attrs='data-sl="tz"') %}{{ tz_name }}{% endcall %}{% endcall %}{% call el('span', 'link') %}Change{% endcall %}{% endcall %}
+    {% call el('p', 'hint sl-tz', attrs='data-sl="note" hidden') %}{% endcall %}
+    {% call el('div', 'sl-fields') %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+      {{ listbox("fy", fy_months, v.fy, "Fiscal year starts") }}
+      {{ select("currency", currencies, v.currency, "Currency") }}
+    </div>
+    {{ listbox("tz", timezones, v.tz, "Time zone", note=tz_note, attrs='data-tz-detect') }}
+    {% endcall %}
+  {% endcall %}
+  {{ button("Continue", "primary", "lg", type="submit", block=True) }}
+{% endcall %}
+{% endblock %}

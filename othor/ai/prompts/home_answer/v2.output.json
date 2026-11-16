@@ -1,0 +1,39 @@
+{
+  "type": "object",
+  "properties": {
+    "record": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            },
+            "body_json": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "body_json"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "reply": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "record",
+    "reply"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "properties": {
+    "text": {"type": "string"},
+    "choice": {"type": "string", "enum": ["", "source", "upload", "both"]}
+  },
+  "required": ["text", "choice"],
+  "additionalProperties": false
+}

@@ -1,0 +1,176 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/icons.html" import icon %}
+{# Sources and scan components (2k–2ke, 6d, 6g). Rows come from othor.web.sources_view. #}
+{% from "components/forms.html" import chip %}
+
+{# The Use chip; with a menu when the table can change (2ke states A–F). #}
+{# #26: the Sheets connect button counts both the header checks and the tabs to scan
+   ("Check 1 header, then scan 3 tabs"); it read as if only the checked tab would be scanned #}
+{% macro scan_label(to_check, chosen) -%}
+{%- set tabs = fmt.num(chosen) ~ " tab" ~ ("s" if chosen != 1 else "") -%}
+{%- if to_check %}Check {{ fmt.num(to_check) }} header{{ "s" if to_check != 1 else "" }}, then scan {{ tabs }}{% elif chosen %}Connect and scan {{ tabs }}{% else %}Connect and scan{% endif -%}
+{%- endmacro %}
+
+{% macro use_menu(r) -%}
+{%- set t = r.t -%}
+{%- set m = r.menu -%}
+{%- if m.kind == "not_ready" -%}
+<span class="chip reading" title="Available when the scan has read this table.">{{ r.chip.label }}</span>
+{%- else -%}
+<details class="use" x-data="menu">
+  <summary aria-label="Change how {{ r.qualified }} is used"><span class="chip"><span class="dot {{ r.chip.dot }}"></span>{{ r.chip.label }}{{ icon("chevron-down", "caret") }}</span></summary>
+  <div class="use-menu" role="menu">
+  {%- if m.kind == "excluded" %}
+    <p class="grp">Personal columns found</p>
+    <p class="opt dim">{{ r.never | join(", ") }}<span class="sub">never read</span></p>
+    <div class="sep"></div>
+    <a class="opt" role="menuitem" href="?tab=excluded&expand={{ t.id }}">Use without personal columns…</a>
+    <button class="opt is-on" role="menuitem" type="button" disabled>Keep excluded<span class="q">✓</span></button>
+    <p class="note">Excluded is set only by the scan. Personal columns are never read, even when the table is used.</p>
+  {%- else %}
+    {%- if m.kind == "scan_ignored" %}
+    <p class="grp">Ignored by the scan</p>
+    <p class="opt dim">{{ t.looks_like or "" }}<span class="sub">{{ r.rows }} rows</span></p>
+    <div class="sep"></div>
+    {%- endif %}
+    <p class="grp">{{ "Use " ~ r.qualified ~ " as" if m.kind == "candidate" else "Use it instead as" }}</p>
+    {%- for use, label, sub in [("metric_source", "Numbers", "metric source"), ("dimension", "Breakdowns", "dimension")] %}
+    <button class="opt{{ ' is-on' if m.current == use else '' }}" role="menuitem" type="button"
+      hx-post="/sources/tables/{{ t.id }}/use" hx-vals='{"use": "{{ use }}"}'>
+      <span>{{ label }} <span class="q">· {{ sub }}</span><span class="sub">{{ "Amounts and dates to add up: invoices, orders" if use == "metric_source" else "Lists to split numbers by: customers, items, regions" }}</span></span>{% if m.current == use %}<span class="q">✓</span>{% endif %}</button>
+    {%- endfor %}
+    {%- if m.kind != "scan_ignored" %}
+    <div class="sep"></div>
+    <p class="grp">{{ "Ignored, because" if m.kind == "user_ignored" else "Ignore, because" }}</p>
+    {%- for code, label in [("not_needed", "Not needed"), ("duplicate", "Duplicate of another table"), ("test_old", "Test or old data")] %}
+    <button class="opt{{ ' is-on' if m.kind == 'user_ignored' and m.current == code else '' }}" role="menuitem" type="button"
+      hx-post="/sources/tables/{{ t.id }}/use" hx-vals='{"use": "ignored", "reason": "{{ code }}"}'>{{ label }}{% if m.kind == 'user_ignored' and m.current == code %}<span class="q">✓</span>{% endif %}</button>
+    {%- endfor %}
+    {%- endif %}
+    <p class="note">
+    {%- if m.kind == "scan_ignored" %}The scan’s reason stays visible. Using a backup can double-count; Metrics will flag it.
+    {%- elif m.kind == "user_ignored" %}Ignored by {{ r.who }}. Change the reason or bring it back.
+    {%- elif m.current == "dimension" %}Metrics using it as a breakdown lose that breakdown if ignored.
+    {%- else %}Saved to the Ontology. Moving back is always possible.{% endif %}</p>
+  {%- endif %}
+  </div>
+</details>
+{%- endif -%}
+{%- endmacro %}
+
+{# The table list with tabs Candidates · Ignored · Excluded, search across all tables (2kd),
+   the Ignored select bar (2kb) and the Excluded expanded row (2kc). mode: scan · detail #}
+{% macro table_list(tl, base, list_url, mode="scan", limit=None, running=False) -%}
+{%- set searching = tl.searching -%}
+<div class="card flush{{ ' lines' if mode == 'detail' else '' }}" id="table-list">
+  <div class="box-head">
+    <div class="flex items-center gap-6 flex-wrap">
+      {%- if searching %}
+      {% set mc = tl.match_counts %}
+      {{ chip("All matches · " ~ fmt.num(mc.values() | sum), state="on" if tl.tab == "all" else "", href=list_url(base, tab="all", q=tl.q)) }}
+      {% for k in ["candidates", "ignored", "excluded"] %}{{ chip({"candidates": "Candidates", "ignored": "Ignored", "excluded": "Excluded"}[k] ~ " · " ~ fmt.num(mc[k]), soft=tl.tab != k, state="on" if tl.tab == k else "", href=list_url(base, tab=k, q=tl.q)) }}{% endfor %}
+      {%- else %}
+      {% for k in ["candidates", "ignored", "excluded"] %}{{ chip({"candidates": "Candidates", "ignored": "Ignored", "excluded": "Excluded"}[k] ~ " · " ~ fmt.num(tl.counts[k]), soft=tl.tab != k, state="on" if tl.tab == k else "", href=list_url(base, tab=k)) }}{% endfor %}
+      <span class="hint">{% if mode == "detail" %}{{ fmt.num(tl.scanned) }} tables · {{ fmt.num(tl.counts.candidates) }} in use{% else %}{{ fmt.num(tl.scanned) }} scanned{% if running %} so far{% endif %}{% endif %}</span>
+      {%- endif %}
+    </div>
+    <form method="get" action="{{ base }}" class="flex items-center gap-6">
+      <input class="input search" name="q" value="{{ tl.q }}" placeholder="Search all {{ fmt.num(tl.scanned) }} tables" aria-label="Search all tables and columns">
+    </form>
+  </div>
+  {%- set ign = tl.tab == "ignored" and not searching %}
+  <form method="post" action="/sources/{{ tl.source.id }}/bring-back" data-inplace>
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <div class="table-wrap"><table class="table flush">
+    <thead>
+    {%- if ign %}<tr class="select-bar" data-select-bar hidden><td colspan="5"><span class="flex items-center gap-8"><b data-selected-count>0 selected</b>
+      <button class="btn primary" name="use" value="metric_source" type="submit">Use as metric source</button>
+      <button class="btn" name="use" value="dimension" type="submit">Use as dimension</button>
+      <button class="btn quiet" type="reset">Clear</button></span></td></tr>{% endif %}
+    <tr>{% if ign %}<th aria-label="Select"></th>{% endif %}<th>Table</th><th>Rows</th>
+      <th>{% if tl.tab == "excluded" and not searching %}Personal columns found{% elif ign %}Why it was ignored{% elif mode == "detail" %}Looks like{% else %}Looks like{% endif %}</th><th>Use</th></tr>
+    </thead>
+    <tbody>
+    {%- for r in (tl.rows[:limit] if limit else tl.rows) %}
+    <tr{% if tl.expand == r.t.id %} class="is-selected"{% endif %}>
+      {% if ign %}<td><input type="checkbox" name="t" value="{{ r.t.id }}" aria-label="Select {{ r.qualified }}" data-select-row></td>{% endif %}
+      <td class="mono-ink">{% if searching %}{{ r.qualified | mark(tl.q) }}{% else %}{{ r.qualified }}{% endif %}</td>
+      <td class="mono">{% if r.t.state != "done" %}{{ "reading…" if r.t.state == "reading" else "queued" }}{% elif mode == "detail" %}{{ r.short }}{% else %}{{ r.rows }}{% endif %}</td>
+      <td class="wrap">{% if r.t.use == "excluded" and not searching %}{{ r.personal }}{% else %}{{ r.t.looks_like or "—" }}{% endif %}</td>
+      <td>{{ use_menu(r) }}</td>
+    </tr>
+    {%- if tl.expand == r.t.id and r.t.use == "excluded" %}
+    <tr class="expand"><td colspan="4"><div class="inner">
+      <p class="section-title">Use without personal columns</p>
+      <div class="flex items-center gap-12"><span class="hint expand-label">Read</span><span class="flex items-center flex-wrap gap-6">{% for c in r.read %}{{ chip(c, dot="ok") }}{% endfor %}</span></div>
+      <div class="flex items-center gap-12"><span class="hint expand-label">Never read</span><span class="flex items-center flex-wrap gap-6">{% for c in r.never %}<span class="chip struck">{{ c }}</span>{% endfor %}</span></div>
+      <p class="hint">Personal columns stay out of every query, scan and model call.</p>
+      <div class="flex items-center gap-8">
+        <button class="btn primary" type="button" hx-post="/sources/tables/{{ r.t.id }}/use" hx-vals='{"use": "without:dimension"}'>Use as dimension</button>
+        <button class="btn" type="button" hx-post="/sources/tables/{{ r.t.id }}/use" hx-vals='{"use": "keep_excluded"}'>Keep excluded</button>
+      </div>
+    </div></td></tr>
+    {%- endif %}
+    {%- else %}
+    <tr><td colspan="5" class="hint">{% if searching %}No table or column matches “{{ tl.q }}”.{% else %}No tables here yet.{% endif %}</td></tr>
+    {%- endfor %}
+    </tbody>
+  </table></div>
+  </form>
+  <div class="box-foot">
+    <span>
+    {%- if searching %}{{ fmt.num(tl.match_counts.values() | sum) }} of {{ fmt.num(tl.scanned) }} tables match “{{ tl.q }}” · names and columns searched
+    {%- elif tl.tab == "excluded" %}Personal data is never read; a table can only be used without its personal columns
+    {%- elif tl.tab == "ignored" %}{{ fmt.num(tl.total) }} ignored · select to bring back
+    {%- elif mode == "detail" %}{% if limit and tl.rows | length > limit %}{{ fmt.num(tl.total - limit) }} more {{ {"candidates": "candidates", "ignored": "ignored", "excluded": "excluded"}.get(tl.tab, "tables") }} · {% endif %}changes apply from tonight’s run; metrics that depend on a table are listed before you ignore it
+    {%- else %}{% if limit and tl.rows | length > limit %}{{ fmt.num(tl.total - limit) }} more candidates{% else %}{{ fmt.num(tl.total) }} candidates{% endif %} · sorted by rows · change any table’s use from its menu{% endif %}
+    </span>
+    <span class="flex items-center gap-12">
+    {%- if limit and tl.rows | length > limit %}<a class="link" href="{{ list_url(base, tab=tl.tab, q=tl.q, all="1") }}">Show all</a>
+    {%- elif tl.pages > 1 %}
+      {% if tl.page > 1 %}<a class="link" href="{{ list_url(base, tab=tl.tab, q=tl.q, page=tl.page - 1) }}">Previous</a>{% endif %}
+      <span>Page {{ fmt.num(tl.page) }} of {{ fmt.num(tl.pages) }}</span>
+      {% if tl.page < tl.pages %}<a class="link" href="{{ list_url(base, tab=tl.tab, q=tl.q, page=tl.page + 1) }}">Next</a>{% endif %}
+    {%- endif %}
+    {%- if searching %}<a class="link-u" href="{{ base }}">Clear search</a>{% endif %}
+    </span>
+  </div>
+</div>
+{%- endmacro %}
+
+{# Undo toast after a use change. #}
+{% macro use_toast(toast) -%}
+{% if toast %}<div class="toast-dock"><div class="toast" role="status"><span class="dot accent"></span><span>{{ toast.text }}</span><button class="action btn quiet" type="button" hx-post="{{ toast.undo }}">Undo</button></div></div>{% endif %}
+{%- endmacro %}
+
+{# Connector tile: PG · MY · GS #}
+{# A source tile. The connectors get their colour and line icon (M11c, docs/07); any other code
+   (an upload's file type, "+") stays a lettered tile. #}
+{% set CONN = {"PG": ("pg", "sources", "PostgreSQL"), "MY": ("my", "sources", "MySQL"), "GS": ("gs", "sheet", "Google Sheets")} %}
+{% macro kind_tile(code) -%}
+{%- if code in CONN %}{% set c = CONN[code] %}<span class="tile-kind conn {{ c[0] }}" title="{{ c[2] }}" role="img" aria-label="{{ c[2] }}">{{ icon(c[1]) }}</span>
+{%- else %}<span class="tile-kind">{{ code }}</span>{% endif -%}
+{%- endmacro %}
+
+{# One row of the source lists (M11c p0–p3, and Add a source 6e in the app): tile, title with an
+   optional tag, a sub line, and the actions (caller). #}
+{% macro src_row(tile, title, sub, tag=None, tag_kind="new") -%}
+<div class="src-row">
+  {{ kind_tile(tile) }}
+  <div class="src-main"><p class="src-t"><span>{{ title }}</span>{% if tag %}<span class="tag {{ tag_kind }}">{{ tag }}</span>{% endif %}</p><p class="src-sub">{{ sub }}</p></div>
+  <div class="src-acts">{{ caller() }}</div>
+</div>
+{%- endmacro %}
+
+{# Other connectors, folded (p0, 6e), and the "Not listed?" line under it. `href(kind)` is a dict;
+   `request`: where the Request a connector form opens (M15.4). #}
+{% macro other_connectors(connectors, hrefs, open=False, request=None) -%}
+<details class="src-more"{% if open %} open{% endif %}>
+  <summary><span>Other connectors · {{ connectors | length }}</span>{{ icon("chevron-down") }}</summary>
+  {% for kind, name, sub in connectors %}
+  {% call src_row({"postgres": "PG", "mysql": "MY", "gsheets": "GS"}[kind], name, "Another database · read in place" if kind != "gsheets" else "Sheets you pick · read-only") %}<a class="btn sm" href="{{ hrefs[kind] }}"{% if kind == "gsheets" and hrefs.get("no_panel") %} data-no-panel{% endif %}>Connect</a>{% endcall %}
+  {% endfor %}
+</details>
+{% if request %}<p class="src-note">Not listed? <a class="link" href="{{ request }}">Request a connector →</a></p>
+{% elif install.support_email %}<p class="src-note">Not listed? Write to <a class="link-u" href="mailto:{{ install.support_email }}">{{ install.support_email }}</a>.</p>{% endif %}
+{%- endmacro %}

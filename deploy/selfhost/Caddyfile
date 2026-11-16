@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# Othor AI behind Caddy (M20.4): a Let's Encrypt certificate for $OTHOR_DOMAIN, renewed by
+# itself. The domain's DNS must point at this server and ports 80 and 443 be open first.
+{$OTHOR_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:8000
+}

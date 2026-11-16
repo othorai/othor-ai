@@ -1,0 +1,10 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{#- M18.1 · an export built by a job is ready. To the owner; the link needs sign-in. -#}
+{% import "_email.html" as e with context %}
+{% call e.page(subject, preheader, company_name, logo_cid) %}
+{% call e.row("24px 24px 0") %}{{ e.kicker(kicker, mono=True) }}{% endcall %}
+{% call e.row("14px 24px 0") %}{{ e.para(lead) }}{% endcall %}
+{% call e.row("14px 24px 0") %}{{ e.para(after, color="#5B6B7B", size=14) }}{% endcall %}
+{% call e.row("20px 24px 24px") %}{{ e.buttons(actions) }}{% endcall %}
+{{ e.owner_footer(instance, preferences) }}
+{% endcall %}

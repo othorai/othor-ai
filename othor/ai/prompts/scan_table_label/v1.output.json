@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "properties": {
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {"type": "string"},
+          "label": {"type": "string"}
+        },
+        "required": ["key", "label"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["labels"],
+  "additionalProperties": false
+}

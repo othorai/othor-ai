@@ -1,0 +1,21 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/app.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import callout, page_title %}
+{% from "components/buttons.html" import button %}
+{# Morning Brief while the first run writes the first brief (M11c): the same stages as First run
+   (2o). Polled; when the brief is written the page becomes the brief list in place. #}
+{% block title %}Morning Brief · {{ company.name }}{% endblock %}
+{% block crumb %}Morning Brief{% endblock %}
+{% block main %}
+<div id="brief-first" class="flex flex-col gap-16"{% if view.polling %} hx-get="/brief" hx-trigger="every 2s" hx-select="#main" hx-target="#main" hx-swap="outerHTML"{% endif %}>
+  {{ page_title("Your first run stopped" if view.failed else "Writing your first brief", lede="Every number is computed from your sources, never written by a model.") }}
+  {% call el('div', 'brief-first') %}{% include "setup/_run_card.html" %}{% endcall %}
+  {% if view.failed %}
+  {% call el("div", "callout err", layout="flex items-center justify-between gap-12", attrs='role="alert"') %}
+    <span>{{ view.failed }}</span>
+    {% call el('form', '', attrs='data-inplace method="post" action="/setup/first-run/retry"') %}<input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Run again", type="submit") }}{% endcall %}
+  {% endcall %}
+  {% endif %}
+</div>
+{% endblock %}

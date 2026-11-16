@@ -1,0 +1,11 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/auth.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import empty_state %}
+{% block title %}Not found · Othor AI{% endblock %}
+{% block card %}
+{% call el('div', 'auth-card not-found') %}
+  {% if site and site.kind == "unknown" %}{{ empty_state("404 · not found", "There’s no company at " ~ site.host, None, "Go to sign in", root_url ~ "login") }}
+  {% else %}{{ empty_state("404 · not found", "There’s nothing at this address", None, "Go to sign in", "/login") }}{% endif %}
+{% endcall %}
+{% endblock %}

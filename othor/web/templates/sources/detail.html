@@ -1,0 +1,53 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/app.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/forms.html" import chip, text_input %}
+{% from "components/buttons.html" import button %}
+{% from "components/blocks.html" import banner, empty_state, page_title %}
+{% from "components/sources.html" import table_list, use_toast %}
+{% set kn = {"postgres": "Postgres", "mysql": "MySQL", "gsheets": "Google Sheets"} %}
+{% block title %}{{ card.title }} · Data sources · {{ company.name }}{% endblock %}
+{% block crumb %}{% call el('a', 'crumb-link', attrs='href="/sources"') %}Data sources{% endcall %}{% call el("span", "crumb-sep") %}/{% endcall %}{{ src.name }}{% endblock %}
+{% block actions %}
+<span class="flex items-center gap-8">
+  {{ button("Tables", href="/sources?panel=tables&s=" ~ src.id) }}{% if src.kind == "postgres" %}{{ button("Schemas", href="/sources?panel=schemas&s=" ~ src.id) }}{% endif %}
+  <form method="post" action="/sources/{{ src.id }}/action/rescan" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Re-scan", type="submit") }}</form>
+  {% if src.kind != "gsheets" %}<form method="post" action="/sources/{{ src.id }}/action/test" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Test connection", type="submit") }}</form>{% endif %}
+</span>
+{% endblock %}
+{% block main %}
+{# the page style (owner, 13 Nov 2026): the name as the title with its status on the right, the
+   address under it; Tables, Credentials, Sync and Remove as sections with lines, no boxes #}
+{% set lede %}{% if src.kind == "gsheets" %}Google Sheets · {{ src.config.account }}{% else %}{{ src.config.host }}:{{ src.config.port }} · role {{ src.config.user }}{% endif %} · {{ fmt.num(card.tables_total) }} {{ "tabs" if src.kind == "gsheets" else "tables" }} scanned, {{ fmt.num(card.tables_used) }} in use{% endset %}
+{% call page_title(src.name if src.kind != "gsheets" else card.title, lede=lede) %}<span class="flex items-center gap-6 flex-wrap">
+  {{ chip(kn[src.kind], soft=True) }}
+  {{ chip(card.status[0] ~ (" · read-only" if src.status == "connected" else ""), dot=card.status[1]) }}
+  {% if src.last_read_at %}{{ chip("Last read " ~ card.last_read, soft=True) }}{% endif %}
+</span>{% endcall %}
+<div class="flex flex-col gap-56">
+{% if src.schema_change and not src.schema_change.acknowledged %}
+<div class="mt-16">{{ banner("warn", "<b>Schema change on " ~ src.schema_change.at[:10] ~ ":</b> tables or columns were added, removed or retyped since the last scan. Uses you set are kept.", None) }}{% call el('button', 'link-u', attrs='type="submit" form="ack"') %}Acknowledge{% endcall %}</div>
+<form id="ack" method="post" action="/sources/{{ src.id }}/action/acknowledge" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}"></form>
+{% endif %}
+{% if view.running %}{% call el("p", "progress-line", layout="mt-16") %}{{ view.line }}{% endcall %}{% endif %}
+<div class="flex flex-col gap-8">{% call el("p", "caps-title") %}Tables{% endcall %}{{ table_list(tl, base, list_url, mode="detail", limit=None if request.query_params.get("all") or tl.searching else 7) }}</div>
+{% call el('section', 'section lines') %}
+  {% call el("div", "section-head") %}Credentials{% endcall %}
+  {% if src.kind == "gsheets" %}
+  {% call el('div', 'section-row') %}<div>{% call el("p", "title") %}Signed in as{% endcall %}{% call el("p", "sub") %}Only the spreadsheets you picked{% endcall %}</div><span>{{ src.config.account }}</span>{% endcall %}
+  {% else %}
+  {% call el('div', 'section-row') %}{% call el("p", "title") %}Role{% endcall %}<span>{{ src.config.user }}</span>{% endcall %}
+  {% call el('div', 'section-row') %}<div>{% call el("p", "title") %}Password{% endcall %}{% call el("p", "sub") %}Encrypted, never shown back{% endcall %}</div>{{ button("Rotate", href="/sources?panel=connect&kind=" ~ src.kind ~ "&sid=" ~ src.id) }}{% endcall %}
+  {% endif %}
+{% endcall %}
+{% call el('section', 'section lines') %}
+  {% call el("div", "section-head") %}Sync{% endcall %}
+  {% call el('div', 'section-row') %}{% call el("p", "title") %}Last nightly read{% endcall %}<span class="flex items-center gap-8 flex-wrap">{% if src.health and src.health.last_read %}{{ chip(fmt.num(src.health.last_read.rows) ~ " rows last read", dot="ok") }}{% else %}{{ chip("First read tonight at " ~ fmt.clock(company.run_time), dot="muted") }}{% endif %}</span>{% endcall %}
+{% endcall %}
+{% call el('section', 'section lines') %}
+  {% call el("div", "section-head") %}Remove source{% endcall %}
+  {% call el('div', 'section-row') %}<div class="min-w-0">{% if card.feeds %}{% call el("p", "hint") %}Removing it stops {{ fmt.num(card.feeds | length) }} metric{{ "s" if card.feeds | length != 1 else "" }} ({{ card.feeds[:3] | join(", ") }}{{ " and " ~ fmt.num(card.feeds | length - 3) ~ " more" if card.feeds | length > 3 else "" }}){% if card.briefs %} and the numbers in {{ card.briefs | join(", ") }}{% endif %}.{% endcall %}{% else %}{% call el("p", "hint") %}Nothing uses this source yet. Metrics, briefs and detectors that read it are listed here once they exist.{% endcall %}{% endif %}</div>{{ button("Remove source", "danger", href="/sources?panel=manage&s=" ~ src.id ~ "&confirm=disconnect#disconnect") }}{% endcall %}
+{% endcall %}
+</div>
+{{ use_toast(toast) }}
+{% endblock %}

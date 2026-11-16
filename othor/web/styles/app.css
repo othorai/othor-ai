@@ -1,0 +1,14 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* Othor AI stylesheet: Tailwind v4 (standalone CLI, scripts/build_css.py).
+   theme.css holds every token (Tailwind's defaults removed); base.css the element defaults;
+   components.css every component look. Pages add layout utilities only. */
+@layer theme, base, components, utilities;
+@import "./theme.css";
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+@import "./base.css" layer(base);
+@import "./components.css" layer(components);
+
+@source "../templates";
+@source "../setup_view.py";
+@source "../sources_view.py";

@@ -1,0 +1,177 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# Home (3a, 3aa, 3b; M10a): a brief card, a question row, a recent row, the chat's progress. #}
+{# `quiet`: the line under the faint Othor AI mark when there's nothing to chart (#21) #}
+{% macro home_card(name, title, meta, href, flag=False, action="Open brief →", chart_spec=None, visual=False, count=0, quiet="") -%}
+{% from "components/icons.html" import logo %}
+{% if visual %}<div class="card-stack{{ ' s2' if count > 2 else (' s1' if count == 2 else '') }}">{% endif %}
+<a class="brief-card{{ ' has-visual' if visual else '' }}" href="{{ href }}">
+  {% if visual %}<div class="visual">{% if chart_spec %}{{ chart(chart_spec, 240, 152) }}{% elif quiet %}<span class="quiet"><span class="mark" aria-hidden="true">{{ logo() }}</span><span>{{ quiet }}</span></span>{% endif %}{% if count > 1 %}<span class="stack-count">1 of {{ fmt.num(count) }}</span>{% endif %}</div>
+  <div class="body">
+  <div class="head"><span class="brief-tag">{{ name }}</span><span class="status"><span class="dot {{ 'warn' if flag else 'ok' }}"></span></span></div>
+  {% else %}
+  <div class="head"><span class="name">{{ name }}</span><span class="status"><span class="dot {{ 'warn' if flag else 'ok' }}"></span></span></div>
+  {% endif %}
+  {% if title %}<p class="headline">{{ title }}</p>{% endif %}
+  <p class="meta"><span>{{ meta }}</span></p>
+  <p class="meta"><span class="link">{{ action }}</span></p>
+  {% if visual %}</div>{% endif %}
+</a>
+{%- if visual %}{% if count > 1 %}<span class="stack-sheet one" aria-hidden="true"></span>{% endif %}{% if count > 2 %}<span class="stack-sheet two" aria-hidden="true"></span>{% endif %}</div>{% endif %}
+{%- endmacro %}
+
+{% macro question_row(n, text, origin) -%}
+<div class="q-row"><span class="n">{{ n }}</span><span>{{ text }}</span><span class="chip soft">{{ origin }}</span></div>
+{%- endmacro %}
+
+{% macro recent_row(date, text, kind) -%}
+<div class="recent-row"><span class="d">{{ date }}</span><span>{{ text }}</span><span class="tag">{{ kind }}</span></div>
+{%- endmacro %}
+
+{# --- The questions panel (3aa; v0.11, docs/plans/questions-panel.md part 1) --- #}
+
+{# "Question 2 of 4 · 1 answered" and one segment per question: answered filled, current outlined.
+   Setup's Decisions panel says "Decision 2 of 6 · 1 decided" (#32). #}
+{% macro qp_steps(at, total, answered, segs, noun="Question", done="answered") -%}
+<div class="nb-steps"><p><b>{{ noun }} {{ fmt.num(at) }} of {{ fmt.num(total) }}</b> · {{ fmt.num(answered) }} {{ done }}</p><ol class="segs qp-segs" aria-label="{{ noun }} {{ at }} of {{ total }}">{% for c in segs %}<li class="seg{{ ' ' ~ c if c else '' }}"{% if 'now' in c %} aria-current="step"{% endif %}></li>{% endfor %}</ol></div>
+{%- endmacro %}
+
+{# The why line; its count of Sweep tests links to Sweep's Coverage #}
+{% macro qp_why(w) -%}
+<p class="nb-lede">{{ w.pre }}{% if w.link %}<a class="link" href="{{ w.href }}" data-no-panel>{{ w.link }}</a>{{ w.post }}{% endif %}</p>
+{%- endmacro %}
+
+{# A reply as a radio card (a real radio group); `aside`, a computed value on the right (a
+   decision's "Oct 2026 · ₹4.77 Cr") #}
+{% macro qp_pick(name, value, label, checked=False, sub=None, aside=None, required=False) -%}
+<label class="qp-pick"><input type="radio" name="{{ name }}" value="{{ value }}"{% if checked %} checked{% endif %}{% if required %} required{% endif %}><span class="t"><span class="name">{{ label }}</span>{% if sub %}<span class="sub">{{ sub }}</span>{% endif %}</span>{% if aside %}<span class="v">{{ aside }}</span>{% endif %}</label>
+{%- endmacro %}
+
+{# Helpful questions (v0.12): when nothing is found, or Othor AI can't decide, one box that says
+   why in one line (from computed facts) and the next step, with its link when there is one #}
+{% macro qp_found(lead, f) -%}
+<div class="qp-found" role="status"><p class="lead">{% from "components/icons.html" import logo %}<span class="mark" aria-hidden="true">{{ logo() }}</span><b>{{ lead }}</b></p><p>{{ f.why }}</p>{% if f.next %}<p class="next">{% if f.href %}<a class="link" href="{{ f.href }}" data-no-panel>{{ f.next }}</a>{% else %}{{ f.next }}{% endif %}</p>{% endif %}</div>
+{%- endmacro %}
+
+{# The tag on an answer Othor AI decided (Let Othor AI decide, v0.12): the mark, the words, its
+   computed evidence and the cap until the owner confirms #}
+{% macro qp_decided(d) -%}
+<div class="qp-decided"><p class="tag">{% from "components/icons.html" import logo %}<span class="mark" aria-hidden="true">{{ logo() }}</span>Decided by Othor AI</p>{% if d.evidence %}<p>{{ d.evidence }}</p>{% endif %}<p class="cap">{{ d.cap }} <a class="link" href="/ontology#decided" data-no-panel>Check it</a></p></div>
+{%- endmacro %}
+
+{# Back · Next (Done on the last, which closes the panel): links, swapped in place with the URL
+   pushed (othor.js panels) #}
+{% macro qp_nav(back, next, done="/home", label="Questions") -%}
+{% from "components/icons.html" import icon %}
+<nav class="qp-nav" aria-label="{{ label }}">{% if back %}<a class="back" href="{{ back }}">{{ icon("chevron-left") }}Back</a>{% else %}<span class="back" aria-disabled="true">{{ icon("chevron-left") }}Back</span>{% endif %}{% if next %}<a class="next" href="{{ next }}">Next{{ icon("chevron-right") }}</a>{% else %}<a class="next" href="{{ done }}">Done{{ icon("chevron-right") }}</a>{% endif %}</nav>
+{%- endmacro %}
+
+{# 3a: a proposal's confidence, a pill with its dot (amber Medium, green High, grey Low) #}
+{% macro confidence_pill(label) -%}
+<span class="status-pill"><span class="dot {{ {'High': 'ok', 'Medium': 'warn'}.get(label, 'muted') }}"></span>{{ label }}</span>
+{%- endmacro %}
+
+{# Home's checks strip (owner's design, 11 Nov 2026): one bar per shipped check, coloured by
+   whether it ran last night, and the one thing to do about the rest (home_view.checks_strip). #}
+{% macro checks_strip(c) -%}
+{% from "components/buttons.html" import button %}
+{# v0.11 (owner, 12 Nov 2026): "At N% Intelligence." with the one thing to do; the bar's parts
+   sized by count; the (i) opens what the percentage means and the 11 checks by group, in place. #}
+<section class="checks {{ c.state }}" aria-label="Checks last night">
+  <div class="checks-body">
+    <div class="checks-line"><p><b>{{ c.lead }}</b> <span>{{ c.tail }}</span></p>
+      <span class="pop checks-pop" x-data="popover"><button class="checks-i" type="button" aria-label="What {{ c.pct }}% Intelligence means" aria-controls="checks-info" aria-expanded="false"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.2"/><path d="M10 9v5M10 6.2v.1"/></svg></button>
+        <div class="checks-info" role="tooltip" id="checks-info">
+          <div class="checks-info-head"><b>Your {{ fmt.num(c.total) }} checks</b><button type="button" class="link" data-pop-close>Close</button></div>
+          <p class="checks-info-lede">{{ c.explain }}</p>
+          {% for g in c.groups %}<div class="checks-group"><i class="dot {{ g.key }}"></i><div><p class="checks-group-head"><b>{{ g.label }}</b><b>{{ fmt.num(g.n) }}</b></p><p>{{ g.text }}</p>{% if g.checks %}<p class="checks-names">{% for name, need in g.checks %}<span>{{ name }}{% if need %}: {{ need[0] | lower }}{{ need[1:] }}{% endif %}</span>{% endfor %}</p>{% endif %}</div></div>{% endfor %}
+          <p class="checks-info-foot">Each check is a test Sweep runs on your numbers every night. Numbers are computed, never written by a model.</p>
+        </div>
+      </span>
+    </div>
+    <div class="checks-bar" role="img" aria-label="{{ c.ran }} of {{ c.total }} checks ran">{% for b in c.bar %}<i class="{{ b.cls }}"></i>{% endfor %}</div>
+  </div>
+  {{ button(c.action[0] ~ " →", "primary" if c.state == "partial" else "", href=c.action[1]) }}
+</section>
+{%- endmacro %}
+
+{# a Home section's label: "Briefs · 3", "Sweep" (design B2) #}
+{% macro section_label(text) -%}
+<h2 class="home-label">{{ text }}</h2>
+{%- endmacro %}
+
+{# Home's Data sources (#57, owner 14 Nov 2026): each source, whether it had rows for yesterday
+   (from the run's stored weather facts), its newest data and when it was last read.
+   rows = home_view.source_rows() #}
+{% macro sources_table(rows) -%}
+{% from "components/sources.html" import kind_tile %}
+{% from "components/forms.html" import chip %}
+{% from "components/buttons.html" import link %}
+<section class="home-sources" aria-label="Data sources">
+  <div class="home-sources-head">{{ section_label("Data sources · " ~ fmt.num(rows | length)) }}{{ link("Data sources →", "/sources") }}</div>
+  <div class="table-wrap"><table class="table flush stack">
+    <thead><tr><th>Source</th><th>Status</th><th>Newest data</th><th>Last read</th></tr></thead>
+    <tbody>{% for r in rows %}<tr>
+      <td><div class="home-src">{{ kind_tile({"postgres": "PG", "mysql": "MY", "gsheets": "GS"}[r.kind]) }}<a class="row-link" href="/sources?panel=manage&amp;s={{ r.id }}">{{ r.title }}</a></div></td>
+      <td>{{ chip(r.status, dot=r.dot) }}</td>
+      <td>{{ r.newest }}</td>
+      <td>{{ r.last_read }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+{%- endmacro %}
+
+{# the sixth brief card when there are more than six: the rest, grouped (design B2) #}
+{% macro brief_more(m) -%}
+<a class="brief-card brief-more" href="{{ m.href }}"><b>+ {{ fmt.num(m.n) }} more briefs</b>
+  <span>{% if m.need %}{{ fmt.num(m.need) }} need{{ 's' if m.need == 1 else '' }} you{% else %}All quiet{% endif %}</span><span class="link">All briefs →</span></a>
+{%- endmacro %}
+
+{# Home's Sweep box (design B2): how much was found, the top three by money, and the rest #}
+{% macro sweep_box(b) -%}
+{% from "components/buttons.html" import button, link %}
+{% from "components/sweep.html" import tags %}
+<div class="sweep-box">
+  <div class="sweep-box-head"><p>{% if b.found %}{{ fmt.num(b.found) }} found{% if b.new %}, {{ fmt.num(b.new) }} new{% endif %}{% else %}Nothing found last night{% endif %}</p>{{ button("Open Sweep →", href="/sweep") }}</div>
+  {% for r in b.rows %}
+  <a class="sweep-box-row" href="/sweep/finding/{{ r.fp }}?run={{ b.run }}">{{ tags(r.state, r.confidence, r.change) }}<span class="t">{{ r.title }}</span>{% if r.in_brief %}<span class="chip soft">In a brief</span>{% endif %}<span class="m">{{ r.money }}</span></a>
+  {% endfor %}
+  {% if b.more %}<div class="sweep-box-foot"><span>+ {{ fmt.num(b.more) }} more in Sweep</span>{{ link("Open Sweep →", "/sweep") }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{# Home's lights (owner, 16 Nov 2026): one light per part, in the order the data flows, each its
+   own icon coloured by its state (ok green, note grey, warn amber, bad red, info ink), a word
+   under it. Any light opens the full list in the panel on the right, in place. #}
+{% macro light_icon(x) -%}
+{% from "components/icons.html" import icon, logo %}
+{%- if x.icon == "ai" %}<span class="light-mark">{{ logo() }}</span>{% else %}{{ icon(x.icon) }}{% endif -%}
+{%- endmacro %}
+
+{# System Health (owner, 16 Nov 2026): the lights as one button left of Big Picture, coloured by
+   the most urgent light (green all clear, amber, red), with how many need you; it opens the
+   full list in the panel on the right, in place. #}
+{% macro health_button(L) -%}
+{% from "components/icons.html" import icon %}
+{%- set level = "bad" if L.bad else ("warn" if not L.ok else "ok") -%}
+{%- set n = L.lights | selectattr("state", "in", ["warn", "bad"]) | list | length -%}
+<a class="btn health is-{{ level }}" href="/home?panel=lights" data-panel title="{{ L.summary }}">{{ icon("checked") }}<span>System Health</span>{% if n %}<span class="health-count" aria-label="{{ n }} need you">{{ n }}</span>{% else %}<span class="health-dot" aria-hidden="true"></span>{% endif %}</a>
+{%- endmacro %}
+
+{% macro lights_panel(L, close="/home") -%}
+{% from "components/panels.html" import side_panel %}
+{% call(part) side_panel("System Health", L.subtitle, close=close) -%}
+{%- if part == "body" -%}
+  <div class="lights-groups">
+  {% for g in L.groups %}<section class="lights-group" aria-label="{{ g.title }}">
+    <p class="caps-title">{{ g.title }}</p>
+    <ul>{% for x in g.lights %}<li class="lp-row" id="light-{{ x.key }}">
+      <span class="light-icon is-{{ x.state }}">{{ light_icon(x) }}</span>
+      <div class="lp-text"><p><b>{{ x.label }}</b> · {{ x.line }}</p>
+        {% for d in x.details %}<p class="lp-detail">{{ d }}</p>{% endfor %}</div>
+      {% if x.href %}<a class="link" href="{{ x.href }}">{{ x.link }} →</a>{% endif %}
+    </li>{% endfor %}</ul>
+  </section>{% endfor %}
+  </div>
+{%- endif -%}
+{%- endcall %}
+{%- endmacro %}

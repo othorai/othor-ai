@@ -1,0 +1,28 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{#- M18.2 · Delete the company: the danger-zone row, and its dialog's steps swapped in place.
+   cl.step: "name" (type the company's name) or "code" (the emailed code, then Delete). -#}
+{% from "components/ui.html" import el %}
+{% from "components/forms.html" import text_input, code_boxes %}
+{% macro close_step(cl, company, csrf) -%}
+{%- call el("div", attrs={"id": "close-step"}) -%}
+{%- if cl.step == "code" -%}
+  {%- call el("form", layout="flex flex-col gap-16", attrs={"hx-post": "/settings/close/confirm", "hx-target": "#close-step", "hx-swap": "outerHTML", "hx-sync": "this:drop"}) -%}
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {%- call el("p") -%}We sent a 6-digit code to {{ cl.masked }}. Enter it, then Delete.{%- endcall -%}
+    {{ code_boxes(cl.digits or ("", "", "", "", "", ""), state=cl.state, focus=0, compact=True) }}
+    {%- if cl.error -%}{%- call el("p", "field-error", attrs={"role": "alert"}) -%}{{ cl.error }}{%- endcall -%}{%- endif -%}
+    {%- call el("div", layout="flex items-center gap-8") -%}
+      {%- call el("button", "btn danger", attrs={"type": "submit", "data-busy": "Deleting…"}) -%}Delete {{ company.name }}{%- endcall -%}
+      {%- call el("button", "btn quiet", attrs={"type": "button", "hx-post": "/settings/close/start", "hx-vals": '{"resend": "1"}', "hx-include": "closest form", "hx-target": "#close-step", "hx-swap": "outerHTML"}) -%}Resend the code{%- endcall -%}
+    {%- endcall -%}
+  {%- endcall -%}
+{%- else -%}
+  {%- call el("form", layout="flex flex-col gap-16", attrs={"hx-post": "/settings/close/start", "hx-target": "#close-step", "hx-swap": "outerHTML", "hx-sync": "this:drop"}) -%}
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {%- call el("p") -%}Deleting stops nightly runs, briefs and sign-in at once, and removes your sources’ passwords and Google sign-ins. Everything else is removed for good on {{ fmt.day_month_year(cl.purge_on) }}. To restore it before then, {{ ("write to " ~ install.support_email) if install.support_email else "ask whoever runs this Othor AI" }}.{%- endcall -%}
+    {{ text_input("name", "Type " ~ company.name ~ " to confirm", cl.typed or "", error=cl.error, attrs='autocomplete="off" required') }}
+    {%- call el("div", layout="flex items-center gap-8") -%}{%- call el("button", "btn danger", attrs={"type": "submit", "data-busy": "Sending…"}) -%}Send a code{%- endcall -%}{%- endcall -%}
+  {%- endcall -%}
+{%- endif -%}
+{%- endcall -%}
+{%- endmacro -%}

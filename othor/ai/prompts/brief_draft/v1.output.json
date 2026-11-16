@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "properties": {
+    "name": {"type": "string"},
+    "question": {"type": "string"},
+    "headline": {"type": "array", "items": {"type": "string"}},
+    "exclude": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string"}}},
+    "ask_owner": {"type": "string"},
+    "goals": {"type": "array", "items": {"type": "string"}},
+    "schedule": {"type": "string"}
+  },
+  "required": ["name", "question", "headline"],
+  "additionalProperties": false
+}

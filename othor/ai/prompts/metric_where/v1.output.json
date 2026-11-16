@@ -1,0 +1,146 @@
+{
+  "type": "object",
+  "properties": {
+    "text": {
+      "type": "string"
+    },
+    "patch": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "",
+            "use_column",
+            "use_duration",
+            "add_filter",
+            "set_threshold",
+            "exclude",
+            "convert_units",
+            "coalesce_date",
+            "set_breakdowns",
+            "rename"
+          ]
+        },
+        "args": {
+          "type": "object",
+          "properties": {
+            "table": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "schema": {
+                  "type": "string"
+                },
+                "table": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "source",
+                "schema",
+                "table"
+              ],
+              "additionalProperties": false
+            },
+            "column": {
+              "type": "string"
+            },
+            "date": {
+              "type": "string"
+            },
+            "op": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            },
+            "values": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "breakdown": {
+              "type": "string"
+            },
+            "breakdowns": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "when": {
+              "type": "object",
+              "properties": {
+                "column": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "column",
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "factor": {
+              "type": "string"
+            },
+            "to_unit": {
+              "type": "string"
+            },
+            "primary": {
+              "type": "string"
+            },
+            "fallback": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "start": {
+              "type": "string"
+            },
+            "end": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "table",
+            "column",
+            "date",
+            "op",
+            "value",
+            "values",
+            "breakdown",
+            "breakdowns",
+            "when",
+            "factor",
+            "to_unit",
+            "primary",
+            "fallback",
+            "name",
+            "start",
+            "end"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "kind",
+        "args"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "text",
+    "patch"
+  ],
+  "additionalProperties": false
+}

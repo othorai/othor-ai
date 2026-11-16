@@ -1,0 +1,25 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+data/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.import_linter_cache/
+.DS_Store
+.cache/
+othor/web/static/css/app.*.css
+othor/web/static/css/manifest.json
+THIRD_PARTY_LICENSES
+
+# Terraform (deploy/aws/terraform): providers and local state never go in git; the lock file does
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+deploy/aws/terraform/backend.hcl
+deploy/aws/terraform/terraform.tfvars
+deploy/aws/terraform/plan.out
+deploy/aws/terraform/plan.json
+othor_site/static/site/css/

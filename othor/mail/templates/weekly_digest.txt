@@ -1,0 +1,12 @@
+Weekly digest · {{ week }}
+
+{% for k, v in stats %}{{ k }}: {{ v }}
+{% endfor %}{% for heading, rows in sections if rows %}
+{{ heading }}
+{% for left, right in rows %}- {{ left }} · {{ right }}
+{% endfor %}{% endfor %}
+Open Sweep: {{ sweep_url }}
+
+—
+Sent by your Othor AI instance at {{ instance }} · Delivery preferences: {{ preferences }}
+This email contains business data; do not forward outside the company.

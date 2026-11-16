@@ -1,0 +1,60 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button %}
+{% from "components/forms.html" import chip %}
+{% from "components/panels.html" import side_panel %}
+{% from "components/sources.html" import use_menu, use_toast %}
+{# The Tables panel (M11c, t1–t2): Used · Ignored · Excluded with search. A use changes from
+   the row's menu, in place. Excluded tables hold personal data: listed, never read, no menu. #}
+{% set kn = {"postgres": "PostgreSQL", "mysql": "MySQL", "gsheets": "Google Sheets"} %}
+{% set unit = "tabs" if psrc.kind == "gsheets" else "tables" %}
+{% set here = base ~ "?panel=tables&s=" ~ psrc.id %}
+{% set all_rows = request.query_params.get("all") %}
+{% set limit = None if (all_rows or tl.searching) else 10 %}
+{% set counts = tl.match_counts if tl.searching else tl.counts %}
+{% call(part) side_panel("Tables", "How each " ~ unit[:-1] ~ " is used. Only names, counts and statistics are read here, never rows.", None, base, kicker=kn[psrc.kind] ~ " · " ~ (card.title if psrc.kind == "gsheets" else (psrc.config.database or psrc.name))) %}
+{% if part == "body" %}
+  <div class="flex items-center justify-between gap-12 flex-wrap">
+    <span class="flex items-center gap-6 flex-wrap">
+    {% for k, key, label in [("used", "candidates", "Used"), ("ignored", "ignored", "Ignored"), ("excluded", "excluded", "Excluded")] %}{{ chip(label ~ " · " ~ fmt.num(counts.get(key, 0)), state="on" if (ttab == k and not tl.searching) else "", href=here ~ "&tab=" ~ k) }}{% endfor %}
+    </span>
+    <form method="get" action="{{ base }}"><input type="hidden" name="panel" value="tables"><input type="hidden" name="s" value="{{ psrc.id }}">
+      {% call el('input', 'input search', attrs={'name': 'q', 'value': tl.q, 'placeholder': 'Search all ' ~ fmt.num(tl.scanned) ~ ' ' ~ unit, 'aria-label': 'Search all ' ~ unit ~ ' and columns'}) %}{% endcall %}</form>
+  </div>
+  {% if psrc.kind == "gsheets" %}{# "Used" is how a tab is classified; the row counts the tabs chosen to read (12 Nov 2026) #}
+  {% call el("p", "hint") %}{{ fmt.num(card.tables_used) }} of these tab{{ "s" if card.tables_used != 1 else "" }} {{ "are" if card.tables_used != 1 else "is" }} read each night. {% call el("a", "link", attrs={"href": base ~ "?panel=sheets&s=" ~ psrc.id}) %}Choose tabs →{% endcall %}{% endcall %}
+  {% endif %}
+  {% set excl = ttab == "excluded" and not tl.searching %}
+  {% call el('div', 'card flush') %}
+    {% call el('div', 'table-wrap') %}{% call el('table', 'table flush') %}
+      <thead><tr><th>{{ unit[:-1] | capitalize }}</th>{% if excl %}<th>Personal columns</th><th>Why</th>{% else %}{% call el('th', 'num') %}Rows{% endcall %}<th>Looks like</th><th>Use</th>{% endif %}</tr></thead>
+      <tbody>
+      {% for r in (tl.rows[:limit] if limit else tl.rows) %}
+      <tr>
+        {% call el('td', 'mono-ink') %}{% if tl.searching %}{{ r.qualified | mark(tl.q) }}{% else %}{{ r.qualified }}{% endif %}{% endcall %}
+        {% if excl %}
+        {% call el('td', 'wrap') %}{{ r.personal }}{% endcall %}
+        <td>{{ chip("Personal data", dot="neg") }}</td>
+        {% else %}
+        {% call el('td', 'num mono') %}{% if r.t.state != "done" %}{{ "reading…" if r.t.state == "reading" else "queued" }}{% else %}{{ r.rows }}{% endif %}{% endcall %}
+        {% call el('td', 'wrap') %}{% if r.t.use == "excluded" %}{{ r.personal }}{% else %}{{ r.t.looks_like or "—" }}{% endif %}{% endcall %}
+        <td>{% if r.t.use == "excluded" %}{{ chip("Personal data", dot="neg") }}{% else %}{{ use_menu(r) }}{% endif %}</td>
+        {% endif %}
+      </tr>
+      {% else %}
+      <tr>{% call el('td', 'hint', attrs={'colspan': 4}) %}{% if tl.searching %}No {{ unit[:-1] }} or column matches “{{ tl.q }}”.{% else %}None here.{% endif %}{% endcall %}</tr>
+      {% endfor %}
+      </tbody>
+    {% endcall %}{% endcall %}
+    {% call el('div', 'box-foot') %}
+      <span>{% if tl.searching %}{{ fmt.num(counts.values() | sum) }} of {{ fmt.num(tl.scanned) }} {{ unit }} match “{{ tl.q }}”{% elif excl %}Never read: not in queries, samples or prompts.{% elif limit and tl.rows | length > limit %}{{ fmt.num(tl.total - limit) }} more · sorted by rows{% else %}{{ fmt.num(tl.total) }} · sorted by rows{% endif %}</span>
+      <span class="flex items-center gap-12">{% if limit and tl.rows | length > limit %}{% call el('a', 'link', attrs={'href': here ~ '&tab=' ~ ttab ~ '&all=1'}) %}Show all{% endcall %}{% endif %}{% if tl.searching %}{% call el('a', 'link-u', attrs={'href': here ~ '&tab=' ~ ttab}) %}Clear search{% endcall %}{% endif %}</span>
+    {% endcall %}
+  {% endcall %}
+  {% call el('p', 'hint') %}Excluded {{ unit }} hold only personal data and are never read. In other {{ unit }}, personal columns (like customer phone numbers) are skipped the same way. Ignored {{ unit }} are logs, backups, copies and empty {{ unit }}; bring any back from its menu.{% endcall %}
+  {{ use_toast(toast) }}
+{% else %}
+  {% call el('span', 'hint') %}Changes apply from tonight’s run{% endcall %}
+  {{ button("Done", "primary", href=base) }}
+{% endif %}
+{% endcall %}

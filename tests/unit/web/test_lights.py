@@ -1,0 +1,237 @@
+# SPDX-License-Identifier: Apache-2.0
+"""Home's lights (owner, 16 Nov 2026): one light per part, in the order the data flows, each
+counted from what the run recorded."""
+
+from __future__ import annotations
+
+from othor.web.lights_view import lights
+
+ORDER = [
+    "connection",
+    "columns",
+    "fresh",
+    "volume",
+    "run",
+    "numbers",
+    "checks",
+    "findings",
+    "forecasts",
+    "checked",
+    "ai",
+    "briefs",
+    "next",
+]
+
+
+def _src(title="sales_dw", status="Updated", dot="ok", **kw):
+    return {
+        "name": title,
+        "title": title,
+        "status": status,
+        "dot": dot,
+        "state": "connected",
+        "read_reason": None,
+        "query_code": None,
+        "added": 100,
+        "usual": 100,
+        "history": 10,
+        **kw,
+    }
+
+
+def _facts(**kw):
+    base = {
+        "run": {
+            "number": 12,
+            "status": "done",
+            "kind": "nightly",
+            "ended": "02:01",
+            "started": "02:00",
+            "late": False,
+            "slow": False,
+            "took": "1 min",
+        },
+        "sources": [_src(), _src("erp_db"), _src("Order tracker")],
+        "numbers": {"total": 60, "stale": []},
+        "checks": {"ran": 11, "total": 11},
+        "findings": {"new": 2, "worse": 1, "came_back": 0, "open": 5},
+        "forecasts": {"total": 5, "made": 5, "unsure": []},
+        "replayed": True,
+        "ai": {"model": 1, "template": 0, "why": None},
+        "briefs": [
+            {
+                "name": "Leadership",
+                "made": True,
+                "sent": 3,
+                "recipients": 3,
+                "due_passed": True,
+                "bounced": 0,
+            }
+        ],
+        "next": {"run": "tonight at 02:00", "brief": "06:00"},
+    }
+    return {**base, **kw}
+
+
+def test_all_well_is_all_clear_in_the_order_the_data_flows():
+    got = lights(_facts())
+    assert [x["key"] for x in got["lights"]] == ORDER
+    assert got["ok"] and got["summary"] == "All clear · finished at 02:01"
+    assert got["subtitle"] == "All clear · run #0012 · finished at 02:01"
+    by = {x["key"]: x for x in got["lights"]}
+    assert by["findings"]["line"] == "2 new · 1 worse" and by["findings"]["state"] == "info"
+    assert by["briefs"]["line"] == "1 of 1 brief sent"
+    assert by["briefs"]["details"] == ["Leadership: sent to 3 people"]
+    assert [g["title"] for g in got["groups"]] == [
+        "Your data",
+        "Last night’s run",
+        "What Othor AI found",
+        "Your briefs",
+        "Next",
+    ]
+    # every light has its own icon
+    assert len({x["icon"] for x in got["lights"]}) == len(ORDER)
+
+
+def test_the_source_problems_each_light_their_own_part():
+    got = lights(
+        _facts(
+            sources=[
+                _src(read_reason="Wrong user or password."),
+                _src("erp_db", query_code="1054"),
+                _src(
+                    "Order tracker", status="Not updated yesterday", dot="warn", added=10, usual=100
+                ),
+            ]
+        )
+    )
+    by = {x["key"]: x for x in got["lights"]}
+    assert by["connection"]["state"] == "bad"
+    assert by["connection"]["details"] == ["sales_dw: Wrong user or password."]
+    assert by["columns"]["state"] == "bad"
+    assert by["columns"]["details"] == ["erp_db: a column the numbers use is missing"]
+    assert (
+        by["fresh"]["state"] == "warn" and by["fresh"]["line"] == "2 of 3 sources updated yesterday"
+    )
+    assert by["volume"]["state"] == "warn"
+    assert by["volume"]["details"] == ["Order tracker: 90% fewer new rows than usual"]
+    assert got["summary"].startswith("4 things need you")
+
+
+def test_expected_quiet_is_grey_not_a_problem():
+    got = lights(
+        _facts(
+            sources=[_src(status="Not updated yesterday", dot="muted", history=2)],
+            checks={"ran": 10, "total": 11, "waiting": 1},
+            forecasts={"total": 5, "made": 4, "unsure": ["Receivables over 60 days"]},
+            replayed=None,
+            ai={"model": 0, "template": 1, "why": "unavailable"},
+        )
+    )
+    by = {x["key"]: x for x in got["lights"]}
+    assert got["ok"]
+    for k in ("fresh", "volume", "checks", "forecasts", "checked", "ai"):
+        assert by[k]["state"] == "note", k
+    assert by["checks"]["href"] == "/home?panel=questions"
+    assert by["ai"]["details"] == [
+        "Othor AI was unavailable, so the brief was written from templates"
+    ]
+
+
+def test_the_run_and_the_briefs():
+    got = lights(
+        _facts(
+            run={
+                "number": 13,
+                "status": "done",
+                "kind": "rerun",
+                "ended": "08:30",
+                "started": "08:29",
+                "late": False,
+                "slow": True,
+                "took": "40 min",
+            },
+            numbers={"total": 60, "stale": ["Net revenue", "DSO"]},
+            briefs=[
+                {
+                    "name": "Leadership",
+                    "made": True,
+                    "sent": 0,
+                    "recipients": 2,
+                    "due_passed": True,
+                    "bounced": 0,
+                },
+                {
+                    "name": "Cash",
+                    "made": True,
+                    "sent": 2,
+                    "recipients": 2,
+                    "due_passed": True,
+                    "bounced": 1,
+                },
+            ],
+        )
+    )
+    by = {x["key"]: x for x in got["lights"]}
+    assert (
+        by["run"]["line"] == "Run #0013 (run again) finished at 08:30"
+        and by["run"]["state"] == "warn"
+    )
+    assert by["numbers"]["state"] == "bad" and by["numbers"]["details"] == [
+        "Kept at the last good day: Net revenue and DSO"
+    ]
+    assert by["briefs"]["state"] == "bad"
+    assert by["briefs"]["details"] == ["Leadership: made but not sent yet", "Cash: 1 email bounced"]
+
+
+def test_a_failed_run_shows_what_still_holds():
+    got = lights(_facts(run={"number": 14, "status": "failed", "kind": "nightly", "ended": ""}))
+    assert [x["key"] for x in got["lights"]] == ["connection", "run", "next"]
+    assert not got["ok"] and got["lights"][1]["link"] == "Why it failed"
+
+
+def test_the_words_light():
+    def ai(**kw):
+        return {x["key"]: x for x in lights(_facts(ai=kw))["lights"]}["ai"]
+
+    assert ai(model=2)["line"] == "2 of 2 briefs written by Othor AI"
+    assert ai(quiet=1)["line"] == "Quiet day: nothing to write up"
+    w = ai(waiting=1)
+    assert w["state"] == "note" and w["details"] == ["1 brief not written up yet"]
+    f = ai(model=1, template=1, why="guard")
+    assert f["line"] == "1 of 2 briefs written by Othor AI"
+    assert f["details"] == ["Othor AI’s words didn’t match the numbers, so templates were used"]
+
+
+def test_the_licence_light():
+    import datetime as dt
+
+    def lic(**kw):
+        base = {
+            "state": "valid",
+            "customer": "Acme",
+            "edition": "enterprise",
+            "expires": None,
+            "grace_left": None,
+            "limits": {"companies": 50},
+            "companies": 12,
+            "reason": "",
+        }
+        got = lights(_facts(licence={**base, **kw}))
+        return {x["key"]: x for x in got["lights"]}["licence"], got
+
+    ok, got = lic()
+    assert ok["state"] == "ok" and ok["line"] == "Enterprise · no end date · 12 of 50 companies"
+    assert got["groups"][-1]["title"] == "Your licence"
+    dated, _ = lic(expires=dt.date(2027, 12, 31))
+    assert dated["line"].startswith("Enterprise · until 31 Dec 2027")
+    grace, got = lic(state="grace", grace_left=11)
+    assert (
+        grace["state"] == "warn" and grace["line"] == "Expired · 11 days to renew" and not got["ok"]
+    )
+    expired, _ = lic(state="expired")
+    assert expired["state"] == "bad" and expired["line"] == "Expired · no new companies"
+    none, _ = lic(state="none")
+    assert none["state"] == "note"
+    # without enterprise features or several companies, no Licence light at all
+    assert "licence" not in {x["key"] for x in lights(_facts())["lights"]}

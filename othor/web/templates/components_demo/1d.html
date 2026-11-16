@@ -1,0 +1,13 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "base.html" %}
+{% block title %}1d · Code screen states{% endblock %}
+{% block body %}
+<div class="board-page states-1d">
+  <div class="grid gap-16 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+  {% for st, label in [("wrong", "Wrong code"), ("expired", "Expired"), ("cooldown", "Resend cooldown"), ("locked", "Too many attempts")] %}
+    {% with state=st, attempts_left=2, digits=(["4", "8", "2", "9", "1", "3"] if st == "wrong" else [""] * 6), resend_in=47, compact=True, label=label %}
+    {% include "partials/code_card.html" %}{% endwith %}
+  {% endfor %}
+  </div>
+</div>
+{% endblock %}

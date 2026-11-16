@@ -1,0 +1,11 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{#- M15.7 · the logo row in Settings; uploads and removes swap this row in place -#}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import company_logo %}
+{% call el('div', 'section-row', attrs={"id": "logo-row"}) %}<div>{% call el('p', 'title') %}Logo{% endcall %}{% call el('p', 'sub') %}A square mark · on sign-in, emails, links and PDFs · PNG or JPEG, up to 1 MB{% endcall %}</div>
+  {% call el("div", layout="flex items-center gap-8") %}{{ company_logo(company, "md") }}
+    {% call el("form", layout="relative", attrs={"hx-post": "/settings/logo", "hx-encoding": "multipart/form-data", "hx-target": "#logo-row", "hx-swap": "outerHTML"}) %}{% call el('label', 'btn sm', layout='relative') %}{{ "Replace" if company.logo_sha else "Upload" }}{{ el('input', 'drop-input', attrs='type="file" name="file" data-autosubmit aria-label="Choose a logo" accept="image/png,image/jpeg"') }}{% endcall %}{% endcall %}
+    {% if company.logo_sha %}{% call el("button", "btn sm quiet", attrs={"type": "button", "hx-post": "/settings/logo/remove", "hx-target": "#logo-row", "hx-swap": "outerHTML"}) %}Remove{% endcall %}{% endif %}
+  {% endcall %}
+{% endcall %}
+{% if toast %}{% call el("div", "toast-dock", attrs='id="toast-dock" aria-live="polite" hx-swap-oob="innerHTML"') %}{% call el("div", "toast", attrs='role="status"') %}{% call el("span", "dot accent") %}{% endcall %}<span>{{ toast }}</span>{% endcall %}{% endcall %}{% endif %}

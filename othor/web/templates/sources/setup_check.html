@@ -1,0 +1,19 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends shell %}
+{% from "components/ui.html" import el %}
+{% from "components/forms.html" import chip %}
+{% block title %}Check “{{ tab.tab_name }}” · Set up {{ company.name }}{% endblock %}
+{% block crumb %}{% call el('a', 'crumb-link', attrs='href="/sources"') %}Sources{% endcall %}{% call el("span", "crumb-sep") %}/{% endcall %}Check a tab{% endblock %}
+{% block main %}
+<div class="flex items-start justify-between">
+  <div><h1>Check “{{ tab.tab_name }}”</h1>{% call el("p", "lede") %}{{ tab.spreadsheet_title }} · Google Sheets · confirm once, read the same way every night{% endcall %}</div>
+  {% if to_check %}{{ chip(fmt.num(idx) ~ " of " ~ fmt.num(to_check) ~ " tab" ~ ("s" if to_check != 1 else "") ~ " to check", dot="warn") }}{% else %}{{ chip("Checked", dot="ok") }}{% endif %}
+</div>
+{% include "sources/_check_live.html" %}
+{% call el('form', 'onb-foot', attrs={'method': 'post', 'action': '/setup/sources/' ~ (src.id) ~ '/check/' ~ (tab.id) ~ '/confirm'}) %}
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  {% call el('a', 'link-u', attrs={'href': '/setup/sources/sheets?sid=' ~ (src.id)}) %}Back{% endcall %}
+  <div class="flex items-center gap-16">{% call el('a', 'btn lg', attrs={'href': '/setup/sources/' ~ src.id ~ '/check/' ~ tab.id ~ '?fix=1'}) %}Fix with Othor AI{% endcall %}{% call el('button', 'btn primary lg', attrs={'type': 'submit', 'disabled': ((running) and true or none)}) %}Looks right · scan{% endcall %}</div>
+{% endcall %}
+{% if fix %}{% include "sources/_tab_fix.html" %}{% endif %}
+{% endblock %}

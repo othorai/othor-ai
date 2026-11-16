@@ -1,0 +1,3 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/ui.html" import el %}
+<div id="slug-check">{% if problem %}{% call el("p", "field-error") %}{{ problem }}{% endcall %}{% else %}{% call el("p", "field-ok") %}{% call el("span", "dot ok") %}{% endcall %}{{ slug }}.{{ base_domain }} is available{% endcall %}{% endif %}</div>
