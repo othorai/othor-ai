@@ -6,6 +6,7 @@ from __future__ import annotations
 import pytest
 
 from othor.core.ratelimit import CODES, LIMITED_TEXT, LOOKUP
+from tests.needs import needs_site
 from tests.web.conftest import ROOT, Env, signup
 
 
@@ -92,6 +93,7 @@ def test_fly_header_means_nothing_in_alb_mode(env: Env) -> None:
     assert client_ip(req({"X-Forwarded-For": ""})) == "10.0.1.5"
 
 
+@needs_site
 def test_public_scheme_follows_the_alb_only_in_alb_mode(env: Env) -> None:
     """The ALB ends TLS and forwards plain HTTP with X-Forwarded-Proto: https. Links built from
     the request (root_url: Open Graph, canonical, redirects to the root) must say https then,

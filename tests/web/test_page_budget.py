@@ -10,6 +10,7 @@ import statistics
 
 import pytest
 
+from tests.needs import HAS_SITE
 from tests.web.test_brief_web import _brief_id
 from tests.web.test_chat_web import need_sources, sample  # noqa: F401
 from tests.web.test_sweep_web import _fp, night  # noqa: F401
@@ -63,7 +64,8 @@ def test_every_page_is_under_budget(night):  # noqa: F811
 def test_root_pages_are_fast(night):  # noqa: F811
     env, *_ = night
     env.app.state.services.settings.public_site = True  # the website pages (M11a, M12b)
-    for path in ("/login", "/signup", "/", "/ips", "/ips.txt", "/security"):
+    site = ("/", "/ips", "/ips.txt", "/security") if HAS_SITE else ()  # the website plug-in's
+    for path in ("/login", "/signup", *site):
         assert env.client.get("http://othor.localhost" + path).status_code == 200, path
         times = [_server_ms(env.client.get("http://othor.localhost" + path)) for _ in range(5)]
         assert statistics.median(times) < 50, path

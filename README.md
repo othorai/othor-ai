@@ -4,102 +4,151 @@
 
 # Meet your Head of Intelligence.
 
-**Built on the tradecraft of intelligence agencies** · **Grounded in a century of signal analysis** · **Numbers computed, never written by AI**
+**Analytic tradecraft as code** · **Classical signal analysis, not LLM guesswork** · **Every number computed, none generated**
 
-[Run it](#run-it) · [Self-host guide](docs/self-host.md) · [Contributing](CONTRIBUTING.md) · [othor.ai](https://othor.ai)
+[Quick start](#quick-start) · [Architecture](#architecture) · [Self-hosting](docs/self-host.md) · [Contributing](CONTRIBUTING.md)
 
 </div>
 
-Every night Othor AI reads your systems, tests every number, and grades what it finds. By
-06:00 you have the few things that matter, how sure each one is, and who to ask.
+Othor AI is a self-hostable analytics engine that runs as a deterministic nightly batch. It
+reads your operational databases in place, compiles a typed business model (the *Ontology*)
+into SQL, materialises every metric and breakdown, runs a battery of statistical detectors with
+false-discovery-rate control, forecasts each series, and emits a ranked, provenance-linked
+**Morning Brief** at 06:00. A language model is confined to drafting setup and phrasing; it is
+never on the path that produces a number.
 
-![A Morning Brief: the headline takes a position, the numbers to watch, goals, and what needs you](docs/images/morning-brief.webp)
-<sub>A Morning Brief for Indigo Thread Co., Othor AI's invented sample company.</sub>
+![Morning Brief: a ranked set of findings with computed figures, goals with forecast bands, and sparklines](docs/images/morning-brief.webp)
+<sub>Rendered from Indigo Thread Co., the invented sample company the test suite generates.</sub>
 
-## We solved the hardest problems in business intelligence, so you don't have to.
+## The design problem
 
-Until now, you had to pick which one to spend, and still got only part of the intelligence.
-**Othor AI keeps AI and effort to a minimum, and intelligence at the maximum.**
+Business intelligence usually spends one of two scarce resources and still under-delivers:
 
-| | AI usage | Human effort | Intelligence |
+| Approach | Compute / tokens | Human effort | Coverage |
 |---|---|---|---|
-| **People do the work.** Analysts and dashboards. | Small | Lots of hours | Partial |
-| **AI does the work.** Ask a model everything. | A big bill | Fewer hours | Partial |
-| **Othor AI. Code does the work.** | Little | Little | Full |
+| **Dashboards + analysts**: humans author queries and read charts | Low | High: every question is hand-built | Only what someone thought to ask |
+| **LLM-first agents**: a model plans queries and writes the answer | High, scales with data and questions | Lower | Non-deterministic; numbers can be hallucinated |
+| **Othor AI**: a compiled spec, exhaustive tests, a model only for prose | Near zero at run time | Minimal | Every metric × every breakdown, every night |
 
-What that looks like, measured on the sample company (205,000 rows, release 0.19):
+Measured on the sample company (≈205k rows, 29 metrics, release 0.19, AWS `t3a.large`):
 
-| | AI bill | Your time |
+| | Cost | Wall time |
 |---|---|---|
-| **Setup** | about $0.61, once | One afternoon: 5 steps, one source at a time |
-| **Every day** | about 1¢ per brief; the nightly run uses none | 5 minutes with your brief each morning |
+| **Setup** (model drafts the business model and metrics) | ≈ $0.61 in tokens, once | one afternoon of owner review |
+| **Nightly run**: 294 hypothesis tests, 154 SQL queries | **0 model calls** | 28 s (47.9 s cold) |
+| **Replay** of that night | 0 model calls | 15.8 s, byte-identical |
+| **Brief prose** (optional) | ≈ 1¢ per brief | pages served in < 140 ms |
 
-No AI key? It still works: every number, every test and the brief are computed by code, and the
-sentences come from templates.
+Without a model provider configured, everything above still runs; the prose layer falls back to
+deterministic templates.
 
-## See what your numbers are not showing.
+## Detection
 
-**Detect every hidden signal.** Eleven tests run on every metric and every breakdown, every
-night: the week a baseline moved, spreads widening before the average does, customers still
-marked active who went quiet.
+Each night every series and breakdown goes through eleven detectors, each a pure function from a
+materialised frame to typed results with a p-value, effect size and money at stake:
 
-**Discover what your BI tools can't.** A total hiding a falling region, a few accounts carrying
-most of the value, one number moving weeks before another, two systems disagreeing on the same
-figure.
+| Detector | Method |
+|---|---|
+| Net hiding gross | additive decomposition of a total; offsetting component moves against the net change |
+| Changepoint | PELT (`ruptures`, L2 cost) on the weekly series, penalty scaled to the series' noise |
+| Rising variance | dispersion (p10–p90 spread) trending while the level holds |
+| Forecast breach | a closed period against the forecast stored *before* it (never a refit) |
+| Broken relationship / Lead–lag | declared metric pairs: rolling correlation breaks; cross-correlation lag |
+| Concentration | share of value held by the top-k entities, and its trend |
+| Missing records | entities still flagged active with no events past their expected cadence |
+| Process artefact | value distributions with suspicious mass (rounding, defaults, cut-offs) |
+| Cross-source contradiction | the same fact in two systems, reconciled on shared keys |
+| Bimodal average | Hartigan's dip test plus a 2-component Gaussian mixture by EM, selected by BIC |
 
-**Understand what shapes your business.** Each finding says what it means for the business, how
-sure it is (*Measured*, *Assessed* or *Not determinable*), and the one question to ask, and of
-whom.
+All p-values in a run are corrected together with **Benjamini–Hochberg** (default q = 0.01).
+Survivors pass materiality, known-pattern and dedup gates, then get an analytic grade borrowed
+from intelligence tradecraft (**Measured**, **Assessed · High/Medium**, **Not determinable**),
+and are ranked by money at stake, urgency and confidence.
 
-![Sweep: eleven detectors, every finding of the night, with its confidence and the money at stake](docs/images/sweep.webp)
+![Sweep: the night's detector coverage, test counts with FDR, and graded findings](docs/images/sweep.webp)
 
-## Every figure shows its working.
+**Forecasting** uses `statsmodels` `ETSModel` candidates chosen by AICc, then a rolling-origin
+backtest per series: the candidate must beat a seasonal-naive (or last-value) baseline by a
+margin or the baseline is used, and it abstains when history is too short. P10/P50/P90 bands
+come from the chosen method's out-of-sample errors, widened until they would have covered its own
+backtest; goals are projected against their targets.
 
-Open any finding to see what was tested, the gates it passed, the SQL, the metric's definition
-and the run. Same inputs, same numbers: `othor replay <run_id>` reproduces any night byte for
-byte, and CI fails if it doesn't.
+## Determinism and provenance
 
-![How it was calculated: the test, the chart, the four gates it passed, the money at stake, and the run](docs/images/how-it-was-calculated.webp)
+- **Pinned everything:** `uv.lock`, base image by digest, Tailwind standalone binary by SHA-256.
+  Randomised routines are seeded from `sha256(spec hash | run date | series id)`, never a run id
+  or the clock.
+- **Append-only, hash-chained run ledger:** `run_hash = sha256(prev | number | kind | spec | image | input | output)`.
+  `othor replay <run_id>` re-executes a sealed run from its stored inputs and must produce the
+  same bytes; CI fails otherwise.
+- **Provenance on every figure:** definition, compiled SQL, test, parameters, spec version and
+  run, one click from the UI.
 
-## Built to be trusted with your numbers
+![A finding's Test tab: the hypothesis, the decomposition chart, the four gates with their statistics, and the run](docs/images/how-it-was-calculated.webp)
 
-- **AI drafts, code computes.** No number you see is written by a model. A model only drafts
-  setup and the wording around the figures; a number in its text is replaced by the computed one.
-- **Your data stays where it is.** PostgreSQL, MySQL and Google Sheets are read in place, with a
-  login that can only read (one that can write is refused). Personal columns are never read, and
-  no raw rows ever reach a model.
-- **The night needs no model.** If the AI provider is down, the run, the findings and the brief's
-  numbers don't notice.
-- **On your own server.** One image, configured by environment variables and a data folder.
-  Nothing calls home.
+## The model boundary
 
-## Run it
+- One `ModelGateway`; every prompt is a versioned file, every call is logged with prompt id,
+  version, token counts and an input hash (cached).
+- **Numeric guard:** any numeral in model output that isn't in the computed input JSON fails the
+  guard; the sentence is dropped or replaced from the computed value.
+- Inputs are schema and computed summaries only: no raw rows, no personal columns. The engine
+  can't import the AI layer at all (an `import-linter` contract in CI).
 
-You need a Linux server with Docker, and a domain pointing at it.
+## Security model
+
+- **Read-only, enforced:** the connection test inspects the login (PostgreSQL role attributes and
+  object privileges, MySQL `SHOW GRANTS`) and refuses any role that can write or administer.
+- **PII never read:** personal columns are classified at scan time and excluded from every query,
+  sample and prompt; a query guard rejects SQL that names one.
+- **Secrets:** source credentials encrypted with AES-256-GCM under a per-install instance key;
+  nothing calls home. Enterprise licences are Ed25519-signed and verified offline.
+
+## Architecture
+
+```
+sources (PostgreSQL · MySQL · Google Sheets, read-only, incremental)
+   │
+   ▼
+Ontology (typed, versioned records) ──compile──▶ spec (SQL + rules, hashed)
+   │
+   ▼  nightly, APScheduler + idempotent job table
+materialise → derive → probes → forecast → detect (BH-FDR) → grade → rank → brief → seal (ledger)
+   │                                                                              │
+   ▼                                                                              ▼
+DuckDB + Parquet on the data volume (results, not copies)       Morning Brief: web · email (PNG charts) · PDF
+```
+
+Python 3.12 · FastAPI + Jinja2 + htmx (server-rendered, no SPA) · SQLAlchemy 2 + Alembic
+(PostgreSQL, SQLite-compatible schema) · DuckDB / Parquet · pandas, numpy, scipy, statsmodels,
+ruptures · charts as a `ChartSpec` rendered to SVG/PNG on the server · one container image,
+configured by environment variables and a data directory.
+
+## Quick start
 
 ```sh
 git clone https://github.com/othorai/othor-ai.git && cd othor-ai
-cp .env.selfhost.example .env        # set OTHOR_DOMAIN, two secrets, your SMTP server
+cp .env.selfhost.example .env        # OTHOR_DOMAIN, OTHOR_SECRET_KEY, POSTGRES_PASSWORD, OTHOR_SMTP_URL
 docker compose -f compose.selfhost.yml up -d
-# open https://<your domain> and sign up: the first sign-up creates your company
 ```
 
-HTTPS comes from Let's Encrypt automatically (or your own certificate on an internal network).
-The full guide, with email, backups and upgrades: **[docs/self-host.md](docs/self-host.md)**.
+Caddy terminates TLS (ACME, or an internal CA / your own certificate); `migrate` runs as a
+one-shot service before `web` and `worker`. Details: **[docs/self-host.md](docs/self-host.md)**.
+
+From source:
+
+```sh
+make dev && make seed                 # app, metadata Postgres, sample PostgreSQL/MySQL, Mailpit
+make test                             # unit, detector goldens, integration, replay
+othor run --company indigothread --date 2026-11-01
+othor replay <run_id>
+```
 
 ## Open core
 
-Everything in this repository is open source under **Apache-2.0**: use it, change it and run it,
-for free. One install runs one company.
+Apache-2.0, one company per install. Multi-company and other enterprise features ship in the
+separate `othor-ee` image under a commercial licence key, loaded through the same plug-in
+entry-point group (`othor.plugins`) this repository exposes. Hosted: [othor.ai](https://othor.ai).
 
-Enterprise features (several companies on one install, and more to come) come in a separate
-image, `othor-ee`, under a commercial licence with a licence key. The hosted service is at
-[othor.ai](https://othor.ai); for enterprise licences, write to support@othor.ai.
-
-## Learn more
-
-- [Contributing](CONTRIBUTING.md): run it from source, the rules every change keeps, the CLA
-- [Security](SECURITY.md): how to report a vulnerability
-- [Changelog](CHANGELOG.md)
-- Licence: [Apache-2.0](LICENSE). "Othor AI" is a registered trademark
-  ([TRADEMARKS.md](TRADEMARKS.md)).
+[Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) ·
+[Apache-2.0](LICENSE) · "Othor AI" is a registered trademark ([TRADEMARKS.md](TRADEMARKS.md))

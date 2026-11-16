@@ -23,6 +23,7 @@ from othor.core.models import AccessRequest, Company, Invitation, PlatformEvent
 from othor.mail.relay import MemoryRelay
 from othor.migrations.runner import upgrade
 from othor.web.app import create_app
+from tests.needs import needs_site
 from tests.web.conftest import BASE, ROOT, Clock, Env
 
 ASK = "Othor AI is by invitation for now"
@@ -107,6 +108,7 @@ def _actions(e: Env) -> list[str]:
 # --- what the visitor sees -------------------------------------------------------------------
 
 
+@needs_site
 def test_no_code_asks_for_access(ienv: Env) -> None:
     r = ienv.client.get(f"{ROOT}/signup")
     assert r.status_code == 200 and ASK in r.text
@@ -209,6 +211,7 @@ def _ask(e: Env, **kw: str) -> object:
     return e.client.post(f"{ROOT}/request-access", data=data, follow_redirects=False)
 
 
+@needs_site
 def test_a_request_is_stored_and_emailed_once_a_day(ienv: Env) -> None:
     r = _ask(ienv, message="Receivables across three plants")
     assert r.status_code == 200 and "Thanks. We’ll be in touch." in r.text  # type: ignore[attr-defined]
@@ -232,6 +235,7 @@ def test_a_request_is_stored_and_emailed_once_a_day(ienv: Env) -> None:
     assert len([m for m in ienv.relay.outbox if m.to == "support@othor.ai"]) == 2
 
 
+@needs_site
 def test_a_request_needs_every_answer_but_anything_else(ienv: Env) -> None:
     r = _ask(ienv, name="", email="nope", company="", team_size="lots", runs_today="")
     assert r.status_code == 400  # type: ignore[attr-defined]
@@ -246,6 +250,7 @@ def test_a_request_needs_every_answer_but_anything_else(ienv: Env) -> None:
     assert ienv.relay.outbox == []
 
 
+@needs_site
 def test_the_honeypot_stores_nothing(ienv: Env) -> None:
     r = _ask(ienv, website="http://spam.example")
     assert r.status_code == 200 and "Thanks." in r.text  # type: ignore[attr-defined]
@@ -254,6 +259,7 @@ def test_the_honeypot_stores_nothing(ienv: Env) -> None:
     assert ienv.relay.outbox == []
 
 
+@needs_site
 def test_a_request_needs_the_csrf_token(ienv: Env) -> None:
     ienv.client.get(f"{ROOT}/request-access")
     r = ienv.client.post(
