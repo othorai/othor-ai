@@ -2171,3 +2171,8 @@ a.bp-tile:hover { border-color: var(--color-border-hover); }
 .lp-detail { margin-top: 2px; font-size: var(--text-13); color: var(--color-muted); }
 .lp-row .link { font-size: var(--text-13); white-space: nowrap; padding-top: 6px; }
 .lp-row .light-icon { margin-top: -2px; }
+
+/* the Enterprise Edition tag (owner, 16 Nov 2026): the AI gradient as a 1px outline */
+.tag.ee { border: 1px solid transparent; color: var(--color-ink); font-weight: 600;
+  background: linear-gradient(var(--color-white), var(--color-white)) padding-box,
+    linear-gradient(90deg, #00FF99 0%, #22DDE0 30%, var(--color-accent) 100%) border-box; }

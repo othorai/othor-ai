@@ -221,7 +221,9 @@ def summary(rv: RunView, s: Session) -> dict[str, Any]:
         "metrics": len(metrics),
         "breakdowns": len(pairs),
         "tests": rv.doc.get("tests", 0),
-        "fdr": fmt.pct(Decimal(str(spec.get("detectors", {}).get("fdr_q", "0.01")))),
+        "fdr": fmt.pct(q := Decimal(str(spec.get("detectors", {}).get("fdr_q", "0.01")))),
+        # the same rate in plain words (non-negotiable 10): "at most 1 in 100 could be chance"
+        "chance": fmt.num(int((1 / q).to_integral_value())) if q > 0 else "",
         "line": " · ".join(parts),
         "date": rv.run.run_date,
     }

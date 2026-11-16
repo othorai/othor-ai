@@ -6,8 +6,8 @@
 {% set L = licence %}
 {% call el('section', 'section lines', attrs={"id": "licence"}) %}
   {% call el("div", "section-head") %}Licence{% endcall %}
-  {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}{% if L.st.state in ("valid", "grace") %}{{ L.st.customer }} · {{ L.st.edition | capitalize }}{% elif L.st.state == "expired" %}Expired{% elif L.st.state == "invalid" %}Not valid{% else %}No licence{% endif %}{% endcall %}
-    {% call el('p', 'sub') %}{% if L.st.state == "valid" %}{{ ("Until " ~ fmt.day_month_year(L.st.expires)) if L.st.expires else "No end date" }}{% elif L.st.state == "grace" %}Expired · {{ fmt.num(L.st.grace_left) }} days to renew{% elif L.st.state == "expired" %}Existing companies keep working; no new ones until it's renewed{% elif L.st.state == "invalid" %}{{ L.st.reason }}{% else %}Enterprise features are off{% endif %}{% if L.features %} · {{ L.features | join(", ") }}{% endif %}{% endcall %}</div>{% endcall %}
+  {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}{% if L.st.state in ("valid", "grace") %}{{ L.st.customer }} · Enterprise Edition{{ " · trial" if L.st.edition == "trial" else "" }}{% elif L.st.state == "expired" %}Expired{% elif L.st.state == "invalid" %}Not valid{% else %}Open source · no licence{% endif %}{% endcall %}
+    {% call el('p', 'sub') %}{% if L.st.state == "valid" %}{{ ("Until " ~ fmt.day_month_year(L.st.expires)) if L.st.expires else "No end date" }}{% elif L.st.state == "grace" %}Expired · {{ fmt.num(L.st.grace_left) }} days to renew{% elif L.st.state == "expired" %}Existing companies keep working; no new ones until it's renewed{% elif L.st.state == "invalid" %}{{ L.st.reason }}{% else %}Enterprise Edition features are off{% endif %}{% if L.features %} · {{ L.features | join(", ") }}{% endif %}{% endcall %}</div>{% endcall %}
   {% if L.from_env %}
   {% call el('div', 'section-row') %}{% call el('p', 'sub') %}Set by the server (OTHOR_LICENCE).{% endcall %}{% endcall %}
   {% else %}

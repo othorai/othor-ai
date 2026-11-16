@@ -375,7 +375,11 @@ def test_first_days(env: Env, sample, need_sources):  # noqa: F811
     cards = [_det_card(page, k) for k in partly]
     assert cards and all("Partly" in c and "Tonight: " in c and " of " in c for c in cards)
     assert any("Still building history" in c or "still building history" in c for c in cards)
-    assert "metrics with enough history" in page and "tests tonight · FDR" in page
+    assert (
+        "metrics with enough history" in page
+        and "tests tonight · at most 1 in 100 could be chance" in page
+    )
+    assert "False discovery rate 1%" in page  # the term, behind the (i)
     assert "Partly" in page and "Running" in page
 
 

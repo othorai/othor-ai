@@ -18,7 +18,7 @@
 {{ detectors_strip(strip, strip_info) }}
 <div class="grid grid-cols-1 md:grid-cols-3 gap-16">
   {{ stat(fmt.num(history.ok) ~ " / " ~ fmt.num(history.all), "metrics with enough history", boxed=True) }}
-  {{ stat(fmt.num(summary.tests), "tests tonight · FDR " ~ summary.fdr, boxed=True) }}
+  {{ stat(fmt.num(summary.tests), ("tests tonight · at most 1 in " ~ summary.chance ~ " could be chance") if summary.chance else "tests tonight", boxed=True, tip="False discovery rate " ~ summary.fdr ~ " (Benjamini–Hochberg), across every test of the night.", tip_id="sweep-chance") }}
   {{ stat(fmt.num(findings | length) ~ " open · " ~ fmt.num(rv.counts.new) ~ " new tonight", "findings", boxed=True) }}
 </div>
 

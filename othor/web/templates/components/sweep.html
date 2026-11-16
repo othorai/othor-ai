@@ -6,8 +6,8 @@
 {% from "components/buttons.html" import button %}
 {% from "components/buttons.html" import info %}
 
-{% macro stat(value, label, boxed=False) -%}
-<div class="sweep-stat{{ ' boxed' if boxed else '' }}"><span class="v">{{ value }}</span><span class="l">{{ label }}</span></div>
+{% macro stat(value, label, boxed=False, tip=None, tip_id="stat-tip") -%}
+<div class="sweep-stat{{ ' boxed' if boxed else '' }}"><span class="v">{{ value }}</span><span class="l">{{ label }}{% if tip %} {{ info(text=tip, id=tip_id) }}{% endif %}</span></div>
 {%- endmacro %}
 
 {% macro tags(state, confidence, change) -%}

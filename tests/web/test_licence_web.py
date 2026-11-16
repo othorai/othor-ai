@@ -57,7 +57,7 @@ def test_paste_a_key_in_settings(tmp_path: Path) -> None:
         signup(env)
         h = env.host("indigothread")
         page = env.client.get(h + "/settings").text
-        assert 'id="licence"' in page and "Acme · Trial" in page
+        assert 'id="licence"' in page and "Acme · Enterprise Edition · trial" in page
         tok = env.csrf(h + "/settings")
         bad = env.client.post(h + "/settings/licence", data={"csrf": tok, "key": "nonsense"})
         assert bad.status_code == 400 and "isn" in bad.text

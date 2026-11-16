@@ -12,3 +12,9 @@
 {%- set labels = {"new": "New", "worse": "Worse", "better": "Better", "resolved": "Resolved", "changed": "Changed", "back": "Came back"} -%}
 <span class="change {{ kind }}">{{ ("Open · day " ~ day) if kind == "open" else labels[kind] }}</span>
 {%- endmacro %}
+
+{# Enterprise Edition (owner, 16 Nov 2026): marks a feature that's only in the Enterprise Edition
+   (othor-ee and othor.ai), outlined in the AI gradient (docs/07 "The Enterprise Edition tag") #}
+{% macro ee_tag(short=False) -%}
+<span class="tag ee" title="Enterprise Edition">{{ "EE" if short else "Enterprise Edition" }}</span>
+{%- endmacro %}

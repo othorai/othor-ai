@@ -144,11 +144,16 @@ othor run --company indigothread --date 2026-11-01
 othor replay <run_id>
 ```
 
-## Open core
+## Open core and Enterprise Edition
 
-Apache-2.0, one company per install. Multi-company and other enterprise features ship in the
-separate `othor-ee` image under a commercial licence key, loaded through the same plug-in
-entry-point group (`othor.plugins`) this repository exposes. Hosted: [othor.ai](https://othor.ai).
+This repository is the **open core**, Apache-2.0, one company per install: the engine, every
+detector, forecasting, the Morning Brief, Sweep, Summary and the business model.
+
+The **Enterprise Edition** (`othor-ee`, under a commercial licence key, verified offline) adds
+**Advanced Intelligence** and **enterprise-ready** features (several companies on one install,
+and more), with enterprise-grade support. It loads through the same plug-in entry-point group
+(`othor.plugins`) this repository exposes. Hosted on [othor.ai](https://othor.ai), the Enterprise
+Edition's features are included.
 
 [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) ·
 [Apache-2.0](LICENSE) · "Othor AI" is a registered trademark ([TRADEMARKS.md](TRADEMARKS.md))

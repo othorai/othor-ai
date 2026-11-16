@@ -7,7 +7,8 @@ chart.
   box to the run date (gap_block), from the run's entity probe. The group of silent accounts has
   no chart: its card shows their rows.
 
-- rising variance: average line with a p10–p90 spread band, a line where it starts widening;
+- rising variance: average line with the spread band (p10–p90, "middle 80%" on screen), a line
+  where it starts widening;
 - broken relationship: the two series indexed to 100, a region from the break;
 - changepoint: the weekly series as a step, a line at the change;
 - net hiding gross: contribution bars by breakdown value, with the total;
@@ -215,7 +216,7 @@ def _variance(f: dict[str, Any], series: SeriesIndex, spec: dict[str, Any]) -> C
         unit=unit,
         period=Period("week", mid[0][0], mid[-1][0]),
         series=(Series("avg", f"average {mean}", "neutral", tuple(mid)),),
-        band=Band("avg", 0.8, tuple(lo), tuple(hi), "p10-p90", role="negative", label="p10–p90"),
+        band=Band("avg", 0.8, tuple(lo), tuple(hi), "p10-p90", role="negative", label="middle 80%"),
         annotations=(
             Annotation(
                 "vline",
@@ -227,7 +228,8 @@ def _variance(f: dict[str, Any], series: SeriesIndex, spec: dict[str, Any]) -> C
         ),
         provenance={"finding": f["fingerprint"], "metric_id": f["metric"]},
         alt_text=(
-            f"{_name(spec, f['metric'])} at {where}: the p10–p90 spread widened from "
+            f"{_name(spec, f['metric'])} at {where}: the spread from the lowest to the highest "
+            f"tenth widened from "
             f"{fmt.day_month(started)} while the average held at {said}."
         ),
     )

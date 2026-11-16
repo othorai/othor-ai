@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
-"""v0.15 (M15.9), v0.16 (M16.4), v0.18 (M18.4): the image is 0.19.0; a run sealed under 0.1.0
-keeps its own version, still replays byte for byte and still passes the ledger check (replay
+"""v0.15 (M15.9) to v0.20 (M20.6): the image is 0.20.0; a run sealed under 0.1.0 keeps its own
+version, still replays byte for byte and still passes the ledger check (replay
 never reads the version; the ledger reads each run's stored one)."""
 
 from __future__ import annotations
@@ -17,13 +17,13 @@ from tests.web.test_chat_web import need_sources, sample  # noqa: F401
 from tests.web.test_sweep_web import night  # noqa: F401
 
 
-def test_the_image_is_0_19_0() -> None:
-    assert __version__ == "0.19.0"
+def test_the_image_is_0_20_0() -> None:
+    assert __version__ == "0.20.0"
 
 
 def test_a_run_sealed_under_0_1_0_still_replays_and_verifies(night):  # noqa: F811
     env, h, cid, rid, svc = night
-    assert svc.settings.image_version == "0.19.0"
+    assert svc.settings.image_version == "0.20.0"
     with svc.sf() as s, tenant_scope(cid):
         run = s.scalars(sa.select(Run).where(Run.id == rid)).one()
         assert run.image_version == "0.1.0"  # the night was sealed as an older image
@@ -33,4 +33,4 @@ def test_a_run_sealed_under_0_1_0_still_replays_and_verifies(night):  # noqa: F8
     with svc.sf() as s, tenant_scope(cid):
         v = verify(s, svc.settings, cid)
     assert v.ok, v.problems
-    assert env.client.get(h.replace("indigothread.", "") + "/healthz").json()["version"] == "0.19.0"
+    assert env.client.get(h.replace("indigothread.", "") + "/healthz").json()["version"] == "0.20.0"

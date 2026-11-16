@@ -189,7 +189,7 @@ def demo_specs() -> dict[str, ChartSpec]:
                 _weeks("2026-08-01", [5.1] * 6 + [5.9, 6.6, 7.2, 7.6, 7.9, 7.9, 7.9, 7.9]),
                 source="p10-p90",
                 role="negative",
-                label="p10–p90",
+                label="middle 80%",
             ),
             annotations=(
                 Annotation(
@@ -200,7 +200,7 @@ def demo_specs() -> dict[str, ChartSpec]:
                     style="dashed",
                 ),
             ),
-            alt_text="Coimbatore dispatch time Aug–Oct 2026: average held at 4.1 days while p10–p90 widened from 12 Sep.",
+            alt_text="Coimbatore dispatch time Aug–Oct 2026: average held at 4.1 days while the spread from the lowest to the highest tenth widened from 12 Sep.",
         ),
         "line_decoupling": ChartSpec(
             id="demo:p6:freight",

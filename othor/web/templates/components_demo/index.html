@@ -2,7 +2,7 @@
 {% extends "base.html" %}
 {% from "components/buttons.html" import button, link, info %}
 {% from "components/forms.html" import text_input, suffix_input, select, toggle, chip, code_boxes %}
-{% from "components/tags.html" import state_tag, change_tag %}
+{% from "components/tags.html" import state_tag, change_tag, ee_tag %}
 {% from "components/blocks.html" import banner, callout, toast, empty_state, kpi, tabs, step_bar, records, link_card, link_others, page_title %}
 {% from "components/panels.html" import chat_panel, wide_panel, msg_user, msg_ai, quick_replies, draft_card %}
 {% from "components/account.html" import account_menu %}
@@ -20,7 +20,7 @@
       {{ text_input("bad", "Work email", "ravi@indigothread.example", error="This email isn’t part of Indigo Thread Co..") }}
       <div class="field"><span class="field-label">6-digit code</span>{{ code_boxes(["4", "8", "2", "", "", ""], focus=3) }}</div><div class="field" data-demo="code-wrong"><span class="field-label">After a wrong code</span>{{ code_boxes(["8", "4", "6", "7", "9", "8"], state="error", name="wrong") }}</div>
       <div class="flex items-center gap-12">{{ toggle("email", True, label="Email") }}{{ chip("Last 30 days") }}{{ chip("indigothread.othor.ai", mono=True) }}{{ chip("Healthy", dot="ok", soft=True) }}</div></div></section>
-  <section class="flex flex-col gap-12"><p class="label-caps">Tags</p><div class="flex items-center flex-wrap gap-8">{{ state_tag("measured") }}{{ state_tag("assessed", "Medium") }}{{ state_tag("not_determinable") }}{{ state_tag("needs_confirmation") }}{{ change_tag("new") }}{{ change_tag("worse") }}{{ change_tag("open", 11) }}{{ change_tag("better") }}{{ change_tag("resolved") }}{{ change_tag("changed") }}</div></section>
+  <section class="flex flex-col gap-12"><p class="label-caps">Tags</p><div class="flex items-center flex-wrap gap-8">{{ state_tag("measured") }}{{ state_tag("assessed", "Medium") }}{{ state_tag("not_determinable") }}{{ state_tag("needs_confirmation") }}{{ change_tag("new") }}{{ change_tag("worse") }}{{ change_tag("open", 11) }}{{ change_tag("better") }}{{ change_tag("resolved") }}{{ change_tag("changed") }}{{ ee_tag() }}{{ ee_tag(short=True) }}</div></section>
   {% from "components/ontology.html" import ont_row %}
   <section class="flex flex-col gap-12" data-demo="ont-long"><p class="label-caps">Ontology line, long (Read more, #48)</p>{{ ont_row("We are a textile company. " * 20, "Your Ontology") }}</section>
   <section class="flex flex-col gap-12"><p class="label-caps">Page title row (with and without an action)</p>{{ page_title("Settings") }}{{ page_title("Ontology", info="What Othor AI knows about the company. Changes apply from the next run.") }}{% call page_title("Data sources") %}{{ button("Add a source", "primary") }}{% endcall %}</section>
