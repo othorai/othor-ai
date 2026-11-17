@@ -64,6 +64,7 @@ class NavItem:
     icon: str
     group: str = "company"  # "company" (above Setup) or "setup"
     after: str | None = None  # the core item it follows; None = the group's end
+    tag: str | None = None  # "ee": the Enterprise Edition tag beside the label (17 Nov 2026)
 
 
 @dataclass(frozen=True)

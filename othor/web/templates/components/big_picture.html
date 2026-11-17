@@ -17,8 +17,9 @@
 {%- endmacro %}
 
 {# Email it to me: the app's own button, in the panel's header; becomes "Sent to …" in place #}
-{% macro bp_email(rid, csrf) -%}
-<form id="bp-email" class="contents" method="post" action="/big-picture/{{ rid }}/email" hx-post="/big-picture/{{ rid }}/email" hx-target="#bp-email" hx-swap="outerHTML"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn" type="submit" data-busy="Sending…">{{ icon("mail") }}Email it to me</button></form>
+{% macro bp_email(rid, csrf, url=None) -%}
+{%- set url = url or "/big-picture/" ~ rid ~ "/email" -%}
+<form id="bp-email" class="contents" method="post" action="{{ url }}" hx-post="{{ url }}" hx-target="#bp-email" hx-swap="outerHTML"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn" type="submit" data-busy="Sending…">{{ icon("mail") }}Email it to me</button></form>
 {%- endmacro %}
 
 {% macro bp_sent(text) -%}

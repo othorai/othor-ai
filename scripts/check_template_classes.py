@@ -30,6 +30,8 @@ ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = ROOT / "othor" / "web" / "templates"
 # the private website's templates (M20.2), checked the same way when it's in the tree
 ROOTS = [t for t in (TEMPLATES, ROOT / "othor_site" / "templates") if t.exists()]
+# enterprise features' pages too (Look back, 17 Nov 2026): the same rule in othor_ee/*/templates
+ROOTS += sorted(p for p in (ROOT / "othor_ee").glob("*/templates") if p.is_dir())
 COMPONENT_SCOPE = ("components", "shells", "components_demo")
 # every page template is on the shared components (UI foundation, 4 Nov); CI fails on any finding
 STRICT: tuple[str, ...] = ("",)

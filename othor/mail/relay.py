@@ -52,6 +52,15 @@ class InlineImage:
 
 
 @dataclass(frozen=True)
+class Attachment:
+    """A file attached to the message (a report's PDF): not shown inline, kept by the reader."""
+
+    filename: str
+    data: bytes
+    mime: str = "application/pdf"
+
+
+@dataclass(frozen=True)
 class Message:
     to: str
     subject: str
@@ -61,6 +70,7 @@ class Message:
     reply_to: str | None = None
     headers: dict[str, str] = field(default_factory=dict)
     images: tuple[InlineImage, ...] = ()
+    files: tuple[Attachment, ...] = ()
     message_id: str = field(default_factory=lambda: make_msgid(domain="othor.ai"))
 
     def to_email(self) -> EmailMessage:
@@ -84,6 +94,9 @@ class Message:
                     filename=img.filename or f"{img.cid.split('@')[0]}.png",
                     disposition="inline",
                 )
+        for f in self.files:
+            main, sub = f.mime.split("/", 1)
+            m.add_attachment(f.data, maintype=main, subtype=sub, filename=f.filename)
         return m
 
 
@@ -206,6 +219,15 @@ class PostmarkRelay:
                 }
                 for img in msg.images
             ]
+        if msg.files:
+            body.setdefault("Attachments", []).extend(
+                {
+                    "Name": f.filename,
+                    "Content": base64.b64encode(f.data).decode(),
+                    "ContentType": f.mime,
+                }
+                for f in msg.files
+            )
         return body
 
     def send(self, msg: Message) -> str:

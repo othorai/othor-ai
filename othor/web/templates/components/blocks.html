@@ -88,8 +88,8 @@
 {%- endmacro %}
 
 {# Onboarding step bar: steps = list of labels; now = 1-based index of the current step. #}
-{% macro step_bar(steps, now) -%}
-<ol class="steps" aria-label="Setup steps">
+{% macro step_bar(steps, now, label="Setup steps") -%}
+<ol class="steps" aria-label="{{ label }}">
   {% for label in steps %}{% if not loop.first %}<li class="step-sep" aria-hidden="true"></li>{% endif %}
   <li class="step{{ ' done' if loop.index < now else (' now' if loop.index == now else '') }}"{% if loop.index == now %} aria-current="step"{% endif %}><span class="n">{% if loop.index < now %}<svg class="icon" aria-hidden="true" focusable="false"><use href="{{ asset('icons/sprite.svg') }}#check"></use></svg><span class="sr-only">{{ loop.index }}</span>{% else %}{{ loop.index }}{% endif %}</span><span class="step-label">{{ label }}</span></li>{% endfor %}
 </ol>

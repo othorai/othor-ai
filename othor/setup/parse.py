@@ -92,13 +92,18 @@ def _cell(v: Any) -> str:
 
 
 def _grid_refs(grid: list[list[str]], tab: str) -> tuple[list[Ref], int, str]:
+    from othor.connectors.classify import blank_personal
+
+    # personal columns' values are blanked before detect reads the grid (non-negotiable 3);
+    # their headers are left out of the refs too
+    grid, personal = blank_personal(grid)
     shape = detect({"properties": {"title": tab}, "values": grid}, today=_today())
     if shape.kind not in ("table", "stale"):
         return [], 0, shape.kind
     refs = []
     numbers = 0
     for c in shape.data_columns:
-        if not c.header:
+        if not c.header or c.header in personal:
             continue
         is_num = c.kind == "number"
         numbers += is_num

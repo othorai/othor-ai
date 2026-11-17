@@ -6,6 +6,21 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-17
+
+### Added
+- Enterprise Edition: Look back, a decision report from a file of past sales (what moved the
+  total, returns, mix, customers kept and lost, value per customer, concentration, next year's
+  budget), as a page, a PDF and an email.
+- Emails can carry a file attachment (SMTP and Postmark relays).
+- A source-host guard for shared installs (`OTHOR_SOURCE_HOST_GUARD`, off by default): a database
+  source may not point at a private network address, checked at save and on every connection.
+
+### Changed
+- The Ontology is called the Business Model on every screen and in every email.
+- Home's weather banner: a soft colour for each kind of day and a tick when all is clear.
+- Columns with personal details are left out of uploaded files by name before any value is read.
+
 ## [0.20.0] - 2026-11-16
 
 Othor AI has run as a hosted service since 0.1; this release makes the whole product something

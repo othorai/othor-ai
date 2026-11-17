@@ -44,6 +44,9 @@ LABEL = {
     "suggest_pairs": "Suggest numbers that move together",
     "metric_areas": "Group your numbers into areas",
     "big_picture": "Big Picture report",
+    # Look back (an Enterprise Edition feature; its prompts live in othor_ee)
+    "look_back_plan": "Plan a Look back report",
+    "look_back_write": "Write a Look back report",
 }
 
 

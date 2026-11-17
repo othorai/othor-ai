@@ -95,6 +95,8 @@ def make_env(tmp_path: Path, at: dt.datetime | None = None, **overrides: Any) ->
     if overrides.get("plugins"):
         plugins.reset()
         plugins.load(Settings(_env_file=None, env="test", plugins=overrides["plugins"]))  # type: ignore[call-arg]
+    elif not plugins.loaded():  # as the CLI does: the installed plug-ins' branches are migrated
+        plugins.load(Settings(_env_file=None, env="test"))  # type: ignore[call-arg]
     upgrade(url)
     relay = MemoryRelay()
     clock = Clock()

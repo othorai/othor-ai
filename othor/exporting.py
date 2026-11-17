@@ -91,6 +91,15 @@ TABLES: dict[str, Rule] = {
     "postmark_event": Rule(),
     # Othor AI's Big Picture reports (v0.19): the report as shown, numbers filled by code
     "big_picture": Rule(drop={"input_hash": "an internal cache key"}),
+    # Look back's reports (an Enterprise Edition table, named here only; the core never imports
+    # it): the question, plan, results and words are the owner's; the upload is not exported
+    "look_back_report": Rule(
+        drop={
+            "upload_id": "an internal file reference; the file itself is not exported",
+            "upload_sha": "an internal file reference",
+            "results_hash": "an internal replay check",
+        }
+    ),
     # sources: names, tables and columns, never how to reach them or what they hold
     "source": Rule(
         drop={

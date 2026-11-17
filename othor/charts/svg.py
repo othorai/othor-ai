@@ -666,6 +666,59 @@ def _dumbbell(spec: ChartSpec, w: int, h: int) -> str:
     return svg.done()
 
 
+def _scatter(spec: ChartSpec, w: int, h: int) -> str:
+    """Values by category (Look back's value per customer, 17 Nov 2026): each category a column,
+    its points spread across it in value order (no randomness: the same bytes every time), faint
+    in the series' colour; a point that a `point` annotation names is drawn dark in its place,
+    with its label beside it (an outlier named). The value axis starts at zero."""
+    svg = _Svg(w, h, spec)
+    pts = [p for s in spec.series for p in s.points]
+    cats = list(dict.fromkeys(k for k, _ in pts))
+    marks = {(x.at, x.value): x.label for x in spec.annotations if x.type == "point"}
+    vals = [v for _, v in pts]
+    top, bottom, left, right = 14, 26, 64, 12
+    hi = max(vals or [1.0]) * 1.08
+    ticks = sorted({0.0, *_nice_ticks(0, hi, most=4)})
+    hi = max(hi, ticks[-1])
+    ys = _Scale(0, hi, h - bottom, top)
+    whole = all(float(t).is_integer() for t in ticks)
+    for t in ticks:
+        y = ys(t)
+        svg.add(f'<line x1="{left}" x2="{w - right}" y1="{_f(y)}" y2="{_f(y)}" stroke="{GRID}"/>')
+        svg.text(
+            left - 8,
+            y + 4,
+            _value(t, _whole(spec.unit) if whole else spec.unit),
+            size=11,
+            anchor="end",
+        )
+    col = (w - left - right) / max(len(cats), 1)
+    colour = ROLE[spec.series[0].role] if spec.series else INK
+    named: list[tuple[float, float, str]] = []
+    for i, key in enumerate(cats):
+        x0 = left + col * i
+        svg.text(x0 + col / 2, h - 8, key, size=12, fill=INK, anchor="middle")
+        mine = sorted(v for k, v in pts if k == key)
+        n = len(mine)
+        for j, v in enumerate(mine):
+            x = x0 + col * (0.25 + 0.5 * (j / (n - 1) if n > 1 else 0.5))
+            label = marks.get((key, v))
+            if label is not None:
+                named.append((x, ys(v), label))
+                continue
+            svg.add(
+                f'<circle cx="{_f(x)}" cy="{_f(ys(v))}" r="4" fill="{colour}" fill-opacity="0.35"/>'
+            )
+    for x, y, label in named:  # drawn last, on top
+        svg.add(
+            f'<circle cx="{_f(x)}" cy="{_f(y)}" r="5" fill="{INK}" stroke="{WHITE}" '
+            'stroke-width="1.5"/>'
+        )
+        if label:
+            svg.text(x + 8, y + 4, label, size=11, fill=INK, weight=600)
+    return svg.done()
+
+
 def _range_bar(spec: ChartSpec, w: int, h: int) -> str:
     """A forecast's likely range (M19.5): a grey track, the range in the positive colour, the
     expected value as a dark dot with a white ring, the goal as a dashed line labelled above, the
@@ -730,4 +783,6 @@ def render_svg(spec: ChartSpec, size: tuple[int, int] = (400, 160), *, legend: b
         return _gap(spec, w, h)
     if spec.kind == "dumbbell":
         return _dumbbell(spec, w, h)
+    if spec.kind == "scatter":
+        return _scatter(spec, w, h)
     raise NotImplementedError(f"{spec.kind} is rendered from M6")

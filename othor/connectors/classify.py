@@ -352,3 +352,31 @@ _MEASURE_WORDS = {
     "total",
     "value",
 }
+
+
+def blank_personal(
+    grid: list[list[str]], *, top: int = 15
+) -> tuple[list[list[str]], tuple[str, ...]]:
+    """A spreadsheet grid with every personal column's cells blanked below its header, before
+    anything reads the values (non-negotiable 3; uploads, 17 Nov 2026). A header is found by
+    name only, in the first `top` rows; the header text stays so the shape is still seen.
+    Returns the new grid and the personal headers found."""
+    found: dict[int, tuple[int, str]] = {}
+    people = any(
+        _BARE_CONTACT.match(str(cell).strip().lower()) for row in grid[:top] for cell in row
+    )
+    for r, row in enumerate(grid[:top]):
+        for c, cell in enumerate(row):
+            text = str(cell).strip()
+            if text and c not in found and personal_kind(text, people_table=people):
+                found[c] = (r, text)
+    if not found:
+        return grid, ()
+    out = []
+    for r, row in enumerate(grid):
+        new = list(row)
+        for c, (hr, _h) in found.items():
+            if r > hr and c < len(new):
+                new[c] = ""
+        out.append(new)
+    return out, tuple(h for _r, h in sorted(found.values()))

@@ -97,6 +97,11 @@ def db_url(request: pytest.FixtureRequest, tmp_path: Path) -> str:
         if not _pg_reachable():
             require_services("metadata Postgres (localhost:5442)")
         url = _pg_test_url()
+    from othor.core import plugins
+    from othor.core.config import Settings
+
+    if not plugins.loaded():  # as the CLI does: the installed plug-ins' branches are migrated
+        plugins.load(Settings(_env_file=None, env="test"))  # type: ignore[call-arg]
     upgrade(url)
     return url
 

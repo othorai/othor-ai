@@ -70,16 +70,20 @@ def use_plugins(dirs: list[Path]) -> None:
     )
 
 
-def nav_items(group: str, core: list[tuple[str, str, str]]) -> list[tuple[str, str, str, str]]:
+def nav_items(
+    group: str, core: list[tuple[str, str, str]]
+) -> list[tuple[str, str, str, str, str | None]]:
     """A side-menu group: the core's items (key, label, href; the icon is the key), with each
     plug-in item after the core item it names, or at the group's end (owner, 16 Nov 2026:
     enterprise items sit in the company group, above Setup)."""
     from othor.core import plugins
 
-    out = [(k, label, href, k) for k, label, href in core]
+    out: list[tuple[str, str, str, str, str | None]] = [
+        (k, label, href, k, None) for k, label, href in core
+    ]
     for n in plugins.nav(group):
         at = next((i + 1 for i, x in enumerate(out) if x[0] == n.after), len(out))
-        out.insert(at, (n.key, n.label, n.href, n.icon))
+        out.insert(at, (n.key, n.label, n.href, n.icon, n.tag))
     return out
 
 

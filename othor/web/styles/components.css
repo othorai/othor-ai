@@ -475,6 +475,7 @@ a.card.is-disabled, .card[aria-disabled="true"] { opacity: .55; pointer-events: 
 .nav-item { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 8px; border-radius: var(--radius-4); color: var(--color-ink-2);
   text-decoration: none; font-size: var(--text-15); transition: background var(--transition-quick); }
 .nav-item svg { width: 18px; height: 18px; stroke: var(--color-muted); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.nav-item .tag.ee { margin-left: auto; }  /* an Enterprise Edition item's tag, at the row's end (17 Nov 2026) */
 .nav-item:hover, .nav-item.is-hover { background: var(--color-surface-2); color: var(--color-ink-2); }
 .nav-item:focus-visible, .nav-item.is-focus { box-shadow: var(--shadow-focus); }
 .nav-item.is-on { background: var(--color-bg); box-shadow: 0 0 0 1px var(--color-accent-border); color: var(--color-slate); font-weight: 600; }
@@ -1215,7 +1216,7 @@ a.brief-card:hover, a.brief-card:focus-visible { border-color: var(--color-accen
 .wx-heat_wave { --wx-panel: #FFE6D6; }
 .wx-rainbow { --wx-panel: #DFF5E6; }
 .wx-clear_night { --wx-panel: #E2E0FA; }
-.wx-sunrise { --wx-panel: #FFF3D6; }  /* white until 17 Nov 2026 (still white in email); pale dawn yellow on the web */
+.wx-sunrise { --wx-panel: #E3F5FF; }  /* the same cyan pastel as All clear (owner, 17 Nov 2026); still white in email */
 .wx-no_signal { --wx-panel: #F7ECD8; }
 .wx-frozen { --wx-panel: #E4F3FB; }
 @media (max-width: 639px) {
@@ -2180,3 +2181,14 @@ a.bp-tile:hover { border-color: var(--color-border-hover); }
 /* open sign-up's free trial on Home's title row (owner, 16 Nov 2026) */
 .trial-chip { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--color-border); font-size: var(--text-13); color: var(--color-ink-2); background: var(--color-white); }
 .trial-chip.is-urgent { border-color: var(--color-warn); background: var(--color-warn-tint); color: var(--color-warn-text); }
+
+/* a fold in the page style (Look back's plan, 17 Nov 2026): a quiet line with a chevron, no box;
+   `.fold-hide` beside it (in the same form) steps aside while the fold is open, so a short summary
+   never stands stale over the choices being changed */
+.fold > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--text-14); font-weight: 500; color: var(--color-accent-deep); }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary:hover span { text-decoration: underline; text-underline-offset: 3px; }
+.fold > summary svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; transition: transform .15s; }
+.fold[open] > summary svg { transform: rotate(180deg); }
+form:has(> .fold[open]) > .fold-hide { display: none; }

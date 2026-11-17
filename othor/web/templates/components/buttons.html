@@ -34,11 +34,11 @@
 
 {# AI-heavy features are marked (docs/07, owner 14 Nov 2026): the Othor AI mark inside, the website
    hero's green-to-cyan gradient. The first is Big Picture (v0.19). #}
-{% macro ai_button(label, href=None, disabled=False, attrs="", state="") -%}
+{% macro ai_button(label, href=None, disabled=False, attrs="", state="", type="button") -%}
 {%- from "components/icons.html" import logo -%}
 {%- set cls = "btn ai" ~ (" is-" ~ state if state else "") -%}
 {%- if href and not disabled -%}<a class="{{ cls }}" href="{{ href }}"{{ attrs_html(attrs) }}>{{ logo() }}<span>{{ label }}</span></a>
-{%- else -%}<button class="{{ cls }}" type="button"{% if disabled %} disabled{% endif %}{{ attrs_html(attrs) }}>{{ logo() }}<span>{{ label }}</span></button>
+{%- else -%}<button class="{{ cls }}" type="{{ type }}"{% if disabled %} disabled{% endif %}{{ attrs_html(attrs) }}>{{ logo() }}<span>{{ label }}</span></button>
 {%- endif -%}
 {%- endmacro %}
 
