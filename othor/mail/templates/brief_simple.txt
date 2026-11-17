@@ -13,7 +13,11 @@
 {% for i in items %}
 {{ i.rank }}. {{ i.title }} · {{ i.money }}
    {{ i.consequence.text }} · {{ i.state_text }}{% if i.change %} · {{ i.change }}{% endif %}
-{% endfor %}{% if ahead %}
+{% endfor %}{% for sec in b.get("sections") or [] %}
+{{ sec.title }}
+{% for i in sec["items"] %}{{ i.text }}{% if i.get("line") %}
+   {{ i.line }}{% endif %}
+{% endfor %}{% endfor %}{% if ahead %}
 What's ahead
 {% for r in ahead %}{{ r.name }}: {{ r.get('says') or r.get('why') }}{% if r.get('confidence') %} · {{ r.confidence.word }}, {{ r.confidence.why }}{% endif %}
 {% endfor %}{% if ahead_note %}{{ ahead_note }}

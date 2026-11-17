@@ -42,6 +42,32 @@ def _job(ctx: Any, job: Any) -> None:
         s.commit()
 
 
+TICKS: list[Any] = []
+
+
+def _after_scan(s: Any, company_id: Any, source_id: Any) -> None:
+    from othor.core.events import SYSTEM_ACTOR, record_event
+
+    record_event(
+        s, actor=SYSTEM_ACTOR, action="demo.after_scan", object_type="source", object_id=source_id
+    )
+
+
+def _after_seal(ctx: Any, company_id: Any, run_id: Any) -> None:
+    from othor.core.events import SYSTEM_ACTOR, record_event
+    from othor.core.tenancy import tenant_scope
+
+    with ctx.sf() as s, tenant_scope(company_id):
+        record_event(
+            s, actor=SYSTEM_ACTOR, action="demo.after_seal", object_type="run", object_id=run_id
+        )
+        s.commit()
+
+
+def _tick(ctx: Any) -> None:
+    TICKS.append(ctx)
+
+
 def _level(s: Any, company: Any, value: str, actor: str) -> tuple[Any, Any]:
     if value not in ("basic", "advanced"):
         raise ValueError("Pick basic or advanced.")
@@ -66,7 +92,17 @@ def plugin(settings: Any) -> Plugin:
         routers=(router,),
         static=(("demo", HERE / "static"),),
         templates=(HERE / "templates",),
-        nav=(NavItem("demo", "Demo", "/demo", "dna", group="company", after="summary"),),
+        nav=(
+            NavItem(
+                "demo",
+                "Demo",
+                "/demo",
+                "dna",
+                group="company",
+                after="summary",
+                badge=lambda s, company: 3,
+            ),
+        ),
         fragments=(
             Fragment(
                 "settings.company.advanced",
@@ -75,7 +111,13 @@ def plugin(settings: Any) -> Plugin:
             ),
             Fragment("home.end", "demo/home_end.html", context=lambda ctx: {"greeting": "Hi"}),
             Fragment("sources.add.kinds", "demo/add_kind.html"),
+            Fragment("sources.end", "demo/sources_end.html"),
+            Fragment("brief_edit.scope", "demo/brief_scope.html"),
         ),
+        after_scan=(_after_scan,),
+        after_seal=(_after_seal,),
+        ticks=(_tick,),
+        hosts=frozenset({"demo-feed.example"}),
         connectors=(ConnectorKind("demo_feed", "Demo feed", "DF", "local", "duckdb"),),
         jobs={"demo_job": _job},
         cli=(("demo", cli),),

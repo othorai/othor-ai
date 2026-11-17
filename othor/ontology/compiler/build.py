@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import importlib.metadata
 import re
+from collections.abc import Callable
 from typing import Any
 
 from sqlglot import exp
@@ -35,7 +36,7 @@ from othor.ontology.compiler.render import (
     to_sql,
 )
 from othor.ontology.compiler.terms import terms as signed_terms
-from othor.ontology.types import walk
+from othor.ontology.types import CORE_BODIES, walk
 
 COMPILER_VERSION = "m16.2"  # M16.1: area and signed terms; M16.2: per_period
 SPEC_FORMAT = 1
@@ -703,6 +704,34 @@ def _label(t: TableInfo) -> str:
     return f"{t.source_name} ({KIND_NAME[t.source_kind]})"
 
 
+# a plug-in record type's part of the spec (Advanced Intelligence Phase 0 §5): type -> fn(the
+# type's records by key, the spec so far) -> its part, or None/{} for nothing. Pure, like the
+# rest of the compiler; the part goes under spec["plugins"][type] and so into the spec hash
+PluginCompiler = Callable[[dict[str, dict[str, Any]], dict[str, Any]], dict[str, Any] | None]
+COMPILERS: dict[str, PluginCompiler] = {}
+
+
+def register_compiler(type_: str, fn: PluginCompiler) -> None:
+    if type_ in CORE_BODIES:
+        raise ValueError(f"record type {type_!r} is the core's")
+    if type_ in COMPILERS and COMPILERS[type_] is not fn:
+        raise ValueError(f"record type {type_!r} already has a compiler")
+    COMPILERS[type_] = fn
+
+
+def _plugin_parts(records: dict[tuple[str, str], dict[str, Any]], spec: dict[str, Any]) -> None:
+    parts: dict[str, Any] = {}
+    for type_, fn in sorted(COMPILERS.items()):
+        mine = {k: b for (t, k), b in sorted(records.items()) if t == type_}
+        if not mine:
+            continue
+        part = fn(mine, spec)
+        if part:
+            parts[type_] = part
+    if parts:  # only then: a company without plug-in records compiles the same spec as before
+        spec["plugins"] = parts
+
+
 # the floor without a `materiality` record, per company currency (M15.6): ₹5 L, $5,000
 DEFAULT_FLOOR = {"INR": "500000", "USD": "5000"}
 
@@ -961,6 +990,7 @@ def compile_records(
     if floor is not None or cur != "INR":
         amount = floor["amount"] if floor else DEFAULT_FLOOR.get(cur, "5000")
         spec["detectors"] = {**DETECTOR_DEFAULTS, "materiality_inr": str(amount)}
+    _plugin_parts(records, spec)
     for m, entry in out_metrics.items():
         if entry.get("status") == "active" and (entry.get("queries") or entry.get("components")):
             entry["definition_hash"] = definition_hash(m, records, spec)

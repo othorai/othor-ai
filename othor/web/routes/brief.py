@@ -381,6 +381,8 @@ async def edit_post(request: Request, bid: str, o: Owner = Depends(signed_in)) -
         options = run_cache.scope_options(spec, files.series)
         fields: dict[str, Any] = {k: form.get(k) for k in form}
         fields["goals"] = form.getlist("goals")
+        fields["areas"] = form.getlist("areas")
+        fields["areas_all"] = form.getlist("areas_all")
         fields["kept"] = {b: form.getlist(f"keep:{b}") for b in options}
         fields["options"] = options
         if action.startswith("remove:"):

@@ -475,7 +475,10 @@ a.card.is-disabled, .card[aria-disabled="true"] { opacity: .55; pointer-events: 
 .nav-item { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 8px; border-radius: var(--radius-4); color: var(--color-ink-2);
   text-decoration: none; font-size: var(--text-15); transition: background var(--transition-quick); }
 .nav-item svg { width: 18px; height: 18px; stroke: var(--color-muted); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.nav-item .tag.ee { margin-left: auto; }  /* an Enterprise Edition item's tag, at the row's end (17 Nov 2026) */
+.nav-item .tag.ee { margin-left: auto; }
+/* a plug-in item's count of new things (Advanced Intelligence Phase 0), before its tag */
+.nav-item .nav-badge { margin-left: auto; min-width: 18px; height: 18px; padding: 0 6px; border-radius: 9px; background: var(--color-accent-tint); color: var(--color-accent-deep); font-size: var(--text-11); font-weight: 600; line-height: 18px; text-align: center; }
+.nav-item .nav-badge + .tag.ee { margin-left: 6px; }  /* an Enterprise Edition item's tag, at the row's end (17 Nov 2026) */
 .nav-item:hover, .nav-item.is-hover { background: var(--color-surface-2); color: var(--color-ink-2); }
 .nav-item:focus-visible, .nav-item.is-focus { box-shadow: var(--shadow-focus); }
 .nav-item.is-on { background: var(--color-bg); box-shadow: 0 0 0 1px var(--color-accent-border); color: var(--color-slate); font-weight: 600; }
@@ -1071,6 +1074,29 @@ a.finding-title:hover { text-decoration: underline; }
 .brief-section .t { font-size: var(--text-16); font-weight: 600; }
 .brief-section .t small { font-size: var(--text-12); font-weight: 400; color: var(--color-muted); margin-left: 6px; }
 .brief-section .meta { font-size: var(--text-12); color: var(--color-muted); }
+/* Discover (Enterprise Edition, Advanced Intelligence D3): on a group's page, a number's line
+   beside its words, under them on a phone */
+.dv-number { align-items: flex-start; }
+.dv-text { flex: 1 1 auto; min-width: 0; }
+.dv-kind { white-space: nowrap; }
+.dv-chart { flex: 0 0 360px; max-width: 100%; }
+.dv-chart svg { display: block; width: 100%; height: auto; }
+.dv-chart.sm { flex-basis: 220px; align-self: center; }  /* a number's preview line in the group panel */
+.dv-done form { display: inline; }
+.dv-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
+.dv-foot > :first-child { flex: 1 1 220px; }
+.dv-done .link-u { color: inherit; font-weight: 500; }
+@media (max-width: 720px) {
+  .dv-number { flex-direction: column; align-items: stretch; }
+  .dv-chart { flex-basis: auto; }
+  .dv-kind { white-space: normal; }
+}
+/* a plug-in's brief section beside the ranked items (Advanced Intelligence Phase 0) */
+.brief-extra { display: flex; flex-direction: column; gap: 8px; }
+.brief-extra-items { display: flex; flex-direction: column; border-top: 1px solid var(--color-rule); }
+.brief-extra-items li { padding: 12px 0; border-bottom: 1px solid var(--color-rule); }
+.brief-extra-items .t { font-size: var(--text-14); line-height: 1.45; }
+.brief-extra-items .meta { font-size: var(--text-12); color: var(--color-muted); margin-top: 4px; }
 .brief-items { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 @media (min-width: 1024px) { .brief-items { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .brief-item { border: 1px solid var(--color-rule); border-radius: var(--radius-8); display: flex; flex-direction: column; min-width: 0; background: var(--color-bg); overflow: hidden; }
@@ -1123,6 +1149,7 @@ a.brief-card:hover, a.brief-card:focus-visible { border-color: var(--color-accen
 .brief-card .meta { font-size: var(--text-12); color: var(--color-muted); display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: auto; }
 .brief-card.new { border-style: dashed; border-color: var(--color-border); background: #FAFCFE; justify-content: center; align-items: center; text-align: center; gap: 8px; padding: 28px 24px; text-decoration: none; }
 .brief-card.new:hover { border-color: var(--color-accent); background: var(--color-accent-tint); }
+button.brief-card { font: inherit; width: 100%; cursor: pointer; }  /* a card that posts in place (Discover's Look again) */
 .brief-card.new .new-mark { position: relative; display: grid; place-items: center; width: 56px; height: 56px; border-radius: var(--radius-12); background: var(--color-accent-tint); color: var(--color-accent-deep); margin-bottom: 6px; }
 .brief-card.new .new-mark .icon { width: 28px; height: 28px; }
 .brief-card.new .new-mark .plus { position: absolute; right: -6px; bottom: -6px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: var(--radius-full); background: var(--color-accent); color: var(--color-on-accent); border: 2px solid var(--color-bg); font-size: var(--text-13); font-weight: 700; line-height: 1; }
@@ -1270,7 +1297,7 @@ a.brief-card:hover, a.brief-card:focus-visible { border-color: var(--color-accen
 .sweep-box-foot { display: flex; align-items: center; justify-content: space-between; padding: 10px 18px; border-top: 1px solid var(--color-rule); background: var(--color-surface); font-size: var(--text-13); color: var(--color-muted); }
 @media (max-width: 640px) { .sweep-box-row { flex-wrap: wrap; } .sweep-box-row .t { flex-basis: 100%; order: 2; } }
 /* #21: nothing to chart on a quiet day: the Othor AI mark, faint, and a short line */
-.brief-card.has-visual .visual .quiet { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; font-size: var(--text-13); color: var(--color-muted); }
+.brief-card.has-visual .visual .quiet { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; font-size: var(--text-13); color: var(--color-muted); text-align: center; }
 .brief-card.has-visual .visual .quiet .mark svg { width: 44px; height: 44px; opacity: 0.28; }
 .brief-card.has-visual .body { padding: 14px 18px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
 .brief-card.has-visual .headline { font-size: var(--text-16); font-weight: 600; line-height: var(--leading-snug); }

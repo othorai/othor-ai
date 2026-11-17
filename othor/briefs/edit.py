@@ -72,13 +72,19 @@ def clean(
     time = str(body.get("time") or "06:00")
     sched = str(body.get("schedule")) if body.get("schedule") in SCHEDULES else "daily"
     on = clean_on(sched, body.get("on"))
+    scope_out: dict[str, Any] = {
+        "metrics": None if ms is None else [m for m in ms if m in metrics],
+        "exclude": {b: v for b, v in exclude.items() if v},
+    }
+    areas = sc.get("areas")
+    if areas is not None:  # only when chosen (Phase 0 §8): every older brief keeps its bytes
+        scope_out["areas"] = [
+            a for a in dict.fromkeys(str(x).strip()[:60] for x in areas or []) if a
+        ]
     out = {
         "name": str(body.get("name") or "Brief").strip()[:120] or "Brief",
         "question": str(body.get("question") or "").strip()[:300],
-        "scope": {
-            "metrics": None if ms is None else [m for m in ms if m in metrics],
-            "exclude": {b: v for b, v in exclude.items() if v},
-        },
+        "scope": scope_out,
         "headline": headline,
         "ask_owner": ask if ask == "top_item" or ask in owners else "top_item",
         "goals": [g for g in body.get("goals") or [] if g in goals],
@@ -115,6 +121,11 @@ def apply_form(tab: str, form: dict[str, Any], draft: dict[str, Any]) -> dict[st
             b: [v for v in vals if v not in (kept.get(b) or [])] for b, vals in options.items()
         }
     elif tab == "numbers":
+        # "Findings come from" (4d4): the areas left on; all on means the whole company (None)
+        if form.get("areas_shown"):
+            shown = [str(a) for a in form.get("areas_all") or []]
+            on = [a for a in shown if a in set(form.get("areas") or [])]
+            d["scope"]["areas"] = None if shown and len(on) == len(shown) else on
         head = list(d.get("headline") or [])
         if form.get("remove"):
             head = [m for m in head if m != form["remove"]]
@@ -131,6 +142,23 @@ def apply_form(tab: str, form: dict[str, Any], draft: dict[str, Any]) -> dict[st
         d["time"] = form.get("time", d.get("time"))
         d["email_format"] = form.get("email_format", d.get("email_format"))
     return d
+
+
+def area_rows(spec: dict[str, Any], scope: dict[str, Any]) -> list[dict[str, Any]]:
+    """ "Findings come from" (board 4d4): each area of the Business Model's listed, active
+    numbers (a Discover group's numbers carry its name as their area), how many numbers it holds,
+    and whether this brief's findings come from it. "Other numbers" holds those without one."""
+    from othor.ontology.areas import OTHER
+
+    counts: dict[str, int] = {}
+    for _k, m in sorted(spec.get("metrics", {}).items()):
+        if m.get("status") != "active" or m.get("listed") is False:
+            continue
+        a = m.get("area") or OTHER
+        counts[a] = counts.get(a, 0) + 1
+    chosen = scope.get("areas")
+    order = sorted(counts, key=lambda a: (a == OTHER, a))
+    return [{"area": a, "count": counts[a], "on": chosen is None or a in chosen} for a in order]
 
 
 def in_scope_totals(

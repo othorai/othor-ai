@@ -45,6 +45,19 @@ KIND_LABEL = {
     "duplicate_metric": "Same number twice",
 }
 CONFIDENCE = {"high": "High", "medium": "Medium", "low": "Low"}
+
+
+def kind_label(kind: str, default: str | None = None) -> str:
+    """A proposal's tag: the core's, or the plug-in kind's (Phase 0 §2)."""
+    from othor.engine.proposals import PROPOSALS
+
+    if kind in KIND_LABEL:
+        return KIND_LABEL[kind]
+    if kind in PROPOSALS:
+        return PROPOSALS[kind].label
+    return default if default is not None else kind
+
+
 NOTICE_DAYS = 7
 
 
@@ -531,6 +544,8 @@ def proposal_rows(s: Session) -> list[dict[str, Any]]:
 
 
 def proposal_row(p: Proposal) -> dict[str, Any]:
+    from othor.engine.proposals import PROPOSALS
+
     ev = p.evidence or {}
     origin = p.origin or {}
     if p.kind == "goal":
@@ -543,12 +558,14 @@ def proposal_row(p: Proposal) -> dict[str, Any]:
         frm = "Sweep · your numbers"
     elif p.kind == "areas":
         frm = "Business Model · your numbers"
+    elif p.kind in PROPOSALS:
+        frm = PROPOSALS[p.kind].from_line(p)
     else:
         frm = "Home · your answers"
     del origin
     return {
         "id": str(p.id),
-        "kind": KIND_LABEL.get(p.kind, p.kind),
+        "kind": kind_label(p.kind),
         "text": p.text,
         "line": ev.get("line", ""),
         "from": frm,
@@ -609,7 +626,7 @@ def _kind_from_records(s: Session, v: OntologyVersion) -> tuple[str, str] | None
                 return "Proposal", ""
             if p.kind == "goal":
                 return "Goal", f"Marked at risk: {r.body.get('name', '')}"
-            return KIND_LABEL.get(p.kind, "Proposal"), record_line(r)
+            return kind_label(p.kind, "Proposal"), record_line(r)
         if "answer" in ref and _uuid(ref["answer"]) is not None:  # a question answered on Home
             q = s.scalars(sa.select(Question).where(Question.id == _uuid(ref["answer"]))).first()
             return (KIND_ANSWER.get(q.kind, "Answer"), record_line(r)) if q else None

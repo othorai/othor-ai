@@ -259,6 +259,27 @@ def read_json(path: Path) -> Any:
     return json.loads(path.read_text()) if path.exists() else None
 
 
+RUN_INPUT_PREFIX = "run_input_"  # a plug-in's stored run input (Advanced Intelligence Phase 0)
+
+
+def run_input_path(files: RunFiles, name: str) -> Path:
+    return files.inputs / f"{RUN_INPUT_PREFIX}{name}.json"
+
+
+def run_input_files(files: RunFiles) -> list[tuple[str, Path]]:
+    return [
+        (p.stem.removeprefix(RUN_INPUT_PREFIX), p)
+        for p in sorted(files.inputs.glob(f"{RUN_INPUT_PREFIX}*.json"))
+    ]
+
+
+def with_run_inputs(context: dict[str, Any], files: RunFiles) -> dict[str, Any]:
+    """The run's context with its stored plug-in inputs (the run, replay and the brief step
+    read the same files); unchanged when there are none."""
+    got = {name: read_json(p) for name, p in run_input_files(files)}
+    return {**context, "run_inputs": got} if got else context
+
+
 class RunFiles:
     """The layout of one run's directory."""
 

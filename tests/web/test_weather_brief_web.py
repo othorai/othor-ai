@@ -59,7 +59,7 @@ def _text(page: str) -> str:
 
 
 def test_each_brief_has_its_own_weather_at_its_head(night, monkeypatch):  # noqa: F811
-    monkeypatch.setattr(weather, "IN_BRIEFS", True)  # hidden by default since #62; kept for v0.21
+    monkeypatch.setattr(weather, "IN_BRIEFS", True)  # hidden by default since #62; kept for v0.24
     env, h, cid, _rid, svc = night
     ctx, rid, lead, disp = two_briefs(env, svc, cid)
     company = _stored(svc, cid, rid)
@@ -141,7 +141,7 @@ def test_a_run_sealed_before_part_1c_shows_no_banner_on_the_brief(night):  # noq
 
 def test_the_weather_is_hidden_in_briefs_and_kept_on_home(night):  # noqa: F811
     """#62 (owner, 14 Nov 2026): no weather banner or outlook in a brief (page, shared link,
-    email) until v0.21 revisits it; Home keeps it."""
+    email) until v0.24 revisits it; Home keeps it."""
     env, h, cid, _rid, svc = night
     with svc.sf() as s, tenant_scope(cid):
         bid = s.scalars(sa.select(Brief.id)).first()

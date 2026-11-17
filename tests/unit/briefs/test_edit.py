@@ -96,3 +96,57 @@ def test_weekly_and_monthly_keep_their_day_and_daily_has_none():
     assert "on" not in edit.clean({"schedule": "daily", "on": "fri"}, SPEC, opts)
     d = edit.apply_form("delivery", {"schedule": "weekly", "on": "wed"}, {"schedule": "daily"})
     assert (d["schedule"], d["on"]) == ("weekly", "wed")
+
+
+def test_areas_are_kept_only_when_chosen():
+    """Advanced Intelligence Phase 0 §8: an older brief's body keeps its bytes (no new version)."""
+    old = {"name": "Sales", "scope": {"metrics": None, "exclude": {}}}
+    got = edit.clean(old, SPEC, {})
+    assert "areas" not in got["scope"]
+    assert edit.clean(got, SPEC, {}) == got
+    chosen = {
+        "name": "Collections",
+        "scope": {"metrics": None, "exclude": {}, "areas": ["Collections", " Sales ", "Sales", ""]},
+    }
+    got = edit.clean(chosen, SPEC, {})
+    assert got["scope"]["areas"] == ["Collections", "Sales"]
+    assert edit.clean(got, SPEC, {}) == got
+
+
+AREA_SPEC = {
+    "metrics": {
+        "net_revenue": {"name": "Net revenue", "status": "active", "area": "Sales"},
+        "orders": {"name": "Orders", "status": "active", "area": "Sales"},
+        "dso": {"name": "DSO", "status": "active", "area": "Collections"},
+        "overdue_amount": {"name": "Overdue amount", "status": "active", "area": "Collections"},
+        "headcount": {"name": "Headcount", "status": "active"},
+        "helper": {"name": "Helper", "status": "active", "area": "Sales", "listed": False},
+        "win_rate": {"name": "Win rate", "status": "needs_source", "area": "Sales"},
+    }
+}
+
+
+def test_findings_come_from_lists_the_areas_with_their_counts():
+    """Board 4d4: each area of the listed, active numbers (Discover's groups bring theirs),
+    "Other numbers" last; all on until the owner turns one off."""
+    rows = edit.area_rows(AREA_SPEC, {})
+    assert rows == [
+        {"area": "Collections", "count": 2, "on": True},
+        {"area": "Sales", "count": 2, "on": True},
+        {"area": "Other numbers", "count": 1, "on": True},
+    ]
+    rows = edit.area_rows(AREA_SPEC, {"areas": ["Collections"]})
+    assert [r["on"] for r in rows] == [True, False, False]
+
+
+def test_turning_an_area_off_scopes_the_brief_and_all_on_is_the_whole_company():
+    every = ["Collections", "Sales", "Other numbers"]
+    form = {"areas_shown": "1", "areas_all": every, "areas": ["Collections"]}
+    d = edit.apply_form("numbers", form, {"scope": {"metrics": None, "exclude": {}}})
+    assert d["scope"]["areas"] == ["Collections"]
+    form = {"areas_shown": "1", "areas_all": every, "areas": every}
+    d = edit.apply_form("numbers", form, d)
+    assert d["scope"]["areas"] is None
+    # a Numbers post without the areas (an older page) leaves them as they were
+    d2 = edit.apply_form("numbers", {}, {"scope": {"areas": ["Sales"]}})
+    assert d2["scope"]["areas"] == ["Sales"]

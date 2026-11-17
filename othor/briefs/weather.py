@@ -58,7 +58,7 @@ INK = "#1F2430"
 
 
 # #62 (owner, 14 Nov 2026): the weather is hidden in briefs (app, email, PDF, shared links) until
-# it is revisited in v0.21; Home keeps it. The run still stores it, so turning this back on shows
+# it is revisited in v0.24; Home keeps it. The run still stores it, so turning this back on shows
 # every stored brief's weather again.
 IN_BRIEFS = False
 
@@ -1011,7 +1011,12 @@ def for_briefs(
         )
         out[str(v["id"])] = {
             "version": v.get("number"),
-            "scope": {"metrics": sc.get("metrics"), "exclude": sc.get("exclude") or {}},
+            "scope": {
+                "metrics": sc.get("metrics"),
+                "exclude": sc.get("exclude") or {},
+                # only when chosen (Phase 0 §8), so a brief without areas keeps its bytes
+                **({"areas": sc["areas"]} if sc.get("areas") is not None else {}),
+            },
             "weather": make(
                 spec,
                 run_date,

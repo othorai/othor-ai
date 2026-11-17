@@ -13,11 +13,11 @@
     <div class="nav-links">
     <p class="group">{{ company.name }}</p>
     {# plug-in items join their group after the core item they name (M20.1) #}
-    {% for key, label, href, ic, tag in nav_items("company", [("home", "Home", "/home"), ("brief", "Morning Brief", "/brief"), ("sweep", "Sweep", "/sweep"), ("summary", "Summary", "/summary")]) %}
-    <a class="nav-item{{ ' is-on' if nav == key else '' }}" href="{{ href }}"{% if nav == key %} aria-current="page"{% endif %}>{{ icon(ic) }}{{ label }}{% if tag == "ee" %}{{ ee_tag(short=True) }}{% endif %}</a>{% endfor %}
+    {% for key, label, href, ic, tag, badge in nav_items("company", [("home", "Home", "/home"), ("brief", "Morning Brief", "/brief"), ("sweep", "Sweep", "/sweep"), ("summary", "Summary", "/summary")]) %}
+    <a class="nav-item{{ ' is-on' if nav == key else '' }}" href="{{ href }}"{% if nav == key %} aria-current="page"{% endif %}>{{ icon(ic) }}{{ label }}{% if badge %}<span class="nav-badge" aria-label="{{ fmt.num(badge) }} new">{{ fmt.num(badge) }}</span>{% endif %}{% if tag == "ee" %}{{ ee_tag(short=True) }}{% endif %}</a>{% endfor %}
     <p class="group">Setup</p>
-    {% for key, label, href, ic, tag in nav_items("setup", [("ontology", "Business Model", "/ontology"), ("sources", "Data sources", "/sources"), ("settings", "Settings", "/settings")]) %}
-    <a class="nav-item{{ ' is-on' if nav == key else '' }}" href="{{ href }}"{% if nav == key %} aria-current="page"{% endif %}>{{ icon(ic) }}{{ label }}{% if tag == "ee" %}{{ ee_tag(short=True) }}{% endif %}</a>{% endfor %}
+    {% for key, label, href, ic, tag, badge in nav_items("setup", [("ontology", "Business Model", "/ontology"), ("sources", "Data sources", "/sources"), ("settings", "Settings", "/settings")]) %}
+    <a class="nav-item{{ ' is-on' if nav == key else '' }}" href="{{ href }}"{% if nav == key %} aria-current="page"{% endif %}>{{ icon(ic) }}{{ label }}{% if badge %}<span class="nav-badge" aria-label="{{ fmt.num(badge) }} new">{{ fmt.num(badge) }}</span>{% endif %}{% if tag == "ee" %}{{ ee_tag(short=True) }}{% endif %}</a>{% endfor %}
     </div>
     {# M15.8 (owner, 13 Nov 2026): AI usage, just above the profile at the bottom #}
     <a class="nav-usage{{ ' is-on' if nav == 'usage' else '' }}" href="/usage"{% if nav == "usage" %} aria-current="page"{% endif %}><span class="nav-usage-head">{{ icon("usage") }}AI usage</span><span class="nav-usage-card" hx-get="/usage/card" hx-trigger="load" hx-swap="innerHTML"></span></a>

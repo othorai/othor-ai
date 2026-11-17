@@ -68,6 +68,7 @@ ICONS = {
     "usage": "gauge",  # AI usage in the side menu (M15.8)
     "summary": "layout-list",  # Summary in the side menu (M16.3)
     "look-back": "history",  # Look back in the side menu (Enterprise Edition, 17 Nov 2026)
+    "discover": "telescope",  # Discover in the side menu (Enterprise Edition, 17 Nov 2026)
     "file": "file-text",
     "sheet": "sheet",
     "table": "table-2",

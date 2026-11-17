@@ -235,3 +235,15 @@ def test_the_licence_light():
     assert none["state"] == "note"
     # without enterprise features or several companies, no Licence light at all
     assert "licence" not in {x["key"] for x in lights(_facts())["lights"]}
+
+
+def test_outside_services_show_only_when_a_plugin_reaches_one():
+    """Advanced Intelligence Phase 0: the hosts a plug-in declares are listed on System Health."""
+    got = lights(_facts())
+    assert "outside" not in [g["key"] for g in got["groups"]]
+    got = lights(_facts(hosts=["api.data.gov.in", "fbil.org.in"]))
+    (g,) = [g for g in got["groups"] if g["key"] == "outside"]
+    (light,) = g["lights"]
+    assert light["line"] == "Also reaches 2 outside services"
+    assert light["details"] == ["api.data.gov.in", "fbil.org.in"]
+    assert light["state"] == "info" and got["ok"]

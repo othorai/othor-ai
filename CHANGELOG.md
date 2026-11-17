@@ -6,6 +6,31 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-11-17
+
+### Added
+- Enterprise Edition: Discover, groups of numbers the business isn't watching yet, found in the
+  connected sources by table and column names (Collections, Dispatch and fulfilment, Pricing and
+  discounts, Customer health, Procurement), each with a twelve-month preview computed read-only
+  from the source; Switch on adds its numbers to the Business Model as one version, with Undo.
+- Edit brief: "Findings come from", the Business Model's areas, each on or off.
+- Plug-in hooks in the open core: after a scan, after a run, on the minute; Home proposal kinds;
+  stored run inputs that replay reads; separate detection pools; a plug-in record type's part of
+  the spec; brief sections; menu badges; two more slots; extra outbound hosts, listed on System
+  Health.
+
+### Changed
+- Look back and Discover list their reports and groups as cards, like the Morning Brief.
+- Look back reads a file with a column for each year (FY24, FY25, FY26 …) as one amount by
+  financial year; every analysis the file can run starts ticked; a plan that can't run says why.
+- An error message no longer stays over the page: it closes on the next click or request.
+
+### Fixed
+- An open-core install could fail to export a company (an Enterprise Edition table was named
+  in the export list).
+- The image's stylesheet was built without the Enterprise Edition's templates, so some spacing
+  was missing on its pages.
+
 ## [0.21.0] - 2026-11-17
 
 ### Added

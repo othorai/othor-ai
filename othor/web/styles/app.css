@@ -10,5 +10,8 @@
 @import "./components.css" layer(components);
 
 @source "../templates";
+/* the Enterprise Edition's templates, when the package is in the tree (absent from the open core;
+   Tailwind skips a missing folder): their layout utilities come from the same stylesheet */
+@source "../../../othor_ee";
 @source "../setup_view.py";
 @source "../sources_view.py";

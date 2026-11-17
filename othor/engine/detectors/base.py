@@ -219,6 +219,8 @@ class Context:
     holds: dict[str, Any] = field(default_factory=dict)
     # forecasts of record for recent periods and tonight's goal projections (M7)
     forecasts: dict[str, Any] = field(default_factory=dict)
+    # plug-in run inputs stored before the manifest (Advanced Intelligence Phase 0 §3)
+    run_inputs: dict[str, Any] = field(default_factory=dict)
 
     def config(self, detector: str) -> dict[str, Any]:
         return dict(self.spec.get("detectors", {}).get(detector, {}))
@@ -279,6 +281,9 @@ class Spec:
     run: Detector
     needs: tuple[str, ...] = ()  # Ontology records it needs (docs/04 "needs" table)
     enabled: bool = True
+    # its Benjamini–Hochberg pool (Advanced Intelligence Phase 0 §4): a plug-in's detectors may
+    # test in a pool of their own (`detect.register_pool`), never pooled with the inside tests
+    pool: str = "inside"
 
 
 REGISTRY: dict[str, Spec] = {}

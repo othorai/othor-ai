@@ -310,16 +310,24 @@ def sources_line(s: Session, bv: BriefView) -> list[dict[str, Any]]:
 # --- the briefs page (4a, 4b) -------------------------------------------------------------------
 
 
+GRAIN_WORD = {"day": "daily", "week": "weekly", "month": "monthly"}
+
+
 def scope_text(spec: dict[str, Any], body: dict[str, Any]) -> str:
     sc = body.get("scope") or {}
     names = spec.get("metrics", {})
     metrics = sc.get("metrics")
-    out = (
-        "Whole company"
-        if not metrics
-        else ", ".join(str(names.get(m, {}).get("name") or m) for m in metrics[:3])
-        + (f" and {len(metrics) - 3} more" if len(metrics) > 3 else "")
-    )
+    areas = sc.get("areas")
+    if metrics:
+        out = ", ".join(str(names.get(m, {}).get("name") or m) for m in metrics[:3]) + (
+            f" and {len(metrics) - 3} more" if len(metrics) > 3 else ""
+        )
+    elif areas is not None:  # 4d4: the areas this brief's findings come from
+        out = (
+            ", ".join(areas[:3]) + (f" and {len(areas) - 3} more" if len(areas) > 3 else "")
+        ) or "No area"
+    else:
+        out = "Whole company"
     left = [v for vals in (sc.get("exclude") or {}).values() for v in vals]
     if left:
         out += " · " + ", ".join(left) + " left out"
@@ -622,6 +630,7 @@ class EditView:
     recipients: list[Any]
     floor: str
     on_options: list[tuple[str, str]] = dc_field(default_factory=list)  # M15.7c: Weekly/Monthly
+    areas: list[dict[str, Any]] = dc_field(default_factory=list)  # 4d4: Findings come from
 
 
 def _last_run(s: Session) -> Run | None:
@@ -712,7 +721,7 @@ def edit_view(
             {
                 "key": m,
                 "name": meta.get("name") or m,
-                "how": f"{(meta.get('grain') or 'month')}ly · "
+                "how": f"{GRAIN_WORD.get(meta.get('grain') or 'month', 'monthly')} · "
                 + (t["comparison"]["text"].split(" · ")[-1] if t else "no value yet"),
                 "today": t["value"] if t else "—",
             }
@@ -767,6 +776,7 @@ def edit_view(
         ),
         floor=money(spec.get("detectors", {}).get("materiality_inr", "500000")),
         on_options=schedule_on_options(body["schedule"]),
+        areas=edit.area_rows(spec, body.get("scope") or {}),
     )
 
 

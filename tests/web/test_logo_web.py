@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """M15.7 · the company's logo: uploaded in Settings (owner, PNG or JPEG, re-encoded), served by its
 hash on the company's host, shown on the sign-in page, the link page and the emailed brief
-(not the side menu: v0.21); and the brief as a PDF from a recipient's link."""
+(not the side menu: v0.24); and the brief as a PDF from a recipient's link."""
 
 from __future__ import annotations
 
@@ -56,7 +56,7 @@ def test_the_owner_sets_and_removes_the_logo(env: Env):
     assert img.status_code == 200 and img.headers["content-type"] == "image/png"
     assert img.content.startswith(b"\x89PNG")
     assert env.client.get(h + f"/logo/{'0' * 64}.png").status_code == 404
-    # not in the side menu (parked to v0.21, owner 13 Nov 2026)
+    # not in the side menu (parked to v0.24, owner 13 Nov 2026)
     assert f"/logo/{sha}.png" not in env.client.get(h + "/home").text
     # refused: an SVG, and a GIF named .png
     bad = _upload(env, h, b'<svg xmlns="http://www.w3.org/2000/svg"></svg>', "logo.svg")

@@ -60,6 +60,10 @@ def run(ctx: WorkerContext, job: Job) -> None:
     from othor.jobs import heartbeat
 
     heartbeat.after_run(ctx.settings, job.payload["kind"], status)  # the nightly check-in
+    if status in ("done", "partial"):
+        from othor.core import plugins
+
+        plugins.after_seal(ctx, job.company_id, run_id)  # needs no model (rule 4)
     if status in ("done", "partial") and ctx.gateway is not None:
         rewrite_prose(ctx, job.company_id, run_id)
 

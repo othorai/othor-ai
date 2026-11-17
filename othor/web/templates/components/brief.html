@@ -53,6 +53,14 @@
 <div class="brief-section"><p class="t">{{ title }}{% if small %}<small>· {{ small }}</small>{% endif %}</p>{% if caller %}<p class="meta">{{ caller() }}</p>{% endif %}</div>
 {%- endmacro %}
 
+{# a plug-in's brief section (Advanced Intelligence Phase 0 §6), beside the ranked items: the
+   stored issue's `sections` entry {key, title, note?, items: [{text, line?, state?}]}, every
+   value computed by the run. `sec["items"]`, not sec.items (a dict's own method) #}
+{% macro brief_extra(sec) -%}
+<div class="brief-extra">{{ brief_section(sec.title, sec.get("note")) }}
+<ul class="brief-extra-items">{% for i in sec["items"] %}<li><p class="t">{{ i.text }}{% if i.get("state") %} {{ state_tag(i.state) }}{% endif %}</p>{% if i.get("line") %}<p class="meta">{{ i.line }}</p>{% endif %}</li>{% endfor %}</ul></div>
+{%- endmacro %}
+
 {# a state in place of a brief (4h): title, text, optional code line #}
 {% macro brief_state(title, text, code=None) -%}
 <div class="brief-state"><p class="t">{{ title }}</p><p>{{ text }}</p>{% if code %}<code>{{ code }}</code>{% endif %}{% if caller %}<div class="flex flex-wrap gap-8">{{ caller() }}</div>{% endif %}</div>
@@ -74,6 +82,32 @@
 </a>
 {%- if n > 1 %}<span class="stack-sheet one" aria-hidden="true"></span>{% endif %}{% if n > 2 %}<span class="stack-sheet two" aria-hidden="true"></span>{% endif %}
 </div>
+{%- endmacro %}
+
+{# Any list of things in the brief cards' style (owner, 17 Nov 2026: Discover's groups, Look
+   back's reports): the chart on top, or the faint Othor AI mark and a short line when there is
+   nothing to chart; then the name in caps with its status, the headline, the meta line and the
+   way in. `spec`: a ChartSpec (drawn by render_svg); `quiet`: the line without one; `dot`:
+   accent · ok · warn · muted; `panel`: the link opens the side panel in place. #}
+{% macro item_card(href, tag, headline, status=None, dot="muted", spec=None, quiet="", meta=(), open="Open →", panel=False) -%}
+{% from "components/icons.html" import logo %}
+<a class="brief-card has-visual" href="{{ href }}"{% if panel %} data-panel{% endif %}>
+  <div class="visual">{% if spec %}{{ chart(spec, 360, 152) }}{% else %}<span class="quiet"><span class="mark" aria-hidden="true">{{ logo() }}</span><span>{{ quiet }}</span></span>{% endif %}</div>
+  <div class="body">
+    <div class="head"><span class="brief-tag">{{ tag }}</span>{% if status %}<span class="status"><span class="dot {{ dot }}"></span>{{ status }}</span>{% endif %}</div>
+    <p class="headline">{{ headline }}</p>
+    {% if meta %}<p class="meta">{% for m in meta if m %}<span>{{ m }}</span>{% endfor %}</p>{% endif %}
+    <span class="open">{{ open }}</span>
+  </div>
+</a>
+{%- endmacro %}
+
+{# the dashed card that starts something, after the cards (as New brief): a link, or with
+   `action` a form posting in place (Look again) #}
+{% macro add_card(label, icon_name, href=None, action=None, csrf=None, panel=False) -%}
+{% from "components/icons.html" import icon %}
+{% if action %}<form class="contents" method="post" action="{{ action }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf }}"><button class="brief-card new" type="submit"><span class="new-mark">{{ icon(icon_name) }}</span><b class="name">{{ label }}</b></button></form>
+{% else %}<a class="brief-card new" href="{{ href }}"{% if panel %} data-panel{% endif %}><span class="new-mark">{{ icon(icon_name) }}<span class="plus" aria-hidden="true">+</span></span><b class="name">{{ label }}</b></a>{% endif %}
 {%- endmacro %}
 
 {# New brief as a card in the grid (v0.15 design 5a, pulled into v0.11 by the owner, 12 Nov 2026):

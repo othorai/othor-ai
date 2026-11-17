@@ -353,7 +353,7 @@ def test_the_real_night_delivered_and_opened_from_the_link(night):  # noqa: F811
         del snap.EMAILS["_real"]
     # the brief's own weather (v0.12 part 1c), as the run stored it: the email's header
     wx = delivery.brief_weather(svc.settings, issue_run(svc, cid, rid), bid)
-    # #62 (14 Nov 2026): stored by the run, but hidden from the email until v0.21
+    # #62 (14 Nov 2026): stored by the run, but hidden from the email until v0.24
     assert wx is not None and wx["line"] not in m.text
     assert f"Today · {wx['label']}".upper() not in m.text
     allowed = (

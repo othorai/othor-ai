@@ -8,9 +8,10 @@ from __future__ import annotations
 import datetime as dt
 from typing import Any
 
+from othor.briefs import sections
 from othor.briefs.assemble import assemble
 from othor.engine.ledger import sha
-from othor.engine.store import Point, RunFiles, read_json, read_points
+from othor.engine.store import Point, RunFiles, read_json, read_points, with_run_inputs
 from othor.ontology.compiler.api import canonical
 
 BRIEFS = "briefs.json"
@@ -61,6 +62,9 @@ def make(
             stale_as_of=stale,
             forecast=forecast,
         )
+        extra = sections.build_all(spec, v, run_date, findings, ws, points, context, outputs_doc)
+        if extra:  # only then, so an issue without a plug-in section keeps its bytes
+            issue["sections"] = extra
         issues.append({"brief_id": v["id"], "version": v["number"], "issue": issue})
     return {"issues": issues}
 
@@ -70,7 +74,7 @@ def from_files(files: RunFiles, spec: dict[str, Any], run_date: dt.date) -> dict
     return make(
         spec,
         run_date,
-        read_json(files.inputs / "context.json") or {},
+        with_run_inputs(read_json(files.inputs / "context.json") or {}, files),
         read_json(files.outputs / "findings.json") or [],
         read_json(files.outputs / "watches.json") or [],
         read_json(files.outputs / "forecasts.json") or {},
@@ -94,7 +98,10 @@ def preview(
     Edit brief's "Today with this change" and New brief's "tomorrow's brief" are what the next
     run would make from the same data (4c1, 4d2–4d6)."""
     outputs_doc = read_json(files.outputs_json) or {}
-    context = {**(read_json(files.inputs / "context.json") or {}), "briefs": [version]}
+    context = {
+        **with_run_inputs(read_json(files.inputs / "context.json") or {}, files),
+        "briefs": [version],
+    }
     doc = make(
         spec,
         run_date,

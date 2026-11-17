@@ -76,4 +76,8 @@ def read_limited(
             proc.kill()
         proc.join(5)
         parent.close()
+    if not isinstance(got, Parsed):
+        # why, without anything from the file: a negative exit code is the signal that ended it
+        # (-11 a crash, -9 killed); 0 means the reader raised (17 Nov 2026: a crash was silent)
+        log.warning("upload not read", extra={"kind": kind, "exitcode": proc.exitcode})
     return got if isinstance(got, Parsed) else _unreadable()

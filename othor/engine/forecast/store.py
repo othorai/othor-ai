@@ -572,7 +572,7 @@ def goals(
 
 
 def _selection(got: Fit, sel: Selection) -> dict[str, Any]:
-    """The v2 choice for one series, every night: what M19.3's track record and v0.22's
+    """The v2 choice for one series, every night: what M19.3's track record and v0.25's
     forecast quality tab read. Labelled a backtest, never a breach."""
     return {
         "label": "backtest",

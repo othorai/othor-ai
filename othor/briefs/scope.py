@@ -1,11 +1,28 @@
 # SPDX-License-Identifier: Apache-2.0
 """A brief's scope (docs/04 §8): which findings, tiles and watches it covers, applied before
-ranking. Scope = the metrics it covers (None: every metric) and breakdown values left out
-("Export left out · it has its own brief", 4d3)."""
+ranking. Scope = the metrics it covers (None: every metric), the areas it covers (`areas`,
+Advanced Intelligence Phase 0 §8: a metric's area or a Discover group's key; absent or None:
+every area; "Other numbers" takes the metrics without an area) and breakdown values left out
+("Export left out · it has its own brief", 4d3). Metrics and areas both apply."""
 
 from __future__ import annotations
 
 from typing import Any
+
+from othor.ontology.areas import OTHER
+
+
+def _area_ok(spec: dict[str, Any], metric: str | None, areas: list[str] | None) -> bool:
+    if areas is None or metric is None:
+        return True
+    area = (spec.get("metrics", {}).get(metric) or {}).get("area")
+    return (area or OTHER) in areas
+
+
+def _ok(spec: dict[str, Any], metric: str | None, scope: dict[str, Any]) -> bool:
+    return _metric_ok(spec, metric, scope.get("metrics")) and _area_ok(
+        spec, metric, scope.get("areas")
+    )
 
 
 def _metric_ok(spec: dict[str, Any], metric: str | None, metrics: list[str] | None) -> bool:
@@ -16,7 +33,7 @@ def _metric_ok(spec: dict[str, Any], metric: str | None, metrics: list[str] | No
 
 
 def finding_in(spec: dict[str, Any], scope: dict[str, Any], f: dict[str, Any]) -> bool:
-    if not _metric_ok(spec, f.get("metric"), scope.get("metrics")):
+    if not _ok(spec, f.get("metric"), scope):
         return False
     out = scope.get("exclude") or {}
     b, v = f.get("breakdown") or "", f.get("breakdown_value")
@@ -33,8 +50,7 @@ def metric_in(spec: dict[str, Any], scope: dict[str, Any], metric: str | None) -
     everything; a scoped one only what is about its metrics: the item's metric, or a metric it's
     computed from, is in scope. An item with no metric (a count from a finding) is company-wide,
     so only unscoped briefs show it. Nothing is deleted: it stays in Sweep and the Ontology."""
-    metrics = scope.get("metrics")
-    if metrics is None:
+    if scope.get("metrics") is None and scope.get("areas") is None:
         return True
     if metric is None:
         return False
@@ -45,7 +61,7 @@ def metric_in(spec: dict[str, Any], scope: dict[str, Any], metric: str | None) -
         if k in seen:
             continue
         seen.add(k)
-        if _metric_ok(spec, k, metrics):
+        if _ok(spec, k, scope):
             return True
         todo += list((spec.get("metrics", {}).get(k) or {}).get("components") or [])
     return False

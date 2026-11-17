@@ -38,6 +38,9 @@ def test_every_hook_reaches_the_running_app(tmp_path: Path) -> None:
         home = c.get(h + "/home").text
         # its menu item sits in the company group, right after Summary
         assert home.index('href="/summary"') < home.index('href="/demo"') < home.index(">Setup<")
+        # its badge count sits on its item (Advanced Intelligence Phase 0)
+        demo_item = home[home.index('href="/demo"') : home.index(">Setup<")]
+        assert 'class="nav-badge"' in demo_item and ">3<" in demo_item
         # its fragment fills a slot with the page's context and its own
         from othor.web.templating import templates
 
@@ -63,6 +66,14 @@ def test_every_hook_reaches_the_running_app(tmp_path: Path) -> None:
         # its data-source kind is in "Add a source" and in the registry
         add = c.get(h + "/sources?panel=add").text
         assert "data-demo-kind" in add
+        # Phase 0's slots: the end of Data sources and Edit brief's scope tab
+        assert "data-demo-sources-end" in c.get(h + "/sources").text
+        got = templates.env.from_string('{{ slot("brief_edit.scope") }}').render()
+        assert "data-demo-brief-scope" in got
+        # its outbound host is allowed while it is loaded
+        from othor.core.http import allowed_hosts
+
+        assert "demo-feed.example" in allowed_hosts()
         from othor.connectors import kinds
 
         assert kinds.get("demo_feed").family == "local" and kinds.is_local("demo_feed")
@@ -107,7 +118,8 @@ def test_without_plugins_no_trace(tmp_path: Path) -> None:
     with make_env(tmp_path, plugins="none") as env:
         signup(env)
         h = env.host("indigothread")
-        for path in ("/home", "/settings", "/sources?panel=add"):
+        for path in ("/home", "/settings", "/sources?panel=add", "/sources"):
             page = env.client.get(h + path).text
             assert "demo" not in page.lower(), path
+            assert "nav-badge" not in page, path
         assert env.client.get(h + "/demo").status_code == 404

@@ -534,6 +534,7 @@ BODIES: dict[str, type[Body]] = {
     "weather": WeatherBody,
     "materiality": MaterialityBody,
 }
+CORE_BODIES = frozenset(BODIES)  # the core's record types (a plug-in adds others)
 
 
 def register_body(type_: str, model: type[Body]) -> None:

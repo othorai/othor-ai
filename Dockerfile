@@ -21,6 +21,8 @@ WORKDIR /src
 COPY --from=src /src/scripts/build_css.py scripts/build_css.py
 COPY --from=src /src/othor/web othor/web
 COPY --from=src /src/othor_site othor_site
+# the Enterprise Edition's templates (empty in the open core): app.css scans them for utilities
+COPY --from=src /src/othor_ee othor_ee
 RUN python scripts/build_css.py --platform "linux-$([ "$TARGETARCH" = arm64 ] && echo arm64 || echo x64)" \
  && python scripts/build_css.py --check --platform "linux-$([ "$TARGETARCH" = arm64 ] && echo arm64 || echo x64)" \
  && mkdir -p othor_site/static/site/css

@@ -99,7 +99,7 @@ def test_a_goal_shortfall_is_tested_and_recorded_but_never_a_finding():
     other = _r()
     detect.bh([goal, other], Decimal("0.01"))
     assert goal.q_value is None  # outside the Sweep's FDR family
-    goal.passed, goal.reason = detect._gate(goal, Decimal("500000"), _CTX)  # type: ignore[arg-type]
+    goal.passed, goal.reason = detect._gate(goal, Decimal("500000"), _CTX, Decimal("0.01"))  # type: ignore[arg-type]
     assert not goal.passed and goal.reason == detect.GOAL_AT_RISK
     assert not _night([goal], [], D(2026, 11, 1))
 

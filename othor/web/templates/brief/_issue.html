@@ -8,7 +8,7 @@
 {% from "components/blocks.html" import banner, empty_state, watching, ask_today, ask_line, goal_line %}
 {% from "components/buttons.html" import button, link %}
 {% from "components/tags.html" import state_tag, change_tag %}
-{% from "components/brief.html" import brief_tile, brief_item, brief_section %}
+{% from "components/brief.html" import brief_tile, brief_item, brief_section, brief_extra %}
 {% from "components/weather.html" import weather_banner %}
 {% from "components/ahead.html" import whats_ahead %}
 {# M15.7c: a Weekly or Monthly issue speaks for its period ("Since last week") #}
@@ -67,6 +67,9 @@
       {% call el("div", "brief-items") %}{% for i in items %}{{ brief_item(i, base ~ "/finding/" ~ i.fingerprint ~ "?" ~ q, base ~ "/finding/" ~ i.fingerprint ~ "?" ~ q ~ ("" if i.link == "reasons" else "&tab=test"), None if readonly or not bv.run else (bv.run.number, bv.brief.id, csrf_token), (held or {}).get(i.fingerprint) if held is defined else None) }}{% endfor %}{% endcall %}
     {% endif %}
   {% endif %}
+
+  {# plug-in sections (Advanced Intelligence Phase 0 §6): after the ranked items, never in them #}
+  {% for sec in b.get("sections") or [] %}{{ brief_extra(sec) }}{% endfor %}
 
   {# v0.19 (M19.4): where the headline numbers are heading, after the findings (owner) #}
   {{ whats_ahead(b.ahead, b.ahead_note) }}

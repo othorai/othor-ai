@@ -70,21 +70,43 @@ def use_plugins(dirs: list[Path]) -> None:
     )
 
 
+@pass_context
 def nav_items(
-    group: str, core: list[tuple[str, str, str]]
-) -> list[tuple[str, str, str, str, str | None]]:
+    ctx: Any, group: str, core: list[tuple[str, str, str]]
+) -> list[tuple[str, str, str, str, str | None, int]]:
     """A side-menu group: the core's items (key, label, href; the icon is the key), with each
     plug-in item after the core item it names, or at the group's end (owner, 16 Nov 2026:
-    enterprise items sit in the company group, above Setup)."""
+    enterprise items sit in the company group, above Setup). The last field is the item's
+    badge count (a plug-in's `NavItem.badge`, Advanced Intelligence Phase 0; 0 = none)."""
     from othor.core import plugins
 
-    out: list[tuple[str, str, str, str, str | None]] = [
-        (k, label, href, k, None) for k, label, href in core
+    out: list[tuple[str, str, str, str, str | None, int]] = [
+        (k, label, href, k, None, 0) for k, label, href in core
     ]
     for n in plugins.nav(group):
         at = next((i + 1 for i, x in enumerate(out) if x[0] == n.after), len(out))
-        out.insert(at, (n.key, n.label, n.href, n.icon, n.tag))
+        out.insert(at, (n.key, n.label, n.href, n.icon, n.tag, _badge(ctx, n)))
     return out
+
+
+def _badge(ctx: Any, n: Any) -> int:
+    """A plug-in item's count, from its own query; any failure shows no badge."""
+    if n.badge is None:
+        return 0
+    company, request = ctx.get("company"), ctx.get("request")
+    if company is None or request is None or getattr(company, "id", None) is None:
+        return 0
+    try:
+        from othor.core.tenancy import tenant_scope
+        from othor.web.context import services
+
+        with services(request).sf() as s, tenant_scope(company.id):
+            return max(int(n.badge(s, company) or 0), 0)
+    except Exception:
+        import logging
+
+        logging.getLogger("othor.plugins").exception("nav badge %s failed", n.key)
+        return 0
 
 
 @pass_context

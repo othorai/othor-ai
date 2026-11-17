@@ -109,7 +109,7 @@ def weather_ctx(w: dict[str, Any] | None, imgs: list[InlineImage]) -> dict[str, 
     from othor.briefs import weather
 
     if not weather.IN_BRIEFS or not w or w.get("scene") not in weather.SCENES:
-        return None  # #62: hidden in briefs until v0.21
+        return None  # #62: hidden in briefs until v0.24
     s = weather.SCENES[w["scene"]]
 
     def attach(img: InlineImage) -> str:

@@ -621,3 +621,41 @@ def test_snooze_from_a_brief_returns_to_it(night):  # noqa: F811
     assert "Snoozed until " in page and f"/sweep/finding/{p1}/undo?run={run}" in page
     for bad in ("https://evil.example", "brief-../x", "brief-", "sweep"):
         assert back_to(bad) is None, bad
+
+
+def test_findings_come_from_areas_on_the_numbers_tab(night):  # noqa: F811
+    """Board 4d4: the Numbers tab lists the Business Model's areas with their counts, each on;
+    turning one off scopes the brief to the rest, saved as a version, and said on its card."""
+    import html as _h
+
+    from othor.briefs.models import BriefVersion
+
+    env, h, cid, _rid, svc = night
+    bid = _brief_id(svc, cid)
+    page = env.client.get(h + f"/brief/{bid}/edit?tab=numbers").text
+    assert "Findings come from" in page and 'name="areas_all" value="Collections"' in page
+    areas = re.findall(r'name="areas_all" value="([^"]+)"', page)
+    assert "Collections" in areas and len(areas) >= 3
+    draft = re.search(r'name="draft" value="([^"]*)"', page).group(1)
+    r = env.client.post(
+        h + f"/brief/{bid}/edit",
+        data={
+            "csrf": env.csrf(h + f"/brief/{bid}"),
+            "draft": _h.unescape(draft),
+            "tab": "numbers",
+            "action": "save",
+            "areas_shown": "1",
+            "areas_all": areas,
+            "areas": ["Collections"],
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and r.headers["location"].endswith("?saved=2")
+    with svc.sf() as s, tenant_scope(cid):
+        v2 = s.scalars(sa.select(BriefVersion).where(BriefVersion.number == 2)).one()
+        assert v2.body["scope"]["areas"] == ["Collections"]
+    again = env.client.get(h + f"/brief/{bid}/edit?tab=numbers").text
+    assert 'value="Collections" data-autosubmit checked' in again or (
+        'aria-label="Findings from Collections" checked' in again
+    )
+    assert "Collections" in env.client.get(h + "/brief").text  # the card's scope line

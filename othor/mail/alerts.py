@@ -4,7 +4,7 @@ digest (8e). Built from stored rows and passed-in data only; the job that sends 
 (8d's drafts live in othor.setup, which othor.mail doesn't import).
 
 Copy follows the boards, with what v0.1 knows: there is no "your setting: send nothing" (a fixed
-rule, not a setting), no members to name in 8d, and no "marked not useful" in 8e (v0.5).
+rule, not a setting), no members to name in 8d, and no "marked not useful" in 8e (next6).
 """
 
 from __future__ import annotations

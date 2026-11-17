@@ -23,6 +23,8 @@ from __future__ import annotations
 import datetime as dt
 import logging
 import uuid
+from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 import sqlalchemy as sa
@@ -51,6 +53,9 @@ from othor.engine.store import (
     publish_series,
     read_json,
     read_points,
+    run_input_files,
+    run_input_path,
+    with_run_inputs,
     write_json,
     write_points,
 )
@@ -381,6 +386,7 @@ def _step(
         return fixture_step(info)
     if kind == "derive":
         _write_context(ctx, info)
+        _write_run_inputs(ctx, info)
         return derive(info, spec)
     if kind == "forecast":
         return forecast_step(info)
@@ -528,6 +534,49 @@ def _write_context(ctx: EngineContext, info: RunInfo) -> None:
     write_json(info.files.inputs / CONTEXT, ctx_doc)
 
 
+# --- plug-in run inputs (Advanced Intelligence Phase 0 §3) -----------------------------------
+
+
+@dataclass(frozen=True)
+class RunInput:
+    """A plug-in's stored input: `collect(ctx, info)` returns a JSON document from what is
+    already stored (never a fetch), or None for none tonight. It is written into the run's
+    inputs before the manifest, hashed there, and read back as `Context.run_inputs[name]` (and
+    the brief step's context); replay reads the file and never collects again."""
+
+    name: str
+    collect: Callable[[EngineContext, RunInfo], Any]
+
+
+RUN_INPUTS: dict[str, RunInput] = {}
+
+
+def register_run_input(name: str, collect: Callable[[EngineContext, RunInfo], Any]) -> RunInput:
+    if _safe(name) != name:
+        raise ValueError(f"run input name {name!r}: letters, digits, - and _ only")
+    if name in RUN_INPUTS and RUN_INPUTS[name].collect is not collect:
+        raise ValueError(f"run input {name!r} is already taken")
+    RUN_INPUTS[name] = RunInput(name, collect)
+    return RUN_INPUTS[name]
+
+
+def _write_run_inputs(ctx: EngineContext, info: RunInfo) -> None:
+    """Each registered input, as canonical JSON. One that fails is logged and left out: the run
+    goes on without it (a plug-in never blocks the night)."""
+    for name, ri in sorted(RUN_INPUTS.items()):
+        path = run_input_path(info.files, name)
+        try:
+            doc = ri.collect(ctx, info)
+        except Exception:
+            log.exception("run input %s failed; the run goes on without it", name)
+            path.unlink(missing_ok=True)
+            continue
+        if doc is None:
+            path.unlink(missing_ok=True)
+        else:
+            write_json(path, doc)
+
+
 LOOKBACK = {"week": dt.timedelta(weeks=13), "month": dt.timedelta(days=92)}
 
 
@@ -622,7 +671,7 @@ def manifest(info: RunInfo, spec: Spec) -> dict[str, Any]:
         f = info.files.inputs / f"probes_{_safe(name)}.json"
         probes[name] = sha(f.read_bytes()) if f.exists() else None
     ctxf = info.files.inputs / CONTEXT
-    return {
+    doc = {
         "format": MANIFEST_FORMAT,
         "run_date": info.run_date.isoformat(),
         "kind": info.kind,
@@ -632,6 +681,10 @@ def manifest(info: RunInfo, spec: Spec) -> dict[str, Any]:
         "probes": probes,
         "context": sha(ctxf.read_bytes()) if ctxf.exists() else None,
     }
+    extra = {name: sha(p.read_bytes()) for name, p in run_input_files(info.files)}
+    if extra:  # only when a plug-in stored one: a run without keeps its bytes
+        doc["run_inputs"] = extra
+    return doc
 
 
 def _safe(name: str) -> str:
@@ -646,7 +699,7 @@ def sweep_inputs(files: RunFiles, spec_doc: dict[str, Any], doc: dict[str, Any])
             s: read_json(files.inputs / f"probes_{_safe(s)}.json") or {}
             for s in sources_with_probes(spec_doc)
         },
-        "context": read_json(files.inputs / CONTEXT) or {},
+        "context": with_run_inputs(read_json(files.inputs / CONTEXT) or {}, files),
     }
 
 

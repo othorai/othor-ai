@@ -335,7 +335,53 @@ DW_FILLERS = {
 }
 
 
+# Procurement for Discover (Advanced Intelligence D1, 17 Nov 2026): real purchase orders in place
+# of the filler, so Discover finds its Procurement group. Planted (D1-P): from 1 Aug 2026 one
+# supplier, vendor 7, delivers about nine days late, so Supplier days late and Share delivered
+# late rise in the last three months; the other suppliers are on time give or take two days.
+PO_LATE_VENDOR = 7
+PO_LATE_FROM = dt.date(2026, 8, 1)
+PO_LAST_RECEIPT = dt.date(2026, 11, 1)
+
+
+def purchase_orders(seed: int) -> pd.DataFrame:
+    r = co.stream(seed, "procurement", "purchase_orders")
+    start, days = dt.date(2024, 4, 1), (dt.date(2026, 10, 31) - dt.date(2024, 4, 1)).days + 1
+    n = 1200
+    po_dates = sorted(start + dt.timedelta(days=int(x)) for x in r.integers(0, days, n))
+    vendors = r.integers(1, 26, n)
+    lead = r.integers(10, 21, n)
+    noise = np.round(r.normal(0, 1.2, n)).astype(int)
+    late = np.round(r.normal(9, 2, n)).astype(int)
+    amounts = np.round(r.lognormal(11.5, 0.6, n), 2)
+    rows = []
+    for i in range(n):
+        po = po_dates[i]
+        expected = po + dt.timedelta(days=int(lead[i]))
+        delay = int(noise[i])
+        if vendors[i] == PO_LATE_VENDOR and po >= PO_LATE_FROM:
+            delay = max(int(late[i]), 4)
+        received: dt.date | None = expected + dt.timedelta(days=delay)
+        if received > PO_LAST_RECEIPT:  # still on its way
+            received = None
+        rows.append(
+            {
+                "po_id": i + 1,
+                "po_no": f"PO/{po.year}/{i + 1:05d}",
+                "vendor_id": int(vendors[i]),
+                "po_date": po,
+                "expected_date": expected,
+                "received_date": received,
+                "amount": float(amounts[i]),
+                "status": "received" if received else "open",
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def _filler(seed: int, name: str, kind: str) -> pd.DataFrame:
+    if name == "purchase_orders":
+        return purchase_orders(seed)
     r = co.stream(seed, "filler", name)
     if kind == "empty":
         return pd.DataFrame(

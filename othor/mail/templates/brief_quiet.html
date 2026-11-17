@@ -14,7 +14,7 @@
 {% endfor %}{% if pair | length == 1 %}<td width="50%" style="width:50%;border:1px solid #DDE2E8">&nbsp;</td>{% endif %}</tr>{% endfor %}
 </table>{% endcall %}{% endif %}
 {% if words.line %}{% call e.row("16px 24px 0") %}{{ e.para(words.line, size=14) }}{% endcall %}{% endif %}
-{% if ahead %}{% call e.row("18px 24px 0") %}{{ e.ahead(ahead, ahead_note) }}{% endcall %}{% endif %}
+{% for sec in b.get("sections") or [] %}{% call e.row("18px 24px 0") %}{{ e.extra(sec) }}{% endcall %}{% endfor %}{% if ahead %}{% call e.row("18px 24px 0") %}{{ e.ahead(ahead, ahead_note) }}{% endcall %}{% endif %}
 {% if b.watching %}{% call e.row("12px 24px 0") %}{{ e.watching(b.watching) }}{% endcall %}{% endif %}
 {% if b.ask %}{% call e.row("16px 24px 0") %}{{ e.ask(b.ask) }}{% endcall %}{% endif %}
 {% call e.row("20px 24px 24px") %}{{ e.button("Open the brief", open_url) }}{% endcall %}

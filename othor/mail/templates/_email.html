@@ -102,6 +102,16 @@
 {% if note %}<p style="margin:8px 0 0;font-family:{{ FONT }};font-size:12px;line-height:1.4;color:#5B6B7B">{{ note }}</p>{% endif %}
 {%- endmacro %}
 
+{# a plug-in's brief section (Advanced Intelligence Phase 0 §6): {title, note?, items} #}
+{% macro extra(sec) -%}
+<p style="margin:0 0 6px;font-family:{{ FONT }};font-size:14px;font-weight:600;color:{{ INK }}">{{ sec.title }}{% if sec.get('note') %} <span style="font-weight:400;font-size:12px;color:{{ MUTED }}">· {{ sec.note }}</span>{% endif %}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+{% for i in sec["items"] %}<tr><td style="padding:10px 0;border-top:1px solid #E3E6EA;font-family:{{ FONT }}">
+  <p style="margin:0;font-size:14px;line-height:1.45;color:{{ INK }}">{{ i.text }}{% if i.get('state') %} {{ state_tag(i.state, none) }}{% endif %}</p>
+  {% if i.get('line') %}<p style="margin:4px 0 0;font-size:12px;line-height:1.4;color:{{ MUTED }}">{{ i.line }}</p>{% endif %}</td></tr>
+{% endfor %}</table>
+{%- endmacro %}
+
 {% macro watching(rows) -%}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:{{ NEG_TINT }};border:1px solid {{ NEG_BORDER }};border-radius:8px;border-collapse:separate"><tr>
 <td valign="top" width="12" style="padding:14px 0 14px 14px;font-size:14px;line-height:1.4;color:{{ NEG }}">&#9679;</td>

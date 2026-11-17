@@ -19,7 +19,7 @@
 </tr>{% endfor %}</table>
 {% endcall %}
 {% if since %}{% call e.row("12px 24px 0") %}<p style="margin:0;font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;color:#3B4756"><b style="font-weight:600;color:#1F2A37">Since {{ since_word }},</b> across every finding this brief covers: {{ since }}.</p>{% endcall %}{% endif %}
-{% if ahead %}{% call e.row("18px 24px 0") %}{{ e.ahead(ahead, ahead_note) }}{% endcall %}{% endif %}
+{% for sec in b.get("sections") or [] %}{% call e.row("18px 24px 0") %}{{ e.extra(sec) }}{% endcall %}{% endfor %}{% if ahead %}{% call e.row("18px 24px 0") %}{{ e.ahead(ahead, ahead_note) }}{% endcall %}{% endif %}
 {% if b.ask %}{% call e.row("16px 24px 0") %}{{ e.ask(b.ask) }}{% endcall %}{% endif %}
 {% call e.row("20px 24px 24px") %}{{ e.button("Open the brief", open_url) }}{% endcall %}
 {{ e.brief_footer(footer, unsubscribe_url) }}

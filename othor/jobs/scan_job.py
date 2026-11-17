@@ -39,6 +39,7 @@ from othor.connectors.sheets.extract import header_fingerprint
 from othor.connectors.sql.engine import SqlCreds, creds_from_source
 from othor.connectors.sql.query_log import QueryLog
 from othor.connectors.sql.scan import Catalog, TableScan, check_connection, scan
+from othor.core import plugins
 from othor.core.events import SYSTEM_ACTOR, record_event
 from othor.jobs.models import Job
 from othor.jobs.queue import enqueue
@@ -398,6 +399,7 @@ def _finish(
         enqueue(s, "label", {"source_id": str(src.id), "scan_id": str(scan_id)})
         # new dimension tables can split numbers already confirmed (v0.11)
         offer_splits(s, row.company_id)
+        plugins.after_scan(s, row.company_id, src.id)  # e.g. Discover looks again (Phase 0)
         s.commit()
 
 
@@ -626,6 +628,7 @@ def _finish_sheets(
         _record_uses(s, row, scan_id)
         enqueue(s, "label", {"source_id": str(src.id), "scan_id": str(scan_id)})
         offer_splits(s, row.company_id)
+        plugins.after_scan(s, row.company_id, src.id)  # e.g. Discover looks again (Phase 0)
         s.commit()
 
 

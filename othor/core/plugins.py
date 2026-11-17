@@ -16,7 +16,19 @@ returns a `Plugin`, every part optional:
 - `connectors`: data-source kinds; `jobs`, `cli`, `prompts`, `models`, `migrations`;
 - `on_load(settings)`: anything else at start: importing its detectors so they `register()`,
   `othor.ontology.types.register_body()` for its record types (the core layer can't import
-  them itself).
+  them itself), and the registries of Advanced Intelligence Phase 0 (17 Nov 2026):
+  `othor.engine.proposals.register_proposal` (a Home proposal kind),
+  `othor.engine.orchestrator.register_run_input` (a stored run input that replay reads, never
+  fetches), `othor.engine.detect.register_pool` with `Spec.pool` (its own Benjamini–Hochberg
+  pool), `othor.ontology.compiler.build.register_compiler` (its records' part of the spec) and
+  `othor.briefs.sections.register_brief_section` (a brief section beside the ranked four);
+- `after_scan(session, company_id, source_id)`: work after a source's scan (next to the
+  core's split offers); `after_seal(worker_ctx, company_id, run_id)`: work after a run is sealed
+  done or partial (no model needed);
+  `ticks(worker_ctx)`: functions on the worker's minute loop, each idempotent. Each is guarded:
+  a failing hook is logged and never fails the scan, run or loop;
+- `hosts`: extra outbound hosts its fetches may reach (`othor.core.http`), listed on System
+  Health.
 
 A plug-in that fails to load is logged and skipped: the app always starts. A plug-in may not
 replace a core job kind, connector kind or path. Plug-ins run with the app's full trust (only
@@ -65,6 +77,8 @@ class NavItem:
     group: str = "company"  # "company" (above Setup) or "setup"
     after: str | None = None  # the core item it follows; None = the group's end
     tag: str | None = None  # "ee": the Enterprise Edition tag beside the label (17 Nov 2026)
+    # a count beside the label (new things to look at); (session, company) -> int, 0 = none
+    badge: Callable[[Any, Any], int] | None = None
 
 
 @dataclass(frozen=True)
@@ -98,6 +112,11 @@ class Plugin:
     # landing), and the paths search engines may index (everything else is noindex)
     root_page: Callable[[Any], Any] | None = None
     indexable: Callable[[], list[str]] | None = None
+    # Advanced Intelligence Phase 0 (17 Nov 2026): lifecycle hooks and outbound hosts
+    after_scan: tuple[Callable[[Any, Any, Any], None], ...] = ()
+    after_seal: tuple[Callable[[Any, Any, Any], None], ...] = ()
+    ticks: tuple[Callable[[Any], None], ...] = ()
+    hosts: frozenset[str] = frozenset()
 
 
 _loaded: tuple[Plugin, ...] | None = None
@@ -209,6 +228,44 @@ def root_page() -> Callable[[Any], Any] | None:
 
 def indexable_paths() -> list[str]:
     return [path for p in loaded() if p.indexable is not None for path in p.indexable()]
+
+
+def hosts() -> frozenset[str]:
+    return frozenset(h for p in loaded() for h in p.hosts)
+
+
+def guarded(what: str, fn: Callable[..., Any], *args: Any) -> bool:
+    """Call one plug-in hook; a failure is logged, never raised (the core's work goes on)."""
+    try:
+        fn(*args)
+    except Exception:
+        log.exception("plug-in %s hook %s failed", what, getattr(fn, "__qualname__", fn))
+        return False
+    return True
+
+
+def after_scan(session: Any, company_id: Any, source_id: Any) -> None:
+    """Each plug-in's after-scan work, each in its own savepoint: one that fails is rolled back
+    and logged, and the scan finishes as it would have without it."""
+    for p in loaded():
+        for fn in p.after_scan:
+            nested = session.begin_nested()
+            if guarded("after_scan", fn, session, company_id, source_id):
+                nested.commit()
+            else:
+                nested.rollback()
+
+
+def after_seal(ctx: Any, company_id: Any, run_id: Any) -> None:
+    for p in loaded():
+        for fn in p.after_seal:
+            guarded("after_seal", fn, ctx, company_id, run_id)
+
+
+def tick(ctx: Any) -> None:
+    for p in loaded():
+        for fn in p.ticks:
+            guarded("tick", fn, ctx)
 
 
 def field_handler(name: str) -> Callable[..., tuple[Any, Any]] | None:

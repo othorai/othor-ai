@@ -140,7 +140,16 @@ def test_every_column_is_exported_or_excluded_with_a_reason():
     (the purge in M18.3 reads the same list)."""
     import othor.all_models as m
 
+    # a test plug-in's own tables (tests/plugins) are loaded by the plug-in tests in the same
+    # process; they are never part of an install
+    test_only = {
+        mp.local_table.name
+        for mp in m.Base.registry.mappers
+        if mp.class_.__module__.startswith("tests.")
+    }
     for t in m.Base.metadata.tables.values():
+        if t.name in test_only:
+            continue
         rule = exporting.TABLES.get(t.name)
         assert rule is not None, f"{t.name}: add it to exporting.TABLES"
         if rule.skip:

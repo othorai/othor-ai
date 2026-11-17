@@ -229,11 +229,13 @@ def worker_loop(ctx: WorkerContext, poll_s: float = 1.0) -> None:  # pragma: no 
     from apscheduler.schedulers.background import BackgroundScheduler
 
     from othor import exporting, purging, trials
+    from othor.core import plugins
     from othor.core.ratelimit import prune
     from othor.engine.scheduler import catch_up, tick
     from othor.jobs import heartbeat, licence_check, ops_alerts
     from othor.jobs.delivery_tick import tick as delivery_tick
 
+    plugins.load(ctx.settings)  # their ticks join the minute loop
     catch_up(ctx.sf, ctx.clock())  # a night missed while the worker was down (M11b §6)
 
     def both() -> None:
@@ -247,6 +249,7 @@ def worker_loop(ctx: WorkerContext, poll_s: float = 1.0) -> None:  # pragma: no 
         purging.tick(ctx.sf, ctx.settings, ctx.mail(), ctx.clock())  # deleted companies (M18.3)
         trials.tick(ctx.sf, ctx.settings, ctx.mail(), ctx.auth(), ctx.clock())  # free trials
         licence_check.check(ctx.sf, ctx.settings, ctx.clock())  # its state changes (M20.3)
+        plugins.tick(ctx)  # each plug-in tick, guarded (Advanced Intelligence Phase 0)
 
     sched = BackgroundScheduler(timezone="UTC")
     # once a minute: queue what is due (docs/02 "scheduler · inside worker")

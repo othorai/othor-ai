@@ -54,3 +54,44 @@ def test_a_watch_with_no_metric_is_company_wide() -> None:
     assert not scope.watch_in(SPEC, CASH, silent)
     assert scope.watch_in(SPEC, ALL, silent)
     assert scope.watch_in(SPEC, CASH, {"indicator": {"kind": "value", "metric": "dso"}})
+
+
+# --- areas (Advanced Intelligence Phase 0 §8) ---------------------------------------------------
+
+AREAS = {
+    "metrics": {
+        "dso": {"name": "DSO", "area": "Collections"},
+        "net_revenue": {"name": "Net revenue", "area": "Sales"},
+        "late_dispatch": {"name": "Late dispatch", "area": "dispatch_fulfilment"},  # a group
+        "headcount": {"name": "Headcount"},  # no area: Other numbers
+        "cash_cycle": {"name": "Cash cycle", "components": ["dso"]},
+    }
+}
+
+
+def _f(metric: str) -> dict:
+    return {"metric": metric, "breakdown": "", "breakdown_value": None, "entities": []}
+
+
+def test_an_area_scope_keeps_its_areas_findings():
+    sc = {"metrics": None, "exclude": {}, "areas": ["Collections", "dispatch_fulfilment"]}
+    kept = [m for m in AREAS["metrics"] if scope.finding_in(AREAS, sc, _f(m))]
+    assert kept == ["dso", "late_dispatch"]
+    other = {"metrics": None, "exclude": {}, "areas": ["Other numbers"]}
+    assert [m for m in AREAS["metrics"] if scope.finding_in(AREAS, other, _f(m))] == [
+        "headcount",
+        "cash_cycle",
+    ]
+
+
+def test_areas_and_metrics_both_apply():
+    sc = {"metrics": ["dso", "net_revenue"], "exclude": {}, "areas": ["Sales"]}
+    assert [m for m in AREAS["metrics"] if scope.finding_in(AREAS, sc, _f(m))] == ["net_revenue"]
+
+
+def test_an_area_scope_keeps_a_watch_computed_from_its_metrics():
+    sc = {"metrics": None, "exclude": {}, "areas": ["Collections"]}
+    assert scope.metric_in(AREAS, sc, "cash_cycle")  # computed from DSO
+    assert not scope.metric_in(AREAS, sc, "net_revenue")
+    assert not scope.metric_in(AREAS, sc, None)  # company-wide: unscoped briefs only
+    assert scope.metric_in(AREAS, {"metrics": None, "exclude": {}}, None)

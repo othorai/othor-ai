@@ -29,6 +29,7 @@ GROUPS = (
     ("found", "What Othor AI found"),
     ("briefs", "Your briefs"),
     ("next", "Next"),
+    ("outside", "Outside services"),  # only when a plug-in fetches from outside (Phase 0)
     ("licence", "Your licence"),
 )
 # a missing column or table, by the driver's code (PostgreSQL SQLSTATE, MySQL number): the run
@@ -515,6 +516,8 @@ def lights(facts: dict[str, Any]) -> dict[str, Any]:
         ]
     if facts.get("licence"):
         row.append(_licence(facts["licence"]))
+    if facts.get("hosts"):
+        row.append(_hosts(facts["hosts"]))
     problems = [x for x in row if x["state"] in PROBLEM]
     # Home's row says no run number (design B2, 11 Nov 2026); the panel's subtitle does
     when = f" · finished at {run['ended']}" if run.get("ended") else ""
@@ -713,12 +716,34 @@ def gather(
         },
         "briefs": cards,
         "licence": lic,
+        "hosts": sorted(_plugin_hosts()),
         "next": {
             "run": f"{'today' if tonight else 'tonight'} at "
             + fmt.clock(dt.time.fromisoformat(run_hm)),
             "brief": fmt.clock(dt.time.fromisoformat(str(company.brief_time or "06:00"))),
         },
     }
+
+
+def _plugin_hosts() -> frozenset[str]:
+    from othor.core import plugins
+
+    return plugins.hosts()
+
+
+def _hosts(hosts: list[str]) -> dict[str, Any]:
+    """The outside services a plug-in reaches (Advanced Intelligence Phase 0): only when one
+    does, so the owner sees every place this install fetches from besides its own sources."""
+    n = len(hosts)
+    return _light(
+        "hosts",
+        "Outside services",
+        "next",
+        "outside",
+        "info",
+        f"Also reaches {fmt.num(n)} outside service{'s' if n != 1 else ''}",
+        hosts,
+    )
 
 
 def _licence_facts(s: Session, now: dt.datetime) -> dict[str, Any] | None:

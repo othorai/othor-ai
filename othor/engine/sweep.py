@@ -50,6 +50,7 @@ def run_sweep(
         probes,
         context.get("holds") or {},
         {**record, "goals": context.get("goals") or []},
+        context.get("run_inputs") or {},
     )
     det = detect.run(ctx)
     fnd = findings.build(det.results, context.get("previous_findings", []), run_date)

@@ -3,6 +3,11 @@
 across the run, then filters and states. Pure: the same outputs, probes, spec and run date give the
 same results (replay re-runs this).
 
+Benjamini–Hochberg runs once per pool (Advanced Intelligence Phase 0 §4): every core detector
+tests in the "inside" pool, with the spec's q and materiality floor; a plug-in's detector may
+test in a pool of its own (`register_pool`) with its own q, and a pool without money skips the
+materiality gate. Pools never share a test count, so a plug-in can't move an inside q-value.
+
 A result that doesn't become a finding keeps the first reason that stopped it, in this order:
 not eligible → no signal (raw p ≥ 0.01) → below materiality (no ₹ at stake, or under the floor) →
 not significant after FDR → suppressed by a known pattern → also seen as another finding (one
@@ -12,6 +17,7 @@ finding per detector, family and window).
 from __future__ import annotations
 
 import datetime as dt
+from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
@@ -22,6 +28,35 @@ from othor.engine.detectors.base import Context, Coverage, Result
 RAW_P = Decimal("0.01")
 HIGH_Q = Decimal("0.001")
 PREFER = ("listed", "headline")  # among one family's results, the metric the owner sees
+INSIDE = "inside"
+
+
+@dataclass(frozen=True)
+class Pool:
+    """A Benjamini–Hochberg pool: its q (None: the spec's `fdr_q`, the inside pool) and whether
+    its results must clear the materiality floor (a pool without money doesn't)."""
+
+    name: str
+    q: Decimal | None = None
+    materiality: bool = True
+
+
+POOLS: dict[str, Pool] = {INSIDE: Pool(INSIDE)}
+
+
+def register_pool(name: str, q: Decimal | str, materiality: bool = True) -> Pool:
+    if name == INSIDE:
+        raise ValueError("the inside pool is the core's")
+    pool = Pool(name, Decimal(str(q)), materiality)
+    if name in POOLS and POOLS[name] != pool:
+        raise ValueError(f"pool {name!r} is already taken")
+    POOLS[name] = pool
+    return pool
+
+
+def pool_of(r: Result) -> Pool:
+    spec = REGISTRY.get(r.detector)
+    return POOLS.get(spec.pool if spec is not None else INSIDE) or POOLS[INSIDE]
 
 
 @dataclass
@@ -60,10 +95,18 @@ def run(ctx: Context) -> Detection:
         got, cov = spec.run(ctx)
         results += got
         coverage.append(cov)
-    bh(results, Decimal(str(ctx.spec.get("detectors", {}).get("fdr_q", "0.01"))))
+    inside_q = Decimal(str(ctx.spec.get("detectors", {}).get("fdr_q", "0.01")))
     floor = Decimal(str(ctx.spec.get("detectors", {}).get("materiality_inr", "500000")))
+    pools: dict[str, list[Result]] = defaultdict(list)
     for r in results:
-        r.passed, r.reason = _gate(r, floor, ctx)
+        pools[pool_of(r).name].append(r)
+    for name, rs in sorted(pools.items()):
+        pool = POOLS[name]
+        bh(rs, inside_q if pool.q is None else pool.q, pool=name)
+    for r in results:
+        pool = pool_of(r)
+        q = inside_q if pool.q is None else pool.q
+        r.passed, r.reason = _gate(r, floor if pool.materiality else None, ctx, q)
     _dedupe(ctx, results)
     for r in results:
         if r.passed:
@@ -78,8 +121,8 @@ def _held(reason: str | None) -> bool:
     return bool(reason) and (reason.startswith("snoozed until") or reason == "muted")  # type: ignore[union-attr]
 
 
-def bh(results: list[Result], q: Decimal) -> None:
-    """Benjamini–Hochberg q-values over every result with a p-value (the run's tests)."""
+def bh(results: list[Result], q: Decimal, pool: str = INSIDE) -> None:
+    """Benjamini–Hochberg q-values over every result with a p-value (one pool's tests)."""
     tested = [
         r for r in results if r.eligible and r.p_value is not None and r.slots.get("kind") != "goal"
     ]
@@ -95,23 +138,25 @@ def bh(results: list[Result], q: Decimal) -> None:
         r.q_value = str(min(val, Decimal(1)).quantize(Decimal("1e-12")))
     for r in tested:
         r.params = {**r.params, "fdr_q": str(q), "tests": m}
+        if pool != INSIDE:  # provenance names a plug-in's pool; inside results keep their bytes
+            r.params["pool"] = pool
 
 
 GOAL_AT_RISK = "goal at risk"
 
 
-def _gate(r: Result, floor: Decimal, ctx: Context) -> tuple[bool, str | None]:
+def _gate(r: Result, floor: Decimal | None, ctx: Context, q: Decimal) -> tuple[bool, str | None]:
+    """`floor` None: the result's pool has no money (no materiality gate)."""
     if not r.eligible:
         return False, r.reason or "not eligible"
     if r.p_value is None or Decimal(r.p_value) >= RAW_P:
         return False, r.reason or "no signal"
-    if r.money is None or Decimal(r.money) < floor:
+    if floor is not None and (r.money is None or Decimal(r.money) < floor):
         return False, "below materiality"
     if r.slots.get("kind") == "goal":
         # where the year will land, not an anomaly (decided 5 Nov 2026): tested and recorded,
         # never a Sweep finding; the brief's goal line and Home's at-risk proposal read it
         return False, GOAL_AT_RISK
-    q = Decimal(str(ctx.spec.get("detectors", {}).get("fdr_q", "0.01")))
     if r.q_value is None or Decimal(r.q_value) > q:
         return False, f"not significant after FDR (q {r.q_value})"
     pattern = suppressed_by(ctx, r)

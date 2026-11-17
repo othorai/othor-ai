@@ -2,8 +2,8 @@
 """The one outbound HTTP client (docs/02 "Security"): only allowlisted hosts are reachable.
 
 Google APIs for Sheets, the model provider, and Postmark (the cloud mail relay; on-premise uses
-SMTP). A request to any
-other host is refused before it leaves the process.
+SMTP), plus the hosts a loaded plug-in declares (`Plugin.hosts`). A request to any other host is
+refused before it leaves the process.
 """
 
 from __future__ import annotations
@@ -27,8 +27,16 @@ class HostNotAllowed(RuntimeError):
     pass
 
 
+def allowed_hosts() -> frozenset[str]:
+    """The core's hosts and those the loaded plug-ins declare (`Plugin.hosts`, shown on System
+    Health): an enterprise feed's host is reachable only while its plug-in is loaded."""
+    from othor.core import plugins
+
+    return ALLOWED_HOSTS | plugins.hosts()
+
+
 def _check(request: httpx.Request) -> None:
-    if request.url.host not in ALLOWED_HOSTS:
+    if request.url.host not in allowed_hosts():
         raise HostNotAllowed(f"outbound host not allowed: {request.url.host}")
 
 

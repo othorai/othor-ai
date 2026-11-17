@@ -13,6 +13,8 @@ with computed values only. Inside the company's tenant scope.
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Callable
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
@@ -24,6 +26,48 @@ from othor.engine.findings import pattern_of
 from othor.engine.models import Finding, Proposal, Run
 
 NEAR_DAYS = 7
+
+# the core's kinds: a plug-in can't take one (Advanced Intelligence Phase 0 §2)
+CORE_KINDS = frozenset(
+    {
+        "suppression",
+        "join",
+        "goal",
+        "definition",
+        "definition_change",
+        "duplicate_metric",
+        "breakdowns",
+        "areas",
+    }
+)
+
+
+@dataclass(frozen=True)
+class ProposalKind:
+    """A plug-in's proposal kind: its tag on Home, its "from" line, and the Ontology change an
+    accepted one writes (`service.put(...)` list, like the core's kinds). Undo is generic."""
+
+    kind: str
+    label: str
+    from_line: Callable[[Proposal], str]
+    changes: Callable[[Any, Proposal], list[Any]]
+
+
+PROPOSALS: dict[str, ProposalKind] = {}
+
+
+def register_proposal(
+    kind: str,
+    label: str,
+    from_line: Callable[[Proposal], str],
+    changes: Callable[[Any, Proposal], list[Any]],
+) -> ProposalKind:
+    if kind in CORE_KINDS:
+        raise ValueError(f"proposal kind {kind!r} is the core's")
+    if kind in PROPOSALS and PROPOSALS[kind].changes is not changes:
+        raise ValueError(f"proposal kind {kind!r} is already taken")
+    PROPOSALS[kind] = ProposalKind(kind, label, from_line, changes)
+    return PROPOSALS[kind]
 
 
 def _md(d: dt.date, year: int) -> dt.date:
@@ -484,6 +528,8 @@ def _changes(s: Any, p: Proposal) -> list[Any]:
             if rec is not None and not (rec.body or {}).get("area"):
                 out.append(service.put("metric", key, {**rec.body, "area": area}, ref))
         return out
+    if p.kind in PROPOSALS:  # a plug-in's kind
+        return PROPOSALS[p.kind].changes(s, p)
     return []
 
 

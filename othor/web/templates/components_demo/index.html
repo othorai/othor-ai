@@ -61,6 +61,9 @@
     <div class="grid gap-16 grid-cols-1 md:grid-cols-2">
       <div>{% call link_card("This link has expired", "Brief links work for 7 days.", kicker="Leadership brief · Sat 1 Nov", fine="The new link goes only to priya@indigothread.example.") %}{{ button("Email me a new link", "primary") }}{% endcall %}</div>
       <div>{% call link_card("You won’t get the Leadership brief", "priya@indigothread.example is off the Leadership brief from tomorrow.", pill="Unsubscribed") %}{{ button("Undo") }}{{ link_others([("Sales brief · daily 06:00", "demo-unsub")]) }}{% endcall %}</div></div></section>
+  {% from "components/brief.html" import brief_extra %}
+  <section class="flex flex-col gap-12"><p class="label-caps">Brief section from a plug-in (Advanced Intelligence)</p>
+    {{ brief_extra({"key": "outside", "title": "Outside · 1", "note": "only when a linked signal moved", "items": [{"text": "Diesel is up 6% this week; Freight cost usually follows in about 4 weeks.", "line": "Diesel price · PPAC · linked to Freight cost", "state": "assessed"}]}) }}</section>
   {% from "components/home.html" import home_card, question_row, recent_row, qp_steps, qp_pick, qp_nav %}
   <section class="flex flex-col gap-12"><p class="label-caps">Home (3a, 3aa, 3b)</p>
     <div class="brief-cards home">{{ home_card("Leadership brief", "Revenue is under its band; South explains most of it.", "4 findings · sent 06:00 to 6", "#", flag=True) }}{{ home_card("Sweep", "212 tests last night · 7 detectors", "8 findings · 2 suppressed", "#", action="Open Sweep →") }}</div>

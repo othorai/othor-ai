@@ -8,7 +8,7 @@
 {% from "components/tags.html" import state_tag, change_tag %}
 {% from "components/brief.html" import brief_tile, brief_item, brief_section, brief_state, check_chip, form_tabs, effect_box, number_row, ai_line, pdf_download %}
 {% from "components/panels.html" import pane, pane_title %}
-{% from "components/forms.html" import text_input, select, listbox %}
+{% from "components/forms.html" import text_input, select, listbox, toggle %}
 {% from "components/weather.html" import forecast_panel %}
 {% block title %}{{ bv.brief.name }} · Morning Brief · {{ company.name }}{% endblock %}
 {% block crumb %}Morning Brief{% endblock %}
@@ -94,16 +94,23 @@
     {% endfor %}
     {% if e.totals %}<div class="flex flex-col gap-8">{% call el("p", "label-caps") %}In scope today · computed{% endcall %}
       {% for t in e.totals %}{% call el("div", "edit-row") %}<div class="flex flex-col">{% call el("span", "name") %}{{ t.name }} · {{ t.period.strftime("%b") }}{% endcall %}{% call el("span", "how") %}{{ fmt.pct(t.share) }} of the whole company{% endcall %}</div>{% call el("span", "today") %}{{ fmt.inr(t.kept, unit="cr", decimals=2) }}{% if t.kept != t.total %} · was {{ fmt.inr(t.total, unit="cr", decimals=2) }}{% endif %}{% endcall %}{% endcall %}{% endfor %}</div>{% endif %}
+    {# a plug-in's scope choices, e.g. Discover's areas (Advanced Intelligence Phase 0) #}
+    {{ slot("brief_edit.scope") }}
   {% elif e.tab == "numbers" %}
     <div class="flex flex-col">{% call el("p", "label-caps") %}Headline numbers · {{ fmt.num(e.headline | length) }} of up to 6{% endcall %}
       {% for r in e.headline %}{{ number_row(r, loop.first) }}{% endfor %}</div>
     {% if e.headline | length < 6 %}{{ button("+ Add a headline number", type="submit", attrs={"name": "goto", "value": "add"}) }}{% endif %}
+    {# 4d4: Findings come from · the Business Model's areas, each on or off; all on = the whole company #}
+    {% if e.areas %}{% set on_count = e.areas | selectattr("on") | map(attribute="count") | sum %}{% set all_count = e.areas | map(attribute="count") | sum %}
+    <div class="flex flex-col">{% call el("div", layout="flex items-baseline justify-between gap-12") %}{% call el("p", "label-caps") %}Findings come from · {{ fmt.num(on_count) }} of {{ fmt.num(all_count) }} numbers{% endcall %}{% call el("span", "hint") %}Areas{% endcall %}{% endcall %}
+      <input type="hidden" name="areas_shown" value="1">
+      {% for a in e.areas %}{% call el("div", "edit-row") %}<input type="hidden" name="areas_all" value="{{ a.area }}"><div class="flex flex-col">{% call el("span", "name") %}{{ a.area }}{% endcall %}</div>{% call el("span", "today") %}{{ fmt.num(a.count) }}{% endcall %}{{ toggle("areas", a.on, label="Findings from " ~ a.area, attrs='value="' ~ (a.area | e) ~ '" data-autosubmit') }}{% endcall %}{% endfor %}</div>{% endif %}
     {% call el("p", "hint") %}Up to 4 items a day · floor {{ e.floor }}{% endcall %}
   {% elif e.tab == "add" %}
     {% call el("div", layout="flex items-end gap-8") %}{{ text_input("q", "Add a headline number", value=e.q, placeholder="Search your metrics") }}{{ button("Search", type="submit", attrs={"name": "goto", "value": "add"}) }}{% endcall %}
     {% for fam in e.families %}
     <div class="flex flex-col">{% call el("p", "label-caps") %}{{ fam.family }} · {{ fmt.num(fam.metrics | length) }} variant{{ "s" if fam.metrics | length != 1 else "" }}{% endcall %}
-      {% for m in fam.metrics %}{% call el("div", "edit-row") %}<div class="flex flex-col">{% call el("span", "name") %}{{ m.name }}{% endcall %}{% call el("span", "how") %}{{ m.grain }}ly{{ " · " ~ m.source if m.source else "" }}{{ "" if m.active else " · needs a source" }}{% endcall %}</div>{% if m.added %}{% call el("span", "today") %}In this brief{% endcall %}{% elif m.active %}{{ button("Add", type="submit", attrs={"name": "action", "value": "add:" ~ m.key}) }}{% endif %}{% endcall %}{% endfor %}</div>
+      {% for m in fam.metrics %}{% call el("div", "edit-row") %}<div class="flex flex-col">{% call el("span", "name") %}{{ m.name }}{% endcall %}{% call el("span", "how") %}{{ {"day": "daily", "week": "weekly", "month": "monthly"}.get(m.grain, m.grain) }}{{ " · " ~ m.source if m.source else "" }}{{ "" if m.active else " · needs a source" }}{% endcall %}</div>{% if m.added %}{% call el("span", "today") %}In this brief{% endcall %}{% elif m.active %}{{ button("Add", type="submit", attrs={"name": "action", "value": "add:" ~ m.key}) }}{% endif %}{% endcall %}{% endfor %}</div>
     {% else %}{% call el("p", "hint") %}No metric matches “{{ e.q }}”.{% endcall %}{% endfor %}
   {% elif e.tab == "delivery" %}
     {% call el("div", layout="grid grid-cols-1 md:grid-cols-3 gap-12") %}

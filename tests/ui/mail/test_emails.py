@@ -189,7 +189,7 @@ EMAILS = emails()
 
 def _with_weather() -> dict:
     """The brief emails with the weather switched on (hidden by default since #62, 14 Nov 2026;
-    kept tested for v0.21's revisit)."""
+    kept tested for v0.24's revisit)."""
     from othor.briefs import weather
 
     was = weather.IN_BRIEFS

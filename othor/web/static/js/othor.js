@@ -237,6 +237,29 @@ document.addEventListener("click", (e) => {
   if (r && r.verb && r.path && window.htmx) htmx.ajax(r.verb.toUpperCase(), r.path, { source: r.elt });
   else location.reload();
 });
+// An error toast never stands in the way (bug #68): a click on it (not on Retry) or anywhere
+// else closes it, and the next request clears it; the click itself still goes through.
+document.addEventListener("click", (e) => {
+  const dock = document.getElementById("toast-dock");
+  if (!dock || !dock.querySelector(".toast.err")) return;
+  if (e.target.closest(".toast .retry, .toast a")) return;
+  dock.querySelectorAll(".toast.err").forEach((t) => t.remove());
+}, true);
+document.addEventListener("htmx:beforeRequest", () => {
+  const dock = document.getElementById("toast-dock");
+  if (dock) dock.querySelectorAll(".toast.err").forEach((t) => t.remove());
+});
+// A live "N of M" beside a group of tick boxes: <span data-checked-count="NAME" data-of="M">
+// counts the form's ticked inputs named NAME (Look back's "What to run", #69).
+document.addEventListener("change", (e) => {
+  const el = e.target;
+  if (!(el instanceof HTMLInputElement) || el.type !== "checkbox" || !el.form || !el.name) return;
+  const name = CSS.escape(el.name);
+  el.form.querySelectorAll(`[data-checked-count="${name}"]`).forEach((c) => {
+    const n = el.form.querySelectorAll(`input[name="${name}"]:checked`).length;
+    c.textContent = `${n} of ${c.dataset.of}`;
+  });
+});
 // Offline (9a): the callout while the browser has no network.
 function offline() {
   const slot = document.getElementById("offline-slot");

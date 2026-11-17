@@ -93,6 +93,8 @@ TABLES: dict[str, Rule] = {
     "big_picture": Rule(drop={"input_hash": "an internal cache key"}),
     # Look back's reports (an Enterprise Edition table, named here only; the core never imports
     # it): the question, plan, results and words are the owner's; the upload is not exported
+    # Discover's groups (Enterprise Edition, named here only): what was offered and decided
+    "discover_group": Rule(),
     "look_back_report": Rule(
         drop={
             "upload_id": "an internal file reference; the file itself is not exported",
@@ -289,8 +291,10 @@ def build(s: Session, settings: Settings, company: Company) -> Export:
     run = _last_run(s)
     day = run.run_date if run is not None else dt.date(2026, 1, 1)
     files: dict[str, bytes] = {}
+    present = _classes()
     for name, rule in sorted(TABLES.items()):
-        if not rule.skip:
+        # an Enterprise Edition table is named here but absent from an open-core install
+        if not rule.skip and name in present:
             files[f"data/{name}.json"] = _json(rows(s, name))
     spec_hash = ""
     if run is not None:
