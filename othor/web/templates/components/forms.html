@@ -80,9 +80,10 @@
 {%- if href %}</a>{% else %}</span>{% endif -%}
 {%- endmacro %}
 
-{# Six-digit code (1c, 1d). digits: list of strings; state: '' | 'error' | 'locked'; focus: index with the caret. #}
-{% macro code_boxes(digits=("", "", "", "", "", ""), state="", focus=None, compact=False, name="code") -%}
-<div class="code-boxes{{ ' is-' ~ state if state else '' }}{{ ' compact' if compact else '' }}" data-code-boxes>
+{# Six-digit code (1c, 1d). digits: list of strings; state: '' | 'error' | 'locked'; focus: index with the caret.
+   auto: six digits submit the form (sign-in); Delete company passes False so Delete is always a click (owner, 16 Nov 2026). #}
+{% macro code_boxes(digits=("", "", "", "", "", ""), state="", focus=None, compact=False, name="code", auto=True) -%}
+<div class="code-boxes{{ ' is-' ~ state if state else '' }}{{ ' compact' if compact else '' }}" data-code-boxes{% if not auto %} data-no-autosubmit{% endif %}>
   {% for d in digits %}<input class="digit{{ ' is-focus' if focus == loop.index0 else '' }}" name="{{ name }}{{ loop.index0 }}" value="{{ d }}" inputmode="numeric" maxlength="1" autocomplete="{{ 'one-time-code' if loop.first else 'off' }}" aria-label="Digit {{ loop.index }}"{% if focus == loop.index0 and state != 'locked' %} autofocus{% endif %}{% if state == 'locked' %} disabled{% endif %}>{% endfor %}
 </div>
 {%- endmacro %}
@@ -112,23 +113,37 @@
 <form{% if kind or layout %} class="{{ (kind ~ ' ' ~ layout) | trim }}"{% endif %} method="post" action="{{ action }}"{% if not nav %} data-inplace{% endif %}{% for k, v in (attrs or {}).items() %}{% if v is sameas true %} {{ k }}{% elif v is not sameas false and v is not none %} {{ k }}="{{ v }}"{% endif %}{% endfor %}><input type="hidden" name="csrf" value="{{ csrf }}">{{ caller() if caller else "" }}</form>
 {%- endmacro %}
 
-{# Request access (M11d part C): the site's /request-access page and the sign-up page's
-   invitation-only state. A hidden honeypot field catches bots; no third-party CAPTCHA. #}
-{% macro access_request_fields(form, errors, csrf_token, sizes) -%}
+{# Contact us (owner, 17 Nov 2026; Request access in M11d part C): the website's /contact, the
+   sign-up page's invitation-only state, and the app's side panel. The topic comes from the link
+   (`form.topic`); `pick_topic=False` keeps it hidden. `who=False`: the app knows the sender, so
+   name, email and company travel hidden. A hidden honeypot field catches bots; no CAPTCHA. #}
+{% macro contact_fields(form, errors, csrf_token, pick_topic=True, who=True, sizes=True) -%}
 <input type="hidden" name="csrf" value="{{ csrf_token }}">
+{% if pick_topic %}
+<div class="field">
+  <label for="f-topic">What it’s about</label>
+  <select class="select{{ ' is-error' if errors.topic else '' }}" id="f-topic" name="topic"{% if errors.topic %} aria-invalid="true" aria-describedby="e-topic"{% endif %}>
+    {% for value, text in contact.topics %}<option value="{{ value }}"{% if value == (form.topic or "other") %} selected{% endif %}>{{ text }}</option>{% endfor %}
+  </select>
+  {% if errors.topic %}<p class="field-error" id="e-topic">{{ errors.topic }}</p>{% endif %}
+</div>
+{% else %}<input type="hidden" name="topic" value="{{ form.topic or 'sales' }}">{% endif %}
+{% if who %}
 {{ text_input("name", "Your name", form.name or "", error=errors.name, attrs='autocomplete="name"') }}
 {{ text_input("email", "Work email", form.email or "", type="email", error=errors.email, attrs='autocomplete="email"') }}
 {{ text_input("company", "Company", form.company or "", error=errors.company, attrs='autocomplete="organization"') }}
+{% if sizes %}
 <div class="field">
-  <label for="f-team_size">How many people work there</label>
+  <label for="f-team_size">How many people work there (optional)</label>
   <select class="select{{ ' is-error' if errors.team_size else '' }}" id="f-team_size" name="team_size"{% if errors.team_size %} aria-invalid="true" aria-describedby="e-team_size"{% endif %}>
     <option value=""{% if not form.team_size %} selected{% endif %}>Choose</option>
-    {% for value, text in sizes %}<option value="{{ value }}"{% if value == form.team_size %} selected{% endif %}>{{ text }}</option>{% endfor %}
+    {% for value, text in contact.sizes %}<option value="{{ value }}"{% if value == form.team_size %} selected{% endif %}>{{ text }}</option>{% endfor %}
   </select>
   {% if errors.team_size %}<p class="field-error" id="e-team_size">{{ errors.team_size }}</p>{% endif %}
 </div>
-{{ text_input("runs_today", "What you run today", form.runs_today or "", error=errors.runs_today, placeholder="Your ERP, accounts, CRM, spreadsheets") }}
-{{ text_area("message", "Anything else (optional)", form.message or "", rows=4) }}
+{% endif %}
+{% endif %}
+{{ text_area("message", "Your message", form.message or "", rows=5, error=errors.message) }}
 <div class="sr-only" aria-hidden="true"><label for="f-website">Leave this empty</label><input id="f-website" name="website" type="text" tabindex="-1" autocomplete="off"></div>
 {%- endmacro %}
 

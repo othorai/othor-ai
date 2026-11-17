@@ -21,6 +21,7 @@ from othor.connectors import service
 from othor.connectors.models import SheetTab, Source, SourceTable
 from othor.connectors.sheets.client import SHEETS_MIME, FixtureSheetsClient
 from othor.connectors.sheets.oauth import authorize_url
+from othor.connectors.sql import hostguard
 from othor.connectors.sql.engine import DEFAULT_PORT
 from othor.core import fmt
 from othor.core.events import record_event
@@ -452,6 +453,30 @@ def sql_test(
                     "go": go,
                 },
             )
+        # othor.ai's source-host guard (owner, 16 Nov 2026): a private or sample host is refused
+        # before anything is saved; checked again on every connection (make_engine)
+        if hostguard.applies(slug=o.company.slug):
+            why, _addrs = hostguard.refusal(cfg["host"], cfg["port"])
+            if why:
+                record_event(
+                    s,
+                    actor=str(o.viewer.id),
+                    action="source.refused_host",
+                    object_type="source",
+                    object_id=src.id if src else o.company.id,
+                    after={"kind": kind, "reason": why},  # never the host or an address
+                )
+                s.commit()
+                return page(
+                    request,
+                    "sources/_test_chip.html",
+                    {
+                        "test": {"ok": False, "message": hostguard.MESSAGE},
+                        "src": {"id": src.id} if src else None,
+                        "kind": kind,
+                        "go": go,
+                    },
+                )
         if src is None:
             src = service.create_sql_source(
                 s,

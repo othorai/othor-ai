@@ -158,3 +158,15 @@ def sample_sources_seeded(tmp_path_factory: pytest.TempPathFactory) -> None:
         pg_url=DW_ADMIN,
         sheets_dir=tmp_path_factory.mktemp("sheets"),
     )
+
+
+@pytest.fixture(autouse=True)
+def _source_host_guard_off() -> Iterator[None]:
+    """The source-host guard (othor.ai only) is process state set by create_app and the worker;
+    a test that turns it on must not leave it on for the next one."""
+    yield
+    from types import SimpleNamespace
+
+    from othor.connectors.sql import hostguard
+
+    hostguard.configure(SimpleNamespace())

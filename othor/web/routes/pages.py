@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from othor.core import fmt
+from othor.core.contact import available as contact_available
 from othor.core.events import record_event
 from othor.core.models import AppUser, Company, Event, Membership, SetupState
 from othor.core.tenancy import Repo, system_scope, tenant_scope
@@ -980,6 +981,23 @@ async def account_name(request: Request, o: Owner = Depends(signed_in)) -> Respo
 # log by code; tokens only; never a prompt's input or a model's output
 
 
+def _ai_cap(s: Any, svc: Any, company: Any, tz: Any) -> dict[str, Any] | None:
+    """This month's AI cap (open sign-up, owner 16 Nov 2026), or None when there's no cap."""
+    from othor.ai import usage
+
+    limit = usage.cap_tokens(company.ai_cap_tokens, svc.settings.ai_monthly_tokens)
+    if limit <= 0:
+        return None
+    now = svc.clock()
+    used = usage.used_this_month(s, tz, now)
+    return {
+        "limit": limit,
+        "used": used,
+        "capped": used >= limit,
+        "resumes": usage.resumes_on(tz, now),
+    }
+
+
 @router.get("/usage/card", response_class=HTMLResponse)
 def usage_card(request: Request, o: Owner = Depends(signed_in)) -> Response:
     """The side menu's AI usage card (owner, 14 Nov 2026): tokens in the last 7 days and a bar
@@ -994,9 +1012,66 @@ def usage_card(request: Request, o: Owner = Depends(signed_in)) -> Response:
     tz = ZoneInfo(o.company.timezone or "Asia/Kolkata")
     with svc.sf() as s, tenant_scope(o.company.id):
         days = usage.daily(s, tz, local_date(o.company, svc.clock()), 7)
+        cap = _ai_cap(s, svc, o.company, tz)
     spec = usage.card_spec(days)
-    card = {"total": fmt.count_short(sum(t for _, t in days)), "alt": spec.alt_text, "spec": spec}
+    card = {
+        "total": fmt.count_short(sum(t for _, t in days)),
+        "alt": spec.alt_text,
+        "spec": spec,
+        "cap": cap,
+    }
     return page(request, "partials/usage_card.html", {"c": card})
+
+
+@router.post("/contact/send", dependencies=[Depends(check_csrf), Depends(rate_limit("codes"))])
+def contact_send(
+    request: Request,
+    topic: str = Form("other"),
+    message: str = Form(""),
+    back: str = Form("/home"),
+    website: str = Form(""),  # the honeypot, as on the website
+    o: Owner = Depends(signed_in),
+) -> Response:
+    """Contact us from the app's side panel (owner, 17 Nov 2026): the owner is known, so the
+    topic and the message; stored and emailed to support as the website's form is, then the
+    panel says it's sent, in place."""
+    from othor.core import contact
+    from othor.mail.messages import access_request
+    from othor.web.errors import toast
+    from othor.web.home_view import trial
+
+    svc = services(request)
+    if not contact.available(svc.settings):
+        return not_found(request, o.site)
+    topic, message = contact.topic(topic), message.strip()
+    if not message and topic not in contact.MESSAGE_OPTIONAL:
+        return toast(request, "Write a line about what you need", 422)
+    if not back.startswith("/") or back.startswith("//"):
+        back = "/home"
+    name, email = o.viewer.name or o.viewer.email, o.viewer.email
+    if not website and svc.auth.contact(
+        name, email, o.company.name, message, topic, company_slug=o.company.slug
+    ):
+        t = trial(o.company, svc.clock(), svc.settings)
+        extra = (
+            f"Address: {svc.settings.instance_url(o.company.slug, '/')}",
+            *([f"Trial: {t['left']} day{'' if t['left'] == 1 else 's'} left"] if t else []),
+            "Sent from the app",
+        )
+        svc.relay.send(
+            access_request(
+                to=svc.settings.access_request_to,
+                name=name,
+                email=email,
+                company=o.company.name,
+                message=message or None,
+                settings=svc.settings,
+                topic=topic,
+                extra=extra,
+            )
+        )
+    sep = "&" if "?" in back else "?"
+    return RedirectResponse(f"{back}{sep}sent=1", 303)
 
 
 @router.get("/usage", response_class=HTMLResponse)
@@ -1031,6 +1106,7 @@ def usage_page(
         if task and task not in {t for t, _ in tasks}:
             task = None
         totals = usage.totals(s, picked, tz)
+        cap = _ai_cap(s, svc, o.company, tz)
         today = local_date(o.company, svc.clock())
         last30 = usage.daily(s, tz, today, 30)
         rows: list[usage.Row] = []
@@ -1060,6 +1136,9 @@ def usage_page(
                 "task": task or "",
                 "tasks": [("", "All tasks"), *tasks],
                 "totals": totals,
+                "cap": cap,
+                "support": svc.settings.support_email,
+                "form": contact_available(svc.settings),
                 "rows": rows,
                 "more": more,
                 "upto": upto,

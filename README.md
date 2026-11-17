@@ -17,6 +17,42 @@ false-discovery-rate control, forecasts each series, and emits a ranked, provena
 **Morning Brief** at 06:00. A language model is confined to drafting setup and phrasing; it is
 never on the path that produces a number.
 
+### Why it exists
+
+- **AI has made dashboards a commodity.** Charts and reports that took analysts weeks now take
+  seconds. What's still scarce is knowing *what to look at*: Othor AI tests every metric and
+  every breakdown, every night, and reports only what matters.
+- **Built on two disciplines:** intelligence tradecraft (how agencies collect, grade, connect
+  and report signals) and classical signal analysis (noise, detection, changes hidden in
+  averages, relationships that lead and lag).
+- **For the owner of a business or a group of companies,** not an analyst: it surfaces what
+  shifts across plants, regions and companies, what teams don't raise, and what the owner never
+  thought to ask.
+- **Every finding carries its tradecraft:** how sure it is (Measured / Assessed / Not
+  determinable), where it came from, what it means for the business, and one question for a
+  named person.
+- **Othor does the exploring.** It picks what to compare, tests it and reports in plain words.
+  The reader never builds the analysis; any data-science term is one click away.
+
+### Rules it never breaks
+
+- **AI drafts, code computes.** No number shown, emailed, stored or ranked comes from a model. A
+  model's output that contains a number is discarded or replaced by the computed value.
+- **Same inputs, same numbers.** The nightly run is deterministic (pinned libraries, seeded
+  routines, an append-only run ledger), and `othor replay <run_id>` reproduces any night byte
+  for byte. CI fails if it doesn't.
+- **Read-only, in place.** Sources are read through read-only credentials; a role that can write
+  is refused. Personal columns are never read, and no raw rows go to a model.
+- **The nightly run needs no model.** If the model provider is down, the run, the detectors, the
+  forecasts and the brief's numbers still work; the prose falls back to templates.
+- **Every figure has provenance.** Every number, finding, forecast and brief sentence can show
+  its definition, SQL, test, parameters, spec version and run.
+- **Nothing AI drafts goes live until a person applies it.**
+- **Runs where your data lives.** One image, configured by environment and a data directory;
+  nothing depends on a service only Othor could host.
+- **Small bills.** Model tokens only for setup drafting and brief prose; incremental reads;
+  results stored, not tables copied.
+
 ![Morning Brief: a ranked set of findings with computed figures, goals with forecast bands, and sparklines](docs/images/morning-brief.webp)
 <sub>Rendered from Indigo Thread Co., the invented sample company the test suite generates.</sub>
 

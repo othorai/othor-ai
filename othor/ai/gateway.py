@@ -16,6 +16,7 @@ A provider failure never raises to the caller: the result says "draft unavailabl
 from __future__ import annotations
 
 import base64
+import datetime as dt
 import hashlib
 import json
 import logging
@@ -25,14 +26,17 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
+from zoneinfo import ZoneInfo
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Session, sessionmaker
 
 from othor.ai.guards import check_input
 from othor.ai.models import ModelCall
+from othor.ai.usage import over_cap
 from othor.core.config import Settings
-from othor.core.tenancy import tenant_scope
+from othor.core.models import Company
+from othor.core.tenancy import Repo, current_company_id, tenant_scope
 
 log = logging.getLogger("othor.ai")
 PROMPTS = Path(__file__).resolve().parent / "prompts"
@@ -157,7 +161,7 @@ class ProviderUnavailable(RuntimeError):
 class Result:
     output: dict[str, Any] | None  # parsed JSON when a schema was given
     text: str | None
-    guard: str  # passed · template · unavailable · error · refused · refused-input · failed:…
+    guard: str  # passed · template · unavailable · capped · error · refused · refused-input · …
     cached: bool = False
 
     @property
@@ -200,11 +204,16 @@ DOWN_FOR = 15 * 60  # seconds: a failed call marks the model unavailable this lo
 
 
 def model_status(settings: Settings, s: Session, now: Any) -> tuple[bool, str]:
-    """(available, why): template · no_key · down · ok. Inside a tenant scope."""
+    """(available, why): template · no_key · capped · down · ok. Inside a tenant scope."""
     if settings.model_provider == "template":
         return False, "template"
     if not settings.model_api_key.get_secret_value():
         return False, "no_key"
+    company = Repo(s).get(Company, current_company_id())
+    if company is not None and over_cap(
+        s, company.ai_cap_tokens, settings.ai_monthly_tokens, ZoneInfo(company.timezone), now
+    ):
+        return False, "capped"
     last = s.scalars(
         sa.select(ModelCall)
         .where(ModelCall.guard_result != "cached")
@@ -224,10 +233,17 @@ class ModelGateway:
         sf: sessionmaker[Session],
         provider: Provider,
         clock: Callable[[], Any] | None = None,
+        *,
+        monthly_tokens: int = 0,
     ) -> None:
         self.sf = sf
         self.provider = provider
         self.clock = clock
+        # the install's monthly AI token cap per company (0 = none; a company may have its own)
+        self.monthly_tokens = monthly_tokens
+
+    def _now(self) -> dt.datetime:
+        return self.clock() if self.clock is not None else dt.datetime.now(dt.UTC)
 
     def complete(
         self,
@@ -267,6 +283,17 @@ class ModelGateway:
             ).first()
             if hit is not None and hit.output is not None:
                 return Result(_parse(hit.output, schema), hit.output, "passed", cached=True)
+            # the monthly cap (open sign-up, owner 16 Nov 2026): past it, no new call reaches the
+            # provider until the 1st; callers fall back as for any unavailable draft (rule 4)
+            company = Repo(s).get(Company, company_id)
+            if company is not None and over_cap(
+                s,
+                company.ai_cap_tokens,
+                self.monthly_tokens,
+                ZoneInfo(company.timezone),
+                self._now(),
+            ):
+                return Result(None, None, "capped")
         t0 = time.perf_counter()
         user_text = json.dumps(inputs, ensure_ascii=False, sort_keys=True, default=str)
         content: list[dict[str, Any]] = [a.block() for a in attachments]

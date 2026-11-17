@@ -529,8 +529,26 @@ class AuthService:
         team_size: str | None = None,
         runs_today: str | None = None,
     ) -> bool:
-        """Store a request for access. True when it's new; a second one from the same email on
-        the same (UTC) day is the same request, so nothing is stored or sent twice."""
+        """Request access (M11d part C): now a Contact us message on the sales topic."""
+        return self.contact(
+            name, email, company, message, "sales", team_size=team_size, runs_today=runs_today
+        )
+
+    def contact(
+        self,
+        name: str,
+        email: str,
+        company: str,
+        message: str | None,
+        topic: str,
+        *,
+        team_size: str | None = None,
+        runs_today: str | None = None,
+        company_slug: str | None = None,
+    ) -> bool:
+        """Store a Contact us message (owner, 17 Nov 2026). True when it's new; a second one from
+        the same email on the same topic and (UTC) day is the same message, so nothing is stored
+        or sent twice."""
         email = email.strip().lower()
         now = self.now()
         with self.sf() as s:
@@ -541,6 +559,8 @@ class AuthService:
                 team_size=(team_size or "").strip()[:32] or None,
                 runs_today=(runs_today or "").strip()[:2000] or None,
                 message=(message or "").strip()[:2000] or None,
+                topic=topic[:32],
+                company_slug=company_slug,
                 day=now.date().isoformat(),
                 created_at=now,
             )
@@ -553,10 +573,15 @@ class AuthService:
             record_platform_event(
                 s,
                 actor=SYSTEM,
-                action="access.requested",
+                action="contact.sent",
                 object_type="access_request",
                 object_id=row.id,
-                after={"email_domain": email.split("@")[-1], "team_size": team_size or None},
+                after={
+                    "email_domain": email.split("@")[-1],
+                    "topic": topic,
+                    "team_size": team_size or None,
+                    "company": company_slug,
+                },
                 at=now,
             )
             s.commit()

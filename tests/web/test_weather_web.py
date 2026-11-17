@@ -59,11 +59,8 @@ def test_home_shows_the_first_briefs_sunrise(night):  # noqa: F811
     # above the checks strip
     assert page.index('class="weather ') < page.index('class="checks ')
     assert "Today · First brief" in page and w["line"] in page
-    # desktop and phone scenes, WebP with a PNG fallback, and alt text
-    assert '/static/weather/web/13-sunrise.webp" type="image/webp"' in page
-    assert 'media="(max-width: 639px)" srcset="/static/weather/phone/13-sunrise.webp"' in page
-    alt = 'alt="First brief: a boat leaving harbour at dawn'
-    assert f'src="/static/weather/web/13-sunrise.png" {alt}' in page
+    # no picture, only the scene's pastel (owner, 17 Nov 2026)
+    assert "weather-scene" not in page and "/static/weather/web/" not in page
     # the icon inline, hidden from screen readers (the kicker says the scene)
     assert '<svg aria-hidden="true" focusable="false"' in page
     with svc.sf() as s, tenant_scope(cid):
@@ -74,8 +71,6 @@ def test_home_shows_the_first_briefs_sunrise(night):  # noqa: F811
     picked = env.client.get(h + "/home?panel=weather").text
     assert 'class="panel wide"' in picked and w["rule"] in picked
     assert f"#{n:04d} · " in picked and f"/sweep?run={n}" in picked
-    for path in ("/static/weather/web/13-sunrise.webp", "/static/weather/phone/13-sunrise.png"):
-        assert env.client.get(h + path).status_code == 200
 
 
 def test_the_next_night_picks_its_scene_and_replays(night):  # noqa: F811

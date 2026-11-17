@@ -20,6 +20,7 @@ SITE_PATHS = [
     "/privacy",
     "/terms",
     "/request-access",
+    "/contact",
     "/ips",
     "/llms.txt",
     "/performance",

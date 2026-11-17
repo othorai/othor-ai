@@ -217,3 +217,30 @@ def log(
         for r in got[:PAGE]
     ]
     return rows, len(got) > PAGE
+
+
+# --- the monthly cap (open sign-up, owner 16 Nov 2026) ----------------------------------------
+
+
+def cap_tokens(company_cap: int | None, default: int) -> int:
+    """The company's monthly token cap: its own, else the install's; 0 = no cap."""
+    return company_cap if company_cap is not None else default
+
+
+def used_this_month(s: Session, tz: ZoneInfo, now: dt.datetime) -> int:
+    """Tokens this company used this month (its own time zone), from the call log."""
+    month = _aware(now).astimezone(tz).date().replace(day=1)
+    return totals(s, month, tz).tokens
+
+
+def over_cap(
+    s: Session, company_cap: int | None, default: int, tz: ZoneInfo, now: dt.datetime
+) -> bool:
+    cap = cap_tokens(company_cap, default)
+    return cap > 0 and used_this_month(s, tz, now) >= cap
+
+
+def resumes_on(tz: ZoneInfo, now: dt.datetime) -> dt.date:
+    """The 1st of next month in the company's zone: when a capped company's drafting resumes."""
+    d = _aware(now).astimezone(tz).date()
+    return dt.date(d.year + d.month // 12, d.month % 12 + 1, 1)

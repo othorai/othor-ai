@@ -4,12 +4,12 @@
    and offers Request access; with one, the form, the invited email filled in. #}
 {% from "components/ui.html" import el %}
 {% from "components/buttons.html" import button %}
-{% from "components/forms.html" import text_input, access_request_fields %}
+{% from "components/forms.html" import text_input, contact_fields %}
 {% block title %}{% if state %}Request access{% else %}Create your company{% endif %} · Othor AI{% endblock %}
 {% block auth_class %}{% if not state %} roomy{% endif %}{% endblock %}
 {% block card %}
 {% if state %}
-{% call el('form', 'auth-card', attrs='method="post" action="/request-access" novalidate') %}
+{% call el('form', 'auth-card', attrs='method="post" action="/contact" novalidate') %}
   {% if state == "bad_invite" %}
   <h1>This invitation can’t be used</h1>
   {% call el("p", "lede") %}Ask for a new one{% if access_form %}, or request access below{% endif %}.{% endcall %}
@@ -18,7 +18,7 @@
   {% call el("p", "lede") %}We’re working closely with our first companies. {% if access_form %}Tell us about yours and we’ll send an invitation when there’s a place.{% else %}Ask whoever runs Othor AI here for an invitation.{% endif %}{% endcall %}
   {% endif %}
   {% if access_form %}
-  {{ access_request_fields(form, errors, csrf_token) }}
+  {{ contact_fields({"topic": "sales"}, errors, csrf_token, pick_topic=False) }}
   {{ button("Request access", "primary", "lg", type="submit", block=True) }}
   {% endif %}
   {% call el("p", "foot") %}Have an invitation? Open the link in its email. Already on Othor AI? <a href="/login">Sign in</a>{% endcall %}
@@ -28,7 +28,7 @@
   <input type="hidden" name="csrf" value="{{ csrf_token }}">
   {% if form.invite %}<input type="hidden" name="invite" value="{{ form.invite }}">{% endif %}
   <h1>Create your company</h1>
-  {% call el("p", "lede") %}No credit card needed.{% endcall %}
+  {% call el("p", "lede") %}{% if install.trial_days %}{{ install.trial_days }}-day free trial · no{% else %}No{% endif %} credit card needed.{% endcall %}
   {{ text_input("name", "Your name", form.name or "", error=errors.name, autofocus=True, attrs='autocomplete="name"') }}
   {{ text_input("email", "Work email", form.email or "", type="email", error=errors.email, attrs='autocomplete="email"') }}
   {{ text_input("company", "Company name", form.company or "", error=errors.company, attrs='autocomplete="organization"') }}

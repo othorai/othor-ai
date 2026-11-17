@@ -109,9 +109,10 @@ function tickCountdowns() {
 }
 setInterval(tickCountdowns, 1000);
 // Six digits entered: submit the code form (the button stays for keyboards and screen readers).
+// Not where the click is the decision (Delete company: data-no-autosubmit).
 document.addEventListener("input", (e) => {
   const boxes = e.target.closest("[data-code-boxes]");
-  if (!boxes) return;
+  if (!boxes || boxes.hasAttribute("data-no-autosubmit")) return;
   const all = [...boxes.querySelectorAll(".digit")];
   if (all.every((b) => /^\d$/.test(b.value))) boxes.closest("form")?.requestSubmit();
 });

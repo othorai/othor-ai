@@ -150,6 +150,12 @@
 {# System Health (owner, 16 Nov 2026): the lights as one button left of Big Picture, coloured by
    the most urgent light (green all clear, amber, red), with how many need you; it opens the
    full list in the panel on the right, in place. #}
+{# open sign-up's free trial (owner, 16 Nov 2026): days left on Home's title row, amber for the
+   last 3, with where to write to continue #}
+{% macro trial_chip(t) -%}
+<span class="trial-chip{{ ' is-urgent' if t.urgent else '' }}">Trial · {{ fmt.num(t.left) }} day{{ "" if t.left == 1 else "s" }} left{% if t.form %} · <a class="link-u" href="?panel=contact&amp;topic=trial" data-panel>Talk to us to continue</a>{% elif t.support %} · <a class="link-u" href="mailto:{{ t.support }}">Talk to us to continue</a>{% endif %}</span>
+{%- endmacro %}
+
 {% macro health_button(L) -%}
 {% from "components/icons.html" import icon %}
 {%- set level = "bad" if L.bad else ("warn" if not L.ok else "ok") -%}

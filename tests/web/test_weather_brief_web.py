@@ -78,9 +78,8 @@ def test_each_brief_has_its_own_weather_at_its_head(night, monkeypatch):  # noqa
         assert page.index('class="weather ') < page.index('class="brief-kicker')
         assert page.index('class="brief-kicker') < page.index('class="brief-title')
         assert f"Today · {w['label']}" in text and w["line"] in text
-        assert f'alt="{weather.alt(w["file"])}"' in html.unescape(page)
-        # the phone scene, as on Home
-        assert f'media="(max-width: 639px)" srcset="/static/weather/phone/{w["file"]}.webp"' in page
+        # no picture, as on Home (owner, 17 Nov 2026)
+        assert "weather-scene" not in page
         # the outlook under it, each card opening the brief's forecast panel in place
         o = w["outlook"]
         assert page.count('class="wx-week wk-') == 4

@@ -88,7 +88,12 @@ def _gateway(request: Request) -> Any:
     from othor.ai.gateway import ModelGateway, provider_for
 
     svc = services(request)
-    return ModelGateway(svc.sf, provider_for(svc.settings), clock=svc.clock)
+    return ModelGateway(
+        svc.sf,
+        provider_for(svc.settings),
+        clock=svc.clock,
+        monthly_tokens=svc.settings.ai_monthly_tokens,
+    )
 
 
 @router.get("/home", response_class=HTMLResponse)
@@ -206,7 +211,14 @@ def _empty(request: Request, o: Owner) -> Response:
     return page(
         request,
         "pages/area_empty.html",
-        {**shell_ctx(o, "home"), "title": title, "empty": empty, "text": text, "resume": resume},
+        {
+            **shell_ctx(o, "home"),
+            "title": title,
+            "empty": empty,
+            "text": text,
+            "resume": resume,
+            "trial": hv.trial(o.company, svc.clock(), svc.settings),
+        },
     )
 
 

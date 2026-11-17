@@ -367,6 +367,64 @@ def company_closed(
     )
 
 
+def _continue_line(settings: Settings) -> str:
+    # the Contact us form on the website when there is one (owner, 17 Nov 2026)
+    if settings.public_site and settings.support_email:
+        url = settings.instance_url(None, "/contact?topic=trial")
+        return f"To continue with Othor AI, tell us at {url} or write to {settings.support_email}."
+    if settings.support_email:
+        return f"To continue with Othor AI, write to {settings.support_email}."
+    return "To continue, ask whoever runs this Othor AI."
+
+
+def trial_reminder(
+    *, to: str, company_name: str, slug: str, ends_on: str, settings: Settings
+) -> Message:
+    """Open sign-up (owner, 16 Nov 2026): 3 days before a trial ends, to every member, once."""
+    return owner_email(
+        "company_closed",
+        to=to,
+        subject=f"[Othor AI] {company_name}'s free trial ends on {ends_on}",
+        preheader=(
+            f"{_continue_line(settings)} Download your data from Settings first if you want a copy."
+        ),
+        company_name=company_name,
+        slug=slug,
+        settings=settings,
+        kicker="Trial ends in 3 days",
+        lead=(
+            f"{company_name}'s 14-day free trial ends on {ends_on}. Then nightly runs and briefs "
+            "stop and the company is closed; its data is removed for good 30 days later."
+        ),
+        after=(
+            f"{_continue_line(settings)} To keep a copy of everything, download it from Settings "
+            "› Your data before the trial ends."
+        ),
+    )
+
+
+def trial_ended(
+    *, to: str, company_name: str, slug: str, ended_on: str, purge_on: str, settings: Settings
+) -> Message:
+    """Open sign-up (owner, 16 Nov 2026): when a trial ends and the company is closed."""
+    return owner_email(
+        "company_closed",
+        to=to,
+        subject=f"[Othor AI] {company_name}'s free trial has ended",
+        preheader=f"Runs and briefs have stopped. The data is removed for good on {purge_on}.",
+        company_name=company_name,
+        slug=slug,
+        settings=settings,
+        kicker="Trial ended",
+        lead=(
+            f"{company_name}'s 14-day free trial ended on {ended_on}. Nightly runs and briefs "
+            "have stopped, everyone has been signed out, and the sources' passwords and Google "
+            "sign-ins are removed."
+        ),
+        after=f"Everything else is removed for good on {purge_on}. {_continue_line(settings)}",
+    )
+
+
 def _restore_line(settings: Settings) -> str:
     """Who restores a deleted company: the install's support address (othor.ai sets its own),
     or the person who runs a self-hosted install (M20.5)."""
@@ -444,27 +502,35 @@ def access_request(
     settings: Settings,
     team_size: str | None = None,
     runs_today: str | None = None,
+    topic: str = "sales",
+    extra: tuple[str, ...] = (),
 ) -> Message:
-    """To Othor AI's support address: who asked, from which company, and what they said.
-    Reply-To is the requester, so answering goes straight back to them."""
+    """A Contact us message, to Othor AI's support address (owner, 17 Nov 2026; Request access
+    before): who wrote, from which company, the topic and what they said. Reply-To is the
+    sender, so answering goes straight back to them. `extra`: lines the app adds (the company's
+    address, its trial)."""
     from html import escape
 
+    from othor.core.contact import SUBJECTS, TOPICS
+
     lines = [
+        f"About: {dict(TOPICS).get(topic, topic)}",
         f"Name: {name}",
         f"Email: {email}",
         f"Company: {company}",
-        f"People who work there: {team_size or '(not given)'}",
-        f"What they run today: {runs_today or '(not given)'}",
+        *([f"People who work there: {team_size}"] if team_size else []),
+        *([f"What they run today: {runs_today}"] if runs_today else []),
+        *extra,
         "",
-        message or "(nothing else)",
+        message or "(no message)",
     ]
-    text = "A request for access to Othor AI.\n\n" + "\n".join(lines) + "\n"
-    html = "<p>A request for access to Othor AI.</p>" + "".join(
+    text = "A message to Othor AI.\n\n" + "\n".join(lines) + "\n"
+    html = "<p>A message to Othor AI.</p>" + "".join(
         f"<p>{escape(line)}</p>" for line in lines if line
     )
     return Message(
         to=to,
-        subject=f"Request access: {company}",
+        subject=f"{SUBJECTS.get(topic, 'Contact')}: {company}",
         html=html,
         text=text,
         sender=sender(settings, None),

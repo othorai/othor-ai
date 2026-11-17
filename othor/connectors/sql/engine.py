@@ -8,10 +8,13 @@ password is never part of a string we format.
 from __future__ import annotations
 
 import ssl as _ssl
+import uuid
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
 import sqlalchemy as sa
+
+from othor.connectors.sql import hostguard
 
 Dialect = Literal["postgresql", "mysql"]
 SslMode = Literal["require", "verify-ca", "disable"]
@@ -31,6 +34,8 @@ class SqlCreds:
     ssl: SslMode = "require"
     # Postgres schemas to read; empty = every schema the role can see (M11c). MySQL: `database`
     schemas: tuple[str, ...] = ()
+    # whose source (the source-host guard, 17 Nov 2026); never shown or stored with the config
+    company_id: uuid.UUID | None = field(default=None, repr=False, compare=False)
 
     def public(self) -> dict[str, Any]:
         """Everything except the password: safe to store as source config and show."""
@@ -88,6 +93,18 @@ def make_engine(c: SqlCreds, timeout_s: int = STATEMENT_TIMEOUT_S) -> sa.Engine:
     eng = sa.create_engine(
         url, connect_args=_connect_args(c, timeout_s), poolclass=sa.pool.NullPool
     )
+    if hostguard.applies(c.company_id):
+        # othor.ai (owner, 16 Nov 2026): every connection checks the host again and goes to the
+        # address it checked; Postgres keeps the name for TLS (hostaddr), MySQL connects by the
+        # address unless verify-ca needs the name
+        @sa.event.listens_for(eng, "do_connect")
+        def _guard(_d: Any, _rec: Any, _cargs: Any, cparams: dict[str, Any]) -> None:
+            addr = hostguard.check(c.host, c.port)
+            if c.dialect == "postgresql":
+                cparams["hostaddr"] = addr
+            elif c.ssl != "verify-ca":
+                cparams["host"] = addr
+
     if c.dialect == "mysql":
 
         @sa.event.listens_for(eng, "connect")
@@ -100,6 +117,10 @@ def make_engine(c: SqlCreds, timeout_s: int = STATEMENT_TIMEOUT_S) -> sa.Engine:
 
 def friendly_error(exc: BaseException, c: SqlCreds) -> str:
     """A one-line reason for the owner. Never includes the password or the driver's DSN."""
+    if isinstance(exc, hostguard.PrivateHost):
+        return hostguard.MESSAGE
+    if isinstance(exc, hostguard.Unresolved):
+        return f"Can't reach {c.host}:{c.port}. Check the host, port and that our IP is allowed."
     text = str(getattr(exc, "orig", exc)).lower()
     if "password authentication failed" in text or "access denied" in text:
         return "Wrong user or password."
@@ -139,6 +160,7 @@ def creds_from_source(src: Any, secret: dict[str, Any]) -> SqlCreds:
         secret["password"],
         c.get("ssl", "require"),
         tuple(c.get("schemas") or ()),
+        company_id=getattr(src, "company_id", None),
     )
 
 

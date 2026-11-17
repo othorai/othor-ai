@@ -38,12 +38,23 @@ class WorkerContext:
     extra: dict[str, Any] = field(default_factory=dict)
     relay: Any = None  # othor.mail.relay.Relay; from settings when not given
 
+    def __post_init__(self) -> None:
+        from othor.connectors.sql import hostguard
+
+        hostguard.configure(self.settings, self.sf)
+
     def mail(self) -> Any:
         if self.relay is None:
             from othor.mail.relay import get_relay
 
             self.relay = get_relay(self.settings)
         return self.relay
+
+    def auth(self) -> Any:
+        """Sign-in, to end a company's sessions when its trial closes it (open sign-up)."""
+        from othor.core.auth import AuthService
+
+        return AuthService(self.sf, self.key, clock=self.clock)
 
 
 class Reschedule(Exception):
@@ -217,7 +228,7 @@ def loop_step(
 def worker_loop(ctx: WorkerContext, poll_s: float = 1.0) -> None:  # pragma: no cover - CLI
     from apscheduler.schedulers.background import BackgroundScheduler
 
-    from othor import exporting, purging
+    from othor import exporting, purging, trials
     from othor.core.ratelimit import prune
     from othor.engine.scheduler import catch_up, tick
     from othor.jobs import heartbeat, licence_check, ops_alerts
@@ -234,6 +245,7 @@ def worker_loop(ctx: WorkerContext, poll_s: float = 1.0) -> None:  # pragma: no 
         ops_alerts.check(ctx.sf, ctx.settings, ctx.mail(), ctx.clock())  # failed or late nights
         exporting.prune(ctx.settings, ctx.clock())  # built exports older than 48 h (M18.1)
         purging.tick(ctx.sf, ctx.settings, ctx.mail(), ctx.clock())  # deleted companies (M18.3)
+        trials.tick(ctx.sf, ctx.settings, ctx.mail(), ctx.auth(), ctx.clock())  # free trials
         licence_check.check(ctx.sf, ctx.settings, ctx.clock())  # its state changes (M20.3)
 
     sched = BackgroundScheduler(timezone="UTC")

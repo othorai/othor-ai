@@ -290,7 +290,12 @@ def _gateway(request: Request) -> Any:
     from othor.ai.gateway import ModelGateway
 
     svc = services(request)
-    return ModelGateway(svc.sf, provider_for(svc.settings), clock=svc.clock)
+    return ModelGateway(
+        svc.sf,
+        provider_for(svc.settings),
+        clock=svc.clock,
+        monthly_tokens=svc.settings.ai_monthly_tokens,
+    )
 
 
 def provider_for(settings: Any) -> Any:

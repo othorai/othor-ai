@@ -248,7 +248,12 @@ def chat_send(
         s.add(ChatMessage(thread_id=t.id, role="user", text=line))
         s.commit()  # the gateway logs the call in its own session: no write held open here
         inputs = changes.model_inputs(s, line, subject, today)
-        gw = ModelGateway(svc.sf, provider_for(svc.settings), clock=svc.clock)
+        gw = ModelGateway(
+            svc.sf,
+            provider_for(svc.settings),
+            clock=svc.clock,
+            monthly_tokens=svc.settings.ai_monthly_tokens,
+        )
         res = gw.complete(o.company.id, *changes.PROMPT, inputs)
         if not res.ok:
             s.add(ChatMessage(thread_id=t.id, role="system", text=changes.NOT_AVAILABLE))

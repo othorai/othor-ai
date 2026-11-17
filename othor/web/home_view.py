@@ -673,6 +673,8 @@ def page(
     return {
         # the lights (owner, 16 Nov 2026), first under the title; the full list in a panel
         "lights": _lights(s, settings, company, run, rv, sources, checks, cards, spec, now),
+        # the free trial (open sign-up, owner 16 Nov 2026): days left, amber for the last 3
+        "trial": trial(company, now, settings),
         "questions_left": questions_summary(order, today),
         "decided_left": decided_summary(s),
         "run": run,
@@ -980,3 +982,19 @@ def _tz(company: Company) -> Any:
     from zoneinfo import ZoneInfo
 
     return ZoneInfo(company.timezone)
+
+
+def trial(company: Any, now: Any, settings: Any) -> dict[str, Any] | None:
+    """A company on open sign-up's free trial: days left (counting today), and where to write."""
+    ends = getattr(company, "trial_ends_at", None)
+    if ends is None:
+        return None
+    left = max(0, -(-int((ends - now).total_seconds()) // 86400))
+    from othor.core import contact
+
+    return {
+        "left": left,
+        "urgent": left <= 3,
+        "support": settings.support_email,
+        "form": contact.available(settings),  # Contact us in the side panel (17 Nov 2026)
+    }

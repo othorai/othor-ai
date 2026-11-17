@@ -31,5 +31,5 @@
     <template id="main-skeleton"><div class="skel" aria-busy="true" aria-label="Loading"><div class="skel-title"></div><div class="skel-tiles"><div></div><div></div><div></div><div></div></div><div class="skel-rows"><div></div><div></div><div></div><div></div><div></div></div></div></template>
   </div>
 </div>
-<div id="overlay">{% block overlay %}{% endblock %}</div>
+<div id="overlay">{% block overlay %}{% endblock %}{% if contact_panel %}{% from "components/panels.html" import contact_panel as _contact %}{{ _contact(contact_panel, csrf_token) }}{% endif %}</div>
 {% endblock %}

@@ -72,6 +72,16 @@ class Settings(BaseSettings):
     # sign-up (M11d part C): `invite` (the cloud; the safe default) needs an invitation from
     # `othor admin invite`; `open` keeps M1's sign-up (dev, tests, on-premise)
     signup: Literal["invite", "open"] = "invite"
+    # open sign-up's guard rails (owner, 16 Nov 2026): each company's AI tokens a month (0 = no
+    # cap; othor.ai 500000) and the free trial of a company that signs up itself (0 = none;
+    # othor.ai 14 days, then closed and purged 30 days later)
+    ai_monthly_tokens: int = 0
+    trial_days: int = 0
+    # the source-host guard (owner, 16 Nov 2026; othor.ai only): refuse a PostgreSQL/MySQL host
+    # on a private network or a sample service name, at save and on every connection; the allow
+    # list names companies (slugs) it skips. Off for self-hosters (their databases are private)
+    source_host_guard: bool = False
+    source_host_allow: str = ""
     # where Request access forms are emailed (M11d part C)
     access_request_to: str = "support@othor.ai"
     # outward links (M20.2, owner 16 Nov 2026): Learn links go to othor.ai's public docs; the

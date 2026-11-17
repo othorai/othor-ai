@@ -7,6 +7,7 @@ The root host (othor.ai) asks for the company address and runs signup; the compa
 
 from __future__ import annotations
 
+import datetime as dt
 import logging
 import uuid
 from typing import Any
@@ -118,7 +119,36 @@ def page(request: Request, name: str, ctx: dict[str, Any], status: int = 200) ->
     }
     if ctx.get("nav") in PAUSED_ON and company is not None:
         base["paused"] = paused_text(request, company)
+    if request.query_params.get("panel") == "contact" and ctx.get("user") and company:
+        base["contact_panel"] = contact_view(request, company, ctx["user"])
     return templates.TemplateResponse(request, name, {**base, **ctx}, status_code=status)
+
+
+def contact_view(request: Request, company: Any, user: Any) -> dict[str, Any] | None:
+    """Contact us in the app's side panel (owner, 17 Nov 2026), on whatever page it opened: the
+    topic from the link, the owner already known. None without the website (self-hosted)."""
+    from urllib.parse import urlencode
+
+    from othor.core import contact
+
+    svc = services(request)
+    if not contact.available(svc.settings):
+        return None
+    q = request.query_params
+    topic = contact.topic(q.get("topic"))
+    rest = [(k, v) for k, v in q.multi_items() if k not in ("panel", "topic", "sent")]
+    here = request.url.path
+    return {
+        "line": dict(contact.TOPICS)[topic],
+        "form": {"topic": topic},
+        "sent": q.get("sent") == "1",
+        "close": here + ("?" + urlencode(rest) if rest else ""),
+        "back": here + "?" + urlencode([*rest, ("panel", "contact"), ("topic", topic)]),
+        "name": user.name or user.email,
+        "email": user.email,
+        "company": company.name,
+        "to": svc.settings.access_request_to,
+    }
 
 
 def not_found(
@@ -893,6 +923,9 @@ def signup_address_submit(
         s.add(company)
         s.flush()
         company.workspace_id = company.id
+        if svc.settings.signup == "open" and svc.settings.trial_days > 0:
+            # open sign-up's free trial (owner, 16 Nov 2026): closed at its end, purged 30 days on
+            company.trial_ends_at = now + dt.timedelta(days=svc.settings.trial_days)
         if svc.settings.signup == "invite":
             # used in this transaction: a second use fails, and a failed sign-up leaves it open
             try:

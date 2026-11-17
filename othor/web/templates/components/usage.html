@@ -17,6 +17,7 @@
 {% macro usage_body(u) -%}
 {% set t = u.totals %}
 <div id="usage-body" class="use-body">
+  {% if u.cap and u.cap.capped %}{% call el("p", "callout warn") %}AI drafting is paused until {{ fmt.day_month(u.cap.resumes) }}: this month's allowance of {{ fmt.count_short(u.cap.limit) }} tokens is used. Every number, run and brief carries on; only drafting and wording wait.{% if u.form %} <a class="link-u" href="?panel=contact&amp;topic=ai" data-panel>Ask us to raise it</a>.{% elif u.support %} To raise it, write to <a class="link-u" href="mailto:{{ u.support }}">{{ u.support }}</a>.{% endif %}{% endcall %}{% endif %}
   {# owner, 14 Nov 2026: the first section, tokens a day for the last 30 days, in grey #}
   <section class="use-trend" aria-label="Tokens per day, last 30 days">
     <div class="use-trend-head"><p class="caps-title">Last 30 days</p><span>{{ fmt.num(u.trend_total) }} tokens</span></div>
@@ -26,6 +27,7 @@
   <div class="use-stats">
     {{ stat(fmt.num(t.tokens), "tokens · " ~ fmt.num(t.tokens_in) ~ " in · " ~ fmt.num(t.tokens_out) ~ " out", boxed=True) }}
     {{ stat(fmt.num(t.calls), "calls" if t.calls != 1 else "call", boxed=True) }}
+    {% if u.cap %}{{ stat(fmt.num(u.cap.used) ~ " of " ~ fmt.count_short(u.cap.limit), "tokens this month · your plan's AI allowance", boxed=True) }}{% endif %}
     {{ stat(fmt.num(u.nights), ("nightly run" if u.nights == 1 else "nightly runs") ~ " · none uses a model", boxed=True) }}
   </div>
   <p class="use-note">Numbers in your briefs never come from a model. Only setup drafting and optional brief wording use one.</p>
@@ -52,5 +54,5 @@
 {# The side menu's card (owner, 14 Nov 2026): tokens in the last 7 days and a bar a day; the
    bars are a ChartSpec rendered by render_svg (`chart`). Filled after the page loads. #}
 {% macro usage_card(c) -%}
-<span class="nav-usage-num">{{ c.total }}</span><span class="nav-usage-chart" role="img" aria-label="{{ c.alt }}">{{ chart(c.spec, 180, 28) }}</span>
+<span class="nav-usage-num">{{ c.total }}</span><span class="nav-usage-chart" role="img" aria-label="{{ c.alt }}">{{ chart(c.spec, 180, 28) }}</span>{% if c.cap and c.cap.capped %}<span class="nav-usage-paused">AI paused until {{ fmt.day_month(c.cap.resumes) }}</span>{% endif %}
 {%- endmacro %}

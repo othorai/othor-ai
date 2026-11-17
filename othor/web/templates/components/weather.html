@@ -1,10 +1,9 @@
 {#- SPDX-License-Identifier: Apache-2.0 -#}
-{# Business weather (v0.12, docs/plans/business-weather.md): today's scene for the company, from
+{# Business weather (v0.12, docs/plans/business-weather.md): today's state for the company, from
    the run's stored weather (weather_view.banner), and under it the outlook for the next four
-   weeks (weather_view.outlook). Desktop: the scene behind the icon, the kicker and the line.
-   Phone (< 640 px): the phone scene on top, the text below it on the scene's panel colour; the
-   week cards scroll sideways. The line is real text; the picture always has alt text. Labels are
-   the state of the business, never weather words. #}
+   weeks (weather_view.outlook). The icon, the kicker and the line on the scene's pastel colour,
+   no picture, as tall as the text (owner, 17 Nov 2026). On a phone the week cards scroll
+   sideways. Labels are the state of the business, never weather words. #}
 {% from "components/buttons.html" import button, link %}
 {% from "components/panels.html" import side_panel %}
 {% from "components/sweep.html" import kv %}
@@ -12,12 +11,6 @@
 {% macro weather_banner(w, o=None) -%}
 <div class="wx-card">
 <section class="weather wx-{{ w.key }}" aria-label="Today’s state of the business">
-  <picture class="weather-scene">
-    <source media="(max-width: 639px)" srcset="/static/weather/phone/{{ w.file }}.webp" type="image/webp">
-    <source media="(max-width: 639px)" srcset="/static/weather/phone/{{ w.file }}.png" type="image/png">
-    <source srcset="/static/weather/web/{{ w.file }}.webp" type="image/webp">
-    <img src="/static/weather/web/{{ w.file }}.png" alt="{{ w.alt }}" width="2240" height="360" decoding="async">
-  </picture>
   <div class="weather-body">
     <span class="weather-icon">{{ w.icon }}</span>
     <div class="weather-text">

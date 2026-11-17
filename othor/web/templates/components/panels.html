@@ -72,3 +72,31 @@
 {%- endcall %}
 </aside>
 {%- endmacro %}
+
+
+{# Contact us in the app (owner, 17 Nov 2026): the website's form in the side panel, on any page
+   (?panel=contact&topic=…); the owner is known, so only the topic and the message. Sent, it says
+   so in place. k = auth.page()'s contact view. #}
+{% macro contact_panel(k, csrf_token) -%}
+{% from "components/forms.html" import action_form, contact_fields %}
+{% from "components/buttons.html" import button %}
+{% call(part) side_panel("Talk to us", k.line, close=k.close) %}
+{% if part == "body" %}
+{% if k.sent %}
+<div class="flex flex-col gap-16">
+  <p class="finding-line">Thanks. We’ll write back to {{ k.email }}.</p>
+  <p class="hint">We read every message ourselves.</p>
+</div>
+{% else %}
+{% call action_form("/contact/send", csrf_token, layout="flex flex-col gap-16") %}
+  <input type="hidden" name="back" value="{{ k.back }}">
+  {{ contact_fields(k.form, {}, csrf_token, who=False) }}
+  <p class="hint">From {{ k.name }} · {{ k.email }} · {{ k.company }}</p>
+  <div class="flex justify-end">{{ button("Send", "primary", type="submit") }}</div>
+{% endcall %}
+{% endif %}
+{% else %}
+<div class="flex items-center justify-between gap-8 w-full"><p class="prov-foot">Goes to {{ k.to }}; we reply by email</p></div>
+{% endif %}
+{% endcall %}
+{%- endmacro %}

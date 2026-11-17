@@ -23,6 +23,11 @@ class EngineContext:
     renew: Callable[[], None] | None = None  # the job's lease, renewed after every step
     fault: Callable[[str], None] | None = None  # tests: called as each step starts
 
+    def __post_init__(self) -> None:
+        from othor.connectors.sql import hostguard
+
+        hostguard.configure(self.settings, self.sf)
+
     @property
     def image_version(self) -> str:
         return self.settings.image_version

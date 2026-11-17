@@ -2,9 +2,10 @@
 {% extends "shells/app.html" %}
 {% from "components/ui.html" import el %}
 {% from "components/blocks.html" import empty_state, page_title %}
+{% from "components/home.html" import trial_chip %}
 {% block title %}{{ title }} · {{ company.name }}{% endblock %}
 {% block crumb %}{{ title }}{% endblock %}
 {% block main %}
-{{ page_title(title) }}
+{% if trial %}{% call page_title(title) %}{{ trial_chip(trial) }}{% endcall %}{% else %}{{ page_title(title) }}{% endif %}
 {% call el("div", "card board") %}{{ empty_state(None, empty, text, "Continue setup" if resume else None, resume or "#", primary=True) }}{% endcall %}
 {% endblock %}

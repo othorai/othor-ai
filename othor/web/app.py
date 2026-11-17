@@ -19,6 +19,7 @@ from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from othor import __version__
+from othor.connectors.sql import hostguard
 from othor.core.auth import AuthService
 from othor.core.config import Settings, get_settings
 from othor.core.crypto import InstanceKey
@@ -113,6 +114,7 @@ def create_app(
     engine = make_engine(settings.db_url, pool_pre_ping=True)
     instrument(engine)
     sf = make_session_factory(engine)
+    hostguard.configure(settings, sf)  # othor.ai's source-host guard (16 Nov 2026)
     key = InstanceKey.load_or_create(
         settings.instance_key_path, allow_create=settings.env != "prod"
     )
@@ -239,6 +241,7 @@ def create_app(
         "help_url": settings.help_url.rstrip("/"),
         "legal_url": settings.legal_url.rstrip("/"),
         "support_email": settings.support_email,
+        "trial_days": settings.trial_days if settings.signup == "open" else 0,
     }
     tpl.use_plugins([d for p in loaded for d in p.templates])
     for p in loaded:

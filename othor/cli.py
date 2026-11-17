@@ -142,7 +142,9 @@ def worker(once: bool = False) -> None:
     s = get_settings()
     sf = make_session_factory(make_engine(s.db_url, pool_pre_ping=True))
     key = InstanceKey.load_or_create(s.instance_key_path, allow_create=s.env != "prod")
-    ctx = WorkerContext(s, sf, key, gateway=ModelGateway(sf, provider_for(s)))
+    ctx = WorkerContext(
+        s, sf, key, gateway=ModelGateway(sf, provider_for(s), monthly_tokens=s.ai_monthly_tokens)
+    )
     if once:
         typer.echo(f"{run_pending(ctx)} jobs run")
         return
@@ -715,6 +717,13 @@ def admin_reopen(
         if c is None:
             typer.echo(f"No company {slug!r}.", err=True)
             raise typer.Exit(1)
+        if c.closed_by == "trial":
+            typer.echo(
+                f"{slug} was closed by its trial's end: use `othor admin trial {slug} --extend N` "
+                "or `--end-trial`, which reopen it too.",
+                err=True,
+            )
+            raise typer.Exit(1)
         if not yes and not typer.confirm(f"Reopen {c.name}?"):
             raise typer.Exit(1)
         with tenant_scope(c.id):
@@ -725,6 +734,107 @@ def admin_reopen(
                 raise typer.Exit(1) from e
             s.commit()
     typer.echo(f"{slug} is open again. The owner signs in, then reconnects each source.")
+
+
+@admin.command("trial")
+def admin_trial(
+    slug: Annotated[str, typer.Argument(help="The company's slug")],
+    extend: Annotated[int, typer.Option("--extend", help="Days to add to the trial")] = 0,
+    end_trial: Annotated[
+        bool, typer.Option("--end-trial", help="No trial any more (a paying customer)")
+    ] = False,
+) -> None:
+    """Extend a free trial, or end it for a paying customer (open sign-up, owner 16 Nov 2026).
+    A company its trial already closed is reopened too (before its purge date)."""
+    import datetime as dt
+
+    import sqlalchemy as sa
+
+    from othor import closing
+    from othor.core.events import record_event
+    from othor.core.models import Company
+    from othor.core.tenancy import system_scope, tenant_scope
+
+    if (extend > 0) == end_trial:
+        typer.echo("Give one of --extend N or --end-trial.", err=True)
+        raise typer.Exit(2)
+    now = _admin_now()
+    with _admin_session() as s:
+        with system_scope("cli: find the company on a trial"):
+            c = s.scalars(sa.select(Company).where(Company.slug == slug)).first()
+        if c is None:
+            typer.echo(f"No company {slug!r}.", err=True)
+            raise typer.Exit(1)
+        before = {"trial_ends_at": c.trial_ends_at.isoformat() if c.trial_ends_at else None}
+        with tenant_scope(c.id):
+            if c.deleted_at is not None:
+                if c.closed_by != "trial":
+                    typer.echo(
+                        f"{slug} was closed by its owner: use `othor admin reopen`.", err=True
+                    )
+                    raise typer.Exit(1)
+                closing.reopen(s, c, actor="operator", now=now)
+            if end_trial:
+                c.trial_ends_at = None
+            else:
+                base = max(c.trial_ends_at or now, now)
+                c.trial_ends_at = base + dt.timedelta(days=extend)
+            c.trial_reminded_at = None
+            record_event(
+                s,
+                actor="operator",
+                action="company.trial_changed",
+                object_type="company",
+                object_id=c.id,
+                before=before,
+                after={"trial_ends_at": c.trial_ends_at.isoformat() if c.trial_ends_at else None},
+                at=now,
+            )
+            s.commit()
+    typer.echo(
+        f"{slug}: trial ended, no limit now."
+        if end_trial
+        else f"{slug}: trial now ends {c.trial_ends_at:%d %b %Y}."
+    )
+
+
+@admin.command("ai-cap")
+def admin_ai_cap(
+    slug: Annotated[str, typer.Argument(help="The company's slug")],
+    tokens: Annotated[str, typer.Argument(help="Tokens a month, or 'default' for the install's")],
+) -> None:
+    """Set one company's monthly AI token cap (open sign-up, owner 16 Nov 2026)."""
+    import sqlalchemy as sa
+
+    from othor.core.events import record_event
+    from othor.core.models import Company
+    from othor.core.tenancy import system_scope, tenant_scope
+
+    if tokens != "default" and not tokens.isdigit():
+        typer.echo("Give a whole number of tokens, or 'default'.", err=True)
+        raise typer.Exit(2)
+    with _admin_session() as s:
+        with system_scope("cli: find the company for its AI cap"):
+            c = s.scalars(sa.select(Company).where(Company.slug == slug)).first()
+        if c is None:
+            typer.echo(f"No company {slug!r}.", err=True)
+            raise typer.Exit(1)
+        before = c.ai_cap_tokens
+        c.ai_cap_tokens = None if tokens == "default" else int(tokens)
+        with tenant_scope(c.id):
+            record_event(
+                s,
+                actor="operator",
+                action="company.ai_cap_changed",
+                object_type="company",
+                object_id=c.id,
+                before={"ai_cap_tokens": before},
+                after={"ai_cap_tokens": c.ai_cap_tokens},
+                at=_admin_now(),
+            )
+            s.commit()
+    said = "the install default" if tokens == "default" else f"{tokens} tokens a month"
+    typer.echo(f"{slug}: AI cap {said}.")
 
 
 @admin.command("invite")

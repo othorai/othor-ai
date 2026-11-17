@@ -112,7 +112,8 @@ def _actions(e: Env) -> list[str]:
 def test_no_code_asks_for_access(ienv: Env) -> None:
     r = ienv.client.get(f"{ROOT}/signup")
     assert r.status_code == 200 and ASK in r.text
-    assert 'action="/request-access"' in r.text and 'name="email"' in r.text
+    assert 'action="/contact"' in r.text and 'name="email"' in r.text
+    assert 'name="topic" value="sales"' in r.text
     assert "Create company" not in r.text
 
 
@@ -194,65 +195,94 @@ def test_open_signup_keeps_m1(env: Env) -> None:
     assert r.status_code in (302, 303)  # type: ignore[attr-defined]
 
 
-# --- Request access --------------------------------------------------------------------------
+# --- Contact us (owner, 17 Nov 2026; Request access before) ----------------------------------
 
 
-def _ask(e: Env, **kw: str) -> object:
+def _ask(e: Env, path: str = "/contact", **kw: str) -> object:
     data = {
         "name": "Meera Iyer",
         "email": "meera@tanvi-foods.example",
         "company": "Tanvi Foods",
+        "topic": "sales",
         "team_size": "200-999",
-        "runs_today": "Tally and a sales spreadsheet",
         "message": "",
     }
     data |= kw
-    data["csrf"] = e.csrf(f"{ROOT}/request-access")
-    return e.client.post(f"{ROOT}/request-access", data=data, follow_redirects=False)
+    data["csrf"] = e.csrf(f"{ROOT}/contact")
+    return e.client.post(f"{ROOT}{path}", data=data, follow_redirects=False)
 
 
 @needs_site
-def test_a_request_is_stored_and_emailed_once_a_day(ienv: Env) -> None:
+def test_the_topic_comes_from_the_link(ienv: Env) -> None:
+    for topic, line in (
+        ("sales", "The Enterprise Edition or pricing"),
+        ("self-hosting", "Running Othor AI on our own servers"),
+        ("nonsense", "Something else"),
+    ):
+        page = ienv.client.get(f"{ROOT}/contact?topic={topic}").text
+        assert line in page and 'action="/contact"' in page and "data-inplace" in page
+    page = ienv.client.get(f"{ROOT}/contact?topic=self-hosting").text
+    assert '<option value="self-hosting" selected>' in page
+
+
+@needs_site
+def test_request_access_moves_to_contact_sales(ienv: Env) -> None:
+    r = ienv.client.get(f"{ROOT}/request-access", follow_redirects=False)
+    assert r.status_code == 308 and r.headers["location"] == "/contact?topic=sales"
+
+
+@needs_site
+def test_a_message_is_stored_and_emailed_once_a_day_per_topic(ienv: Env) -> None:
     r = _ask(ienv, message="Receivables across three plants")
-    assert r.status_code == 200 and "Thanks. We’ll be in touch." in r.text  # type: ignore[attr-defined]
-    r = _ask(ienv)  # a double submit
+    text = r.text  # type: ignore[attr-defined]
+    assert r.status_code == 200 and "Thanks. We’ll write back to meera@tanvi-foods.example." in text  # type: ignore[attr-defined]
+    r = _ask(ienv, message="Receivables across three plants")  # a double submit
     assert r.status_code == 200 and "Thanks." in r.text  # type: ignore[attr-defined]
+    _ask(ienv, topic="self-hosting", message="On our own servers?")  # another topic, same day
     with _db(ienv) as s:
-        rows = s.scalars(sa.select(AccessRequest)).all()
-    assert len(rows) == 1 and rows[0].company == "Tanvi Foods"
-    assert (
-        rows[0].team_size == "200 to 999" and rows[0].runs_today == "Tally and a sales spreadsheet"
-    )
+        rows = s.scalars(sa.select(AccessRequest).order_by(AccessRequest.created_at)).all()
+    assert [r.topic for r in rows] == ["sales", "self-hosting"]
+    assert rows[0].company == "Tanvi Foods" and rows[0].team_size == "200 to 999"
     mails = [m for m in ienv.relay.outbox if m.to == "support@othor.ai"]
-    assert len(mails) == 1 and "Tanvi Foods" in mails[0].subject
+    assert [m.subject for m in mails] == ["Sales: Tanvi Foods", "Self-hosting: Tanvi Foods"]
     assert mails[0].reply_to == "meera@tanvi-foods.example"
     assert "Receivables across three plants" in mails[0].text
+    assert "About: The Enterprise Edition or pricing" in mails[0].text
     assert "People who work there: 200 to 999" in mails[0].text
-    assert "What they run today: Tally and a sales spreadsheet" in mails[0].text
-    assert _actions(ienv).count("access.requested") == 1
+    assert _actions(ienv).count("contact.sent") == 2
     ienv.clock.tick(days=1)
-    _ask(ienv)
-    assert len([m for m in ienv.relay.outbox if m.to == "support@othor.ai"]) == 2
+    _ask(ienv, message="Again")
+    assert len([m for m in ienv.relay.outbox if m.to == "support@othor.ai"]) == 3
 
 
 @needs_site
-def test_a_request_needs_every_answer_but_anything_else(ienv: Env) -> None:
-    r = _ask(ienv, name="", email="nope", company="", team_size="lots", runs_today="")
+def test_the_old_request_access_post_still_lands(ienv: Env) -> None:
+    r = _ask(ienv, path="/request-access", message="From the sign-up page")
+    assert r.status_code == 200 and "Thanks." in r.text  # type: ignore[attr-defined]
+    assert [m.subject for m in ienv.relay.outbox] == ["Sales: Tanvi Foods"]
+
+
+@needs_site
+def test_a_message_needs_who_and_what(ienv: Env) -> None:
+    r = _ask(ienv, name="", email="nope", company="", team_size="lots", message="")
     assert r.status_code == 400  # type: ignore[attr-defined]
     for line in (
         "Enter your name.",
         "Enter your work email.",
         "Enter the company name.",
         "Choose how many people work there.",
-        "Tell us what you run today.",
+        "Tell us what you need.",
     ):
         assert line in r.text  # type: ignore[attr-defined]
     assert ienv.relay.outbox == []
+    # the team size is optional, and so is the message when the topic says it all
+    r = _ask(ienv, team_size="", topic="trial", message="")
+    assert r.status_code == 200 and "Thanks." in r.text  # type: ignore[attr-defined]
 
 
 @needs_site
 def test_the_honeypot_stores_nothing(ienv: Env) -> None:
-    r = _ask(ienv, website="http://spam.example")
+    r = _ask(ienv, website="http://spam.example", message="Buy now")
     assert r.status_code == 200 and "Thanks." in r.text  # type: ignore[attr-defined]
     with _db(ienv) as s:
         assert s.scalars(sa.select(AccessRequest)).all() == []
@@ -260,10 +290,10 @@ def test_the_honeypot_stores_nothing(ienv: Env) -> None:
 
 
 @needs_site
-def test_a_request_needs_the_csrf_token(ienv: Env) -> None:
-    ienv.client.get(f"{ROOT}/request-access")
+def test_a_message_needs_the_csrf_token(ienv: Env) -> None:
+    ienv.client.get(f"{ROOT}/contact")
     r = ienv.client.post(
-        f"{ROOT}/request-access", data={"name": "x", "email": "x@y.example", "company": "x"}
+        f"{ROOT}/contact", data={"name": "x", "email": "x@y.example", "company": "x"}
     )
     assert r.status_code in (400, 403)
 

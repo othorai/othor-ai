@@ -60,7 +60,6 @@ def _banner(doc: dict[str, Any], run: Any, suffix: str, picked: str) -> dict[str
         "name": s.label,
         "line": doc["line"],
         "icon": icon(s.file, suffix),
-        "alt": weather.alt(s.file),
         "why": f"From run #{run.number:04d} · " + ", ".join(doc.get("why") or []),
         "picked": picked,
     }

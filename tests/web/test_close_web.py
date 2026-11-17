@@ -57,6 +57,8 @@ def test_a_wrong_code_then_the_right_one_closes_everything(night):  # noqa: F811
         assert s.scalars(sa.select(SourceSecret)).first() is not None
     r = _post(env, h, "/settings/close/start", {"name": "  indigo thread co. "})
     assert r.status_code == 200 and "We sent a 6-digit code to u•••@" in r.text
+    # the code never deletes by itself: Delete is a click (owner, 16 Nov 2026); sign-in still does
+    assert "data-no-autosubmit" in r.text
     code = _code(env)
     wrong = "000000" if code != "000000" else "111111"
     r = _post(env, h, "/settings/close/confirm", _digits(wrong))
@@ -124,3 +126,14 @@ def test_a_session_of_a_closed_company_signs_no_one_in(night):  # noqa: F811
         c.deleted_at = svc.clock()
         s.commit()
     assert svc.auth.session_for(tok) is None
+
+
+def test_sign_in_codes_still_submit_by_themselves() -> None:
+    from othor.web.templating import templates
+
+    t = templates.env.from_string(
+        '{% from "components/forms.html" import code_boxes %}{{ code_boxes() }}|'
+        "{{ code_boxes(auto=False) }}"
+    )
+    sign_in, close = t.render().split("|")
+    assert "data-no-autosubmit" not in sign_in and "data-no-autosubmit" in close

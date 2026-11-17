@@ -98,6 +98,11 @@ class Company(IdMixin, Base):
     # closed by the owner (M18.2): purged after this, unless support reopens it before
     purge_after: Mapped[datetime | None] = mapped_column()
     closed_by: Mapped[str | None] = mapped_column(sa.String(64))
+    # open sign-up (owner, 16 Nov 2026): a company's own monthly AI token cap (None = the
+    # install's OTHOR_AI_MONTHLY_TOKENS), and the 14-day trial of a company that signed up itself
+    ai_cap_tokens: Mapped[int | None] = mapped_column()
+    trial_ends_at: Mapped[datetime | None] = mapped_column()
+    trial_reminded_at: Mapped[datetime | None] = mapped_column()
     purged_at: Mapped[datetime | None] = mapped_column()  # M18.3: scrubbed to a placeholder
 
     memberships: Mapped[list[Membership]] = relationship(back_populates="company")
@@ -211,11 +216,12 @@ class Invitation(IdMixin, Base):
 
 
 class AccessRequest(IdMixin, Base):
-    """A Request access form (M11d part C): kept 12 months, deleted on request. One per email per
-    day (a double submit is the same request). Only othor.core.auth touches it."""
+    """A Contact us message (Request access in M11d part C; one form with a topic from 17 Nov
+    2026): kept 12 months, deleted on request. One per email, topic and day (a double submit is
+    the same message). Only othor.core.auth touches it."""
 
     __tablename__ = "access_request"
-    __table_args__ = (sa.UniqueConstraint("email", "day"),)
+    __table_args__ = (sa.UniqueConstraint("email", "day", "topic"),)
 
     name: Mapped[str] = mapped_column(sa.String(200))
     email: Mapped[str] = mapped_column(sa.String(320))
@@ -225,6 +231,8 @@ class AccessRequest(IdMixin, Base):
     )  # a range (site_content.TEAM_SIZES)
     runs_today: Mapped[str | None] = mapped_column(sa.Text)  # the systems they run, in their words
     message: Mapped[str | None] = mapped_column(sa.Text)  # "Anything else"
+    topic: Mapped[str | None] = mapped_column(sa.String(32))  # othor.core.contact; None before
+    company_slug: Mapped[str | None] = mapped_column(sa.String(63))  # sent from the app
     day: Mapped[str] = mapped_column(sa.String(10))  # UTC date, for the once-a-day rule
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 

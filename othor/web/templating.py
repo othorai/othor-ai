@@ -14,7 +14,7 @@ from markupsafe import Markup
 
 from othor.charts.spec import ChartSpec
 from othor.charts.svg import render_svg
-from othor.core import features, fmt
+from othor.core import contact, features, fmt
 from othor.web.ui import ui
 
 HERE = Path(__file__).resolve().parent
@@ -25,8 +25,11 @@ templates.env.globals["install"] = {
     "help_url": "https://othor.ai",
     "legal_url": "",
     "support_email": "",
+    "trial_days": 0,
 }
 templates.env.globals["features"] = features
+# Contact us (owner, 17 Nov 2026): its topics and team sizes, one list for the site and the app
+templates.env.globals["contact"] = {"topics": contact.TOPICS, "sizes": contact.TEAM_SIZES}
 
 
 def chart(spec: ChartSpec, width: int = 400, height: int = 160, legend: bool = False) -> Markup:

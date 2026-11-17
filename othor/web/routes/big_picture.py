@@ -55,7 +55,9 @@ def make(request: Request, size: str = Form(""), o: Owner = Depends(signed_in)) 
             if not bpv.available(svc.settings, s, svc.clock(), provider):
                 return _partial(request, {"report": None})
             facts = bpv.gather(s, svc.settings, run, local_date(o.company, svc.clock()))
-            gateway = ModelGateway(svc.sf, provider, clock=svc.clock)
+            gateway = ModelGateway(
+                svc.sf, provider, clock=svc.clock, monthly_tokens=svc.settings.ai_monthly_tokens
+            )
             row, _guard = bpv.make(s, gateway, o.company, run, lang, facts, o.viewer.id)
         out = {
             "report": bpv.report(row, o.company.name) if row is not None else None,

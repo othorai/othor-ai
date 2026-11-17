@@ -75,11 +75,13 @@ services:
       OTHOR_MODEL_ID: ${OTHOR_MODEL_ID:-}
       OTHOR_MODEL_API_KEY: ${OTHOR_MODEL_API_KEY:-}
       OTHOR_PUBLIC_SITE: "1"  # the landing page on the root host (M11a)
+      OTHOR_SITE_PREVIEW_PUBLIC: "1"  # localhost shows the site as after the public flip
       # documentation addresses (RFC 5737/3849), shown on the connect forms in dev
       OTHOR_EGRESS_IPS: ${OTHOR_EGRESS_IPS:-203.0.113.24,203.0.113.25,2a09:8280:1::24,2a09:8280:1::25}
     ports: ["${OTHOR_APP_PORT:-8000}:8000"]
     volumes:
       - ./othor:/app/othor
+      - ./othor_site:/app/othor_site  # the website plug-in, live like the app (17 Nov 2026)
       - app-data:/data
       - ./data/sample:/data/sample:ro  # the Sheets stand-in written by `make seed`
     depends_on:
@@ -112,6 +114,7 @@ services:
       OTHOR_MODEL_API_KEY: ${OTHOR_MODEL_API_KEY:-}
     volumes:
       - ./othor:/app/othor
+      - ./othor_site:/app/othor_site
       - app-data:/data
       - ./data/sample:/data/sample:ro
     depends_on:
@@ -130,6 +133,7 @@ services:
       OTHOR_CSS_CACHE: /cache
     volumes:
       - ./othor:/app/othor
+      - ./othor_site:/app/othor_site  # site.<sha8>.css too
       - ./scripts:/app/scripts
       - css-cache:/cache
 
