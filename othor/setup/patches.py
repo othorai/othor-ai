@@ -184,7 +184,7 @@ def apply_patch(body: dict[str, Any], patch: Patch, cat: Catalog, records: Recor
         if a.get("breakdown"):
             bd = records.get(("breakdown", a["breakdown"]))
             if bd is None:
-                raise PatchRefused(f"no breakdown {a['breakdown']!r} in the Ontology")
+                raise PatchRefused(f"no breakdown {a['breakdown']!r} in the Business Model")
             t = _table(b, cat)
             col_ref = _breakdown_column(bd, t, records)
             if col_ref is None:
@@ -246,7 +246,7 @@ def apply_patch(body: dict[str, Any], patch: Patch, cat: Catalog, records: Recor
         keys = [str(k) for k in a.get("breakdowns", [])]
         unknown = [k for k in keys if ("breakdown", k) not in records]
         if unknown:
-            raise PatchRefused(f"no breakdown {unknown[0]!r} in the Ontology")
+            raise PatchRefused(f"no breakdown {unknown[0]!r} in the Business Model")
         before = ", ".join(b.get("breakdowns", [])) or "none"
         b["breakdowns"] = keys
         lines.append(f"Breakdowns {before} → {', '.join(keys) or 'none'}")

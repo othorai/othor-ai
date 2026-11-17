@@ -51,7 +51,10 @@ def test_three_checks_confirm_all_and_undo(setup_world: World) -> None:  # noqa:
 
     # Metrics to confirm: two groups, values computed; confirm one, then undo it
     panel = w.env.client.get(w.host + M + "?panel=confirm").text
-    assert "Check 3 of 3" in panel and "You can change any of these later in the Ontology." in panel
+    assert (
+        "Check 3 of 3" in panel
+        and "You can change any of these later in the Business Model." in panel
+    )
     remaining = re.findall(r'name="key" value="([a-z0-9_]+)"', panel.split("confirm-all")[1])
     assert remaining, "the footer posts the remaining keys"
     first = remaining[0]

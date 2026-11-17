@@ -220,11 +220,11 @@ def test_ontology_draft_panel(env: Env, sample, need_sources, tmp_path):
     """2n0: read-only; the four sections, what needs the owner, where it was built from."""
     h, _ = _drafted(env, sample, tmp_path)
     page = env.client.get(h + "/setup/metrics").text
-    assert "Ontology draft" in page
+    assert "Business Model draft" in page
     page = env.client.get(h + "/setup/metrics?panel=ontology").text
     for text in (
-        "Ontology draft",
-        "Becomes Ontology v1 when you confirm metrics",
+        "Business Model draft",
+        "Becomes Business Model v1 when you confirm metrics",
         "Draft · not live",
         "The business",
         "Numbers",
@@ -235,7 +235,7 @@ def test_ontology_draft_panel(env: Env, sample, need_sources, tmp_path):
     ):
         assert text in page, text
     assert "Needs you · " in page and "Fix in Metrics →" in page
-    assert '<form method="post"' not in page.split('aria-label="Ontology draft"')[1]
+    assert '<form method="post"' not in page.split('aria-label="Business Model draft"')[1]
 
 
 def test_after_setup_review_confirm_and_fix_chat(env: Env, sample, need_sources, tmp_path):
@@ -299,7 +299,7 @@ def test_after_setup_review_confirm_and_fix_chat(env: Env, sample, need_sources,
     # Confirm the N remaining stages all; the footer adds them in one version
     _post(env, h, f"/sources/{sid}/confirm-metrics/stage-all", {"key": keys})
     page = env.client.get(f"{h}/sources?panel=review&s={sid}").text
-    assert f"Add {len(keys)} to the Ontology" in page
+    assert f"Add {len(keys)} to the Business Model" in page
     r = _post(env, h, f"/sources/{sid}/confirm-metrics", {})
     assert r.headers["location"].startswith(f"/sources?panel=review&s={sid}&added=")
     with svc.sf() as s, tenant_scope(cid):
@@ -309,7 +309,7 @@ def test_after_setup_review_confirm_and_fix_chat(env: Env, sample, need_sources,
         added = [e for e in s.scalars(sa.select(Event)) if e.action == "source.metric_added"]
         assert sorted(e.after["key"] for e in added) == sorted(keys)
     page = env.client.get(h + r.headers["location"]).text
-    assert f"{len(keys)} metric" in page and "added to the Ontology" in page
+    assert f"{len(keys)} metric" in page and "added to the Business Model" in page
     assert f"/sources/{sid}/confirm-metrics/undo" in page
     # The toast's Undo takes the version back and the rows return to the panel
     _post(env, h, f"/sources/{sid}/confirm-metrics/undo", {"version": str(before + 1)})
@@ -389,4 +389,7 @@ def test_sources_suggested_from_waiting_metrics(env: Env, sample, need_sources, 
     page = env.client.get(h + "/sources?tab=suggested").text
     assert "1 metric waiting" in page and 'href="/sources?panel=sheets"' in page
     page = env.client.get(h + "/sources?panel=add").text
-    assert "Suggested from your Ontology" in page and "1 metric waiting · Order book value" in page
+    assert (
+        "Suggested from your Business Model" in page
+        and "1 metric waiting · Order book value" in page
+    )

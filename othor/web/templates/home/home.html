@@ -57,7 +57,7 @@
 
   {% if proposals %}
   {% call el("section", "card lines", attrs={"aria-label": "Proposals", "id": "proposals"}) %}
-    {% call el("div", "section-head") %}{% call el("p", "card-title") %}Proposals for the Ontology{% endcall %}{% call el("p", "hint") %}Accepted items change the spec from tomorrow’s run{% endcall %}{% endcall %}
+    {% call el("div", "section-head") %}{% call el("p", "card-title") %}Proposals for the Business Model{% endcall %}{% call el("p", "hint") %}Accepted items change the spec from tomorrow’s run{% endcall %}{% endcall %}
     {% call el("div", "table-wrap") %}{% call el("table", "table flush stack") %}<thead><tr><th>Kind</th><th>Proposal</th><th>From</th><th>Confidence</th><th></th></tr></thead><tbody data-rows>
     {% for p in proposals %}{% if p.decided %}{% call el("tr", "is-decided", attrs={"data-row": p.id}) %}
       {% call el("td", attrs={"colspan": "5"}) %}{% call el("div", layout="flex items-center gap-8 flex-wrap") %}{{ toast(p.decided, sub=p.text) }}{% call action_form("/home/proposals/" ~ p.id ~ "/undo", csrf_token) %}{{ button("Undo", type="submit") }}{% endcall %}{% endcall %}{% endcall %}
@@ -81,15 +81,15 @@
     {% call el("div", "section-head") %}{% call el("p", "card-title") %}Questions for you{% if question_count %} · {{ fmt.num(question_count) }}{% endif %}{% endcall %}
       {% call el("div", layout="flex items-center gap-12") %}{% if questions_left %}{% call el("p", "hint") %}{{ questions_left }}{% endcall %}{% endif %}{{ link("Answer questions →" if question_count else "Review answers →", "/home?panel=questions") }}{% endcall %}{% endcall %}
     {% for q in questions %}{{ question_row(loop.index, q.text, q.origin) }}{% endfor %}
-    {% call el("div", "section-head") %}{% call el("p", "hint") %}One at a time · answers go into the Ontology{% endcall %}{% if decided_left %}{{ link(decided_left ~ " →", "/ontology#decided", muted=True) }}{% else %}{{ link("Open the Ontology", "/ontology", muted=True) }}{% endif %}{% endcall %}
+    {% call el("div", "section-head") %}{% call el("p", "hint") %}One at a time · answers go into the Business Model{% endcall %}{% if decided_left %}{{ link(decided_left ~ " →", "/ontology#decided", muted=True) }}{% else %}{{ link("Open the Business Model", "/ontology", muted=True) }}{% endif %}{% endcall %}
   {% endcall %}
   {% endif %}
 
   {% if not proposals and not question_count %}
-  {% call el("div", "card board") %}{{ empty_state(None, "All caught up", "New proposals and questions arrive after the nightly run.", "Open the Ontology", "/ontology") }}{% endcall %}
+  {% call el("div", "card board") %}{{ empty_state(None, "All caught up", "New proposals and questions arrive after the nightly run.", "Open the Business Model", "/ontology") }}{% endcall %}
   {% if recent %}
   {% call el("section", "card lines", attrs={"aria-label": "Recently accepted"}) %}
-    {% call el("div", "section-head") %}{% call el("p", "card-title") %}Recently accepted{% endcall %}{% call el("p", "hint") %}Ontology v{{ version }}{% endcall %}{% endcall %}
+    {% call el("div", "section-head") %}{% call el("p", "card-title") %}Recently accepted{% endcall %}{% call el("p", "hint") %}Business Model v{{ version }}{% endcall %}{% endcall %}
     {% for r in recent %}{{ recent_row(fmt.date_short(r.date), r.text, r.kind) }}{% endfor %}
   {% endcall %}
   {% endif %}

@@ -74,7 +74,7 @@
   {% if b.description %}{% call el("p", "finding-line") %}{{ b.description }}{% endcall %}{% endif %}
   {% call el("p", "label-caps") %}Definition{% endcall %}{{ kv(b.definition) }}
   {% call el("p", "label-caps") %}Source{% endcall %}{{ kv(b.source) }}
-  {% call el("p", "label-caps") %}Rules from your Ontology{% endcall %}
+  {% call el("p", "label-caps") %}Rules from your Business Model{% endcall %}
   {% if b.rules %}{% call el("div", "section") %}{% for r in b.rules %}{% call el("div", "held-row") %}<span>{{ r.text }}</span>{% call el("span", "how") %}{{ r.kind | capitalize }}{% endcall %}{% endcall %}{% endfor %}{% endcall %}
   {% else %}{% call el("p", "hint") %}No rule applies to this metric.{% endcall %}{% endif %}
   {% call el("p", "label-caps") %}Version{% endcall %}{{ kv(b.version) }}
@@ -106,7 +106,7 @@
     {% if b.nd %}{{ link("How is this calculated?", fbase ~ p.fp ~ "?" ~ fq ~ "&tab=test") }}{{ button("Add a known pause", href="#pause") }}{% if b.question %}{{ button("Copy question" ~ (" for " ~ b.question.to[0].name.split(" ")[0] if b.question.to else ""), kind="primary", attrs={"data-copy": b.question.text}) }}{% endif %}
     {% else %}{{ link("How is this calculated?", fbase ~ p.fp ~ "?" ~ fq ~ "&tab=test") }}{% call el("span", layout="hidden md:inline-flex items-center gap-8") %}{{ hold_form("snooze", p.fp, run, "Snooze 7 days", csrf_token, kind="button") }}{{ hold_form("mute", p.fp, run, "Mute", csrf_token, kind="button") }}{% endcall %}{% call more_menu(layout="md:hidden") %}{{ hold_form("snooze", p.fp, run, "Snooze 7 days", csrf_token, kind="button") }}{{ hold_form("mute", p.fp, run, "Mute", csrf_token, kind="button") }}{{ button("Watch", href="/sweep/watch/" ~ p.fp ~ "?run=" ~ run) }}{% endcall %}{% call el("span", layout="hidden md:inline-flex") %}{{ button("Watch", href="/sweep/watch/" ~ p.fp ~ "?run=" ~ run) }}{% endcall %}{% if features.BRIEFS and p.state != "needs_confirmation" %}{{ button("Add to a brief", kind="primary", href="/sweep/finding/" ~ p.fp ~ "/brief?run=" ~ run, attrs={"data-dialog-open": "add-brief"} if add_dialog is defined and add_dialog else {}) }}{% endif %}{% endif %}
   {% elif p.tab == "test" %}{% if b.replays %}{% call el("span", "hint", layout="mr-auto") %}Same inputs, same numbers: this run replays identically.{% endcall %}{% endif %}{{ button("See the SQL", href=fbase ~ p.fp ~ "?" ~ fq ~ "&tab=sql") }}{{ button("Open the metric", href=fbase ~ p.fp ~ "?" ~ fq ~ "&tab=metric") }}
-  {% elif p.tab == "metric" %}{{ button("Open in Ontology", href="/ontology") }}
+  {% elif p.tab == "metric" %}{{ button("Open in Business Model", href="/ontology") }}
   {% elif p.tab == "sql" %}{% if b.statements %}{{ button("Copy SQL", attrs={"data-copy-text": b.statements | map(attribute="sql") | join("\n\n")}) }}{% endif %}{{ button("Download result", href=b.download) }}
   {% else %}{{ button("Download run log", href=b.log) }}<form method="post" action="/sweep/run/{{ run }}/replay?fp={{ p.fp }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Replay this run", type="submit") }}</form>
   {% endif %}

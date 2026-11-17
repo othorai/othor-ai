@@ -85,7 +85,7 @@ def test_the_draft_arrives_as_one_proposal_and_applies_on_accept(world) -> None:
         }
         assert p.evidence["line"].startswith("Sales: Net revenue, Orders · Collections: DSO")
         (row,) = [r for r in proposal_rows(s) if r["kind"] == "Areas"]
-        assert row["from"] == "Ontology · your numbers"
+        assert row["from"] == "Business Model · your numbers"
         assert s.scalars(sa.select(Event).where(Event.action == "proposal.created")).first()
 
         # the owner set DSO's area meanwhile: theirs wins

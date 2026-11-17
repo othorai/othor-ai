@@ -51,7 +51,7 @@
     {%- if m.kind == "scan_ignored" %}The scan’s reason stays visible. Using a backup can double-count; Metrics will flag it.
     {%- elif m.kind == "user_ignored" %}Ignored by {{ r.who }}. Change the reason or bring it back.
     {%- elif m.current == "dimension" %}Metrics using it as a breakdown lose that breakdown if ignored.
-    {%- else %}Saved to the Ontology. Moving back is always possible.{% endif %}</p>
+    {%- else %}Saved to the Business Model. Moving back is always possible.{% endif %}</p>
   {%- endif %}
   </div>
 </details>

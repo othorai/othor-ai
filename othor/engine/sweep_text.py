@@ -610,7 +610,7 @@ RESULT_WORD = {
 }
 
 NEEDS = {
-    "entity": "Needs a customer list with a status (a breakdown entity in your Ontology)",
+    "entity": "Needs a customer list with a status (a breakdown entity in your Business Model)",
     "reconcile": "Needs a rule saying which records should match across sources",
     "pair": "Needs two metrics that should move together",
     "threshold": "Needs an approval limit or another threshold",

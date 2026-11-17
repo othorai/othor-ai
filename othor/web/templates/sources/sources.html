@@ -67,8 +67,8 @@
   {% if part == "body" %}
     {% if creq and creq.requested %}{% set sent_msg %}<b>Request sent · {{ creq.requested }}</b> We build the most requested first and we’ll email you when it’s ready.{% endset %}{{ banner("ok", sent_msg) }}{% endif %}
     {% if waiting %}
-    {% call el('section', 'src-box', attrs={'aria-label': 'Suggested from your Ontology'}) %}
-      {% call el('div', 'box-head') %}<span>Suggested from your Ontology · {{ fmt.num(waiting | length) }}</span>{% endcall %}
+    {% call el('section', 'src-box', attrs={'aria-label': 'Suggested from your Business Model'}) %}
+      {% call el('div', 'box-head') %}<span>Suggested from your Business Model · {{ fmt.num(waiting | length) }}</span>{% endcall %}
       {% for w in waiting %}
       {% call src_row(w.tile, w.title, fmt.num(w.metrics | length) ~ " metric" ~ ("s" if w.metrics | length != 1 else "") ~ " waiting · " ~ (w.metrics | join(", "))) %}{{ button("Connect", "primary" if loop.first else "", "sm", href=w.href) }}{% endcall %}
       {% endfor %}

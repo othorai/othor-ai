@@ -118,7 +118,7 @@ def test_an_answer_keeps_its_place_and_back_shows_undo_and_change_answer(night):
     page = env.client.get(h + r.headers["location"]).text
     assert f"<b>Question {at + 1} of {len(order)}</b> · 1 answered" in page
     assert _segs(page)[at] == " done now"
-    assert "You answered" in page and f"applied in Ontology v{before + 1}" in page
+    assert "You answered" in page and f"applied in Business Model v{before + 1}" in page
     assert f'action="/home/questions/{qid}/undo"' in page and "Change answer" in page
     with svc.sf() as s, tenant_scope(cid):
         assert s.get(Question, uuid.UUID(qid)).answer_text == side

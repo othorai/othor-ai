@@ -184,14 +184,14 @@ LINES: dict[str, str] = {
     "clear": "Nothing needs you today. All {checks} checks ran clean.",
     "clear_some": "Nothing needs you today. {ran} of {checks} checks ran and found nothing.",
     "clear_night_pattern": (
-        "A quiet day: no activity on {day}, as your Ontology expects ({pattern})."
+        "A quiet day: no activity on {day}, as your Business Model expects ({pattern})."
     ),
     "clear_night": "A quiet day: no activity on {day}, as usual for a {weekday}.",
     "partly_cloudy": "{count} to glance at, none large; the business is on plan.",
     "overcast_goal": "Grey but steady: {metric} is tracking {projection} against {target}.",
     "overcast": "{count}, none large and none urgent; the business is steady.",
     "fog_checks": (
-        "Only {ran} of {checks} checks could run; the view clears as the Ontology fills in."
+        "Only {ran} of {checks} checks could run; the view clears as the Business Model fills in."
     ),
     "fog_history": "{days} days of history so far; the view clears as more data comes in.",
     "light_rain": "{title}; worth a look this week.",

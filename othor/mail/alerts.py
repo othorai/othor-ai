@@ -260,7 +260,7 @@ def export_ready(
         settings=settings,
         kicker="Export ready",
         lead=(
-            f"Your export of {company.name} is ready: your Ontology, briefs, findings, "
+            f"Your export of {company.name} is ready: your Business Model, briefs, findings, "
             "forecasts, numbers, settings and history, in one zip. No passwords, tokens or "
             "source rows."
         ),

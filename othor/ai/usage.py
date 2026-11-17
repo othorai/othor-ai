@@ -38,7 +38,7 @@ LABEL = {
     "home_answer": "Answer a question for you",
     "conflict_chat": "Talk through a decision",
     "proposal_chat": "Talk through a proposal",
-    "ontology_change": "Change the Ontology in your words",
+    "ontology_change": "Change the Business Model in your words",
     "metric_connect": "Connect a metric to its data",
     "metric_where": "Find where a metric lives",
     "suggest_pairs": "Suggest numbers that move together",

@@ -477,7 +477,10 @@ def _save_floor(request: Request, o: Owner, value: str) -> Response:
     return page(
         request,
         "partials/toast_saved.html",
-        {"text": "Floor saved · applies from tonight · Undo in Ontology History", "event_id": None},
+        {
+            "text": "Floor saved · applies from tonight · Undo in Business Model History",
+            "event_id": None,
+        },
     )
 
 
@@ -903,7 +906,11 @@ EMPTY = {
         "The first brief is written after the first nightly run.",
     ),
     "sweep": ("Sweep", "Nothing has fired yet", "Detectors run tonight at 2:00 AM."),
-    "ontology": ("Ontology", "No Ontology yet", "It is drafted when setup reaches Metrics."),
+    "ontology": (
+        "Business Model",
+        "No Business Model yet",
+        "It is drafted when setup reaches Metrics.",
+    ),
 }
 
 

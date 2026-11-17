@@ -222,7 +222,7 @@ def _numbers(n: dict[str, Any]) -> dict[str, Any]:
             f"{_of(total - len(stale), total, 'number')} computed fresh",
             [f"Kept at the last good day: {_names(stale)}"],
             "/ontology",
-            "Ontology",
+            "Business Model",
         )
     return _light(
         "numbers", "Numbers", "numbers", "run", "ok", f"All {_plural(total, 'number')} computed"

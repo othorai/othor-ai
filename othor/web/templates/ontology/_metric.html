@@ -11,7 +11,7 @@
 {% call overlay(m.name, close) %}
 {% call(part) pane() %}
 {% if part == "head" %}
-  {% set sub %}{% if m.needs %}Drafted from {{ m.seen_in }} · not computed yet · Ontology v{{ m.version }}{% else %}{{ m.confirmed_line }}{% endif %}{% endset %}
+  {% set sub %}{% if m.needs %}Drafted from {{ m.seen_in }} · not computed yet · Business Model v{{ m.version }}{% else %}{{ m.confirmed_line }}{% endif %}{% endset %}
   {% call pane_title(m.name, sub, close) %}{% call el("span", "chip") %}{% call el("span", "dot " ~ ("neg" if m.needs else "ok")) %}{% endcall %}{{ "Needs a source" if m.needs else "Confirmed" }}{% endcall %}{% call el("span", "chip soft") %}{{ m.grain }}{% endcall %}{% endcall %}
 {% elif part == "body" %}
 <div class="flex flex-col gap-16">

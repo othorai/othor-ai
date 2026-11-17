@@ -22,7 +22,7 @@
 {% endcall %}
 {% call el('div', 'onb-foot') %}
   {% call el('a', 'link-u', attrs='href="/setup/upload"') %}Back{% endcall %}
-  {% call el('span', 'biz-continue', attrs='id="biz-continue"') %}{% if box == "waiting" %}{% call el('span', 'hint') %}Continue opens when the draft is ready{% endcall %}{% else %}{% call el('span', 'hint') %}You can change this later in the Ontology.{% endcall %}{% endif %}{{ button("Continue", "primary", "lg", type="submit", disabled=(box == "waiting")) }}{% endcall %}
+  {% call el('span', 'biz-continue', attrs='id="biz-continue"') %}{% if box == "waiting" %}{% call el('span', 'hint') %}Continue opens when the draft is ready{% endcall %}{% else %}{% call el('span', 'hint') %}You can change this later in the Business Model.{% endcall %}{% endif %}{{ button("Continue", "primary", "lg", type="submit", disabled=(box == "waiting")) }}{% endcall %}
 {% endcall %}
 {% endcall %}
 {% endblock %}

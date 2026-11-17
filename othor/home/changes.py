@@ -194,7 +194,7 @@ def check(s: Session, out: Any, inputs: dict[str, Any], said: str, today: dt.dat
     except ValueError:
         return Draft(None, COULDNT, "invalid")
     if current is not None and current.body == body:
-        return Draft(None, "That is already in your Ontology.", "no change")
+        return Draft(None, "That is already in your Business Model.", "no change")
     return Draft({"op": "put", "type": type_, "key": key, "body": body}, reply)
 
 
@@ -370,7 +370,7 @@ def effect_lines(e: Effect) -> list[str]:
         verb = "Sweep won't flag" if p.startswith("+") else "Sweep flags again"
         out.append(f"{verb}: {p[2:]}.")
     if not out:
-        out.append("No number changes; the Ontology line is updated.")
+        out.append("No number changes; the Business Model line is updated.")
     return out
 
 

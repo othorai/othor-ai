@@ -57,7 +57,7 @@ LINES: dict[str, str] = {
     "finding": "{title} · {when}",
     "watch_likely": "{label} likely to cross {threshold}",
     "watch_could": "{label} could cross {threshold}",
-    "pattern": "{pattern}: a quiet week, as your Ontology expects",
+    "pattern": "{pattern}: a quiet week, as your Business Model expects",
     "clear": "Nothing ahead on the forecasts or the open findings",
     # the Ahead line
     "ahead_likely": "{subject} likely {gap} {side} of plan ({level} band {band}) · {days}.",

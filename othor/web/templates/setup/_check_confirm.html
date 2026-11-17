@@ -48,7 +48,7 @@
   {% if not cm.app %}{% call el('p', 'hint') %}No metrics to confirm yet.{% endcall %}{% endif %}
   {% endfor %}
   {% if cm.app and c.added %}
-  {% call el('div', 'toast-dock') %}{% call el('div', 'toast', attrs='role="status"') %}{% call el('span', 'dot accent') %}{% endcall %}<span>{{ fmt.num(c.added.n) }} metric{{ "s" if c.added.n != 1 else "" }} added to the Ontology{% call el('span', 'sub') %}Ontology v{{ c.added.version }} · in tonight’s run{% if again is defined and again and again.shown %}, or run now with them{% endif %}{% endcall %}</span>
+  {% call el('div', 'toast-dock') %}{% call el('div', 'toast', attrs='role="status"') %}{% call el('span', 'dot accent') %}{% endcall %}<span>{{ fmt.num(c.added.n) }} metric{{ "s" if c.added.n != 1 else "" }} added to the Business Model{% call el('span', 'sub') %}Business Model v{{ c.added.version }} · in tonight’s run{% if again is defined and again and again.shown %}, or run now with them{% endif %}{% endcall %}</span>
     <form method="post" action="{{ cm.undo }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="version" value="{{ c.added.version }}">{% call el('button', 'action btn quiet', attrs='type="submit"') %}Undo{% endcall %}</form>
     {% if again is defined %}{{ run_again(again, csrf_token, label="Run now", kind="primary", next="/brief") }}{% endif %}{% endcall %}{% endcall %}
   {% elif not cm.app and panel.done %}
@@ -56,14 +56,14 @@
     <form method="post" action="/setup/metrics/unconfirm" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{% for k in panel.done %}<input type="hidden" name="key" value="{{ k }}">{% endfor %}<input type="hidden" name="next" value="{{ here }}">{% call el('button', 'action btn quiet', attrs='type="submit"') %}Undo{% endcall %}</form>{% endcall %}{% endcall %}
   {% endif %}
 {% elif cm.app %}
-  {% call el('span', 'hint', layout='flex flex-col') %}<span>{% if drafting %}Still drafting · you can confirm once it’s done{% elif c.staged %}{{ fmt.num(c.staged | length) }} of {{ fmt.num(c.n) }} confirmed · nothing changes until you add them{% elif c.n %}None confirmed yet{% else %}Nothing to add{% endif %}</span><span>You can change any of these later in the Ontology.</span>{% endcall %}
+  {% call el('span', 'hint', layout='flex flex-col') %}<span>{% if drafting %}Still drafting · you can confirm once it’s done{% elif c.staged %}{{ fmt.num(c.staged | length) }} of {{ fmt.num(c.n) }} confirmed · nothing changes until you add them{% elif c.n %}None confirmed yet{% else %}Nothing to add{% endif %}</span><span>You can change any of these later in the Business Model.</span>{% endcall %}
   <span class="flex items-center gap-8">
     {% if c.remaining %}<form method="post" action="{{ cm.all }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{% for k in c.remaining %}<input type="hidden" name="key" value="{{ k }}">{% endfor %}{{ button("Confirm the " ~ fmt.num(c.remaining | length) ~ " remaining", "" if c.staged else "primary", type="submit", disabled=drafting) }}</form>{% endif %}
-    {% if c.staged %}<form method="post" action="{{ cm.add }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Add " ~ fmt.num(c.staged | length) ~ " to the Ontology", "primary", type="submit", disabled=drafting) }}</form>
+    {% if c.staged %}<form method="post" action="{{ cm.add }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Add " ~ fmt.num(c.staged | length) ~ " to the Business Model", "primary", type="submit", disabled=drafting) }}</form>
     {% elif not c.remaining %}{{ button("Done", "primary", href=cm.close) }}{% endif %}
   </span>
 {% else %}
-  {% call el('span', 'hint', layout='flex flex-col') %}<span>{% if drafting %}Still drafting · you can confirm once it’s done{% else %}{{ fmt.num(c.confirmed) }} of {{ fmt.num(c.n) }} confirmed · values computed from your sources{% endif %}</span><span>You can change any of these later in the Ontology.</span>{% endcall %}
+  {% call el('span', 'hint', layout='flex flex-col') %}<span>{% if drafting %}Still drafting · you can confirm once it’s done{% else %}{{ fmt.num(c.confirmed) }} of {{ fmt.num(c.n) }} confirmed · values computed from your sources{% endif %}</span><span>You can change any of these later in the Business Model.</span>{% endcall %}
   <span class="flex items-center gap-8">
     {% if c.remaining %}{{ button("Done", href=cm.close) }}
     <form method="post" action="{{ cm.all }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{% for k in c.remaining %}<input type="hidden" name="key" value="{{ k }}">{% endfor %}{{ button("Confirm the " ~ fmt.num(c.remaining | length) ~ " remaining", "primary", type="submit", disabled=drafting) }}</form>

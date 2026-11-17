@@ -82,7 +82,7 @@
   {% if e.tab == "question" %}
     {{ text_input("question", "The question this brief answers", value=d.question) }}
     {{ text_input("name", "Name", value=d.name) }}
-    <div class="flex flex-col gap-8">{% call el("p", "label-caps") %}Deadlines it watches · goals in your Ontology{% endcall %}
+    <div class="flex flex-col gap-8">{% call el("p", "label-caps") %}Deadlines it watches · goals in your Business Model{% endcall %}
       <div class="flex flex-wrap gap-8">{% for g in e.goals %}{{ check_chip("goals", g.key, g.name, g.key in d.goals) }}{% endfor %}</div></div>
     <div class="flex flex-col gap-8">{% call el("p", "label-caps") %}Ask today goes to{% endcall %}
       {{ listbox("ask_owner", owner_options, d.ask_owner) }}

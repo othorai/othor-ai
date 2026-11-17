@@ -11,7 +11,7 @@
 {% if view %}
 {% include "setup/_first_run.html" %}
 {% else %}
-<h1>Your Ontology is confirmed.</h1>
+<h1>Your Business Model is confirmed.</h1>
 {% call el("div", "card dashed", layout="mt-24") %}{{ empty_state(None, "Your first run is tonight", "It runs at " ~ fmt.clock(company.run_time) ~ ".") }}{% endcall %}
 {% call el('form', 'onb-foot', attrs='method="post" action="/setup/first-run/continue"') %}
   <input type="hidden" name="csrf" value="{{ csrf_token }}"><span></span>{{ button("Go to the app", "primary", "lg", type="submit") }}

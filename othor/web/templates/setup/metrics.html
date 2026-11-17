@@ -41,7 +41,7 @@
 
 {# owner's O1 (8 Nov): one line to the Ontology draft, then "Not quite right?" with Upload; no
    separate Add a metric link #}
-{% call el('p', 'check-tools') %}See all of this together in your {% call el('a', 'link-u', attrs='href="/setup/metrics?panel=ontology"') %}Ontology draft{% endcall %}{% endcall %}
+{% call el('p', 'check-tools') %}See all of this together in your {% call el('a', 'link-u', attrs='href="/setup/metrics?panel=ontology"') %}Business Model draft{% endcall %}{% endcall %}
 {% set doc_form %}<form method="post" action="/setup/metrics/document" enctype="multipart/form-data" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{% call el('label', 'btn', layout='relative') %}{{ "Upload another" if doc else "Upload" }}{{ el('input', 'drop-input', attrs='type="file" name="file" data-autosubmit aria-label="Choose a document" accept=".pdf,.docx,.xlsx,.md,.txt"') }}{% endcall %}</form>{% endset %}
 {% if doc %}
 {% call el('div', 'card board describe', layout='mt-24') %}

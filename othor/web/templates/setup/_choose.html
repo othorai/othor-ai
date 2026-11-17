@@ -24,7 +24,7 @@
     {% if panel.proposal %}
     <form class="flex flex-col gap-8" method="post" action="/setup/metrics/{{ panel.key }}/choose" data-inplace>
       <input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="choice" value="{{ panel.proposal.choice }}">
-      {% call el("div", "draft proposal") %}{% call el("p", "hint") %}Will be saved to the Ontology{% endcall %}<p class="mt-4">{{ panel.proposal.text }}</p>{% endcall %}
+      {% call el("div", "draft proposal") %}{% call el("p", "hint") %}Will be saved to the Business Model{% endcall %}<p class="mt-4">{{ panel.proposal.text }}</p>{% endcall %}
       <div class="flex items-center gap-8">{% call el('button', 'btn primary', attrs='type="submit"') %}Apply{% endcall %}{% call el('span', 'hint') %}{{ panel.proposal.name }} becomes High confidence{% endcall %}</div>
     </form>
     {% endif %}

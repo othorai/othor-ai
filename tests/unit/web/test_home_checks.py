@@ -72,7 +72,7 @@ def test_waiting_with_nothing_to_answer_points_to_the_ontology() -> None:
     st = _all()
     st[names[0]] = ("could_not_run", "pair")
     s = home_view.checks_strip(_rv(st), questions=0)
-    assert s["action"] == ("Update the Ontology", "/ontology") and s["state"] == "partial"
+    assert s["action"] == ("Update the Business Model", "/ontology") and s["state"] == "partial"
     s = home_view.checks_strip(_rv(st), questions=0, proposals=2)
     assert s["action"] == ("Review proposals", "/home#proposals") and "2 proposals" in s["tail"]
     s = home_view.checks_strip(_rv(st), questions=3, proposals=2)
@@ -117,4 +117,4 @@ def test_only_history_left_says_it_turns_on_by_itself() -> None:
     st[names[0]] = ("could_not_run", "forecast")
     s = home_view.checks_strip(_rv(st), questions=0)
     assert s["tail"] == "1 more turns on as your history grows."
-    assert s["action"] == ("Update the Ontology", "/ontology")
+    assert s["action"] == ("Update the Business Model", "/ontology")

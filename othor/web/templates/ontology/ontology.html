@@ -4,8 +4,8 @@
 {% from "components/buttons.html" import button, link %}
 {% from "components/blocks.html" import toast, callout, page_title %}
 {% from "components/ontology.html" import ont_section, ont_cols, ont_row, ont_sub, ont_term, ont_act, ont_waiting, tell_line, metric_link, ont_decided %}
-{% block title %}Ontology · {{ company.name }}{% endblock %}
-{% block crumb %}Ontology{% endblock %}
+{% block title %}Business Model · {{ company.name }}{% endblock %}
+{% block crumb %}Business Model{% endblock %}
 {% block crumb_after %}{% if version %}{% call el("span", "chip soft") %}v{{ version }}{% if changed %} · {{ fmt.day_month(changed) }}{% endif %}{% endcall %}{% endif %}{% endblock %}
 {% block actions %}{{ button("History", href="/ontology?panel=history") }}{% endblock %}
 {% block main %}
@@ -13,11 +13,11 @@
 {% set page_chat = "/ontology?panel=chat&subject=page" %}
 {# the page style (owner, 13 Nov 2026): the title row with what waits on Home as its button #}
 {# #43: the description behind an info icon beside the title #}
-{% call page_title("Ontology", info="What Othor AI knows about " ~ company.name ~ ("" if company.name.endswith(".") else ".") ~ " Every brief and every Sweep reads from it. Changes apply from the next run. Every version is kept; any brief can be replayed on the version it used.") %}{% if home_count %}{{ button(fmt.num(home_count) ~ " to review on Home", "primary", href="/home", attrs={"title": home_line}) }}{% endif %}{% endcall %}
+{% call page_title("Business Model", info="What Othor AI knows about " ~ company.name ~ ("" if company.name.endswith(".") else ".") ~ " Every brief and every Sweep reads from it. Changes apply from the next run. Every version is kept; any brief can be replayed on the version it used. In data terms, this is the Ontology.") %}{% if home_count %}{{ button(fmt.num(home_count) ~ " to review on Home", "primary", href="/home", attrs={"title": home_line}) }}{% endif %}{% endcall %}
 <div class="flex flex-col gap-56">
   {% if note %}{{ callout(note | e) }}{% endif %}
   {% if done and not chat %}
-  {% call el("div", layout="flex items-center gap-8 flex-wrap") %}{{ toast("Ontology v" ~ done.number ~ " · applies from tonight’s run", sub=done.reason) }}{% call el("form", attrs={"data-inplace": true, "method": "post", "action": "/ontology/versions/" ~ done.number ~ "/undo"}) %}<input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="back" value="/ontology">{{ button("Undo", type="submit") }}{% endcall %}{% endcall %}
+  {% call el("div", layout="flex items-center gap-8 flex-wrap") %}{{ toast("Business Model v" ~ done.number ~ " · applies from tonight’s run", sub=done.reason) }}{% call el("form", attrs={"data-inplace": true, "method": "post", "action": "/ontology/versions/" ~ done.number ~ "/undo"}) %}<input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="back" value="/ontology">{{ button("Undo", type="submit") }}{% endcall %}{% endcall %}
   {% endif %}
 
   {% call el("form", attrs={"data-inplace": true, "method": "post", "action": "/ontology/chat"}) %}<input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="subject" value="page">{{ tell_line("Tell Othor AI what changed…", ["Kochi plant starts invoicing in December", "The Surat shutdown moves to September"]) }}{% endcall %}

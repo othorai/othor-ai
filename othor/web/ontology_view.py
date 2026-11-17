@@ -137,7 +137,7 @@ def cited(s: Session, ref: dict[str, Any] | None, at: dt.datetime | None = None)
     for k in ("upload", "from", "source"):
         if ref.get(k):
             return str(ref[k])
-    return "Your Ontology"
+    return "Your Business Model"
 
 
 # --- record lines ------------------------------------------------------------------------------
@@ -541,7 +541,9 @@ def metric_panel(
     )
     return {
         **base,
-        "confirmed_line": f"Confirmed · {fmt.day_month(rec.created_at.date())} · Ontology v{v}",
+        "confirmed_line": (
+            f"Confirmed · {fmt.day_month(rec.created_at.date())} · Business Model v{v}"
+        ),
         "tile": t,
         "chart": panel_chart(rd, key),
         "description": str(b.get("description") or ""),
@@ -735,7 +737,7 @@ def where_from(v: OntologyVersion) -> str:
         return "Proposal on Home"
     if reason.startswith("Tell Othor AI"):
         return "Tell Othor AI"
-    return "Metrics" if "metric" in reason.lower() else "Ontology"
+    return "Metrics" if "metric" in reason.lower() else "Business Model"
 
 
 def effect(v: OntologyVersion) -> str:
@@ -767,7 +769,7 @@ def history(s: Session, names: dict[str, str]) -> list[dict[str, Any]]:
         title = short_title(v.reason)
         if v.number == 1:
             trail = (v.source_ref or {}).get("setup_changes")
-            title = "First Ontology from onboarding"
+            title = "First Business Model from onboarding"
             meta_extra = (
                 f" · {fmt.num(trail)} change{'s' if trail != 1 else ''} before confirmation"
                 if trail

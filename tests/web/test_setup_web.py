@@ -135,7 +135,7 @@ def test_no_model_setup_flow(env: Env, sample, tmp_path, need_sources):
     # M11c: three checks; the open conflict blocks
     assert re.search(r"We found \d+ metrics\.", r.text) and "Needs you" in r.text
     assert "1 required decision left before you continue" in r.text
-    assert "Not quite right?" in r.text and "Ontology draft" in r.text
+    assert "Not quite right?" in r.text and "Business Model draft" in r.text
     assert re.search(r'<button class="btn primary lg" type="submit"\s+disabled', r.text)
     assumed = env.client.get(f"{h}/setup/metrics?panel=assumptions").text
     assert "What we assumed" in assumed and "Check 1 of 3" in assumed
@@ -167,7 +167,7 @@ def test_no_model_setup_flow(env: Env, sample, tmp_path, need_sources):
         assert fmt.inr(Decimal(o["value"])) in r.text
     assert "Not available right now" in r.text
     r = env.client.get(f"{h}/setup/metrics?panel=choose&key=net_revenue&choice=source")
-    assert "Will be saved to the Ontology" in r.text and "erp_db wins" in r.text
+    assert "Will be saved to the Business Model" in r.text and "erp_db wins" in r.text
     r = _post(
         env,
         "/setup/metrics/decide",

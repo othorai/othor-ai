@@ -23,11 +23,11 @@
   {% if c.draft %}{% set d = c.draft %}{% set k = d.card %}
     {% if d.said %}{% call el("p", "nb-reply") %}You asked: “{{ d.said }}”{% endcall %}{% endif %}
     {% if d.applied %}
-    {% call record_card(k.section, k.before, k.after, k.lines, k.effect.note, kicker="Applied · Ontology v" ~ d.version ~ " · from tonight’s run") %}
+    {% call record_card(k.section, k.before, k.after, k.lines, k.effect.note, kicker="Applied · Business Model v" ~ d.version ~ " · from tonight’s run") %}
       {% call action_form("/ontology/versions/" ~ d.version ~ "/undo", csrf_token) %}<input type="hidden" name="back" value="/ontology?panel=chat&subject={{ c.subject }}">{{ button("Undo", size="sm", type="submit") }}{% endcall %}
     {% endcall %}
     {% else %}
-    {% call record_card(k.section, k.before, k.after, k.lines, k.effect.note, kicker="Draft · will be saved · " ~ k.section ~ " · Ontology v" ~ c.next) %}
+    {% call record_card(k.section, k.before, k.after, k.lines, k.effect.note, kicker="Draft · will be saved · " ~ k.section ~ " · Business Model v" ~ c.next) %}
       {% call action_form("/ontology/chat/" ~ d.id ~ "/apply", csrf_token) %}{{ button("Apply", kind="primary", size="sm", type="submit", attrs={"data-busy": "Applying…"}) }}{% endcall %}
       {% call action_form("/ontology/chat/" ~ d.id ~ "/edit", csrf_token) %}{{ button("Edit", size="sm", type="submit") }}{% endcall %}
     {% endcall %}

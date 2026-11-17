@@ -448,7 +448,7 @@ def purge_reminder(
         kicker="Removed for good in 7 days",
         lead=(
             f"{company_name} was deleted. On {purge_on} its data is removed for good: the "
-            "Ontology, briefs, findings, history and every file. This can’t be undone."
+            "Business Model, briefs, findings, history and every file. This can’t be undone."
         ),
         after=_restore_line(settings),
     )

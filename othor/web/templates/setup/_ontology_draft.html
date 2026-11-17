@@ -3,7 +3,7 @@
 {% from "components/forms.html" import chip %}
 {% from "components/panels.html" import side_panel %}
 {# 2n0: the Ontology draft, read-only. Becomes Ontology v1 when the owner confirms metrics. #}
-{% call(part) side_panel("Ontology draft", "Becomes Ontology v1 when you confirm metrics", None, "/setup/metrics") %}
+{% call(part) side_panel("Business Model draft", "Becomes Business Model v1 when you confirm metrics", None, "/setup/metrics") %}
 {% if part == "body" %}
   <div class="flex items-center justify-between">{{ chip("Draft · not live", soft=True) }}</div>
   {% if panel.needs %}

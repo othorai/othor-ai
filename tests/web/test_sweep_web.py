@@ -222,7 +222,7 @@ def test_the_panel_has_five_tabs_from_the_run(night):
     assert "What it tested" in test and "gates, all passed" in test and "It isn’t chance" in test
     assert "Method and settings" in test and "Materiality floor" in test
     metric = env.client.get(base + "?tab=metric").text
-    assert "Rules from your Ontology" in metric and "Version" in metric
+    assert "Rules from your Business Model" in metric and "Version" in metric
     sql = env.client.get(base + "?tab=sql").text
     assert "Generated from the metric spec, not written by AI" in sql
     run = env.client.get(base + "?tab=run").text

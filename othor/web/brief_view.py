@@ -906,7 +906,7 @@ _FROM = {
     "goals": "From your goal",
     "your message": "From your business",
     "sweep": "From last night’s Sweep",
-    "ontology": "From your Ontology",
+    "ontology": "From your Business Model",
 }
 
 

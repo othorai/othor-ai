@@ -260,7 +260,7 @@ def test_history_compare_restore_and_no_change(night):  # noqa: F811
 def test_change_with_othor_ai_without_a_model(night):  # noqa: F811
     env, h, *_ = night
     chat = env.client.get(h + "/ontology?panel=chat&subject=metric:net_revenue").text
-    assert "Change with Othor AI" in chat and "Net revenue · Ontology · v" in chat
+    assert "Change with Othor AI" in chat and "Net revenue · Business Model · v" in chat
     assert (
         "Drafts only. Numbers are computed, not written. Nothing changes until you apply." in chat
     )
@@ -336,7 +336,7 @@ def test_a_draft_shows_its_effect_and_todays_values_then_apply_and_undo(night, m
     assert f'action="/ontology/chat/{mid}/edit"' in panel
     r = _post(env, h, f"/ontology/chat/{mid}/apply")
     assert f"done={n + 1}" in r.headers["location"]
-    assert "Applied · Ontology v" in env.client.get(h + r.headers["location"]).text
+    assert "Applied · Business Model v" in env.client.get(h + r.headers["location"]).text
     with svc.sf() as s, tenant_scope(cid):  # Apply writes exactly one version
         assert s.scalar(sa.select(sa.func.count()).select_from(OntologyVersion)) == versions + 1
         assert service.current_number(s) == n + 1

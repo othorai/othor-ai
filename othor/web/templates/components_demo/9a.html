@@ -10,7 +10,7 @@
     <div class="card board min-h-300">{{ empty_state("Empty · no sources", "No sources connected", "Connect your ERP, CRM or warehouse.", "Add a source", primary=True) }}</div>
     <div class="card board min-h-300">{{ empty_state("Empty · no findings yet", "Nothing has fired yet", "Detectors run tonight at 02:00.", "See what will be tested") }}</div>
     <div class="card board min-h-300 flex flex-col gap-12"><p class="label-code">Loading skeleton</p>{{ skeleton() }}</div>
-    <div class="card board min-h-230 flex flex-col gap-12"><p class="label-code">Error toast</p>{{ toast("Couldn't save the Ontology line", "err", sub="Validation: metric name already exists (net_revenue).", retry="Retry") }}</div>
+    <div class="card board min-h-230 flex flex-col gap-12"><p class="label-code">Error toast</p>{{ toast("Couldn't save the Business Model line", "err", sub="Validation: metric name already exists (net_revenue).", retry="Retry") }}</div>
     <div class="card board min-h-230 not-found">{{ empty_state("404 · not found", "There's no brief for 31 Feb", None, "Today's brief") }}</div>
     <div class="card board min-h-230 flex flex-col gap-12"><p class="label-code">Offline (browser)</p>{{ callout("You're offline.", "warn") }}</div>
     <div class="card board min-h-230 flex flex-col gap-12"><p class="label-code">Stale page</p>{{ stale("A newer run finished.") }}</div>

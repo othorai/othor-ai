@@ -15,7 +15,7 @@
     {% for key, label, href, ic in nav_items("company", [("home", "Home", "/home"), ("brief", "Morning Brief", "/brief"), ("sweep", "Sweep", "/sweep"), ("summary", "Summary", "/summary")]) %}
     <a class="nav-item{{ ' is-on' if nav == key else '' }}" href="{{ href }}"{% if nav == key %} aria-current="page"{% endif %}>{{ icon(ic) }}{{ label }}</a>{% endfor %}
     <p class="group">Setup</p>
-    {% for key, label, href, ic in nav_items("setup", [("ontology", "Ontology", "/ontology"), ("sources", "Data sources", "/sources"), ("settings", "Settings", "/settings")]) %}
+    {% for key, label, href, ic in nav_items("setup", [("ontology", "Business Model", "/ontology"), ("sources", "Data sources", "/sources"), ("settings", "Settings", "/settings")]) %}
     <a class="nav-item{{ ' is-on' if nav == key else '' }}" href="{{ href }}"{% if nav == key %} aria-current="page"{% endif %}>{{ icon(ic) }}{{ label }}</a>{% endfor %}
     </div>
     {# M15.8 (owner, 13 Nov 2026): AI usage, just above the profile at the bottom #}

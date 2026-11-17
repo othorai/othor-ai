@@ -204,7 +204,7 @@ def _base_sql(
                 continue
             if bkey is not None:
                 if bkey not in bds:
-                    raise CompileError(f"{m}: breakdown {bkey} isn't in the Ontology")
+                    raise CompileError(f"{m}: breakdown {bkey} isn't in the Business Model")
                 bexpr, vmap = _breakdown(scope, bkey, bds[bkey], vocabs)
                 cols.append(exp.alias_(bexpr, "breakdown_value", quoted=True))
                 group.append(bexpr.copy())
@@ -286,7 +286,7 @@ def _allocation_sql(
     rebate × the customer's line revenue by plant in that month). No weight → "Unmapped"."""
     rule = rules.allocations[(m, bkey)]
     if bkey not in bds:
-        raise CompileError(f"{m}: breakdown {bkey} isn't in the Ontology")
+        raise CompileError(f"{m}: breakdown {bkey} isn't in the Business Model")
     wt = _table(cat, rule["to"], f"{m} allocation")
     ws = Scope(f"{m} allocation", cat, wt, rules, wt.dialect)
     (fkey, wkey), *_ = rule["on"]

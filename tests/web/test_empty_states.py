@@ -15,7 +15,7 @@ EMPTY = {
     "/brief": "No brief yet",
     "/brief/archive": "No briefs yet",
     "/sweep": "Nothing has fired yet",
-    "/ontology": "No Ontology yet",
+    "/ontology": "No Business Model yet",
     "/sources": "No sources connected",
 }
 

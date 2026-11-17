@@ -34,8 +34,8 @@ from othor.web.security import check_csrf
 router = APIRouter(include_in_schema=False)
 # the 404 (9a): what isn’t there, and one way back
 GONE = (
-    "There’s no such record in the Ontology",
-    ("Ontology", "/ontology"),
+    "There’s no such record in the Business Model",
+    ("Business Model", "/ontology"),
 )
 
 
@@ -46,7 +46,7 @@ def provider_for(settings: Any) -> Any:
 
 
 CSRF = [Depends(check_csrf)]
-NO_CHANGE = "No change: that is already in your Ontology."
+NO_CHANGE = "No change: that is already in your Business Model."
 
 
 def _today(request: Request, o: Owner) -> dt.date:
@@ -192,7 +192,7 @@ def _chat(
         elif not last.applied:
             reply = card["error"] if card and card.get("error") else last.text
     n = service.current_number(s)
-    title, sub = "Change with Othor AI", f"Ontology · v{n}"
+    title, sub = "Change with Othor AI", f"Business Model · v{n}"
     if subject.startswith("metric:"):
         key = subject.split(":", 1)[1]
         rec = next((r for r in service.active(s, ["metric"]) if r.key == key), None)
@@ -415,7 +415,7 @@ def undo(
     svc = services(request)
     with svc.sf() as s, tenant_scope(o.company.id):
         if _version(s, n) is None:
-            return not_found(request, o.site, f"There’s no Ontology v{n}", GONE[1])
+            return not_found(request, o.site, f"There’s no Business Model v{n}", GONE[1])
         nv = service.undo(s, n, actor=str(o.viewer.id))
         if nv is not None:
             compile_version(s, o.company, actor=str(o.viewer.id))
@@ -432,7 +432,7 @@ def restore(request: Request, n: int, o: Owner = Depends(signed_in)) -> Response
     svc = services(request)
     with svc.sf() as s, tenant_scope(o.company.id):
         if _version(s, n) is None:
-            return not_found(request, o.site, f"There’s no Ontology v{n}", GONE[1])
+            return not_found(request, o.site, f"There’s no Business Model v{n}", GONE[1])
         nv = service.restore(s, n, actor=str(o.viewer.id))
         if nv is None:
             return RedirectResponse("/ontology?panel=history&note=nochange", 303)

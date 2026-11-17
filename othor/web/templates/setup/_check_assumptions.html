@@ -14,17 +14,17 @@
   {% call el('form', '', layout='flex flex-col gap-12', attrs={'id': 'assume-form', 'method': 'post', 'action': '/setup/metrics/found/' ~ one.key ~ '/set', 'data-inplace': true}) %}
     <input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="next" value="/setup/metrics?panel=assumptions">
     {% call el('p', 'strong') %}Use this assumption?{% endcall %}
-    {% call el('label', 'opt-row') %}<input type="radio" name="use" value="keep"{% if not one.skipped %} checked{% endif %}><span>{% call el('span', 'opt-t') %}Use it{% if not one.skipped %} {% call el('span', 'tag new') %}Assumed{% endcall %}{% endif %}{% endcall %}{% call el('span', 'hint') %}Saved to your Ontology as a rule when you confirm Metrics.{% endcall %}</span>{% endcall %}
-    {% call el('label', 'opt-row') %}<input type="radio" name="use" value="skip"{% if one.skipped %} checked{% endif %}><span>{% call el('span', 'opt-t') %}Don’t use this rule{% endcall %}{% call el('span', 'hint') %}It isn’t saved to your Ontology. The metrics are computed without it.{% endcall %}</span>{% endcall %}
+    {% call el('label', 'opt-row') %}<input type="radio" name="use" value="keep"{% if not one.skipped %} checked{% endif %}><span>{% call el('span', 'opt-t') %}Use it{% if not one.skipped %} {% call el('span', 'tag new') %}Assumed{% endcall %}{% endif %}{% endcall %}{% call el('span', 'hint') %}Saved to your Business Model as a rule when you confirm Metrics.{% endcall %}</span>{% endcall %}
+    {% call el('label', 'opt-row') %}<input type="radio" name="use" value="skip"{% if one.skipped %} checked{% endif %}><span>{% call el('span', 'opt-t') %}Don’t use this rule{% endcall %}{% call el('span', 'hint') %}It isn’t saved to your Business Model. The metrics are computed without it.{% endcall %}</span>{% endcall %}
   {% endcall %}
-  {% call el('p', 'hint') %}You can change it in the Ontology later.{% endcall %}
+  {% call el('p', 'hint') %}You can change it in the Business Model later.{% endcall %}
 {% else %}
   {% call el('span', 'hint') %}{{ (a.rows | map(attribute="key") | list).index(one.key) + 1 }} of {{ fmt.num(a.n) }} assumptions{% endcall %}
   <span class="flex items-center gap-8">{{ button("Back", href="/setup/metrics?panel=assumptions") }}{{ button("Save", "primary", type="submit", attrs={"form": "assume-form"}) }}</span>
 {% endif %}
 {% endcall %}
 {% else %}
-{% call(part) side_panel("What we assumed", "Each one becomes a rule in your Ontology. Change anything that’s wrong; the rest is used as is.", None, "/setup/metrics", kicker="Check 1 of 3") %}
+{% call(part) side_panel("What we assumed", "Each one becomes a rule in your Business Model. Change anything that’s wrong; the rest is used as is.", None, "/setup/metrics", kicker="Check 1 of 3") %}
 {% if part == "body" %}
   {% if a.rows %}
   {% call el('div', 'as-list') %}

@@ -223,7 +223,7 @@ def forecast_panel(
     if plan and item["kind"] == "forecast":
         prov.append(("Plan", plan["how"]))
     prov += [
-        ("Spec version", f"Ontology v{spec.get('ontology_version', '')}"),
+        ("Spec version", f"Business Model v{spec.get('ontology_version', '')}"),
         ("Run", f"#{n:04d} · {fmt.day_month(run.run_date)}"),
     ]
     goals = [g for g in spec.get("forecast", {}).get("goals", []) if g.get("metric") == metric]

@@ -302,7 +302,7 @@ class AlreadyConfirmed(ValueError):
 def confirm(s: Session, *, actor: str, reason: str = "Setup confirmed") -> OntologyVersion:
     """Setup's Confirm: every draft record becomes live as version 1."""
     if confirmed(s):
-        raise AlreadyConfirmed("the Ontology is already confirmed")
+        raise AlreadyConfirmed("the Business Model is already confirmed")
     drafts = list(
         s.scalars(
             sa.select(OntologyRecord)

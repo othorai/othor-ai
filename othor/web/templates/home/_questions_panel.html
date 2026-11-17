@@ -26,7 +26,7 @@
   {% endcall %}
   {% if q.state == "answered" %}
     {% if q.decided %}{{ qp_decided(q.decided) }}{% endif %}
-    {% call record_card(None, "", q.answer, [q.line ~ (" · applied in Ontology v" ~ q.version if q.version else ""), q.did] | select | list, kicker="You answered", title="What it did") %}
+    {% call record_card(None, "", q.answer, [q.line ~ (" · applied in Business Model v" ~ q.version if q.version else ""), q.did] | select | list, kicker="You answered", title="What it did") %}
       {% call action_form("/home/questions/" ~ q.id ~ "/undo" ~ qs, csrf_token) %}{{ button("Undo", size="sm", type="submit") }}{% endcall %}
       {% call action_form("/home/questions/" ~ q.id ~ "/undo" ~ qs, csrf_token) %}<input type="hidden" name="change" value="1">{{ button("Change answer", size="sm", type="submit") }}{% endcall %}
     {% endcall %}

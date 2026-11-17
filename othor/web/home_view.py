@@ -400,9 +400,9 @@ def checks_strip(
         elif n["history"] and not n["waiting"]:
             h = n["history"]
             tail = f"{fmt.num(h)} more turn{'s' if h == 1 else ''} on as your history grows."
-            action = ("Update the Ontology", "/ontology")
+            action = ("Update the Business Model", "/ontology")
         else:
-            tail, action = "See what each check needs.", ("Update the Ontology", "/ontology")
+            tail, action = "See what each check needs.", ("Update the Business Model", "/ontology")
     meaning = {
         "ran": "Ran on the latest numbers. What they found is in Sweep.",
         "waiting": (
@@ -542,7 +542,7 @@ def proposal_row(p: Proposal) -> dict[str, Any]:
     elif p.kind == "duplicate_metric":
         frm = "Sweep · your numbers"
     elif p.kind == "areas":
-        frm = "Ontology · your numbers"
+        frm = "Business Model · your numbers"
     else:
         frm = "Home · your answers"
     del origin
@@ -651,7 +651,7 @@ def page(
         counts.append(f"{fmt.num(len(qs))} question{'s' if len(qs) != 1 else ''}")
     if not counts:
         counts.append("Nothing to review")
-    counts.append(f"Ontology v{version}")
+    counts.append(f"Business Model v{version}")
     updated = None
     if run is not None and run.ended_at is not None:
         end = local_now(company, run.ended_at)
@@ -923,7 +923,7 @@ def questions_panel(
             # Let Othor AI decide: tagged, its computed evidence, capped until confirmed
             "decided": {
                 "evidence": str(ref.get("evidence") or ""),
-                "cap": "Confidence capped at Medium until you confirm it on the Ontology.",
+                "cap": "Confidence capped at Medium until you confirm it on the Business Model.",
             }
             if by_ai
             else None,

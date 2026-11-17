@@ -228,7 +228,10 @@ def test_a_known_pattern_ahead_is_a_quiet_week() -> None:
     }
     w = make(goals=[], spec=_spec(suppressions=[p]))
     assert _scenes(w)[1] == "clear_night"  # the week of 25 Nov overlaps 21–27 Nov
-    assert w["outlook"]["weeks"][1]["line"] == "Diwali week: a quiet week, as your Ontology expects"
+    assert (
+        w["outlook"]["weeks"][1]["line"]
+        == "Diwali week: a quiet week, as your Business Model expects"
+    )
 
 
 def test_same_input_same_bytes_and_order_free() -> None:

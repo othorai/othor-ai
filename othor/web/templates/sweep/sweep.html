@@ -61,12 +61,12 @@
       {% call el("div", "section lines") %}{% for h in suppressed.held %}{% call el("div", "held-row") %}<span>{{ h.title }}</span>{% call el("span", "how") %}{{ h.how }} · {{ hold_form("undo", h.fp, run, "Undo", csrf_token) }}{% endcall %}{% endcall %}{% endfor %}{% endcall %}
     </div>
     {% endif %}
-    <div class="flex flex-col gap-8">{% call el("p", "label-caps") %}Suppressed by your Ontology · {{ fmt.num(suppressed.by_ontology | length) }}{% endcall %}
+    <div class="flex flex-col gap-8">{% call el("p", "label-caps") %}Suppressed by your Business Model · {{ fmt.num(suppressed.by_ontology | length) }}{% endcall %}
       {% if suppressed.by_ontology %}{{ pattern_groups(suppressed.by_ontology) }}
       {% else %}{% call el("p", "hint") %}Nothing matched a known pattern tonight.{% endcall %}{% endif %}
     </div>
     {% if suppressed.proposals %}
-    <div class="flex flex-col gap-8">{% call el("p", "label-caps") %}Proposed for your Ontology · {{ fmt.num(suppressed.proposals | length) }}{% endcall %}
+    <div class="flex flex-col gap-8">{% call el("p", "label-caps") %}Proposed for your Business Model · {{ fmt.num(suppressed.proposals | length) }}{% endcall %}
       {% call el("div", "section lines") %}{% for p in suppressed.proposals %}{% call el("div", "held-row") %}<span>{{ p.text }}</span>{% endcall %}{% endfor %}{% endcall %}
     </div>
     {% endif %}

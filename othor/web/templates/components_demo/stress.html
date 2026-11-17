@@ -21,7 +21,7 @@
     <div class="card board">{{ empty_state("404 · not found", "There’s no brief for 31 Feb", None, "Today’s brief") }}</div>
     <div class="card board">{{ empty_state("500 · our side", "Something went wrong on our side. Nothing you did was lost.", None, "Reload", "", primary=True, more=[("Home", "/")], ref="3f9a1c2b7d10") }}</div>
   </div>
-  {{ toast("Couldn’t save the Ontology line · " ~ long, "err", sub="Reference 3f9a1c2b7d10", retry="Retry") }}
+  {{ toast("Couldn’t save the Business Model line · " ~ long, "err", sub="Reference 3f9a1c2b7d10", retry="Retry") }}
   {{ callout("You’re offline.", "warn") }}
   {{ callout("Couldn’t read " ~ long ~ ": the role othor_ro lost SELECT on erp_db.public.customer_invoices_with_a_very_long_table_name_2026", "err") }}
   <div class="card board" data-skeleton>{{ skeleton() }}</div>

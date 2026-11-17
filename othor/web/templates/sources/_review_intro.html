@@ -12,5 +12,5 @@
   {% endif %}
   {% call el("p", "hint") %}Matching with your other sources runs tonight. Results tomorrow on this source and on Home.{% endcall %}
   {% if rv.drafting %}{% call el("p", "progress-line") %}Drafting metrics from {{ sel.title }}…{% endcall %}
-  {% elif not rv.n %}{% call el("div", "card dashed") %}{{ empty_state(None, "No metrics from this source yet", "Nothing in it adds up to a metric on its own. Add one by form in the Ontology.") }}{% endcall %}{% endif %}
+  {% elif not rv.n %}{% call el("div", "card dashed") %}{{ empty_state(None, "No metrics from this source yet", "Nothing in it adds up to a metric on its own. Add one by form in the Business Model.") }}{% endcall %}{% endif %}
 </div>

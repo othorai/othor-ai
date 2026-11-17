@@ -60,7 +60,7 @@
         <div class="flex-1 min-w-0 flex flex-col gap-4"><p>{{ m.text }}</p>
           {% if m.unmatched %}{% call el("p", "hint") %}{{ fmt.num(m.unmatched) }} not matched{% if m.examples %}: {{ m.examples[:5] | join(", ") }}{% if m.unmatched > 5 %} and {{ fmt.num(m.unmatched - 5) }} more{% endif %}{% endif %}{% endcall %}{% endif %}
           {% if m.ambiguous_count %}{% call el("p", "hint") %}{{ fmt.num(m.ambiguous_count) }} ambiguous, left out: {% for a in m.ambiguous[:3] %}{{ a[0] }} ({{ a[1] | join(" or ") }}){{ ", " if not loop.last else "" }}{% endfor %}{% endcall %}{% endif %}
-          {% if m.joined %}{% call el("p", "hint") %}Already joined in your Ontology{% endcall %}{% endif %}
+          {% if m.joined %}{% call el("p", "hint") %}Already joined in your Business Model{% endcall %}{% endif %}
         </div>{% endcall %}{% endfor %}{% endcall %}
       {% endif %}
       {% if matches.proposal %}{% set pr = matches.proposal %}

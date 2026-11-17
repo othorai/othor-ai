@@ -244,7 +244,7 @@ def test_frozen_never_under_a_known_pattern() -> None:
     assert w["scene"] == "clear_night"
     assert (
         w["line"]
-        == "A quiet day: no activity on Thu 12 Nov, as your Ontology expects (Diwali week)."
+        == "A quiet day: no activity on Thu 12 Nov, as your Business Model expects (Diwali week)."
     )
     # an unconfirmed pattern, or one for one plant, doesn't explain a company-wide stop
     for p in ({**pattern, "confirmed": False}, {**pattern, "plant": "Surat"}):

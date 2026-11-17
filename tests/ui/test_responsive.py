@@ -138,7 +138,7 @@ def test_the_ontology_title_and_its_pill_line_up(live: tuple[int, str]) -> None:
         css = page.eval_on_selector('link[rel="stylesheet"][href*="/css/app."]', "e => e.href")
         page.set_content(
             f'<link rel="stylesheet" href="{css}"><main class="app-main"><div class="ont-head flex '
-            'items-center gap-12 flex-wrap"><h1 class="ont-title">Ontology</h1><a class='
+            'items-center gap-12 flex-wrap"><h1 class="ont-title">Business Model</h1><a class='
             '"wait-pill" href="/home"><span class="dot accent"></span>5 questions waiting on '
             "Home →</a></div></main>",
             wait_until="load",

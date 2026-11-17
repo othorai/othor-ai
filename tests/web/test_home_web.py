@@ -51,14 +51,16 @@ def test_the_page_reads_the_last_run_and_counts_agree_with_sweep(night):  # noqa
     # design B2 (11 Nov 2026): the header line (Ontology version, run number) is gone; the
     # Sweep box's counts are Sweep's own. The weather's "How this was picked" names its run (v0.12).
     head = re.sub(r'<section class="weather .*?</section>', "", page, flags=re.S)
-    assert f"Ontology v{version}" not in head and f"run #{run.number:04d}" not in head
+    assert f"Business Model v{version}" not in head and f"run #{run.number:04d}" not in head
     assert f"Questions for you · {open_q}" in page
     assert "Leadership brief" in page and "Open brief →" in page
     box = page.split('aria-label="Sweep"', 1)[1]
     assert f"{sw['findings']} found" in box and "Open Sweep →" in box
     # P10's question (needs confirmation) comes first
     assert "Which system is right about these 37 orders?" in page
-    assert "Answer questions" in page and "One at a time · answers go into the Ontology" in page
+    assert (
+        "Answer questions" in page and "One at a time · answers go into the Business Model" in page
+    )
 
 
 def test_a_goal_proposal_is_accepted_and_undone(night):  # noqa: F811
@@ -68,7 +70,7 @@ def test_a_goal_proposal_is_accepted_and_undone(night):  # noqa: F811
         pid, n = str(p.id), service.current_number(s)
     page = env.client.get(h + "/home").text
     # owner, 14 Nov 2026 (M16.1): proposals also come from the Ontology
-    assert ">Proposals for the Ontology<" in page
+    assert ">Proposals for the Business Model<" in page
     assert "Net revenue FY27 target ₹60 Cr → tracking ₹57.2 Cr" in page
     assert "Morning Brief · forecast" in page
     r = _post(env, h, f"/home/proposals/{pid}/accept")

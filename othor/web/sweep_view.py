@@ -1156,7 +1156,7 @@ def test_tab(rv: RunView, s: Session | None, f: dict[str, Any]) -> dict[str, Any
         (
             "Run",
             f"#{rv.run.number:04d} · {fmt.date_short(rv.run.run_date)} · "
-            f"Ontology v{rv.spec.ontology_version} · "
+            f"Business Model v{rv.spec.ontology_version} · "
             f"{sweep_text.LABELS.get(f['detector'], f['detector'])} v"
             f"{det.version if det else f.get('version', '')}",
         ),
@@ -1531,7 +1531,7 @@ class WatchDraft:
 
     @property
     def owner_options(self) -> list[tuple[str, str]]:
-        return [(n, n) for n in self.owners] or [("", "No owner in your Ontology")]
+        return [(n, n) for n in self.owners] or [("", "No owner in your Business Model")]
 
 
 def watch_draft(rv: RunView, f: dict[str, Any], threshold: str | None = None) -> WatchDraft | None:
@@ -1606,7 +1606,9 @@ def _owner_note(spec: dict[str, Any], owner: str) -> str:
     areas = sorted(
         {a for o in spec.get("owners", []) if o["name"] == owner for a in o.get("areas", [])}
     )
-    return f"Owns {', '.join(a.replace('_', ' ') for a in areas)} in your Ontology" if areas else ""
+    if not areas:
+        return ""
+    return f"Owns {', '.join(a.replace('_', ' ') for a in areas)} in your Business Model"
 
 
 def _unit_value(v: Any, unit: str) -> str:

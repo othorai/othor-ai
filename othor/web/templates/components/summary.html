@@ -60,7 +60,7 @@
     </div>
     {% endif %}
     <div class="sum-foot">
-      <span class="sum-how">{{ info(text=(r.description ~ (" · " if r.description else "") ~ "From last night's run · Ontology v" ~ r.version), id="sum-info-" ~ rid) }}<a class="link" href="/ontology?metric={{ r.lead }}">How is this calculated?</a></span>
+      <span class="sum-how">{{ info(text=(r.description ~ (" · " if r.description else "") ~ "From last night's run · Business Model v" ~ r.version), id="sum-info-" ~ rid) }}<a class="link" href="/ontology?metric={{ r.lead }}">How is this calculated?</a></span>
       {% if r.metrics | length > 1 %}
       {% call action_form("/summary/lead", csrf, kind="sum-lead") %}<input type="hidden" name="area" value="{{ r.area }}">{% if all %}<input type="hidden" name="all" value="1">{% endif %}<label for="lead-{{ loop_id(r.area) }}">Lead number</label>{{ select("metric", r.metrics, r.lead, small=True, attrs='data-autosubmit', id="lead-" ~ loop_id(r.area)) }}{% endcall %}
       {% endif %}
@@ -80,7 +80,7 @@
 {% if sm.empty == "before_first_run" %}
   <div class="card board">{{ empty_state(None, "Summary appears after the first nightly run", "Every key number, area by area, against the period before or last year.") }}</div>
 {% elif sm.empty == "no_numbers" %}
-  <div class="card board">{{ empty_state(None, "No numbers to summarise yet", "Confirm your metrics in the Ontology; they show here after the next nightly run.", "Open the Ontology", "/ontology") }}</div>
+  <div class="card board">{{ empty_state(None, "No numbers to summarise yet", "Confirm your metrics in the Business Model; they show here after the next nightly run.", "Open the Business Model", "/ontology") }}</div>
 {% else %}
   {% if sm.proposal_open %}<p class="sum-hint">Othor AI has drafted areas for your numbers. <a class="link" href="/home#proposals">Review them on Home</a></p>{% endif %}
   {% if sm.view.rows == "numbers" %}
