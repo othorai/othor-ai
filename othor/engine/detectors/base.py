@@ -270,7 +270,9 @@ class Coverage:
         }
 
 
-Detector = Callable[[Context], tuple[list[Result], Coverage]]
+Detector = Callable[
+    [Context], tuple[list[Result], Coverage | None]
+]  # None: a plug-in with nothing to check
 
 
 @dataclass(frozen=True)

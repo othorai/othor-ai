@@ -591,6 +591,17 @@ _BY = {
     "changepoint": _step,
     "forecast_breach": _breach,
 }
+_CORE = frozenset(_BY) | frozenset(LABELS)
+
+
+def register_words(detector: str, label: str, fn: Any) -> None:
+    """A plug-in detector's words (Advanced Intelligence, External Signals): its label in Sweep
+    and a function (finding, spec) -> {title, line, consequence, why_unseen, question}, filled
+    from the finding's computed slots only (non-negotiable 1). A core detector can't be taken."""
+    if detector in _CORE:
+        raise ValueError(f"detector {detector!r} is the core's")
+    LABELS[detector] = label
+    _BY[detector] = fn
 
 
 # --- Coverage and quiet night (5a, 5f, 10i) ----------------------------------------------------

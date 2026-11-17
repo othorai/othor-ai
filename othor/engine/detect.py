@@ -94,7 +94,8 @@ def run(ctx: Context) -> Detection:
             continue
         got, cov = spec.run(ctx)
         results += got
-        coverage.append(cov)
+        if cov is not None:  # a plug-in detector with nothing to check leaves no trace
+            coverage.append(cov)
     inside_q = Decimal(str(ctx.spec.get("detectors", {}).get("fdr_q", "0.01")))
     floor = Decimal(str(ctx.spec.get("detectors", {}).get("materiality_inr", "500000")))
     pools: dict[str, list[Result]] = defaultdict(list)
@@ -451,7 +452,8 @@ def _dedupe(ctx: Context, results: list[Result]) -> None:
         r.passed, r.reason = False, f"also seen as {home.metric} ({home.detector})"
         where = r.breakdown_value or r.metric
         home.slots = {**home.slots, "also_in": sorted({*home.slots.get("also_in", []), where})}
-    # one finding per metric and window across detectors
+    # one finding per metric and window across detectors, within a pool (an outside signal's
+    # move is not the same change as an inside finding on that metric)
     by_specific = sorted(
         kept,
         key=lambda r: (SPECIFIC.index(r.detector) if r.detector in SPECIFIC else 99, _rank(ctx, r)),
@@ -463,6 +465,7 @@ def _dedupe(ctx: Context, results: list[Result]) -> None:
                 k
                 for k in final
                 if k.metric == r.metric
+                and pool_of(k) == pool_of(r)
                 and k.breakdown_value == r.breakdown_value
                 and k.window[0] <= r.window[1]
                 and r.window[0] <= k.window[1]

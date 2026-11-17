@@ -136,6 +136,9 @@ TABLES: dict[str, Rule] = {
     "rate_limit": Rule(skip="internal rate-limit counters"),
     "worker_heartbeat": Rule(skip="the worker's heartbeat, not company data"),
     "platform_event": Rule(skip="the instance's own log, across companies"),
+    # External Signals (Enterprise Edition, named here only): public series, no company data
+    "outside_point": Rule(skip="public series (rates, prices, rainfall), not company data"),
+    "outside_fetch": Rule(skip="the instance's fetch log of public series"),
     "access_request": Rule(skip="website requests for access, not company data"),
     "purge_lock": Rule(skip="the purge's own lock (M18.3), never company data"),
 }

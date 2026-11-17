@@ -43,6 +43,8 @@ GLOBAL: dict[str, str] = {
     "access_request": "kept: a request made on the website, not company data",
     "platform_event": "kept: the instance's own log (ids, the old address and counts only)",
     "rate_limit": "kept: hashed counters, no company data",
+    "outside_point": "kept: public series (External Signals), no company data",
+    "outside_fetch": "kept: the fetch log of public series, no company data",
     "worker_heartbeat": "kept: the worker's heartbeat, no company data",
     "purge_lock": "the lock itself: a row only inside the purge's transaction",
     "auth_session": "deleted by othor.core.auth.purge_rows: the company's, and gone users'",

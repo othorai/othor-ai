@@ -6,6 +6,29 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-11-17
+
+### Added
+- Enterprise Edition: External Signals, public figures that may lead the business's own numbers:
+  the rupee against the dollar, euro, pound and yen (worked out from the ECB's euro reference
+  rates), the World Bank's monthly cotton price, and a state's monthly rainfall (a NASA POWER
+  model estimate). Diesel (PPAC) is listed and off until PPAC's permission.
+  - Reasons come from the Business Model's names, never rows; each candidate is tested on the
+    company's own history (fitted on the earlier two thirds, confirmed on the later third, one
+    false-discovery pool at q = 0.01). A link that holds is a Home proposal, "Outside link"; Apply
+    writes a versioned record, with Undo.
+  - Every night, a linked signal whose last month moved beyond its usual range is a finding in
+    its own pool, and the brief's Outside section shows at most two, beside the four ranked items.
+  - Data sources lists each feed, its source and terms, its status for the company and when it
+    was last fetched. The instance fetches once a day from the three hosts itself; nothing of a
+    company's is sent. The stored values are a run input, so replay never fetches.
+
+### Changed
+- The engine's one-finding-per-number rule applies within a detection pool; a plug-in check with
+  nothing to test leaves no line in Sweep's coverage. Inside results are byte-identical.
+- Charts: a phone's stacked dumbbell names get the row's width (they were cut short); the extra
+  decimal for repeating values applies to small shares only.
+
 ## [0.22.0] - 2026-11-17
 
 ### Added

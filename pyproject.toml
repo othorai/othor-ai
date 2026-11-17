@@ -1,6 +1,6 @@
 [project]
 name = "othor"
-version = "0.22.0"
+version = "0.23.0"
 description = "Othor AI v0.1"
 requires-python = "==3.12.*"
 # Every dependency is pinned exactly (non-negotiable 2: same inputs, same numbers).
@@ -92,7 +92,7 @@ packages = [
 plugins = []
 
 [[tool.mypy.overrides]]
-module = ["pymysql.*", "duckdb.*", "openpyxl.*", "apscheduler.*", "scipy.*", "ruptures.*", "statsmodels.*"]
+module = ["pymysql.*", "duckdb.*", "openpyxl.*", "apscheduler.*", "scipy.*", "ruptures.*", "statsmodels.*", "defusedxml.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

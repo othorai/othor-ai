@@ -145,6 +145,26 @@ class _Svg:
         return head + "".join(self.parts) + "".join(self.labels) + "</svg>"
 
 
+def _caption(svg: _Svg, x: float, y: float, unit: Unit) -> None:
+    """The axis names its money unit once ("₹ Cr", "$ M"), as the line charts do (9c, M12b)."""
+    if unit.type != "currency" or unit.scale not in ("cr", "m", "b", "l", "k"):
+        return
+    sym = fmt.SYMBOL.get(unit.code or "", fmt.currency_symbol())
+    word = {"cr": " Cr", "m": " M", "b": " B", "l": " L", "k": " K"}[unit.scale]
+    svg.label(x, y, f"{sym}{word}", size=9)
+
+
+def _finer(unit: Unit) -> Unit:
+    """One decimal more than the unit's own (small shares: 0.8%, not 1%)."""
+    return dataclasses.replace(unit, decimals=max(unit.decimals, 0) + 1)
+
+
+def _fit(s: str, size: int, room: float) -> str:
+    """A name shortened with an ellipsis to fit `room` pixels (a long product name)."""
+    most = max(int(room / (size * TEXT_W)), 4)
+    return s if len(s) <= most else s[: most - 1].rstrip() + "…"
+
+
 def _ord(d: str) -> int:
     return dt.date.fromisoformat(d).toordinal()
 
@@ -519,7 +539,13 @@ def _waterfall(spec: ChartSpec, w: int, h: int) -> str:
     levels = [y for a, b in spans for y in (a, b) if not (a == 0.0 and y == 0.0)]
     lo, hi = min(levels), max(levels)
     base = max(0.0, lo - (hi - lo) * 0.6) if hi > lo else 0.0
-    ys = _Scale(base, hi, h - 26, 20)
+    # room above the tallest bar for its value, the unit and the axis note, so none overlap
+    ys = _Scale(base, hi, h - 26, 34 if base > 0 else 22)
+    if base > 0:  # placed first: the values move out of its way, never over it
+        svg.label(
+            w - 4, 11, "axis from " + _value(base, spec.unit), size=10, fill=AXIS_TXT, anchor="end"
+        )
+    _caption(svg, 2, 11, spec.unit)
     col = (w - 8) / len(cats)
     bw = col * 0.6
     prev_top: float | None = None
@@ -540,12 +566,9 @@ def _waterfall(spec: ChartSpec, w: int, h: int) -> str:
             )
         prev_top = top
         txt = _value(c.value, spec.unit, sign=not c.total)
-        svg.text(x + bw / 2, top - 6, txt, size=11, fill=INK, anchor="middle", weight=600)
-        svg.text(x + bw / 2, h - 8, c.key, size=11, fill=INK, anchor="middle")
-    if base > 0:
-        svg.text(
-            w - 4, 12, "axis from " + _value(base, spec.unit), size=10, fill=AXIS_TXT, anchor="end"
-        )
+        svg.reserve((x, top, x + bw, top + height))
+        svg.label(x + bw / 2, top - 6, txt, size=11, fill=INK, anchor="middle", weight=600)
+        svg.text(x + bw / 2, h - 8, _fit(c.key, 11, col - 4), size=11, fill=INK, anchor="middle")
     return svg.done()
 
 
@@ -620,8 +643,16 @@ def _dumbbell(spec: ChartSpec, w: int, h: int) -> str:
     a, b = spec.series
     rows = list(zip(a.points, b.points, strict=True))
     size, bottom, top = 13, 26, 24
-    stacked = w < 480
-    label_w = 16.0 if stacked else max(len(k) for k, _ in a.points) * size * TEXT_W + 20
+    # a phone stacks each name over its row when every row has room for both (#70); else the
+    # names stay on the left, shortened to fit
+    stacked = w < 480 and (h - top - bottom) / max(len(rows), 1) >= 28
+    # no more rows than fit (14 px each); the analysis says how many it left out
+    most = max(int((h - top - bottom) / 14), 1)
+    rows = rows[:most]
+    # a stacked name sits over its row and has the width; a name on the left shares it
+    room = w - 32 if stacked else w * (0.32 if w >= 480 else 0.3)
+    names = {k: _fit(k, size, room) for k, _ in a.points}
+    label_w = 16.0 if stacked else max(len(names[k]) for (k, _), _b in rows) * size * TEXT_W + 20
     vals = [v for s in spec.series for _, v in s.points]
     vals += [x.value for x in spec.annotations if x.type == "threshold" and x.value is not None]
     hi = max(vals) * 1.04
@@ -629,12 +660,24 @@ def _dumbbell(spec: ChartSpec, w: int, h: int) -> str:
     hi = max(hi, ticks[-1])
     xs = _Scale(0, hi, label_w, w - 64)
     row = (h - top - bottom) / len(rows)
+    # whole numbers on the axis, unless they would repeat (shares under 1%: #70)
+    tick_unit = _whole(spec.unit)
+    if len({_value(t, tick_unit) for t in ticks}) < len(ticks):
+        tick_unit = _finer(spec.unit)
+    # small shares that round alike get a decimal (0.8%, 1.2%, not 1%, 1%); other units are
+    # shown as they are (two pages can both take 46 ms)
+    value_unit = spec.unit
+    shown = [_value(vb, value_unit) for (_k, _va), (_k2, vb) in rows]
+    if spec.unit.type == "percent" and (
+        len(set(shown)) < len(shown) or any(s in ("0%", "1%") for s in shown)
+    ):
+        value_unit = _finer(spec.unit)
     for t in ticks:
         x = xs(t)
         svg.add(
             f'<line x1="{_f(x)}" x2="{_f(x)}" y1="{top - 8}" y2="{h - bottom}" stroke="{GRID}"/>'
         )
-        svg.text(x, h - 8, _value(t, _whole(spec.unit)), size=11, anchor="middle")
+        svg.text(x, h - 8, _value(t, tick_unit), size=11, anchor="middle")
     for x_ in spec.annotations:
         if x_.type == "threshold" and x_.value is not None:
             x = xs(x_.value)
@@ -650,9 +693,9 @@ def _dumbbell(spec: ChartSpec, w: int, h: int) -> str:
         cy = mid + 8 if stacked else mid
         xa, xb = xs(va), xs(vb)
         if stacked:
-            svg.text(label_w, mid - 6, key, size=size, fill=INK)
+            svg.text(label_w, mid - 6, names[key], size=size, fill=INK)
         else:
-            svg.text(0, cy + 4.5, key, size=size, fill=INK)
+            svg.text(0, cy + 4.5, names[key], size=size, fill=INK)
         svg.add(
             f'<line x1="{_f(min(xa, xb))}" x2="{_f(max(xa, xb))}" y1="{_f(cy)}" y2="{_f(cy)}" '
             f'stroke="{cb}" stroke-opacity="0.35" stroke-width="4" stroke-linecap="round"/>'
@@ -662,7 +705,8 @@ def _dumbbell(spec: ChartSpec, w: int, h: int) -> str:
             f'stroke-width="2"/>'
         )
         svg.add(f'<circle cx="{_f(xb)}" cy="{_f(cy)}" r="5" fill="{cb}"/>')
-        svg.text(max(xa, xb) + 10, cy + 4.5, _value(vb, spec.unit), size=12, fill=INK, weight=600)
+        svg.reserve((min(xa, xb) - 5, cy - 5, max(xa, xb) + 5, cy + 5))
+        svg.label(max(xa, xb) + 10, cy + 4.5, _value(vb, value_unit), size=12, fill=INK, weight=600)
     return svg.done()
 
 
@@ -676,7 +720,7 @@ def _scatter(spec: ChartSpec, w: int, h: int) -> str:
     cats = list(dict.fromkeys(k for k, _ in pts))
     marks = {(x.at, x.value): x.label for x in spec.annotations if x.type == "point"}
     vals = [v for _, v in pts]
-    top, bottom, left, right = 14, 26, 64, 12
+    top, bottom, left, right = 22, 26, 64, 12
     hi = max(vals or [1.0]) * 1.08
     ticks = sorted({0.0, *_nice_ticks(0, hi, most=4)})
     hi = max(hi, ticks[-1])
@@ -692,12 +736,13 @@ def _scatter(spec: ChartSpec, w: int, h: int) -> str:
             size=11,
             anchor="end",
         )
+    _caption(svg, 2, 10, spec.unit)
     col = (w - left - right) / max(len(cats), 1)
     colour = ROLE[spec.series[0].role] if spec.series else INK
     named: list[tuple[float, float, str]] = []
     for i, key in enumerate(cats):
         x0 = left + col * i
-        svg.text(x0 + col / 2, h - 8, key, size=12, fill=INK, anchor="middle")
+        svg.text(x0 + col / 2, h - 8, _fit(key, 12, col - 6), size=12, fill=INK, anchor="middle")
         mine = sorted(v for k, v in pts if k == key)
         n = len(mine)
         for j, v in enumerate(mine):
@@ -709,13 +754,17 @@ def _scatter(spec: ChartSpec, w: int, h: int) -> str:
             svg.add(
                 f'<circle cx="{_f(x)}" cy="{_f(ys(v))}" r="4" fill="{colour}" fill-opacity="0.35"/>'
             )
-    for x, y, label in named:  # drawn last, on top
+    for x, y, _label in named:  # drawn last, on top
         svg.add(
             f'<circle cx="{_f(x)}" cy="{_f(y)}" r="5" fill="{INK}" stroke="{WHITE}" '
             'stroke-width="1.5"/>'
         )
-        if label:
-            svg.text(x + 8, y + 4, label, size=11, fill=INK, weight=600)
+        svg.reserve((x - 5, y - 5, x + 5, y + 5))
+    for x, y, label in sorted(named, key=lambda n: (n[1], n[0])):  # the highest first
+        if label:  # kept inside the chart and clear of the others (label() moves it)
+            anchor = "end" if x > w * 0.75 else "start"
+            svg.label(x + (-8 if anchor == "end" else 8), y + 4, label, size=11, fill=INK,
+                      anchor=anchor, weight=600)  # fmt: skip
     return svg.done()
 
 

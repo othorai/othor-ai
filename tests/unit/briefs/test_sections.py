@@ -36,9 +36,9 @@ def _outside(spec, version, run_date, findings, watches, points, context, output
 
 @pytest.fixture
 def outside():
-    sections.register_brief_section("outside", _outside, max_items=2)
+    sections.register_brief_section("demo_outside", _outside, max_items=2)
     yield
-    sections.SECTIONS.pop("outside", None)
+    sections.SECTIONS.pop("demo_outside", None)
 
 
 def _make(monkeypatch, context):
@@ -58,7 +58,7 @@ def test_a_section_is_capped_and_kept_beside_the_ranked_items(monkeypatch, outsi
     assert issue["items"] == [{"rank": 1, "fingerprint": "f1"}]  # the ranked four untouched
     (sec,) = issue["sections"]
     assert sec == {
-        "key": "outside",
+        "key": "demo_outside",
         "title": "Outside",
         "note": "only when a linked signal moved",
         "items": [
@@ -75,7 +75,7 @@ def test_a_section_is_capped_and_kept_beside_the_ranked_items(monkeypatch, outsi
 def test_without_a_section_the_issue_keeps_its_bytes(monkeypatch, outside):
     doc = _make(monkeypatch, {})  # the plug-in has nothing tonight
     assert "sections" not in doc["issues"][0]["issue"]
-    sections.SECTIONS.pop("outside")
+    sections.SECTIONS.pop("demo_outside")
     doc = _make(monkeypatch, {"run_inputs": {"demo_outside": {}}})  # no plug-in at all
     assert "sections" not in doc["issues"][0]["issue"]
 
@@ -94,11 +94,11 @@ def test_a_failing_section_is_left_out(monkeypatch):
 
 def test_a_taken_key_cant_be_replaced(outside):
     with pytest.raises(ValueError):
-        sections.register_brief_section("outside", lambda *a: None)
+        sections.register_brief_section("demo_outside", lambda *a: None)
 
 
 SECTION = {
-    "key": "outside",
+    "key": "demo_outside",
     "title": "Outside · 1",
     "note": "only when a linked signal moved",
     "items": [
