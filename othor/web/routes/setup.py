@@ -1255,8 +1255,10 @@ def first_run_strip(request: Request, o: Owner = Depends(signed_in)) -> Response
 @router.get("/first-run/open")
 def first_run_open(request: Request, close: str = "", o: Owner = Depends(signed_in)) -> Response:
     """Open (or close) the strip: it goes; Open lands on Morning Brief."""
-    back = request.headers.get("referer") or "/home"
-    to = "/brief" if not close else (back if back.startswith(str(request.base_url)) else "/home")
+    from othor.web.context import local_path
+
+    back = local_path(request.headers.get("referer"), "/home", request.url.netloc)
+    to = "/brief" if not close else back
     r = RedirectResponse(to, 303)
     r.delete_cookie(FIRST_RUN_COOKIE)
     return r

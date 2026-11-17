@@ -29,7 +29,7 @@ from othor.core.models import Event, SetupState
 from othor.core.tenancy import Repo, tenant_scope
 from othor.setup import connect
 from othor.web import sources_view as sv
-from othor.web.context import company_url, resolve_site, root_url, services
+from othor.web.context import company_url, local_path, resolve_site, root_url, services
 from othor.web.routes.auth import STEP_ORDER, not_found, page
 from othor.web.routes.pages import Owner, shell_ctx, signed_in
 from othor.web.security import check_csrf
@@ -89,6 +89,12 @@ def _now(request: Request) -> Any:
 
 def _hx(request: Request) -> bool:
     return request.headers.get("HX-Request") == "true"
+
+
+def _current(request: Request) -> str | None:
+    """The page an htmx action came from (HX-Current-URL), as a path on this host, or None."""
+    raw = request.headers.get("HX-Current-URL")
+    return (local_path(raw, "", request.url.netloc) or None) if raw else None
 
 
 def _redirect(request: Request, url: str) -> Response:
@@ -591,7 +597,7 @@ def schema_skip(
             return not_found(request, o.site, *GONE)
         service.skip_schema(s, src, name, actor=str(o.viewer.id))
         s.commit()
-    return _redirect(request, request.headers.get("HX-Current-URL") or f"/setup/sources/{sid}/scan")
+    return _redirect(request, _current(request) or f"/setup/sources/{sid}/scan")
 
 
 @router.post("/sources/{sid}/schemas", dependencies=CSRF)
@@ -640,7 +646,7 @@ def table_use(
         except service.ActionRefused as e:
             return HTMLResponse(str(e), status_code=400)
         s.commit()
-    url = request.headers.get("HX-Current-URL") or f"/sources/{t.source_id}"
+    url = _current(request) or f"/sources/{t.source_id}"
     return _redirect(request, _with_param(url, toast=str(ev) if ev else None))
 
 
@@ -656,7 +662,7 @@ def table_use_undo(
             return not_found(request, o.site, *GONE)
         service.undo_use(s, t, dict(ev.before), actor=str(o.viewer.id), now=_now(request))
         s.commit()
-    url = request.headers.get("HX-Current-URL") or f"/sources/{t.source_id}"
+    url = _current(request) or f"/sources/{t.source_id}"
     return _redirect(request, _with_param(url, toast=None))
 
 
@@ -678,9 +684,7 @@ async def bring_back(request: Request, sid: uuid.UUID, o: Owner = Depends(signed
             except service.ActionRefused:
                 continue
         s.commit()
-    return _redirect(
-        request, request.headers.get("HX-Current-URL") or f"/setup/sources/{sid}/scan?tab=ignored"
-    )
+    return _redirect(request, _current(request) or f"/setup/sources/{sid}/scan?tab=ignored")
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1581,9 +1585,7 @@ def source_action(
         return _redirect(request, "/sources")
     if next_.startswith("/") and not next_.startswith("//"):
         return _redirect(request, next_)
-    return _redirect(
-        request, request.headers.get("HX-Current-URL") or f"/sources?panel=manage&s={sid}"
-    )
+    return _redirect(request, _current(request) or f"/sources?panel=manage&s={sid}")
 
 
 @router.post("/sources/test-all", dependencies=CSRF)

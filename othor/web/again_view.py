@@ -84,9 +84,9 @@ def load(
 
 def safe_next(raw: str | None) -> str:
     """Where the button goes back to: a path on this site only."""
-    if not raw or not raw.startswith("/") or raw.startswith("//") or "\\" in raw:
-        return "/"
-    return raw
+    from othor.web.context import local_path
+
+    return local_path(raw, "/")
 
 
 def with_reason(url: str, code: str) -> str:

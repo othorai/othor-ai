@@ -17,7 +17,7 @@ from othor.core.contact import available as contact_available
 from othor.core.events import record_event
 from othor.core.models import AppUser, Company, Event, Membership, SetupState
 from othor.core.tenancy import Repo, system_scope, tenant_scope
-from othor.web.context import Site, Viewer, resolve_site, services
+from othor.web.context import Site, Viewer, local_path, resolve_site, services
 from othor.web.errors import rate_limit
 from othor.web.routes.auth import (
     CURRENCIES,
@@ -1046,8 +1046,7 @@ def contact_send(
     topic, message = contact.topic(topic), message.strip()
     if not message and topic not in contact.MESSAGE_OPTIONAL:
         return toast(request, "Write a line about what you need", 422)
-    if not back.startswith("/") or back.startswith("//"):
-        back = "/home"
+    back = local_path(back, "/home")
     name, email = o.viewer.name or o.viewer.email, o.viewer.email
     if not website and svc.auth.contact(
         name, email, o.company.name, message, topic, company_slug=o.company.slug

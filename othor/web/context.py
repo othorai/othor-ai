@@ -160,3 +160,21 @@ class Viewer:
     @classmethod
     def of(cls, user: AppUser, role: str = "owner") -> Viewer:
         return cls(user.id, user.name or user.email.split("@")[0], user.email, role)
+
+
+def local_path(raw: str | None, default: str, host: str | None = None) -> str:
+    """A redirect target that stays on this site: a path (and query), or an absolute URL on
+    `host` turned into its path; anything else, `default`. One check for every "back", "next"
+    and HX-Current-URL redirect (CodeQL py/url-redirection, 17 Nov 2026)."""
+    from urllib.parse import urlsplit
+
+    if not raw or "\\" in raw or any(ord(ch) < 32 for ch in raw):
+        return default
+    parts = urlsplit(raw)
+    off_site = host is None or parts.netloc != host or parts.scheme not in ("http", "https")
+    if (parts.scheme or parts.netloc) and off_site:
+        return default
+    path = parts.path or "/"
+    if not path.startswith("/") or path.startswith("//"):
+        return default
+    return path + (f"?{parts.query}" if parts.query else "")

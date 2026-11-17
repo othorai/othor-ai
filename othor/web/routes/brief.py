@@ -153,6 +153,16 @@ def issue_ctx(
     }
 
 
+def _plain_email(email: str) -> bool:
+    """name@domain.tld, at most 320 characters, no spaces; checked without a backtracking
+    pattern (CodeQL py/polynomial-redos, 17 Nov 2026)."""
+    if len(email) > 320 or any(ch.isspace() for ch in email) or email.count("@") != 1:
+        return False
+    local, domain = email.split("@")
+    head, _, tld = domain.rpartition(".")
+    return bool(local and head and tld)
+
+
 @router.get("/brief", response_class=HTMLResponse)
 def brief_home(
     request: Request, created: str | None = None, o: Owner = Depends(signed_in)
@@ -417,7 +427,6 @@ async def edit_post(request: Request, bid: str, o: Owner = Depends(signed_in)) -
 @router.post("/brief/{bid}/recipients", dependencies=CSRF)
 async def add_recipient(request: Request, bid: str, o: Owner = Depends(signed_in)) -> Response:
     """Add a recipient (4d6): an event; they get the next email and a read-only link."""
-    import re
 
     from othor.briefs.models import Recipient
     from othor.core.events import record_event
@@ -430,7 +439,7 @@ async def add_recipient(request: Request, bid: str, o: Owner = Depends(signed_in
         brief = _brief(s, bid)
         if brief is None:
             return not_found(request, o.site, *GONE)
-        if re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        if _plain_email(email):
             got = s.scalars(
                 sa.select(Recipient).where(Recipient.brief_id == brief.id, Recipient.email == email)
             ).first()

@@ -8,6 +8,10 @@ on:
 # `make ci` still runs everything in one go locally.
 # a newer push to the same branch cancels the run still going for the older one (Actions minutes,
 # 12 Nov 2026)
+# the token reads the code only; no job writes (CodeQL actions/missing-workflow-permissions)
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
