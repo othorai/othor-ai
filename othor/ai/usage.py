@@ -46,6 +46,7 @@ LABEL = {
     "big_picture": "Big Picture report",
     # Look back (an Enterprise Edition feature; its prompts live in othor_ee)
     "look_back_plan": "Plan a Look back report",
+    "look_back_drill": "Look further in a Look back report",
     "look_back_suggest": "Suggest Look backs",
     "look_back_write": "Write a Look back report",
 }

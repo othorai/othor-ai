@@ -6,6 +6,31 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.24.2] - 2026-11-18
+
+### Fixed
+- Enterprise Edition, Look back: a finished report brings its top bar (PDF, Email, Regenerate)
+  without a reload; the progress asks again at once when the owner comes back to the tab or page;
+  a grouping named like the customer counts as the customer when none is marked (customers kept,
+  lost and new, concentration and the budget now run); the PDF's sections flow instead of a page
+  each.
+
+## [0.24.1] - 2026-11-18
+
+### Changed
+- Enterprise Edition, Look back reports go deeper: every report opens with how much the number
+  changed (years, months, halves); after the first results Othor looks further, up to four
+  drill-downs inside the group that drove the change (picked by a model from options code lists,
+  computed by code, frozen with the report so replay holds; without a model, the largest rise and
+  fall). The outside check is the last section, an extra, never in the headline or summary.
+  A suggested report plans every analysis the data can run. Apply sits on the steps' line.
+
+### Fixed
+- Look back on connected data: a growth question reads the sales number (it could read cash
+  collected); a number worked out from others maps to the one it is built on and its subtracted
+  parts count as deductions; a grouping on the number's own table is kept; no deductions section
+  when nothing is deducted.
+
 ## [0.24.0] - 2026-11-18
 
 ### Added
