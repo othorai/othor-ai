@@ -14,7 +14,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
       {% for o in panel.options %}{% call el("div", "option") %}{% call el("p", "hint") %}{{ o.label }}{% endcall %}{% call el("p", "option-v") %}{{ o.shown }}{% endcall %}{% call el("p", "hint") %}{{ o.where }}{% endcall %}{% endcall %}{% endfor %}
     </div>
-    {% call oc_list() %}{% call oc_one(1, "Which should every brief use?", "My suggestion" if panel.by_ai else ("Changed" if p else "Needs you"), "pick" if panel.by_ai else ("changed" if p else "needs")) %}
+    {% call oc_list() %}{% call oc_one(1, "Which should every brief use?", "My suggestion" if panel.by_ai else ("Changed" if p else ""), "pick" if panel.by_ai else "changed") %}
       {% if p %}{% call el("p", "strong") %}{{ p.text }}{% endcall %}{% endif %}
       {# no choice buttons (owner, 18 Nov 2026): the other definition, or both, through Suggest edits #}
     {% endcall %}{% endcall %}

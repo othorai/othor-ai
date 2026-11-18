@@ -3,11 +3,12 @@
    never stored. #}
 <div class="oc-preview">
 {% if pv.failed %}<p class="oc-note">{{ pv.failed }}</p>
+{% elif pv.chart %}<p class="oc-preview-title">{{ pv.title }}</p>{{ chart(pv.chart, 360, 120) }}{% if pv.note %}<p class="oc-note">{{ pv.note }}</p>{% endif %}
 {% elif not pv.rows %}<p class="oc-note">No rows to show in {{ pv.title|lower }}.</p>
 {% else %}<p class="oc-preview-title">{{ pv.title }}</p>
 <table class="oc-rows"><thead><tr>{% for h in pv.head %}<th scope="col">{{ h }}</th>{% endfor %}</tr></thead>
 <tbody>{% for r in pv.rows %}<tr>{% for c in r %}<td>{{ c }}</td>{% endfor %}</tr>{% endfor %}</tbody></table>
 {% if pv.note %}<p class="oc-note">{{ pv.note }}</p>{% endif %}
-<details class="oc-where"><summary>Where this comes from</summary><p class="oc-note">Read just now from {{ pv.source }}, read-only, and not kept.</p><pre><code>{{ pv.sql }}</code></pre></details>
+<details class="oc-where"><summary>Where this comes from</summary>{% if pv.sql %}<p class="oc-note">Read just now from {{ pv.source }}, read-only, and not kept.</p><pre><code>{{ pv.sql }}</code></pre>{% else %}<p class="oc-note">From {{ pv.source }}, as it was stored.</p>{% endif %}</details>
 {% endif %}
 </div>

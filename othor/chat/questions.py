@@ -66,6 +66,8 @@ def _effect(q: Question) -> str:
 def item(q: Question) -> dict[str, Any]:
     qid = f"q:{q.id}"
     base: dict[str, Any] = {
+        # a question from a finding: the records in question, from what the night stored
+        "evidence": bool((q.unblocks or {}).get("finding")),
         "id": qid,
         "text": q.text,
         "why": q.why,
@@ -84,8 +86,9 @@ def item(q: Question) -> dict[str, Any]:
                 "note": str(c.get("sub") or ""),
                 "tag": _tag(dict(c.get("change") or {})),
                 "type": str((c.get("change") or {}).get("type") or ""),
-                # real rows can be shown, read live by code from its names (M26.3)
-                "preview": preview.for_change(dict(c.get("change") or {})) is not None,
+                # real rows (M26.3) or, for a pair, the two numbers from stored series (0.26.2)
+                "preview": preview.for_change(dict(c.get("change") or {})) is not None
+                or (dict(c.get("change") or {}).get("body") or {}).get("kind") == "pair",
             }
             for c in cards
             if c.get("key") and c.get("change")
@@ -93,39 +96,66 @@ def item(q: Question) -> dict[str, Any]:
         dec = answers.decision(q)
         pick = dec.get("pick")
         card = next((c for c in cards if c.get("key") == pick), None)
-        high = card is not None and str((card.get("change") or {}).get("type")) in HIGH_IMPACT_TYPES
         strong = bool(card and card.get("strong"))
-        status = "pick" if (card and strong and not high) else "needs_you"
+        # owner, 18 Nov 2026: Othor AI always suggests an answer; the owner edits if it looks
+        # wrong. The decided card when there is one, else the best-ranked card (cards come in
+        # code's order); a weak one says why under it.
+        chosen = card or (cards[0] if cards else None)
+        high = (
+            chosen is not None
+            and str((chosen.get("change") or {}).get("type")) in HIGH_IMPACT_TYPES
+        )
+        if not opts or chosen is None:
+            return {**base, **_later()}
         return {
             **base,
             "answer_type": "choice",
             "options": opts,
-            "choice": str(pick) if status == "pick" else None,
-            "status": status if opts else "needs_you",
+            "choice": str(chosen.get("key")),
+            "status": "pick",
             "high_impact": high,
-            # no pick: why not, and the next step, as code found them at night
+            # a weak suggestion: why, and the next step, as code found them at night
             "why_not": (
                 " ".join(str(dec.get(k) or "").strip() for k in ("why", "next")).strip()
-                if status != "pick"
+                if not (strong and card is chosen)
                 else ""
             ),
         }
-    if q.kind == "unmapped_plant" and not q.quick_replies:
-        return {**base, "answer_type": "free_text", "options": [], "status": "needs_you"}
     opts = [
         {"key": r, "label": r, "note": "", "tag": None, "type": ""}
         for r in (q.quick_replies or [])
         if r not in NOT_A_CHOICE
     ]
-    if q.kind == "unmapped_plant":  # its plants, or the name typed
-        return {
-            **base,
-            "answer_type": "choice",
-            "options": opts,
-            "status": "needs_you",
-            "free_text_ok": True,
-        }
-    return {**base, "answer_type": "choice", "options": opts, "status": "needs_you"}
+    if not opts:  # a free-text question (a plant by name): nothing to suggest yet
+        return {**base, **_later()}
+    # owner, 18 Nov 2026: where Othor AI can't pick a side (the replies offer "look into it"),
+    # its suggestion is "Skip for now" (set aside a week, nothing written); else the first reply
+    if any(o["key"] in answers.LOOK_INTO_IT for o in opts):
+        return {**base, **_later(), "options": [*_later()["options"], *opts]}
+    chosen = opts[0]
+    return {
+        **base,
+        "answer_type": "choice",
+        "options": opts,
+        "choice": chosen["key"],
+        "status": "pick",
+        **({"free_text_ok": True} if q.kind == "unmapped_plant" else {}),
+    }
+
+
+LATER = "__later"
+
+
+def _later() -> dict[str, Any]:
+    """Nothing Othor AI can pick: it suggests "Skip for now" (Apply sets it aside a week and
+    writes nothing), never a bare Needs you (owner, 18 Nov 2026)."""
+    return {
+        "answer_type": "choice",
+        "options": [{"key": LATER, "label": "Skip for now", "note": "", "tag": None}],
+        "choice": LATER,
+        "status": "pick",
+        "effect": "Set aside for a week; nothing changes.",
+    }
 
 
 def build(s: Session, today: dt.date) -> list[dict[str, Any]]:
@@ -175,6 +205,8 @@ def apply(
     plan: list[tuple[Question, list[Any], str, dict[str, Any]]] = []
     missed: list[str] = []
     for it in pending.to_apply(items):
+        if it.get("choice") == LATER:  # set aside by skip(), not answered
+            continue
         q = _question(s, str(it["id"]))
         if q is None or q.status == "answered":
             missed.append(str(it["id"]))
@@ -234,7 +266,8 @@ def skip(s: Session, items: list[dict[str, Any]], *, actor: str, today: dt.date)
     """Skipped items come back in a week, as Ask me later did."""
     out = []
     for it in items:
-        if it.get("status") != "skipped":
+        later = it.get("choice") == LATER and it.get("status") in pending.APPLY
+        if it.get("status") != "skipped" and not later:
             continue
         q = _question(s, str(it["id"]))
         if q is not None and q.status != "answered":

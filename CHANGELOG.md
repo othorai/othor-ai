@@ -6,6 +6,22 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.26.2] - 2026-11-18
+
+### Added
+- Ask answers four more questions from what the night computed: today's brief, System Health,
+  Intelligence (how much Sweep can check, and what would raise it) and what's ahead.
+- Questions for you: a pair question shows the two numbers' last 12 weeks side by side; a
+  "which system is right" question shows the records as each source has them; both from the
+  night's stored results, never read live or sent to a model.
+- "More" on a question opens it alone in the same panel, with more rows and where it comes from.
+- After Apply, the message says how Intelligence moves ("Intelligence 72% → 81%") when it does.
+
+### Changed
+- Every question carries Othor AI's suggestion by default, with Apply and Suggest edits only;
+  no option lists and no "Needs you". Where Othor AI can't pick a side, its suggestion is
+  "Skip for now": the question is set aside for a week and nothing changes.
+
 ## [0.26.1] - 2026-11-18
 
 ### Changed

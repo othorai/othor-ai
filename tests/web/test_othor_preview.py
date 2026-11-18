@@ -88,7 +88,7 @@ def test_a_pick_shows_real_rows_read_live_never_stored(night):  # noqa: F811
     urls = [html.unescape(u) for u in re.findall(r'hx-get="(/othor/preview\?[^"]+)"', chat)]
     pick = f"/othor/preview?item=q%3A{qid}&option=rec"
     other = f"/othor/preview?item=q%3A{qid}&option=ent"
-    assert pick in urls and other in urls
+    assert pick in urls and other not in urls  # the suggestion's rows; no other options shown
     assert 'hx-trigger="load"' in chat  # the pick's rows load as the chat opens
     with svc.sf() as s, tenant_scope(cid):
         calls = s.scalar(sa.select(sa.func.count()).select_from(ModelCall))
@@ -97,8 +97,8 @@ def test_a_pick_shows_real_rows_read_live_never_stored(night):  # noqa: F811
     rows = re.findall(r"<tr><td>([^<]+)</td>", r.text)
     assert 1 <= len(rows) <= 6 and "order no" in r.text and "Where this comes from" in r.text
     assert "read-only, and not kept" in r.text
-    counts = env.client.get(h + other).text
-    assert "<td>active</td>" in counts.lower() or "active" in counts
+    counts = env.client.get(h + other).text  # still readable directly (the no-model buttons)
+    assert "active" in counts
     # never stored, never sent to a model
     with svc.sf() as s, tenant_scope(cid):
         stored = " ".join(str(m.proposal) + m.text for m in s.scalars(sa.select(ChatMessage)))
@@ -112,3 +112,33 @@ def test_only_the_questions_own_cards_are_read(night):  # noqa: F811
     for bad in (f"item=q%3A{qid}&option=nope", "item=q%3Anot-a-uuid&option=rec", "item=x"):
         r = env.client.get(h + "/othor/preview?" + bad)
         assert r.status_code == 200 and "<table" not in r.text
+
+
+def test_pair_and_finding_previews_come_from_stored_results(night):  # noqa: F811
+    """0.26.2 (items 5–6): "move together" draws the two numbers from the night's stored series;
+    "which system is right" shows the records the night kept with the finding. Neither reads a
+    source (no query is logged) and nothing is stored."""
+    from othor.connectors.models import RunQuery
+
+    env, h, cid, _rid, svc = night
+    page = env.client.get(h + "/home?panel=othor&subject=questions").text
+    chat = page.split('id="othor-chat"', 1)[1]
+    urls = [html.unescape(u) for u in re.findall(r'hx-get="(/othor/preview\?[^"]+)"', chat)]
+    pair = [u for u in urls if "option=pair" in u]
+    rows = [u for u in urls if "rows=1" in u]
+    assert pair and rows, urls
+    with svc.sf() as s, tenant_scope(cid):
+        logged = s.scalar(sa.select(sa.func.count()).select_from(RunQuery))
+    got = env.client.get(h + pair[0])
+    assert got.headers["cache-control"] == "no-store" and "<svg" in got.text
+    assert "last 12 weeks" in got.text
+    seen = ""
+    for u in rows:
+        r = env.client.get(h + u).text
+        seen += r
+        assert "The records in question" in r or r.strip() == '<div class="oc-preview"></div>'
+    assert "<td>" in seen  # at least one finding kept its records
+    with svc.sf() as s, tenant_scope(cid):
+        assert s.scalar(sa.select(sa.func.count()).select_from(RunQuery)) == logged  # no read
+        stored = " ".join(str(m.proposal) for m in s.scalars(sa.select(ChatMessage)))
+        assert "<svg" not in stored

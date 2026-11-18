@@ -14,7 +14,7 @@
 {% if part == "body" %}
   {% call oc_ai() %}
     <p>{{ panel.intro }}{% if panel.today and panel.purpose == "edit" %} Today: {% call el("b") %}{{ panel.today }}{% endcall %}{% endif %}</p>
-    {% if panel.pick or panel.editing %}{% call oc_list() %}{% call oc_one(1, "", "My suggestion" if panel.pick else "Needs you", "pick" if panel.pick else "needs") %}
+    {% if panel.pick or panel.editing %}{% call oc_list() %}{% call oc_one(1, "", "My suggestion" if panel.pick else "", "pick") %}
       {% if panel.pick %}{% call el("p", "strong") %}{{ panel.pick.label }}{% endcall %}{% if panel.pick.note %}{% call el("p", "hint") %}{{ panel.pick.note }}{% endcall %}{% endif %}{% endif %}
       {# with a suggestion, the other candidates aren't shown as buttons: Suggest edits takes the
          owner's own (owner, 18 Nov 2026) #}

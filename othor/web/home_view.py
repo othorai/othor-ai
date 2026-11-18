@@ -1051,3 +1051,27 @@ def trial(company: Any, now: Any, settings: Any) -> dict[str, Any] | None:
         "support": settings.support_email,
         "form": contact.available(settings),  # Contact us in the side panel (17 Nov 2026)
     }
+
+
+def intelligence_share(
+    s: Session, settings: Settings, today: dt.date, unlock: set[str] | None = None
+) -> int | None:
+    """The top bar's Intelligence share, as `checks_strip` counts it; with `unlock`, the same
+    with those waiting checks counted as able to run (0.26.2: what applying answers buys; the
+    night confirms it). None before the first run."""
+    runs = sv.detecting_runs(s)
+    rv = sv.load(s, settings, runs[0], today) if runs else None
+    if rv is None:
+        return None
+    cov = {c["detector"]: c for c in rv.doc.get("coverage", [])}
+    total = ran = 0
+    for name in sv.shipped():
+        c = cov.get(name)
+        if c is None:
+            continue
+        total += 1
+        if c["status"] in ("ran", "partly") or (
+            unlock and name in unlock and c.get("needs") in ANSWERABLE
+        ):
+            ran += 1
+    return round(100 * ran / total) if total else None

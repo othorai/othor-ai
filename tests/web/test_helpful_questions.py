@@ -75,10 +75,8 @@ def test_the_pair_question_shows_cards_with_computed_reasons(night):  # noqa: F8
     assert "Sweep test" not in panel and "could not run last night" not in panel  # #33
     assert NOTE in panel  # Othor AI's picks are drafts until Apply (0.26)
     pick = sub["decide"]["pick"]
-    for c in cards:  # the pick by its name; the others with what each is
-        assert c["label"] in panel
-        if c["key"] != pick:
-            assert c["sub"] in panel
+    for c in cards:  # the suggestion by its name; no list of other options (owner, 18 Nov)
+        assert (c["label"] in panel) == (c["key"] == pick)
     assert "My suggestion" in panel and 'action="/othor/apply"' in panel
     assert "Let Othor AI decide" not in panel and "Ask me later" not in panel
 
@@ -129,6 +127,11 @@ def test_othor_ais_pick_applies_on_the_owners_apply(night):  # noqa: F811
         assert rec.body["kind"] == "pair"
     ev = next(e for e in _events(svc, cid, "question.answered") if e.object_id == str(q.id))
     assert ev.after["picked_by"] == "othor_ai"
+    # 0.26.2 (item 8): what answering bought, worked out by code: the pair lets Lead/lag run
+    import re
+
+    m = re.search(r"Intelligence (\d+)% → <b>(\d+)%</b>", _panel(env, h))
+    assert m and int(m.group(2)) > int(m.group(1)), "Intelligence before → after"
 
 
 def _company(s, cid):
@@ -137,7 +140,7 @@ def _company(s, cid):
     return s.scalars(sa.select(Company).where(Company.id == cid)).one()
 
 
-def test_below_the_bar_it_needs_the_owner_says_why_and_writes_nothing(night):  # noqa: F811
+def test_below_the_bar_it_still_suggests_and_says_why(night):  # noqa: F811
     env, h, cid, _rid, svc = night
     q = _pair_q(svc, cid)
     with svc.sf() as s, tenant_scope(cid):
@@ -155,11 +158,12 @@ def test_below_the_bar_it_needs_the_owner_says_why_and_writes_nothing(night):  #
         row.subject = sub
         s.commit()
     panel = _panel(env, h)
-    assert "Needs you" in panel and sub["decide"]["why"] in panel
-    assert sub["decide"]["next"] in panel and sub["suggestions"][0]["label"] in panel
+    # owner, 18 Nov 2026: a weak suggestion is still a suggestion, with why under it
+    assert "My suggestion" in panel and "Needs you" not in panel
+    assert sub["decide"]["why"] in panel and sub["decide"]["next"] in panel
     _chat(env, h, "/othor/apply", {"subject": "questions"})
     with svc.sf() as s, tenant_scope(cid):
-        assert s.get(Question, q.id).status == "open"  # not answered: it needs the owner
+        assert s.get(Question, q.id).status == "answered"  # Apply applies the suggestion
 
 
 def test_nothing_found_says_so_with_the_next_step(night):  # noqa: F811
@@ -182,7 +186,7 @@ def test_nothing_found_says_so_with_the_next_step(night):  # noqa: F811
         qid = q.id
     panel = _panel(env, h, qid)
     assert "Is this your customer list, with who is active?" in panel
-    assert f.why in panel and f.next in panel and "Needs you" in panel
+    assert "Skip for now" in panel and "Needs you" not in panel  # nothing found
 
 
 class _EmptyCat:

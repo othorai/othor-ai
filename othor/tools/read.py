@@ -235,3 +235,166 @@ register(
         ("question", "waiting", "need from me"),
     )
 )
+
+
+# --- Home's own view: today's briefs, System Health, Intelligence, what's ahead (0.26.2) ----
+
+
+def _home(ctx: Ctx) -> dict[str, Any]:
+    """Home's view, computed the way Home computes it, so a tool and the page never disagree."""
+    import datetime as dt
+
+    from othor.web import home_view as hv
+
+    return hv.page(ctx.s, ctx.settings, ctx.company, ctx.today, dt.datetime.now(dt.UTC))
+
+
+def _run_prov(ctx: Ctx, home: dict[str, Any]) -> dict[str, Any]:
+    run = home.get("run")
+    return _provenance(ctx, _rd(ctx)) if run is not None else {}
+
+
+def _brief(ctx: Ctx, args: dict[str, Any]) -> Card:
+    home = _home(ctx)
+    cards = list(home.get("cards") or [])
+    want = str(args.get("name") or "").strip().lower()
+    if want:
+        cards = [c for c in cards if want in str(c.get("name") or "").lower()] or cards
+    lines = []
+    for c in cards[:6]:  # a headline is a sentence: a line, not a label and value
+        lines.append(f"{c.get('name')} brief: {c.get('title') or 'No issue yet'}")
+        if c.get("meta"):
+            lines.append(str(c["meta"]))
+    return Card(
+        "brief",
+        "Today's briefs",
+        lines=lines,
+        provenance=_run_prov(ctx, home),
+        empty="No brief yet." if not cards else "",
+    )
+
+
+register(
+    Tool(
+        "brief",
+        "Today's Morning Brief: each brief's headline, how many findings it carries and when it "
+        "goes out. `name` picks one brief.",
+        {
+            "type": "object",
+            "properties": {"name": {"type": "string", "maxLength": 80}},
+            "additionalProperties": False,
+        },
+        _brief,
+        ("brief", "headline", "morning"),
+    )
+)
+
+
+STATE_WORD = {
+    "ok": "Fine",
+    "note": "Note",
+    "warn": "Needs a look",
+    "bad": "Needs you",
+    "info": "Info",
+}
+
+
+def _system_health(ctx: Ctx, args: dict[str, Any]) -> Card:
+    del args
+    home = _home(ctx)
+    lt = home.get("lights") or {}
+    rows = list(lt.get("lights") or [])
+    order = {"bad": 0, "warn": 1, "note": 2, "info": 3, "ok": 4}
+    rows.sort(key=lambda x: order.get(str(x.get("state")), 5))
+    return Card(
+        "system_health",
+        "System Health",
+        facts=[
+            (
+                str(x.get("label") or ""),
+                f"{STATE_WORD.get(str(x.get('state')), '')} · {x.get('line')}",
+            )
+            for x in rows
+        ],
+        lines=[str(lt.get("summary"))] if lt.get("summary") else [],
+        provenance=_run_prov(ctx, home),
+        empty=NO_RUN if not rows else "",
+    )
+
+
+register(
+    Tool(
+        "system_health",
+        "System Health: whether the sources answered and were fresh, how the night's run went, "
+        "and what needs the owner, most urgent first.",
+        {"type": "object", "properties": {}, "additionalProperties": False},
+        _system_health,
+        ("health", "healthy", "system", "fresh"),
+    )
+)
+
+
+def _intelligence(ctx: Ctx, args: dict[str, Any]) -> Card:
+    del args
+    home = _home(ctx)
+    c = home.get("checks")
+    if not c:
+        return Card("intelligence", "Intelligence", empty=NO_RUN)
+    facts = [("Intelligence", f"{fmt.num(c['pct'])}%")]
+    for g in c.get("groups") or []:
+        if g.get("n"):
+            facts.append((str(g.get("label")), fmt.num(g["n"])))
+    lines = [str(c.get("explain") or "")]
+    if c.get("tail"):
+        lines.append(str(c["tail"]))
+    return Card(
+        "intelligence",
+        "How much Sweep can check",
+        facts=facts,
+        lines=[x for x in lines if x],
+        provenance=_run_prov(ctx, home),
+    )
+
+
+register(
+    Tool(
+        "intelligence",
+        "Intelligence: the share of Sweep's checks that could run last night, why the rest "
+        "couldn't, and what would raise it.",
+        {"type": "object", "properties": {}, "additionalProperties": False},
+        _intelligence,
+        ("intelligence", "how much can", "coverage percent"),
+    )
+)
+
+
+def _whats_ahead(ctx: Ctx, args: dict[str, Any]) -> Card:
+    home = _home(ctx)
+    o = home.get("outlook") or {}
+    weeks = list(o.get("weeks") or [])[: int(args.get("weeks") or 4)]
+    return Card(
+        "whats_ahead",
+        "The next weeks",
+        facts=[
+            (f"{w.get('name')} · {w.get('dates')}", f"{w.get('label')} · {w.get('line')}")
+            for w in weeks
+        ],
+        provenance=_run_prov(ctx, home),
+        empty="No outlook yet: it needs a few weeks of history." if not weeks else "",
+    )
+
+
+register(
+    Tool(
+        "whats_ahead",
+        "What's ahead: each of the next weeks (from forecasts, goals and deadlines), what could "
+        "go wrong and how sure Othor AI is.",
+        {
+            "type": "object",
+            "properties": {"weeks": {"type": "integer", "minimum": 1, "maximum": 4}},
+            "additionalProperties": False,
+        },
+        _whats_ahead,
+        ("ahead", "next week", "coming up", "forecast"),
+    )
+)

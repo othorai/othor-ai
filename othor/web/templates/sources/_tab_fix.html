@@ -13,7 +13,7 @@
   {% call oc_ai() %}
     <p>Tell me what looks wrong, or set a column’s unit here.</p>
     {# the unit form only once the owner opens Suggest edits (owner, 18 Nov 2026: no pills) #}
-    {% if fix.numbers and editing %}{% call oc_list() %}{% call oc_one(1, "Are the values in another unit?", "Needs you", "needs") %}
+    {% if fix.numbers and editing %}{% call oc_list() %}{% call oc_one(1, "Are the values in another unit?") %}
       {% call oc_options() %}<li>
       <details>{% call el("summary", "chip lg") %}Values are in another unit{% endcall %}
         <form class="flex items-end gap-8 flex-wrap mt-8" method="post" action="{{ shape_url }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="header_row" value="{{ tab.header_row }}"><input type="hidden" name="last_row" value="{{ tab.last_row or '' }}">

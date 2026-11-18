@@ -226,14 +226,23 @@ def choose(
 
 
 def apply(
-    s: Session, t: ChatThread, *, actor: str, now: dt.datetime, today: dt.date
+    s: Session,
+    t: ChatThread,
+    *,
+    actor: str,
+    now: dt.datetime,
+    today: dt.date,
+    only: str | None = None,
 ) -> ChatMessage | None:
     """The owner's Apply: every ready item of the current set in one Business Model version;
     skipped ones set aside for a week. Othor AI's message says what each answer does."""
     m = last_set(s, t)
     if m is None:
         return None
-    items = list(prop(m)["items"])
+    every = list(prop(m)["items"])
+    # the detail view's Apply (0.26.2): that one question; the rest stay as they are
+    items = [i for i in every if i["id"] == only] if only else every
+    rest = [i for i in every if i["id"] != only] if only else []
     out = questions.apply(s, items, actor=actor, now=now, today=today)
     skipped = questions.skip(s, items, actor=actor, today=today)
     m.applied = True
@@ -252,6 +261,16 @@ def apply(
     )
     s.add(done)
     s.flush()
+    if rest:  # the others, as the owner left them
+        s.add(
+            ChatMessage(
+                thread_id=t.id,
+                role="ai",
+                text="Here are the rest.",
+                proposal={"kind": "set", "items": rest},
+            )
+        )
+        s.flush()
     record_event(
         s,
         actor=actor,
@@ -271,7 +290,7 @@ def apply(
 def applied_text(out: dict[str, Any], skipped: list[str]) -> str:
     n = len(out["applied"])
     head = f"Applied {n} answer{'s' if n != 1 else ''}." if n else "Nothing was applied."
-    tail = f" I'll ask about the {len(skipped)} you skipped again next week." if skipped else ""
+    tail = f" I'll ask about {len(skipped)} again next week." if skipped else ""
     missed = len(out.get("not_applied") or [])
     if missed:  # its answer can't be written now (what it refers to has changed): said, not hidden
         what = "it refers" if missed == 1 else "they refer"

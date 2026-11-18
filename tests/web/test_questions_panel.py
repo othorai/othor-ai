@@ -95,3 +95,31 @@ def test_with_every_question_answered_the_chat_says_so(night):  # noqa: F811
     assert "No questions for you right now." in page and "/othor/apply" not in page
     # #89: nothing pending, so no drafts note and no reply box
     assert "Drafts only" not in page and 'id="oc-reply"' not in page
+
+
+def test_one_question_on_its_own_and_applied_alone(night):  # noqa: F811
+    """0.26.2 (item 7): "More" opens one question alone, with "← Back to all questions", up to
+    8 rows and its own Apply; applying it answers that one and leaves the rest as they were."""
+    env, h, cid, _rid, svc = night
+    page = _chat(env, h)
+    import re
+
+    m = re.search(r'href="(/home\?panel=othor&amp;subject=questions&amp;item=q:[^"]+)"', page)
+    assert m, "each question has More"
+    url = m.group(1).replace("&amp;", "&")
+    qid = url.split("item=q:", 1)[1]
+    one = env.client.get(h + url).text.split('id="othor-chat"', 1)[1]
+    assert "← Back to all questions" in one and one.count('class="oc-item"') == 1
+    # Apply only when this question has an answer to apply (a Needs you one has none yet)
+    assert (f'name="only" value="q:{qid}"' in one) == ("My suggestion" in one)
+    with svc.sf() as s, tenant_scope(cid):
+        others = {str(q.id) for q in s.scalars(sa.select(Question)) if q.status == "open"} - {qid}
+    _post(env, h, "/othor/apply", {"subject": "questions", "only": f"q:{qid}", "back": CHAT})
+    with svc.sf() as s, tenant_scope(cid):
+        q = s.get(Question, uuid.UUID(qid))
+        still = {str(x.id) for x in s.scalars(sa.select(Question)) if x.status == "open"}
+    if (
+        q.status == "answered"
+    ):  # a question with a suggestion applies; one that needs the owner doesn't
+        assert others <= still
+    assert "Here are the rest." in _chat(env, h) or not others

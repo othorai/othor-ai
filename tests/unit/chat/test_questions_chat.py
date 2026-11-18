@@ -71,7 +71,7 @@ PAIR = {
 }
 
 
-def test_picks_needs_you_and_one_version_for_every_answer(world) -> None:  # type: ignore[no-untyped-def]
+def test_every_question_has_a_suggestion_and_one_version_for_every_answer(world) -> None:  # type: ignore[no-untyped-def]
     with world.sf() as s, tenant_scope(world.cid):
         a = _q(
             s,
@@ -101,21 +101,14 @@ def test_picks_needs_you_and_one_version_for_every_answer(world) -> None:  # typ
         ia, ib, ic = by[f"q:{a.id}"], by[f"q:{b.id}"], by[f"q:{c.id}"]
         assert ia["status"] == "pick" and ia["choice"] == "pair:a"
         assert "2 more checks" in ia["effect"]
-        # a metric answer could rewrite past findings: the owner's, never Othor AI's pick
-        assert ib["status"] == "needs_you" and ib["high_impact"] and ib["choice"] is None
-        assert ic["status"] == "needs_you" and [o["key"] for o in ic["options"]] == [
-            "Yes, every year"
-        ]
-        assert pending.counts(items)["apply"] == 1
+        # owner, 18 Nov 2026: Othor AI suggests for every question (no Needs you); a metric
+        # answer is still flagged high-impact
+        assert ib["status"] == "pick" and ib["high_impact"] and ib["choice"] == "m:1"
+        assert ic["status"] == "pick" and ic["choice"] == "Yes, every year"
+        assert pending.counts(items)["apply"] == 3 and pending.counts(items)["needs_you"] == 0
 
-        # the owner's reply picks the pattern's answer; the metric one is skipped
-        items, dropped = pending.edit(
-            items,
-            [
-                {"id": ic["id"], "action": "pick", "option": "Yes, every year"},
-                {"id": ib["id"], "action": "skip"},
-            ],
-        )
+        # the owner's reply skips the metric one
+        items, dropped = pending.edit(items, [{"id": ib["id"], "action": "skip"}])
         assert dropped == 0
         n = service.current_number(s)
         out = questions.apply(s, items, actor="o", now=NOW, today=TODAY)
@@ -124,19 +117,26 @@ def test_picks_needs_you_and_one_version_for_every_answer(world) -> None:  # typ
         assert a.status == "answered" and c.status == "answered" and b.status == "open"
         assert a.answer_version == c.answer_version == out["version"]
         evs = [e for e in s.scalars(sa.select(Event).where(Event.action == "question.answered"))]
-        assert len(evs) == 2 and {e.after["picked_by"] for e in evs} == {"othor_ai", "owner"}
+        assert len(evs) == 2 and {e.after["picked_by"] for e in evs} == {"othor_ai"}
 
         questions.skip(s, items, actor="o", today=TODAY)
         assert b.status == "skipped" and b.skipped_until == TODAY + dt.timedelta(days=7)
 
 
-def test_nothing_ready_applies_nothing(world) -> None:  # type: ignore[no-untyped-def]
+def test_nothing_to_suggest_means_ask_again_next_week(world) -> None:  # type: ignore[no-untyped-def]
+    """A question Othor AI can't suggest an answer for (a plant typed by name) is suggested for
+    next week: Apply sets it aside, writes nothing."""
     with world.sf() as s, tenant_scope(world.cid):
-        _q(s, "pattern", {"pattern": "x"}, ("Yes, every year",))
+        q = _q(s, "unmapped_plant", {"prefix": "KC"}, ())
+        items = questions.build(s, TODAY)
+        (it,) = items
+        assert it["status"] == "pick" and it["choice"] == questions.LATER
         n = service.current_number(s)
-        out = questions.apply(s, questions.build(s, TODAY), actor="o", now=NOW, today=TODAY)
+        out = questions.apply(s, items, actor="o", now=NOW, today=TODAY)
         assert out == {"applied": [], "version": None, "not_applied": []}
         assert service.current_number(s) == n
+        assert questions.skip(s, items, actor="o", today=TODAY) == [it["id"]]
+        assert q.status == "skipped"
 
 
 class _Got:
@@ -173,7 +173,7 @@ def test_a_reply_edits_the_set_and_never_applies(world) -> None:  # type: ignore
         c = _q(s, "pattern", {"pattern": "surat_shutdown"}, ("Yes, every year",), rank="3|")
         t = chat.thread(s, "questions")
         m = chat.open_set(s, t, TODAY)
-        assert m is not None and "I've suggested answers for 1, and 1 need you" in m.text
+        assert m is not None and "I've suggested an answer for each" in m.text
         assert chat.open_set(s, t, TODAY) is m  # the same set until something changes
         n = service.current_number(s)
         gw = _Gateway(

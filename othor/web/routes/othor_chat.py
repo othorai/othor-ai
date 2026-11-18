@@ -90,6 +90,7 @@ def apply(
     subject: str = Form("questions"),
     back: str = Form(""),
     decision: str = Form(""),
+    only: str = Form(""),
     o: Owner = Depends(signed_in),
 ) -> Response:
     from othor.chat import changes, proposals
@@ -114,11 +115,29 @@ def apply(
             changes.apply(s, o.company, t, actor=str(o.viewer.id))
             s.commit()
             return RedirectResponse(_back(back, subject), 303)
+        from othor.web import home_view as hv
+
+        today = local_date(o.company, svc.clock())
+        before = hv.intelligence_share(s, svc.settings, today)
         done = chat.apply(
-            s, t, actor=str(o.viewer.id), now=svc.clock(), today=local_date(o.company, svc.clock())
+            s,
+            t,
+            actor=str(o.viewer.id),
+            now=svc.clock(),
+            today=local_date(o.company, svc.clock()),
+            only=only or None,
         )
         if done is not None and (done.proposal or {}).get("version"):
             compile_version(s, o.company, actor=str(o.viewer.id))
+            # 0.26.2: what answering bought, worked out by code (the night confirms it)
+            unlock = {
+                str(d)
+                for a in (done.proposal or {}).get("applied") or []
+                for d in a.get("unblocks") or []
+            }
+            after = hv.intelligence_share(s, svc.settings, today, unlock)
+            if before is not None and after is not None and after > before:
+                done.proposal = {**(done.proposal or {}), "intel": [before, after]}
         s.commit()
     return RedirectResponse(_back(back, subject), 303)
 
@@ -148,6 +167,8 @@ def preview(
     item: str = "",
     option: str = "",
     subject: str = "",
+    rows: str = "",
+    limit: int = 6,
     o: Owner = Depends(signed_in),
 ) -> Response:
     """A choice's real rows (M26.3), read live by code from the choice's own names: the item
@@ -167,15 +188,42 @@ def preview(
     svc = services(request)
     with svc.sf() as s, tenant_scope(o.company.id):
         q = questions._question(s, item)
-        card = answers._card(q, option) if q is not None and q.status != "answered" else None
+        live = q is not None and q.status != "answered"
+        nothing = HTMLResponse('<div class="oc-preview"></div>')
+        headers = {"Cache-Control": "no-store"}
+        # 0.26.2: from what the night stored, no source read
+        if live and rows == "1":  # a question from a finding: the records in question
+            fp = str((q.unblocks or {}).get("finding") or "")
+            if not fp:
+                return nothing
+            got = pv.finding_rows(s, fp, limit=max(1, min(limit, 8)))
+            if got.failed:  # nothing kept with this finding: show nothing, not a note
+                return nothing
+            return templates.TemplateResponse(
+                request, "components/othor_preview.html", {"pv": got}, headers=headers
+            )
+        card = answers._card(q, option) if live else None
+        body = (dict(card.get("change") or {}).get("body") or {}) if card else {}
+        if body.get("kind") == "pair" and len(body.get("over") or []) == 2:
+            from othor.web.ontology_view import run_data
+
+            a, b = body["over"]
+            spec = pv.pair_chart(run_data(s, svc.settings), a, b)
+            if spec is None:
+                return nothing
+            shown = pv.Preview(title="The two numbers, last 12 weeks", head=[], chart=spec)
+            shown.note = str(card.get("sub") or "") if card else ""
+            return templates.TemplateResponse(
+                request, "components/othor_preview.html", {"pv": shown}, headers=headers
+            )
         ask = pv.for_change(dict(card.get("change") or {})) if card else None
         if ask is None:
-            return HTMLResponse('<div class="oc-preview"></div>')
+            return nothing
         cat = load_catalog(s)
         records = {(r.type, r.key): dict(r.body) for r in service.active(s)}
     ctx = EngineContext(svc.settings, svc.sf, svc.key, clock=svc.clock)
     with tenant_scope(o.company.id):
-        got = pv.read(ctx, o.company.id, records, cat, ask)
+        got = pv.read(ctx, o.company.id, records, cat, ask, limit=max(1, min(limit, 8)))
     return templates.TemplateResponse(
         request, "components/othor_preview.html", {"pv": got}, headers={"Cache-Control": "no-store"}
     )

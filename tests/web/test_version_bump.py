@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""v0.15 (M15.9) to v0.24 (18 Nov 2026): the image is 0.26.1; a run sealed under 0.1.0 keeps its own
+"""v0.15 (M15.9) to v0.24 (18 Nov 2026): the image is 0.26.2; a run sealed under 0.1.0 keeps its own
 version, still replays byte for byte and still passes the ledger check (replay
 never reads the version; the ledger reads each run's stored one)."""
 
@@ -18,12 +18,12 @@ from tests.web.test_sweep_web import night  # noqa: F401
 
 
 def test_the_image_is_0_20_0() -> None:
-    assert __version__ == "0.26.1"
+    assert __version__ == "0.26.2"
 
 
 def test_a_run_sealed_under_0_1_0_still_replays_and_verifies(night):  # noqa: F811
     env, h, cid, rid, svc = night
-    assert svc.settings.image_version == "0.26.1"
+    assert svc.settings.image_version == "0.26.2"
     with svc.sf() as s, tenant_scope(cid):
         run = s.scalars(sa.select(Run).where(Run.id == rid)).one()
         assert run.image_version == "0.1.0"  # the night was sealed as an older image
@@ -33,7 +33,7 @@ def test_a_run_sealed_under_0_1_0_still_replays_and_verifies(night):  # noqa: F8
     with svc.sf() as s, tenant_scope(cid):
         v = verify(s, svc.settings, cid)
     assert v.ok, v.problems
-    assert env.client.get(h.replace("indigothread.", "") + "/healthz").json()["version"] == "0.26.1"
+    assert env.client.get(h.replace("indigothread.", "") + "/healthz").json()["version"] == "0.26.2"
 
 
 def test_the_package_and_the_project_say_the_same_version() -> None:

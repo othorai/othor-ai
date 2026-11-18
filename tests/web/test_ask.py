@@ -121,3 +121,29 @@ def test_the_gate_refuses_before_anything_runs(night):  # noqa: F811
     assert names == sorted(names) and {"numbers", "metric", "findings"} <= set(names)
     for t in tools.listing():  # every schema closes its arguments (nothing else passes)
         assert t["args_schema"].get("additionalProperties") is False, t["name"]
+
+
+def test_the_four_home_tools_answer_from_homes_own_view(night):  # noqa: F811
+    """0.26.2 (items 1–4): today's brief, System Health, Intelligence and what's ahead, each read
+    from the view Home shows (so they never disagree), picked by the question's words."""
+    env, h, cid, _rid, svc = night
+    home = env.client.get(h + "/home").text
+    asks = {
+        "what does today's brief say?": ("brief", "Today's briefs"),
+        "how healthy is everything?": ("system_health", "System Health"),
+        "how much intelligence do we have?": ("intelligence", "How much Sweep can check"),
+        "what is coming up next week?": ("whats_ahead", "The next weeks"),
+    }
+    for q, (_tool, title) in asks.items():
+        _post(env, h, "/othor/reply", {"subject": "ask", "text": q, "back": BACK})
+        import html
+
+        page = html.unescape(env.client.get(h + BACK).text)
+        assert title in page, q
+    assert [e.after["tool"] for e in _events(svc, cid)] == [t for t, _ in asks.values()]
+    page = env.client.get(h + BACK).text
+    # the Intelligence card says the same share as the top bar's ring
+    import re
+
+    pct = re.search(r'aria-label="Intelligence at (\d+)%"', home).group(1)
+    assert f"<dd>{pct}%</dd>" in page

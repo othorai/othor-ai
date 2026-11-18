@@ -2275,7 +2275,7 @@ form:has(> .fold[open]) > .fold-hide { display: none; }
 /* Ask Othor AI's answer card (0.26, M26.6): computed facts, where they came from */
 .oc-card { margin-top: 8px; padding: 12px 14px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface, transparent); display: flex; flex-direction: column; gap: 6px; }
 .oc-card-title { font-weight: 600; color: var(--color-ink); }
-.oc-facts { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; margin: 0; font-size: var(--text-meta); }
+.oc-facts { display: grid; grid-template-columns: minmax(7rem, 38%) minmax(0, 1fr); gap: 4px 16px; margin: 0; font-size: var(--text-meta); }
 .oc-facts dt { color: var(--color-ink-2); }
 .oc-facts dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; color: var(--color-ink); }
 
@@ -2286,3 +2286,4 @@ form:has(> .fold[open]) > .fold-hide { display: none; }
 .oc .oc-badge.pick { background: var(--color-surface-2); color: var(--color-ink); }
 .oc .oc-badge.changed { background: var(--color-ink-2); color: var(--color-white); }
 .oc a:not(.btn), .oc button.link { color: var(--color-ink-2); text-decoration: underline; text-underline-offset: 2px; }
+.oc-preview svg { max-width: 100%; height: auto; }  /* the move-together chart fits a phone */

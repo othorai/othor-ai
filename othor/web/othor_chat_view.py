@@ -67,18 +67,23 @@ def _card(c: dict[str, Any] | None) -> dict[str, Any] | None:
     }
 
 
-def _preview_url(item_id: str, o: dict[str, Any]) -> str:
+def _preview_url(item_id: str, o: dict[str, Any], limit: int = 6) -> str:
     """Where a choice's real rows are read from, live (M26.3); "" when there's nothing to read."""
     if not o.get("preview"):
         return ""
-    return "/othor/preview?" + urlencode({"item": item_id, "option": o["key"]})
+    q = {"item": item_id, "option": o["key"], **({"limit": str(limit)} if limit != 6 else {})}
+    return "/othor/preview?" + urlencode(q)
 
 
 def _items(
-    raw: list[dict[str, Any]], names: dict[str, str], subject: str = ""
+    raw: list[dict[str, Any]], names: dict[str, str], subject: str = "", focus: str = ""
 ) -> list[dict[str, Any]]:
+    """`focus`: the detail view of one question (0.26.2): only it, with up to 8 rows."""
     out = []
+    lim = 8 if focus else 6
     for n, i in enumerate(raw, start=1):
+        if focus and i["id"] != focus:
+            continue
         opts = i.get("options") or []
         chosen = next((o for o in opts if o.get("key") == i.get("choice")), None)
         label, cls = BADGE.get(i.get("status", ""), ("", ""))
@@ -95,7 +100,7 @@ def _items(
                     {
                         "label": chosen["label"],
                         "tag": _tag(chosen.get("tag"), names),
-                        "preview": _preview_url(i["id"], chosen),
+                        "preview": _preview_url(i["id"], chosen, lim),
                     }
                     if chosen
                     else None
@@ -107,7 +112,7 @@ def _items(
                         "label": o["label"],
                         "note": o.get("note") or "",
                         "tag": _tag(o.get("tag"), names),
-                        "preview": _preview_url(i["id"], o),
+                        "preview": _preview_url(i["id"], o, lim),
                     }
                     for o in opts
                     if o.get("key") != i.get("choice")
@@ -115,6 +120,12 @@ def _items(
                 "free_text": i.get("answer_type") == "free_text",
                 "effect": i.get("effect") or "",
                 "why_not": i.get("why_not") or "",
+                "evidence_url": (
+                    "/othor/preview?"
+                    + urlencode({"item": i["id"], "rows": "1", **({"limit": "8"} if focus else {})})
+                    if i.get("evidence")
+                    else ""
+                ),
                 "status": i.get("status"),
                 # a Business Model change (M26.4): the line before and after, its effect lines
                 "change": i.get("kind") == "change",
@@ -129,6 +140,10 @@ def _items(
             }
         )
     return out
+
+
+def prop_items(m: Any) -> list[dict[str, Any]]:
+    return list((m.proposal or {}).get("items") or [])
 
 
 def view(
@@ -148,13 +163,20 @@ def view(
     names = _source_names(s)
     msgs = []
     current = chat.last_set(s, t)
+    focus = str(request.query_params.get("item") or "") if t.subject == "questions" else ""
+    if focus and (current is None or focus not in {str(i["id"]) for i in prop_items(current)}):
+        focus = ""
     for m in chat.messages(s, t):
+        if focus and m is not current:
+            continue  # the detail view: just this question
         p = m.proposal or {}
         msgs.append(
             {
                 "role": m.role,
-                "text": m.text,
-                "rows": _items(p.get("items") or [], names, t.subject) if m is current else [],
+                "text": "" if focus else m.text,
+                "rows": _items(p.get("items") or [], names, t.subject, focus)
+                if m is current
+                else [],
                 "applied": [
                     {**a, "effect": a.get("effect") or ""} for a in (p.get("applied") or [])
                 ]
@@ -164,6 +186,7 @@ def view(
                 # Ask (M26.6): the tool's card, computed by code, with where it came from
                 "card": _card(p.get("card")) if p.get("kind") == "answer" else None,
                 "to_change": bool(p.get("change")),
+                "intel": list(p.get("intel") or []),
                 "current": m is current,
             }
         )
@@ -171,7 +194,7 @@ def view(
     rest = [
         (k, v)
         for k, v in request.query_params.multi_items()
-        if k not in ("panel", "subject", "edit")
+        if k not in ("panel", "subject", "edit", "item")
     ]
     base = here + ("?" + urlencode(rest) if rest else "")
     sep = "&" if "?" in base else "?"
@@ -209,6 +232,13 @@ def view(
         "applied_once": applied_once,
         "close": base,
         "here": open_url,
-        "edit_url": open_url + "&edit=1",
+        "edit_url": open_url + ("&item=" + focus if focus else "") + "&edit=1",
+        "focus": focus,
+        # the detail view's Apply only when that question has an answer to apply
+        "focus_ready": bool(focus)
+        and any(i["id"] == focus and pending.ready(i) for i in prop_items(current))
+        if current is not None
+        else False,
+        "more_url": open_url + "&item=" if t.subject == "questions" else "",
         "empty": t.subject == "questions" and current is None and not msgs,
     }

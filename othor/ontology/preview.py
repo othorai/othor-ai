@@ -53,6 +53,7 @@ class Preview:
     failed: str = ""  # the plain reason a read didn't work
     sql: str = ""  # for "Where this comes from"
     source: str = ""
+    chart: Any = None  # a ChartSpec (move together), drawn by render_svg
 
 
 def _words(name: str) -> str:
@@ -158,6 +159,7 @@ def read(
     records: dict[tuple[str, str], dict[str, Any]],
     cat: Catalog,
     ask: Ask,
+    limit: int = ROWS,
 ) -> Preview:
     """Read it live. A failure says so plainly (the answer can still be applied)."""
     from othor.connectors.read import Unreachable, run
@@ -165,7 +167,7 @@ def read(
 
     out = Preview(title=ask.title, head=[], source=str(ask.table.get("source") or ""))
     try:
-        sql, _d, heads = build(records, cat, ask)
+        sql, _d, heads = build(records, cat, ask, limit=limit)
     except CompileError:
         out.failed = (
             "I can't show rows for this one: the table or column has changed since the scan."
@@ -181,4 +183,80 @@ def read(
     t = cat.table(ask.table["source"], ask.table["schema"], ask.table["table"])
     if t is not None and t.row_count:
         out.note = f"{fmt.num(t.row_count)} rows in {t.name} at the last scan."
+    return out
+
+
+# --- from stored results, no source read (0.26.2) --------------------------------------------
+
+
+def pair_chart(rd: Any, a: str, b: str, weeks: int = 12) -> Any:
+    """ "Move together": the two numbers' last weeks from the night's stored series, each indexed
+    to 100 at its first week so both read on one scale (a ChartSpec; render_svg draws it)."""
+    from decimal import Decimal as D
+
+    from othor.briefs import tiles
+    from othor.charts.spec import ChartSpec, Period, Series, Unit
+    from othor.web import run_cache
+
+    if rd.files is None or rd.run is None:
+        return None
+    by = run_cache.by_metric(rd.files.series)
+    series = []
+    names = []
+    period = None
+    for key, role in ((a, "neutral"), (b, "muted")):
+        pts = tiles._series(list(by.get(key, ())), key, "week")[-weeks:]
+        if len(pts) < 4 or not pts[0][1]:
+            return None
+        base = D(pts[0][1])
+        name = str((rd.spec.get("metrics", {}).get(key) or {}).get("name") or key)
+        names.append(name)
+        period = period or (pts[0][0].isoformat(), pts[-1][0].isoformat())
+        series.append(
+            Series(
+                key,
+                name,
+                role,  # type: ignore[arg-type]
+                tuple((p.isoformat(), float(D(v) / base * 100)) for p, v in pts),
+            )
+        )
+    assert period is not None
+    return ChartSpec(
+        id=f"pair:{a}:{b}:{period[1]}",
+        kind="line",
+        title=f"{names[0]} and {names[1]} · last {weeks} weeks, each from 100",
+        unit=Unit("count"),
+        period=Period("week", period[0], period[1]),
+        series=tuple(series),
+        alt_text=f"{names[0]} and {names[1]}, weekly, each indexed to 100 at {period[0]}.",
+        provenance={"pair": f"{a},{b}", "run": str(rd.run.id)},
+    )
+
+
+def finding_rows(s: Any, fingerprint: str, limit: int = 6) -> Preview:
+    """ "Which system is right" (and any question from a finding): the records in question, as
+    the night stored them with the finding (Sweep's own rows), up to `limit`."""
+    import sqlalchemy as sa
+
+    from othor.engine.models import Finding, Run
+
+    row = s.scalars(
+        sa.select(Finding)
+        .join(Run, Run.id == Finding.run_id)
+        .where(Finding.fingerprint == fingerprint)
+        .order_by(Run.number.desc())
+        .limit(1)
+    ).first()
+    out = Preview(title="The records in question", head=[])
+    t = ((row.body or {}).get("text") or {}).get("rows") if row is not None else None
+    if not t or not t.get("rows"):
+        out.failed = "No records were kept with this finding."
+        return out
+    rows = list(t["rows"])[:limit]
+    keep = [i for i in range(len(t["headers"])) if any(str(x[i]).strip() for x in rows)]
+    out.head = [str(t["headers"][i]) for i in keep]
+    out.rows = [[cell(x[i]) for i in keep] for x in rows]
+    total = int(t.get("total") or len(t["rows"]))
+    out.note = f"{len(rows)} of {total} from last night's check." if total > len(rows) else ""
+    out.source = "last night's check"
     return out
