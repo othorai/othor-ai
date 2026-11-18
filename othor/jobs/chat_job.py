@@ -130,14 +130,28 @@ def run(ctx: WorkerContext, job: Job) -> None:
                 "before": row_value,
                 "before_unit": row_body.get("unit"),
             }
-        s.add(
-            ChatMessage(
-                thread_id=thread.id,
-                role="ai",
-                text=note or text or "Here is the change and what it does today.",
-                proposal=proposal,
-            )
+        reply = ChatMessage(
+            thread_id=thread.id,
+            role="ai",
+            text=note or text or "Here is the change and what it does today.",
+            proposal=proposal,
         )
+        s.add(reply)
+        s.flush()
+        # Chat 1.1: the owner pressed "Apply my pick": applied once its value is computed (a
+        # change that can't be computed stays a note, nothing applied)
+        if job.payload.get("apply") and proposal is not None:
+            row_now = chat.find_row(s, key)
+            co = s.scalars(sa.select(Company).where(Company.id == cid)).one()
+            if row_now is not None:
+                chat.apply_message(
+                    s,
+                    co,
+                    row_now,
+                    reply,
+                    actor=str(job.payload.get("actor") or "owner"),
+                    today=ctx.clock().date(),
+                )
         _done(s, mid)
         s.commit()
 

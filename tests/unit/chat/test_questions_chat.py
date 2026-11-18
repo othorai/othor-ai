@@ -173,7 +173,7 @@ def test_a_reply_edits_the_set_and_never_applies(world) -> None:  # type: ignore
         c = _q(s, "pattern", {"pattern": "surat_shutdown"}, ("Yes, every year",), rank="3|")
         t = chat.thread(s, "questions")
         m = chat.open_set(s, t, TODAY)
-        assert m is not None and "I've picked answers for 1, and 1 need you" in m.text
+        assert m is not None and "I've suggested answers for 1, and 1 need you" in m.text
         assert chat.open_set(s, t, TODAY) is m  # the same set until something changes
         n = service.current_number(s)
         gw = _Gateway(

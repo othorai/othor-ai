@@ -28,7 +28,8 @@
 
   {# #61 (owner, 14 Nov 2026): the company's name as the title; the crumb still says Home #}
   {# v0.19 (M19.5): Big Picture where "Updated" was; the time moved to the top bar (owner, 15 Nov 2026) #}
-  {% call page_title(company.name) %}{% call el("div", layout="flex items-center gap-12 flex-wrap") %}{{ slot("home.title_actions") }}{% if trial %}{{ trial_chip(trial) }}{% endif %}{% if big_picture is defined %}{{ ai_button("Big Picture Report" if big_picture else "Big Picture · not available right now", href="/home?panel=big-picture", disabled=not big_picture) }}{% endif %}{% endcall %}{% endcall %}
+  {% call page_title(company.name) %}{% call el("div", layout="flex items-center gap-12 flex-wrap") %}{{ slot("home.title_actions") }}{% if trial %}{{ trial_chip(trial) }}{% endif %}{# #86 (owner, 18 Nov 2026): Ask Othor AI sits left of Big Picture on Home (not in the top bar
+   here); Big Picture has its own icon #}{{ ai_button("Ask Othor AI", href="/home?panel=othor&subject=ask", attrs={"data-panel": true}) }}{% if big_picture is defined %}{{ ai_button("Big Picture Report" if big_picture else "Big Picture · not available right now", href="/home?panel=big-picture", disabled=not big_picture, ic="summary") }}{% endif %}{% endcall %}{% endcall %}
 
   {% include "partials/run_again.html" %}
 

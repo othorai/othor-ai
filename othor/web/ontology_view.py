@@ -133,7 +133,7 @@ def cited(s: Session, ref: dict[str, Any] | None, at: dt.datetime | None = None)
     if "undo" in ref:
         return f"Undo v{ref['undo']}"
     if "chat" in ref:
-        return "Tell Othor AI" + (f" · {fmt.day_month(at.date())}" if at else "")
+        return "Othor AI chat" + (f" · {fmt.day_month(at.date())}" if at else "")
     for k in ("upload", "from", "source"):
         if ref.get(k):
             return str(ref[k])
@@ -735,8 +735,8 @@ def where_from(v: OntologyVersion) -> str:
         return "Answered on Home"
     if reason.startswith("Accepted on Home") or reason.startswith("Accepted:"):
         return "Proposal on Home"
-    if reason.startswith("Tell Othor AI"):
-        return "Tell Othor AI"
+    if reason.startswith("Tell Othor AI") or reason.startswith("Othor AI chat"):
+        return "Othor AI chat"  # "Tell Othor AI" until 0.26: the same, one chat now
     return "Metrics" if "metric" in reason.lower() else "Business Model"
 
 

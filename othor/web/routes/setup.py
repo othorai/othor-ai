@@ -7,7 +7,6 @@ to the Ontology until Confirm (othor.setup.confirm). Every owner action writes a
 
 from __future__ import annotations
 
-import contextlib
 import datetime as dt
 import re
 import uuid
@@ -498,7 +497,14 @@ def _panel(
         if row is not None and purpose in chat.PURPOSES:
             svc = services(request)
             available, _ = model_status(svc.settings, s, svc.clock())
-            return v.chat_ctx(s, row, purpose, _replies(s, row, purpose), available)
+            return v.chat_ctx(
+                s,
+                row,
+                purpose,
+                _replies(s, row, purpose),
+                available,
+                editing=request.query_params.get("edit") == "1",
+            )
     if panel == "connect" and key:
         row = _row(s, key)
         if row is not None:
@@ -566,6 +572,12 @@ def _choose_ctx(
             )
         ]
         choice = choice or next((m["choice"] for m in reversed(messages) if m["choice"]), None)
+    # Chat 1.1 (owner, 18 Nov 2026): Othor AI's pick by default: the database, the book of
+    # record (code's rule, the same for every company); the owner changes it with one click
+    ids = [str(x.get("id")) for x in options]
+    by_ai = choice is None
+    if by_ai:
+        choice = "source" if "source" in ids else (ids[0] if ids else None)
     proposal = None
     if choice in ("source", "upload", "both"):
         cat = load_catalog(s)
@@ -583,6 +595,10 @@ def _choose_ctx(
         "options": options,
         "messages": messages,
         "proposal": proposal,
+        "by_ai": by_ai and proposal is not None,
+        "editing": request.query_params.get("edit") == "1"
+        or any(m["role"] == "user" for m in messages),
+        "edit_url": f"/setup/metrics?panel=choose&key={key}&edit=1",
         "model": available,
         "not_available": v.NOT_AVAILABLE,
     }
@@ -1038,7 +1054,14 @@ async def chat_turn(
         thread = chat.thread_for(s, key, purpose)
         assert thread is not None
         m = chat.add_turn(s, thread, text=text, patch=patch, actor=actor)
-        enqueue(s, "chat", {"message_id": str(m.id)})
+        # Chat 1.1: "Apply my pick" drafts it (its value computed by SQL) and applies it in one
+        # click; the owner's own button press is the apply (non-negotiable 6)
+        then_apply = form.get("apply") == "1" and patch is not None
+        enqueue(
+            s,
+            "chat",
+            {"message_id": str(m.id), **({"apply": True, "actor": actor} if then_apply else {})},
+        )
         s.commit()
     return RedirectResponse(url, 303)
 
@@ -1058,7 +1081,6 @@ async def chat_apply(
     """Apply a card. Before Confirm the draft changes; after Confirm a live metric's change is
     written as a new Ontology version (a draft from a new source waits for Confirm N metrics)."""
     from othor.core.models import Company
-    from othor.ontology import service as ontology
 
     svc = services(request)
     _, done = _chat_back(await request.form(), "")
@@ -1068,27 +1090,8 @@ async def chat_apply(
         card = (m.proposal or {}).get("card") if m else None
         if row is None or m is None or card is None or m.applied or confirm.drafting(s):
             return RedirectResponse(done, 303)
-        live = row.state == "confirmed" and ontology.confirmed(s)
-        chat.apply_card(s, row, card, actor=str(o.viewer.id))
-        if live:
-            row.state = "needs_confirmation"
-            with contextlib.suppress(confirm.NotReady):
-                confirm.confirm_more(
-                    s,
-                    s.scalars(sa.select(Company).where(Company.id == o.company.id)).one(),
-                    [key],
-                    actor=str(o.viewer.id),
-                    today=svc.clock().date(),
-                    reason=f"Changed {row.body.get('name') or key}",
-                )
-        m.applied = True
-        for t in s.scalars(
-            sa.select(ChatThread).where(
-                ChatThread.subject == f"metric:{key}", ChatThread.status == "open"
-            )
-        ):
-            t.status = "applied"
-        _enqueue_draft(s, o, "values")
+        company = s.scalars(sa.select(Company).where(Company.id == o.company.id)).one()
+        chat.apply_message(s, company, row, m, actor=str(o.viewer.id), today=svc.clock().date())
         s.commit()
     return RedirectResponse(done, 303)
 

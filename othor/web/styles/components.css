@@ -797,8 +797,8 @@ button.link, button.link-u { border: 0; background: transparent; padding: 0; fon
 .progress-row { display: grid; grid-template-columns: 280px 200px 1fr; align-items: center; gap: 12px; padding: 0 12px; min-height: 46px;
   border-top: 1px solid var(--color-row); font-size: var(--text-body); }
 .progress-list .progress-row:first-child { border-top: 0; }
-.choose .option { border: 1px solid var(--color-rule); border-radius: var(--radius-8); padding: 12px; display: flex; flex-direction: column; gap: 6px; }
-.choose .option-v { font-size: var(--text-page); font-weight: 600; }
+.choose .option, .oc .option { border: 1px solid var(--color-rule); border-radius: var(--radius-8); padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.choose .option-v, .oc .option-v { font-size: var(--text-page); font-weight: 600; }
 .choose .proposal { border-color: var(--color-accent); }
 @media (max-width: 1024px) {
   .biz { grid-template-columns: 1fr; }
@@ -2278,3 +2278,11 @@ form:has(> .fold[open]) > .fold-hide { display: none; }
 .oc-facts { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; margin: 0; font-size: var(--text-meta); }
 .oc-facts dt { color: var(--color-ink-2); }
 .oc-facts dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; color: var(--color-ink); }
+
+/* #90 (owner, 18 Nov 2026): in every Othor AI chat, blue is for buttons only. The owner's
+   messages sit in grey; badges, the avatar and text links are neutral. */
+.oc .msg-user { background: var(--color-surface-2); color: var(--color-ink); }
+.oc .avatar-ai { background: var(--color-surface-2); color: var(--color-ink-2); }
+.oc .oc-badge.pick { background: var(--color-surface-2); color: var(--color-ink); }
+.oc .oc-badge.changed { background: var(--color-ink-2); color: var(--color-white); }
+.oc a:not(.btn), .oc button.link { color: var(--color-ink-2); text-decoration: underline; text-underline-offset: 2px; }

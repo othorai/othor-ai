@@ -156,6 +156,7 @@ def home(
         if done and (row := _proposal(s, done)) is not None and row.status != "open":
             ctx["proposals"] = _with_decided(s, ctx["proposals"], row)
         s.expunge_all()
+    ctx["ask_in_title"] = True  # #86: Ask Othor AI sits by Big Picture, not in the top bar
     return page(request, "home/home.html", ctx)
 
 

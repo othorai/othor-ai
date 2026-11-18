@@ -452,3 +452,58 @@ def find_row(s: Session, key: str) -> SetupDraft | None:
     return s.scalars(
         sa.select(SetupDraft).where(SetupDraft.kind == "metric", SetupDraft.key == key)
     ).first()
+
+
+# --- Apply (the button, or Othor AI's pick applied in one click) -------------------------------
+
+
+def queue_values(s: Session, actor: str) -> None:
+    """Recompute the drafts' values after a change (the draft job, mode "values")."""
+    from othor.jobs.queue import enqueue
+    from othor.setup.models import SetupDraft
+
+    meta = s.scalars(sa.select(SetupDraft).where(SetupDraft.kind == "meta")).first()
+    if meta is None:
+        meta = SetupDraft(kind="meta", key="drafting", body={}, origin={"by": "system"})
+        s.add(meta)
+    meta.body = {**(meta.body or {}), "state": "queued", "mode": "values"}
+    enqueue(s, "draft", {"mode": "values", "actor": actor})
+
+
+def apply_message(
+    s: Session, company: Any, row: SetupDraft, m: ChatMessage, *, actor: str, today: Any
+) -> bool:
+    """Apply a drafted card (Chat 1.1: the Apply button, or Othor AI's pick in one click).
+    Before Confirm the draft changes; after Confirm a live metric's change is written as a new
+    Business Model version. False when there's nothing to apply."""
+    import contextlib
+
+    from othor.ontology import service as ontology
+    from othor.setup import confirm
+
+    card = (m.proposal or {}).get("card")
+    if card is None or m.applied:
+        return False
+    key = row.key
+    live = row.state == "confirmed" and ontology.confirmed(s)
+    apply_card(s, row, card, actor=actor)
+    if live:
+        row.state = "needs_confirmation"
+        with contextlib.suppress(confirm.NotReady):
+            confirm.confirm_more(
+                s,
+                company,
+                [key],
+                actor=actor,
+                today=today,
+                reason=f"Changed {row.body.get('name') or key}",
+            )
+    m.applied = True
+    for t in s.scalars(
+        sa.select(ChatThread).where(
+            ChatThread.subject == f"metric:{key}", ChatThread.status == "open"
+        )
+    ):
+        t.status = "applied"
+    queue_values(s, actor)
+    return True

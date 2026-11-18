@@ -165,9 +165,14 @@ def test_no_model_setup_flow(env: Env, sample, tmp_path, need_sources):
     opts = nr.value["conflict"]["options"]
     for o in opts:
         assert fmt.inr(Decimal(o["value"])) in r.text
+    # Chat 1.1: Othor AI's pick (the database) by default, Apply in one click; the
+    # reply box opens on Suggest edits
+    assert "My suggestion" in r.text and ">Apply</button>" in r.text and "Suggest edits" in r.text
+    assert "Later" not in r.text  # Apply and Suggest edits only (owner, 18 Nov 2026)
+    r = env.client.get(f"{h}/setup/metrics?panel=choose&key=net_revenue&edit=1")
     assert "Not available right now" in r.text
     r = env.client.get(f"{h}/setup/metrics?panel=choose&key=net_revenue&choice=source")
-    assert "Will be saved to the Business Model" in r.text and "erp_db wins" in r.text
+    assert "erp_db wins" in r.text and "becomes High confidence" not in r.text
     r = _post(
         env,
         "/setup/metrics/decide",

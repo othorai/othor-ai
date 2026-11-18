@@ -26,7 +26,7 @@
   </nav>
   <div>
     {% if request.cookies.get("othor_first_run") %}<div hx-get="/first-run/strip" hx-trigger="load" hx-swap="outerHTML"></div>{% endif %}
-    <header class="app-header"><div class="flex items-center gap-10 min-w-0"><p class="crumbs"><span>{{ company.name }}</span><span>/</span><span class="here">{% block crumb %}{% endblock %}</span></p>{% block crumb_after %}{% endblock %}</div><div class="app-header-end">{% if company %}{% from "components/buttons.html" import ai_button %}{{ ai_button("Ask Othor AI", href=request.url.path ~ "?panel=othor&subject=ask", attrs={"data-panel": true}) }}{% endif %}<div id="app-actions">{% block actions %}{% endblock %}</div></div></header>
+    <header class="app-header"><div class="flex items-center gap-10 min-w-0"><p class="crumbs"><span>{{ company.name }}</span><span>/</span><span class="here">{% block crumb %}{% endblock %}</span></p>{% block crumb_after %}{% endblock %}</div><div class="app-header-end">{% if company and not ask_in_title %}{% from "components/buttons.html" import ai_button %}{{ ai_button("Ask Othor AI", href=request.url.path ~ "?panel=othor&subject=ask", attrs={"data-panel": true}) }}{% endif %}<div id="app-actions">{% block actions %}{% endblock %}</div></div></header>
     <main class="app-main{% block main_class %}{% endblock %}" id="main">{% if paused %}<div class="mb-20">{{ banner("warn", "<b>Nightly runs are paused</b> · " ~ paused ~ ". Othor AI has been told.") }}</div>{% endif %}{% block main %}{% endblock %}</main>
     {# #63 (owner, 14 Nov 2026): one loading view for the main panel while a menu page loads:
        very light grey boxes in the page style's layout, shown at once on a menu click #}

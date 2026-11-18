@@ -2,15 +2,16 @@
 """Business Model changes in the one Othor AI chat (0.26, M26.4; owner 18 Nov 2026: "the business
 described once, kept true, and updated and changed in plain-language chat").
 
-Subjects: "ontology" (the page's Tell Othor AI), "ontology:add" (a new number) and
-"ontology:metric:<key>" (Change with Othor AI on a number). The owner writes; one model call
-(`ontology_change` v4, the thread as history) returns the full list of changes wanted now, at
-most 5; each goes through the same checks Tell Othor AI always had (`othor.home.changes.check`:
-allowed types and fields, the record schema, numbers only from the owner's words) and its
-effect is computed by code (which numbers change meaning, which briefs and watches read them).
-The list is the chat's pending set; a reply reshapes it; nothing is written until Apply, which
-writes every ready change in one Business Model version (non-negotiable 6). Without a model the
-chat says so and nothing is drafted (a change in the owner's words needs one)."""
+Subjects: "ontology" (the page's Chat to update; "Tell Othor AI" until 0.26), "ontology:add" (a
+new number) and "ontology:metric:<key>" (Change with Othor AI on a number). The owner writes;
+one model call (`ontology_change` v4, the thread as history) returns the full list of changes
+wanted now, at most 5; each goes through the same checks Tell Othor AI always had
+(`othor.home.changes.check`: allowed types and fields, the record schema, numbers only from the
+owner's words) and its effect is computed by code (which numbers change meaning, which briefs
+and watches read them). The list is the chat's pending set; a reply reshapes it; nothing is
+written until Apply, which writes every ready change in one Business Model version (non-
+negotiable 6). Without a model the chat says so and nothing is drafted (a change in the owner's
+words needs one)."""
 
 from __future__ import annotations
 
@@ -61,7 +62,7 @@ def title(s: Session, subject: str) -> str:
         rec = next((r for r in service.active(s, ["metric"]) if r.key == key), None)
         name = str((rec.body.get("name") if rec else None) or key.replace("_", " ").capitalize())
         return f"Change {name}"
-    return "Tell Othor AI"
+    return "Update your Business Model"
 
 
 def opening(subject: str) -> str:

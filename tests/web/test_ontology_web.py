@@ -45,7 +45,7 @@ def test_the_page_has_its_four_sections(night):  # noqa: F811
         "Names and words",
         "Known patterns",
         "Changes apply from the next run. Every version is kept;",
-        "Tell Othor AI what changed",
+        "Chat to update",
     ):
         assert text in page, text
     # #51: a header row like the Numbers table's in the other three sections
@@ -108,24 +108,19 @@ def test_cleaned_up_header_pill_and_tell_line(night):  # noqa: F811
         parts.append(f"{later} set aside")
     label = f"{props + qs + later} to review on Home"
     btn = page[page.index(label) - 300 : page.index(label) + len(label)]
-    assert 'class="btn primary"' in btn and 'href="/home"' in btn
+    assert 'class="btn"' in btn and 'href="/home"' in btn  # the blue one is Chat to update
     assert 'title="' + " · ".join(parts) + ' waiting on Home"' in btn
     assert 'class="banner' not in _main(page)  # the full-width banner is gone
     head = page[page.index("<h1") : page.index("The business")]
     assert "Changes apply from the next run." in head  # moved up from the foot
     assert page.count("Changes apply from the next run.") == 1
-    # Tell Othor AI: the mark, the input, the Enter button, and chips that fill the input
-    tell = page[page.index('class="tell"') : page.index("The business")]
-    assert 'aria-label="Othor AI"' in tell and 'name="line"' in tell
-    assert 'placeholder="Tell Othor AI what changed…"' in tell
-    assert 'name="action" value="ai"' in tell
-    for chip in (
-        "Kochi plant starts invoicing in December",
-        "The Surat shutdown moves to September",
-    ):
-        assert f'data-tell-fill="{chip}"' in tell, chip
-    js = env.client.get("/static/js/othor.js").text
-    assert "data-tell-fill" in js
+    # owner, 18 Nov 2026: the Tell Othor AI line went; "Chat to update" by the title opens the
+    # one chat on the Business Model
+    assert 'class="tell"' not in page
+    assert (
+        'class="btn primary" href="/ontology?panel=othor&amp;subject=ontology" data-panel>'
+        "Chat to update" in page
+    )
 
 
 def test_numbers_section_latest_see_all_and_fix(night):  # noqa: F811

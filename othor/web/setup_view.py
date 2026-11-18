@@ -172,8 +172,15 @@ def chat_ctx(
     model: bool,
     page: str | None = None,
     close: str = "/setup/metrics",
+    editing: bool = False,
 ) -> dict[str, Any]:
-    """`page`/`close`: where this chat lives (Metrics, or the Sources review step for 6ha)."""
+    """`page`/`close`: where this chat lives (Metrics, or the Sources review step for 6ha).
+
+    Chat 1.1 (owner, 18 Nov 2026: "the AI suggests by default and the user clicks one button"):
+    Othor AI's pick is code's first candidate (the best-ranked column or table; for Connect, the
+    source to connect); "Apply my pick" drafts it with its value computed and applies it in one
+    click. The other candidates stay as choices; the reply box opens on Suggest edits; Later
+    leaves it for now. Edit has no pick (only the owner knows what to change)."""
     from othor.setup import chat
 
     thread = chat.thread_for(s, row.key, purpose, create=False)
@@ -192,6 +199,22 @@ def chat_ctx(
             }
         )
     label, dot = CONF.get(row.confidence, CONF["check"])
+    shown = [
+        {"i": i, **q.as_json()}
+        for i, q in enumerate(replies)
+        if not (page and q.action == "form_panel")  # the setup form lives on Metrics
+    ]
+    pick = None
+    if purpose in ("where", "connect"):
+        pick = next(
+            (
+                q
+                for q in shown
+                if q["patch"] is not None or str(q["action"] or "").startswith("connect:")
+            ),
+            None,
+        )
+    page_url = page or chat_url(row.key, purpose)
     return {
         "kind": "chat",
         "page": page or chat_url(row.key, purpose),
@@ -205,11 +228,13 @@ def chat_ctx(
         "dot": dot,
         "intro": _intro(row, purpose),
         "today": value_line(row),
-        "replies": [
-            {"i": i, **q.as_json()}
-            for i, q in enumerate(replies)
-            if not (page and q.action == "form_panel")  # the setup form lives on Metrics
-        ],
+        "replies": shown,
+        "pick": pick,
+        # the other choices: not the pick, not "It's somewhere else" (that's Suggest edits) and
+        # not "Skip for now" (that's Later)
+        "others": [q for q in shown if q is not pick and q["action"] not in ("ask", "skip")],
+        "editing": editing or any(m["role"] == "user" for m in msgs),
+        "edit_url": page_url + ("&" if "?" in page_url else "?") + "edit=1",
         "messages": msgs,
         "pending": pending,
         "model": model,

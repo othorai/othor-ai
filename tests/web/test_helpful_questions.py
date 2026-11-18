@@ -79,7 +79,7 @@ def test_the_pair_question_shows_cards_with_computed_reasons(night):  # noqa: F8
         assert c["label"] in panel
         if c["key"] != pick:
             assert c["sub"] in panel
-    assert "My pick" in panel and 'action="/othor/apply"' in panel
+    assert "My suggestion" in panel and 'action="/othor/apply"' in panel
     assert "Let Othor AI decide" not in panel and "Ask me later" not in panel
 
 

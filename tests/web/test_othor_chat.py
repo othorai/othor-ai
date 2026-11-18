@@ -109,15 +109,16 @@ def test_ask_in_every_top_bar_and_questions_as_one_message(tmp_path: Path, fake_
         for page in ("/home", "/settings", "/sources"):
             html = env.client.get(h + page).text
             assert "Ask Othor AI" in html and f'href="{page}?panel=othor&amp;subject=ask"' in html
+            # (#86: on a Home with its title row, Ask sits left of Big Picture instead)
         cid, (_a, b) = _questions(env)
         page = env.client.get(h + "/home?panel=othor&subject=questions").text
         assert 'aria-label="Questions for you"' in page
-        assert "I have 2 questions" in page and "picked answers for 1, and 1 need you" in page
-        assert "My pick" in page and "Needs you" in page and "Apply 1 answer" in page
+        assert "I have 2 questions" in page and "suggested answers for 1, and 1 need you" in page
+        assert "My suggestion" in page and "Needs you" in page and "Apply 1 answer" in page
         assert "Suggest edits" in page and 'id="oc-reply"' not in page  # no reply box at first
         assert "Drafts only" in page
         page = env.client.get(h + "/home?panel=othor&subject=questions&edit=1").text
-        assert 'id="oc-reply"' in page and "Nothing is applied until you press Apply." in page
+        assert 'id="oc-reply"' in page and "Nothing is applied until you press Apply" not in page
 
         tok = env.csrf(h + "/home")
         svc = env.app.state.services
@@ -157,7 +158,7 @@ def test_ask_in_every_top_bar_and_questions_as_one_message(tmp_path: Path, fake_
         }
         page = env.client.get(h + back).text
         assert "Applied 1 answer" in page and "1 couldn" in page
-        assert "Reply to change any answer" in page
+        assert "on the Business Model page" in page
 
 
 def test_an_outside_back_address_is_refused(tmp_path: Path) -> None:
@@ -201,7 +202,7 @@ def test_business_model_changes_are_drafted_reshaped_and_applied_once(  # type: 
         assert "Tell me what changed in the business" in page and 'id="oc-reply"' in page
         # the old link opens the same chat
         old = env.client.get(h + "/ontology?panel=chat&subject=page").text
-        assert 'id="othor-chat"' in old and "Tell Othor AI" in old
+        assert 'id="othor-chat"' in old and "Update your Business Model" in old
         tok = env.csrf(h + "/ontology")
         back = "/ontology?panel=othor&subject=ontology"
         fake_model["out"] = {

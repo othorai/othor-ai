@@ -15,14 +15,14 @@
 {% set page_chat = "/ontology?panel=othor&subject=ontology" %}
 {# the page style (owner, 13 Nov 2026): the title row with what waits on Home as its button #}
 {# #43: the description behind an info icon beside the title #}
-{% call page_title("Business Model", info="What Othor AI knows about " ~ company.name ~ ("" if company.name.endswith(".") else ".") ~ " Every brief and every Sweep reads from it. Changes apply from the next run. Every version is kept; any brief can be replayed on the version it used. In data terms, this is the Ontology.") %}{% if home_count %}{{ button(fmt.num(home_count) ~ " to review on Home", "primary", href="/home", attrs={"title": home_line}) }}{% endif %}{% endcall %}
+{% call page_title("Business Model", info="What Othor AI knows about " ~ company.name ~ ("" if company.name.endswith(".") else ".") ~ " Every brief and every Sweep reads from it. Changes apply from the next run. Every version is kept; any brief can be replayed on the version it used. In data terms, this is the Ontology.") %}{% call el("div", layout="flex items-center gap-8 flex-wrap") %}{% if home_count %}{{ button(fmt.num(home_count) ~ " to review on Home", href="/home", attrs={"title": home_line}) }}{% endif %}{{ button("Chat to update", "primary", href="/ontology?panel=othor&subject=ontology", attrs={"data-panel": true}) }}{% endcall %}{% endcall %}
 <div class="flex flex-col gap-56">
   {% if note %}{{ callout(note | e) }}{% endif %}
   {% if done and not chat %}
   {% call el("div", layout="flex items-center gap-8 flex-wrap") %}{{ toast("Business Model v" ~ done.number ~ " · applies from tonight’s run", sub=done.reason) }}{% call el("form", attrs={"data-inplace": true, "method": "post", "action": "/ontology/versions/" ~ done.number ~ "/undo"}) %}<input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="back" value="/ontology">{{ button("Undo", type="submit") }}{% endcall %}{% endcall %}
   {% endif %}
 
-  {% call el("form", attrs={"data-inplace": true, "method": "post", "action": "/othor/reply"}) %}<input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="subject" value="ontology"><input type="hidden" name="back" value="/ontology?panel=othor&amp;subject=ontology">{{ tell_line("Tell Othor AI what changed…", ["Kochi plant starts invoicing in December", "The Surat shutdown moves to September"]) }}{% endcall %}
+  {# the Tell Othor AI line went: "Chat to update" by the title opens the one chat (owner, 18 Nov 2026) #}
 
   {# Let Othor AI decide (v0.12): its decisions, listed to confirm or fix #}
   {% if decided and not expanded %}

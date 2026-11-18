@@ -1409,6 +1409,7 @@ def _chat_panel(request: Request, s: Session, src: Source) -> dict[str, Any] | N
         available,
         page=page,
         close=f"/sources?panel=review&s={src.id}",
+        editing=q.get("edit") == "1",
     )
 
 

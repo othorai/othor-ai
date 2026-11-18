@@ -6,6 +6,26 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.26.1] - 2026-11-18
+
+### Changed
+- Onboarding's chats (Fix with Othor AI, the Conflict, the Sheets tab fix) work like the Othor AI
+  chat: Othor AI's suggestion by default with Apply (its value computed, then applied in one
+  click) and Suggest edits for anything else; no other choice buttons beside a suggestion.
+- "My pick" reads "My suggestion"; blue is for buttons only in every chat (the owner's messages,
+  badges, the avatar and links are neutral); Send is a normal-size button; no lines under the
+  reply box.
+- A change asked for in Ask is drafted at once in the Business Model chat, to review and apply.
+- Business Model: the Tell Othor AI line went; "Chat to update" by the title opens the chat
+  ("Update your Business Model"); provenance and history say "Othor AI chat".
+- Home: Ask Othor AI left of Big Picture, which has its own icon. Look back: New report is the
+  plain primary button.
+- Data sources: Status shows the connection's health again; Last read is a chip, amber with the
+  date the data stopped; the Newest data column went.
+
+### Fixed
+- The questions chat no longer shows the drafts note or a reply box once nothing is pending.
+
 ## [0.26.0] - 2026-11-18
 
 ### Added

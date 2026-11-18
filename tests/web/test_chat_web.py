@@ -15,7 +15,7 @@ from othor.core.tenancy import system_scope, tenant_scope
 from othor.jobs.queue import enqueue
 from othor.jobs.runner import WorkerContext, run_pending
 from othor.setup import uploads
-from othor.setup.models import BusinessMessage, SetupDraft
+from othor.setup.models import BusinessMessage, ChatMessage, SetupDraft
 from tests.fixtures.sample_company.generate import generate
 from tests.fixtures.sample_company.uploads import write_uploads
 from tests.integration import setup_world as w
@@ -77,8 +77,11 @@ def test_edit_chat_without_a_model(env: Env, sample, need_sources, tmp_path):
     h, cid = _drafted(env, sample, tmp_path)
     url = "/setup/metrics?panel=chat&purpose=edit&key=receivables_over_60"
     page = env.client.get(h + url).text
-    assert "Fix with Othor AI" in page and "Change the threshold" in page
-    assert "Not available right now" in page and "Drafts only." in page
+    # no choice buttons until Suggest edits (owner, 18 Nov 2026)
+    assert "Fix with Othor AI" in page and "Change the threshold" not in page
+    assert "Suggest edits" in page and "Later" not in page and "Drafts only." in page
+    page = env.client.get(h + url + "&edit=1").text
+    assert "Change the threshold" in page and "Not available right now" in page
     # the threshold quick reply (a small form) → a card computed by the worker
     i = re.search(
         r'name="reply" value="(\d+)">\s*<input type="hidden" name="patch" value="set_threshold"',
@@ -109,8 +112,33 @@ def test_where_chat_lists_candidates(env: Env, sample, need_sources, tmp_path):
     h, _ = _drafted(env, sample, tmp_path)
     url = "/setup/metrics?panel=chat&purpose=where&key=metres_dispatched"
     page = env.client.get(h + url).text
-    assert "Use dispatch_mtrs" in page and "We don’t track this" in page
-    assert "fact_dispatch.dispatch_mtrs" in page
+    assert "Use dispatch_mtrs" in page and "fact_dispatch.dispatch_mtrs" in page
+    assert "We don’t track this" not in page  # with a suggestion, no other buttons
+
+
+def test_apply_my_pick_drafts_and_applies_in_one_click(env: Env, sample, need_sources, tmp_path):
+    """Chat 1.1 (owner, 18 Nov 2026): Where is it? opens with Othor AI's pick (code's best
+    candidate) and one button, Apply: the worker computes its value and applies it;
+    the other candidates aren't offered as buttons (Suggest edits takes the owner's own); no
+    Later (owner, 18 Nov 2026)."""
+    h, cid = _drafted(env, sample, tmp_path)
+    url = "/setup/metrics?panel=chat&purpose=where&key=metres_dispatched"
+    page = env.client.get(h + url).text
+    assert "My suggestion" in page and ">Apply</button>" in page and "Suggest edits" in page
+    assert "Later" not in page and 'id="oc-reply"' not in page  # two buttons only (owner)
+    m = re.search(r'name="reply" value="(\d+)"><input type="hidden" name="apply" value="1">', page)
+    assert m, "the pick's one-click form"
+    r = _post(
+        env, h, "/setup/metrics/metres_dispatched/chat/where", {"reply": m.group(1), "apply": "1"}
+    )
+    assert r.status_code == 303
+    _jobs(env)
+    svc = env.app.state.services  # type: ignore[attr-defined]
+    with svc.sf() as s, tenant_scope(cid):
+        row = s.scalars(sa.select(SetupDraft).where(SetupDraft.key == "metres_dispatched")).one()
+        assert row.confidence == "high"  # applied: no second click
+        msgs = list(s.scalars(sa.select(ChatMessage).where(ChatMessage.role == "ai")))
+        assert any(x.applied for x in msgs)
 
 
 def test_connect_the_order_tracker_from_metrics(env: Env, sample, need_sources, tmp_path):
@@ -277,7 +305,7 @@ def test_after_setup_review_confirm_and_fix_chat(env: Env, sample, need_sources,
     # Fix with AI (Edit) opens the fix chat beside the review
     url = f"/sources?panel=chat&s={sid}&key={keys[0]}&purpose=fix"
     assert url.replace("&", "&amp;") in page
-    page = env.client.get(h + url).text
+    page = env.client.get(h + url + "&edit=1").text  # the reply box opens on Suggest edits
     assert "Fix with Othor AI" in page and "Drafts only." in page
     assert f'name="back" value="{url.replace("&", "&amp;")}"' in page
     with svc.sf() as s, tenant_scope(cid):
@@ -346,6 +374,8 @@ def test_tab_fix_units_without_a_model(env: Env, tmp_path):
     page = env.client.get(h + check).text
     assert "Fix with Othor AI" in page and "values are in ₹ crore" in page
     page = env.client.get(h + check + "?fix=1").text
+    assert "Values are in another unit" not in page and "Suggest edits" in page
+    page = env.client.get(h + check + "?fix=1&edit=1").text
     assert "Values are in another unit" in page and "Not available right now" in page
     assert "Drafts only." in page
     r = post_page(

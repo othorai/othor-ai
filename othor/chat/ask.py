@@ -7,9 +7,9 @@ role, schema, audit) → `ask_answer` v1 words the answer from the card's comput
 with a figure the card doesn't hold is not shown (the card shows alone). The card is stored with
 the message, with where it came from; the answer's numbers are always the card's (rule 1).
 
-A change request ("move the Diwali goal") is pointed to Tell Othor AI, where changes are drafted
-and applied. Without a model: the question's words are matched to a tool, and the card shows
-without words (rule 4)."""
+A change request ("move the Diwali goal") is drafted at once in the Business Model chat, to
+review and apply there. Without a model: the question's words are matched to a tool, and the
+card shows without words (rule 4)."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ NONE = (
     "I can answer about your numbers, what Sweep found, which checks ran, your Business Model's "
     "changes and the questions waiting for you. Try one of those."
 )
-CHANGE = "To change your Business Model, tell me in Tell Othor AI: I'll draft it for you to apply."
+CHANGE = "I couldn't draft that as a change. Open the Business Model chat and say it another way."
 
 
 def _route(
@@ -87,8 +87,23 @@ def answer(
     s.commit()  # the gateway logs the call in its own session
     name, args, change, reply, guard = _route(gateway, tctx.company.id, text, hist)
     card: tools.Card | None = None
+    drafted = None
     if change:
-        said = CHANGE
+        # context-aware (owner, 18 Nov 2026): a change asked for in Ask is drafted straight
+        # away in the Business Model chat, to review and apply there
+        from othor.chat import changes
+        from othor.chat import service as chat_svc
+
+        othread = chat_svc.thread(s, "ontology")
+        drafted = changes.draft(
+            s, gateway, tctx.company, othread, text, actor=actor, today=tctx.today
+        )
+        has_set = drafted is not None and bool((drafted.proposal or {}).get("items"))
+        said = (
+            "I've drafted that as a change to your Business Model. Review it and apply."
+            if has_set
+            else CHANGE
+        )
     elif name is None:
         said = reply or NONE
     else:

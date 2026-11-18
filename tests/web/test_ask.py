@@ -69,12 +69,34 @@ def test_without_a_model_the_words_find_the_tool(night):  # noqa: F811
     assert [e.after["tool"] for e in _events(svc, cid)] == ["numbers"]
 
 
-def test_a_change_request_points_to_tell_othor_ai(night, monkeypatch):  # noqa: F811
+def test_a_change_request_is_drafted_in_the_business_model_chat(night, monkeypatch):  # noqa: F811
+    """Context-aware (owner, 18 Nov 2026): a change asked for in Ask is drafted at once in the
+    Business Model chat; nothing is applied; no read tool is called."""
     env, h, cid, _rid, svc = night
-    _fake(monkeypatch, [{"tool": None, "args_json": "{}", "change": True, "reply": ""}])
-    _post(env, h, "/othor/reply", {"subject": "ask", "text": "move the goal", "back": BACK})
+    change = {
+        "op": "put",
+        "type": "business_fact",
+        "key": "kochi_invoicing",
+        "body_json": '{"text": "Kochi plant starts invoicing in December", "kind": "other"}',
+    }
+    _fake(
+        monkeypatch,
+        [
+            {"tool": None, "args_json": "{}", "change": True, "reply": ""},
+            {"changes": [change], "reply": "Noted.", "clarify": None},
+        ],
+    )
+    _post(
+        env,
+        h,
+        "/othor/reply",
+        {"subject": "ask", "text": "Kochi invoices from December", "back": BACK},
+    )
     page = env.client.get(h + BACK).text
-    assert "Open Tell Othor AI" in page and not _events(svc, cid)
+    assert "drafted that as a change" in page and "Review the change" in page
+    assert not _events(svc, cid)
+    draft = env.client.get(h + "/ontology?panel=othor&subject=ontology").text
+    assert "Kochi plant starts invoicing in December" in draft and "Apply 1 change" in draft
 
 
 def test_the_gate_refuses_before_anything_runs(night):  # noqa: F811

@@ -17,7 +17,7 @@ from othor.chat import pending
 from othor.chat import service as chat
 
 BADGE = {
-    "pick": ("My pick", "pick"),
+    "pick": ("My suggestion", "pick"),
     "needs_you": ("Needs you", "needs"),
     "changed": ("Changed", "changed"),
     "skipped": ("Skipped", "skipped"),
@@ -192,7 +192,7 @@ def view(
             changes.opening(t.subject)
             if is_change and not msgs
             else "Ask me about your numbers, what Sweep found, which checks ran, your Business "
-            "Model's changes or the questions waiting for you. Every figure I give is computed."
+            "Model's changes or the questions waiting for you."
             if t.subject == "ask" and not msgs
             else ""
         ),
@@ -200,7 +200,12 @@ def view(
         "messages": msgs,
         "counts": counts,
         "has_set": current is not None,
-        "editing": editing or applied_once or current is None or is_proposal,
+        # the reply box: when there's something to reshape, or a subject that takes free words
+        # (Ask, Business Model changes); never on answered questions (#89: nothing to reply to)
+        "editing": (current is not None and (editing or any(m["role"] == "user" for m in msgs)))
+        or is_proposal
+        or is_change
+        or t.subject == "ask",
         "applied_once": applied_once,
         "close": base,
         "here": open_url,

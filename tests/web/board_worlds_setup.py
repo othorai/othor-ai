@@ -385,7 +385,7 @@ def edit_change_computed(w: World) -> None:
     computed, Apply waiting."""
     _drafted(w)
     page = w.env.client.get(
-        w.host + "/setup/metrics?panel=chat&purpose=edit&key=receivables_over_60"
+        w.host + "/setup/metrics?panel=chat&purpose=edit&key=receivables_over_60&edit=1"
     ).text
     i = re.search(
         r'name="reply" value="(\d+)">\s*<input type="hidden" name="patch" value="set_threshold"',

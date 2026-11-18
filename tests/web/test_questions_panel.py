@@ -93,3 +93,5 @@ def test_with_every_question_answered_the_chat_says_so(night):  # noqa: F811
         s.commit()
     page = _chat(env, h)
     assert "No questions for you right now." in page and "/othor/apply" not in page
+    # #89: nothing pending, so no drafts note and no reply box
+    assert "Drafts only" not in page and 'id="oc-reply"' not in page

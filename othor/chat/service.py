@@ -102,9 +102,9 @@ def intro(c: dict[str, int]) -> str:
     q = "question" if n == 1 else "questions"
     head = f"I have {n} {q} that would make Sweep and your briefs sharper. Here's what I found."
     if picked and need:
-        return f"{head} I've picked answers for {picked}, and {need} need you."
+        return f"{head} I've suggested answers for {picked}, and {need} need you."
     if picked:
-        return f"{head} I've picked an answer for {'it' if n == 1 else 'each'}."
+        return f"{head} I've suggested an answer for {'it' if n == 1 else 'each'}."
     return f"{head} {'It needs' if n == 1 else 'They need'} you."
 
 
@@ -276,7 +276,7 @@ def applied_text(out: dict[str, Any], skipped: list[str]) -> str:
     if missed:  # its answer can't be written now (what it refers to has changed): said, not hidden
         what = "it refers" if missed == 1 else "they refer"
         tail += f" {missed} couldn't be applied: what {what} to has changed, so I'll ask again."
-    return head + tail + " To change any of these answers, just reply here, anytime."
+    return head + tail + " You can change any of them on the Business Model page."
 
 
 def dumps(items: list[dict[str, Any]]) -> str:  # for tests and logs: the set, stably

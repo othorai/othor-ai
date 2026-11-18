@@ -1,20 +1,24 @@
 {#- SPDX-License-Identifier: Apache-2.0 -#}
 {% from "components/ui.html" import el %}
-{% from "components/panels.html" import DRAFT_NOTE, draft_note %}
-{% from "components/othor_chat.html" import oc_draft, oc_actions %}
-{# The fix-a-metric chat (2nb Where is it?, 2nc Connect, 2nd Edit): quick replies by code, typed
-   text to Othor AI, a draft card whose value is computed by SQL, Apply. #}
+{% from "components/buttons.html" import button %}
+{% from "components/othor_chat.html" import oc_shell, oc_ai, oc_user, oc_list, oc_one, oc_options, oc_actions, oc_composer %}
+{# Fix a metric with Othor AI (2nb Where is it?, 2nc Connect, 2nd Edit) as the one chat works
+   (Chat 1.1, owner 18 Nov 2026): Othor AI's pick by default (code's best candidate) with
+   Apply (drafted with its value computed by SQL, then applied, one click); the other
+   choices; Suggest edits opens the reply box (owner: two buttons only). A choice or a reply drafts a
+   change shown as a numbered Draft with Apply. Its own routes and polling stay. #}
 {% set base = "/setup/metrics/" ~ panel.key ~ "/chat/" ~ panel.purpose %}
-{% set back %}{% if panel.elsewhere %}<input type="hidden" name="back" value="{{ panel.page }}"><input type="hidden" name="close" value="{{ panel.close }}">{% endif %}{% endset %}
-{% call el('aside', 'panel chat', attrs={'aria-label': 'Fix with Othor AI', 'id': 'chat-panel', 'hx-get': panel.page if panel.pending else none, 'hx-trigger': 'every 1s' if panel.pending else none, 'hx-select': '#chat-panel' if panel.pending else none, 'hx-swap': 'outerHTML' if panel.pending else none}) %}
-  {% call el('header', 'panel-head') %}<div>{% call el("p", "panel-title") %}Fix with Othor AI{% endcall %}{% call el("p", "hint", layout="flex items-center gap-6") %}{{ panel.name }}{% call el('span', 'chip') %}{% call el('span', 'dot ' ~ panel.dot) %}{% endcall %}{{ panel.label }}{% endcall %}{% endcall %}</div>
-    {% call el('a', 'btn quiet', attrs={'href': panel.close, 'aria-label': 'Close'}) %}×{% endcall %}{% endcall %}
-  {% call el('div', 'panel-body', layout='flex flex-col gap-16') %}
-    {% call el('div', 'msg-ai') %}{% call el("span", "avatar-ai") %}AI{% endcall %}<div class="flex flex-col gap-12 flex-1 min-w-0">
-      <p>{{ panel.intro }}{% if panel.today and panel.purpose == "edit" %} Today: {% call el("b") %}{{ panel.today }}{% endcall %}{% endif %}</p>
-      {% for q in panel.replies %}{% if q.note %}{% call el("div", "option") %}{% call el("p", "strong") %}{{ q.label[4:] if q.label.startswith("Use ") else q.label }}{% endcall %}{% call el("p", "hint") %}{{ q.note }}{% endcall %}{% endcall %}{% endif %}{% endfor %}
-      <div class="flex flex-col gap-8">
-      {% for q in panel.replies %}
+{% set hidden = [("back", panel.page), ("close", panel.close)] if panel.elsewhere else [] %}
+{% set back %}{% for k, v in hidden %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}{% endset %}
+{% call(part) oc_shell("Fix with Othor AI", panel.close, sub=panel.name ~ " · " ~ panel.label, id="chat-panel", poll=panel.page if panel.pending else none) %}
+{% if part == "body" %}
+  {% call oc_ai() %}
+    <p>{{ panel.intro }}{% if panel.today and panel.purpose == "edit" %} Today: {% call el("b") %}{{ panel.today }}{% endcall %}{% endif %}</p>
+    {% if panel.pick or panel.editing %}{% call oc_list() %}{% call oc_one(1, "", "My suggestion" if panel.pick else "Needs you", "pick" if panel.pick else "needs") %}
+      {% if panel.pick %}{% call el("p", "strong") %}{{ panel.pick.label }}{% endcall %}{% if panel.pick.note %}{% call el("p", "hint") %}{{ panel.pick.note }}{% endcall %}{% endif %}{% endif %}
+      {# with a suggestion, the other candidates aren't shown as buttons: Suggest edits takes the
+         owner's own (owner, 18 Nov 2026) #}
+      {% if panel.others and not panel.pick and panel.editing %}{% call oc_options() %}{% for q in panel.others %}<li>
         {% if q.inputs %}
         <details>{% call el("summary", "chip lg") %}{{ q.label }}{% endcall %}
           <form class="flex items-end gap-8 flex-wrap mt-8" method="post" action="{{ base }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ back }}<input type="hidden" name="reply" value="{{ q.i }}">
@@ -22,34 +26,33 @@
             {% for f in q.inputs %}{% call el("label", "field") %}{% call el("span", "field-label") %}{{ f.label }}{% endcall %}
               {% if f.options %}{% call el('select', 'select compact', attrs={'name': f.name, 'multiple': f.multiple or none}) %}{% for o in f.options %}<option value="{{ o }}">{{ o }}</option>{% endfor %}{% endcall %}
               {% else %}{{ el('input', 'input', attrs={'name': f.name, 'value': f.value, 'aria-label': f.label}) }}{% endif %}{% endcall %}{% endfor %}
-            {% call el('button', 'btn', attrs='type="submit"') %}Show today’s value{% endcall %}
+            {{ button("Show today’s value", size="sm", type="submit") }}
           </form></details>
         {% else %}
-        <form method="post" action="{{ base }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ back }}<input type="hidden" name="reply" value="{{ q.i }}">{% call el('button', 'chip lg', attrs='type="submit"') %}{{ q.label }}{% endcall %}</form>
+        <form class="flex items-center gap-6 flex-wrap" method="post" action="{{ base }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ back }}<input type="hidden" name="reply" value="{{ q.i }}">{{ button(q.label, size="sm", type="submit") }}{% if q.note %}{% call el("span", "hint") %}— {{ q.note }}{% endcall %}{% endif %}</form>
         {% endif %}
-      {% endfor %}
-      </div>
-    </div>{% endcall %}
-    {% for m in panel.messages %}
-      {% if m.role == "user" %}{% call el("p", "msg-user") %}{{ m.text }}{% endcall %}
-      {% elif m.role == "ai" %}{% call el("div", "msg-ai") %}{% call el("span", "avatar-ai") %}AI{% endcall %}<div class="flex flex-col gap-12 flex-1 min-w-0"><p>{{ m.text }}</p>
-        {% if m.card %}
-        {% call oc_draft(m.card.lines) %}
-          {% if m.card.now %}{% call el("p", "hint", layout="mt-4") %}Today · computed{% endcall %}{% call el("p", "option-v") %}{{ m.card.now.split(" · ")[-1] }}{% endcall %}{% call el("p", "hint") %}{{ m.card.now }}{% if m.card.before %} (was {{ m.card.before.split(" · ")[-1] }}){% endif %}{% endcall %}{% endif %}
-          {% if not m.applied %}{% call oc_actions() %}<form class="flex items-center gap-8" method="post" action="{{ base }}/apply/{{ m.id }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ back }}{% call el('button', 'btn primary', attrs='type="submit"') %}Apply{% endcall %}{% call el('span', 'hint') %}Becomes High confidence{% endcall %}</form>{% endcall %}{% endif %}
-        {% endcall %}
-        {% endif %}</div>{% endcall %}
-      {% else %}{% call el("p", "hint") %}{{ m.text }}{% endcall %}{% endif %}
-    {% endfor %}
-    {% if panel.pending %}{% call el("p", "progress-line") %}Working it out…{% endcall %}{% endif %}
+      </li>{% endfor %}{% endcall %}{% endif %}
+    {% endcall %}{% endcall %}{% endif %}
+    {% call oc_actions() %}
+      {% if panel.pick %}<form method="post" action="{{ base }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ back }}<input type="hidden" name="reply" value="{{ panel.pick.i }}">{% if panel.pick.patch %}<input type="hidden" name="apply" value="1">{{ button("Apply", "primary", type="submit", attrs={"data-busy": "Applying…"}) }}{% else %}{{ button(panel.pick.label, "primary", type="submit") }}{% endif %}</form>{% endif %}
+      {% if not panel.editing %}{{ button("Suggest edits", href=panel.edit_url) }}{% endif %}
+    {% endcall %}
   {% endcall %}
-  {% call el('form', 'composer', attrs={'method': 'post', 'action': base}) %}
-    <input type="hidden" name="csrf" value="{{ csrf_token }}">{{ back }}
-    {% if panel.model %}
-    <div class="flex items-center gap-8">{{ el('input', 'input', layout='flex-1 min-w-0', attrs={'name': 'text', 'placeholder': 'Ask or tell Othor AI…', 'aria-label': 'Ask or tell Othor AI', 'autofocus': true if request.query_params.get('ask') else none}) }}{% call el('button', 'btn primary', attrs='type="submit"') %}Send{% endcall %}</div>
-    {% else %}
-    <div class="flex items-center gap-8">{{ el('input', 'input', layout='flex-1 min-w-0', attrs={'placeholder': panel.not_available, 'aria-label': panel.not_available, 'disabled': true}) }}{% call el('button', 'btn', attrs='type="button" disabled') %}Send{% endcall %}</div>
-    {% endif %}
-    {{ draft_note() }}
-  {% endcall %}
+  {% for m in panel.messages %}
+    {% if m.role == "user" %}{{ oc_user(m.text) }}
+    {% elif m.role == "ai" %}{% call oc_ai() %}<p>{{ m.text }}</p>
+      {% if m.card %}{% call oc_list() %}{% call oc_one(1, "", "Draft", "pick") %}
+        {% for line in m.card.lines %}{% call el("p", "strong") %}{{ line }}{% endcall %}{% endfor %}
+        {% if m.card.now %}{% call el("p", "hint", layout="mt-4") %}Today · computed{% endcall %}{% call el("p", "option-v") %}{{ m.card.now.split(" · ")[-1] }}{% endcall %}{% call el("p", "hint") %}{{ m.card.now }}{% if m.card.before %} (was {{ m.card.before.split(" · ")[-1] }}){% endif %}{% endcall %}{% endif %}
+      {% endcall %}{% endcall %}
+      {% if not m.applied %}{% call oc_actions() %}<form class="flex items-center gap-8" method="post" action="{{ base }}/apply/{{ m.id }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ back }}{{ button("Apply", "primary", type="submit", attrs={"data-busy": "Applying…"}) }}</form>{% endcall %}
+      {% else %}{% call el("p", "hint") %}Applied{% endcall %}{% endif %}
+      {% endif %}
+    {% endcall %}
+    {% else %}{% call el("p", "hint") %}{{ m.text }}{% endcall %}{% endif %}
+  {% endfor %}
+  {% if panel.pending %}{% call el("p", "progress-line") %}Working it out…{% endcall %}{% endif %}
+{% elif panel.editing %}
+  {{ oc_composer(base, csrf_token, hidden=hidden, placeholder="Tell me what to change", enabled=panel.model, off=panel.not_available) }}
+{% endif %}
 {% endcall %}

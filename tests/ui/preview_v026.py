@@ -139,6 +139,7 @@ def test_preview_v026(night) -> None:  # noqa: F811
         ("08-data-sources", "/sources", True),
         ("09-source-plain-name", f"/sources?panel=manage&s={sid}", False),
         ("10-discover", "/discover", True),
+        ("12-business-model", "/ontology", False),
     ]
     from playwright.sync_api import sync_playwright
 

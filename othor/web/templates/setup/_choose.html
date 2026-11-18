@@ -1,42 +1,34 @@
 {#- SPDX-License-Identifier: Apache-2.0 -#}
 {% from "components/ui.html" import el %}
-{% from "components/panels.html" import DRAFT_NOTE, draft_note %}
-{% from "components/othor_chat.html" import oc_draft, oc_actions %}
-{% call el('aside', 'panel chat choose', attrs='aria-label="Fix with Othor AI"') %}
-  {% call el('header', 'panel-head') %}<div>{% call el("p", "strong") %}Fix with Othor AI{% endcall %}{% call el("p", "hint", layout="flex items-center gap-6") %}{{ panel.name }}{% call el('span', 'chip') %}{% call el('span', 'dot neg') %}{% endcall %}Conflict{% endcall %}{% endcall %}</div>
-    {% call el('a', 'btn quiet', attrs='href="/setup/metrics" aria-label="Close"') %}×{% endcall %}{% endcall %}
-  {% call el('div', 'panel-body', layout='flex flex-col gap-16') %}
-    {% call el('div', 'msg-ai') %}{% call el("span", "avatar-ai") %}AI{% endcall %}<div class="flex flex-col gap-12 flex-1 min-w-0">
-      <p><b>{{ panel.name }}</b> has two definitions in your data. {{ panel.question.split(". Which")[0] }}. Here is {{ panel.month.split(" ")[0] }} both ways:</p>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {% for o in panel.options %}{% call el("div", "option") %}{% call el("p", "hint") %}{{ o.label }}{% endcall %}{% call el("p", "option-v") %}{{ o.shown }}{% endcall %}{% call el("p", "hint") %}{{ o.where }}{% endcall %}{% endcall %}{% endfor %}
-      </div>
-      <p>Which should every brief use?</p>
-      <div class="flex items-center flex-wrap gap-6">
-        {% for o in panel.options %}{% call el('a', 'chip lg' ~ ((' is-on' if panel.proposal and panel.proposal.choice == o.id else '') | string | e), attrs={'href': '/setup/metrics?panel=choose&key=' ~ (panel.key) ~ '&choice=' ~ (o.id)}) %}{{ o.label }}{% endcall %}{% endfor %}
-        {% call el('a', 'chip lg' ~ ((' is-on' if panel.proposal and panel.proposal.choice == 'both' else '') | string | e), attrs={'href': '/setup/metrics?panel=choose&key=' ~ (panel.key) ~ '&choice=both'}) %}Show both in the brief{% endcall %}
-      </div>
-    </div>{% endcall %}
-    {% for m in panel.messages %}
-      {% if m.role == "user" %}{% call el("p", "msg-user") %}{{ m.text }}{% endcall %}
-      {% elif m.role == "ai" %}{% call el("div", "msg-ai") %}{% call el("span", "avatar-ai") %}AI{% endcall %}<p>{{ m.text }}</p>{% endcall %}
-      {% else %}{% call el("p", "hint") %}{{ m.text }}{% endcall %}{% endif %}
-    {% endfor %}
-    {% if panel.proposal %}
-    <form class="flex flex-col gap-8" method="post" action="/setup/metrics/{{ panel.key }}/choose" data-inplace>
-      <input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="choice" value="{{ panel.proposal.choice }}">
-      {% call oc_draft([panel.proposal.text]) %}{% call el("p", "hint") %}Will be saved to the Business Model{% endcall %}
-      {% call oc_actions() %}{% call el('button', 'btn primary', attrs='type="submit"') %}Apply{% endcall %}{% call el('span', 'hint') %}{{ panel.proposal.name }} becomes High confidence{% endcall %}{% endcall %}{% endcall %}
-    </form>
-    {% endif %}
+{% from "components/buttons.html" import button %}
+{% from "components/othor_chat.html" import oc_shell, oc_ai, oc_user, oc_list, oc_one, oc_options, oc_actions, oc_composer %}
+{# A metric with two definitions (the Conflict) as the one chat works (Chat 1.1, owner 18 Nov
+   2026): both values computed by SQL side by side; Othor AI's pick by default (the database,
+   the book of record) with what it writes, Apply in one click; the other choices
+   change it; Suggest edits opens the reply box (owner: two buttons only). #}
+{% set p = panel.proposal %}
+{% call(part) oc_shell("Fix with Othor AI", "/setup/metrics", sub=panel.name ~ " · Conflict", id="chat-panel") %}
+{% if part == "body" %}
+  {% call oc_ai() %}
+    <p><b>{{ panel.name }}</b> has two definitions in your data. {{ panel.question.split(". Which")[0] }}. Here is {{ panel.month.split(" ")[0] }} both ways:</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {% for o in panel.options %}{% call el("div", "option") %}{% call el("p", "hint") %}{{ o.label }}{% endcall %}{% call el("p", "option-v") %}{{ o.shown }}{% endcall %}{% call el("p", "hint") %}{{ o.where }}{% endcall %}{% endcall %}{% endfor %}
+    </div>
+    {% call oc_list() %}{% call oc_one(1, "Which should every brief use?", "My suggestion" if panel.by_ai else ("Changed" if p else "Needs you"), "pick" if panel.by_ai else ("changed" if p else "needs")) %}
+      {% if p %}{% call el("p", "strong") %}{{ p.text }}{% endcall %}{% endif %}
+      {# no choice buttons (owner, 18 Nov 2026): the other definition, or both, through Suggest edits #}
+    {% endcall %}{% endcall %}
+    {% call oc_actions() %}
+      {% if p %}<form method="post" action="/setup/metrics/{{ panel.key }}/choose" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="choice" value="{{ p.choice }}">{{ button("Apply", "primary", type="submit", attrs={"data-busy": "Applying…"}) }}</form>{% endif %}
+      {% if not panel.editing %}{{ button("Suggest edits", href=panel.edit_url) }}{% endif %}
+    {% endcall %}
   {% endcall %}
-  {% call el('form', 'composer', attrs={'method': 'post', 'action': '/setup/metrics/' ~ (panel.key) ~ '/chat'}) %}
-    <input type="hidden" name="csrf" value="{{ csrf_token }}">
-    {% if panel.model %}
-    <div class="flex items-center gap-8">{{ el('input', 'input', layout='flex-1 min-w-0', attrs='name="text" placeholder="Ask or tell Othor AI…" aria-label="Ask or tell Othor AI"') }}{% call el('button', 'btn primary', attrs='type="submit"') %}Send{% endcall %}</div>
-    {% else %}
-    <div class="flex items-center gap-8">{{ el('input', 'input', layout='flex-1 min-w-0', attrs={'placeholder': (panel.not_available), 'aria-label': (panel.not_available), 'disabled': true}) }}{% call el('button', 'btn', attrs='type="button" disabled') %}Send{% endcall %}</div>
-    {% endif %}
-    {{ draft_note() }}
-  {% endcall %}
+  {% for m in panel.messages %}
+    {% if m.role == "user" %}{{ oc_user(m.text) }}
+    {% elif m.role == "ai" %}{% call oc_ai() %}<p>{{ m.text }}</p>{% endcall %}
+    {% else %}{% call el("p", "hint") %}{{ m.text }}{% endcall %}{% endif %}
+  {% endfor %}
+{% elif panel.editing %}
+  {{ oc_composer("/setup/metrics/" ~ panel.key ~ "/chat", csrf_token, placeholder="Tell me which one, or ask about the two", enabled=panel.model, off=panel.not_available) }}
+{% endif %}
 {% endcall %}

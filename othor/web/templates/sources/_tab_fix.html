@@ -1,48 +1,45 @@
 {#- SPDX-License-Identifier: Apache-2.0 -#}
 {% from "components/ui.html" import el %}
-{% from "components/panels.html" import DRAFT_NOTE, draft_note %}
-{% from "components/othor_chat.html" import oc_draft, oc_actions %}
-{# 10c: Fix with Othor AI. The units form is code; a typed line goes to Othor AI, whose fix is a
-   typed shape change. Apply re-reads the tab by code. #}
+{% from "components/buttons.html" import button %}
+{% from "components/othor_chat.html" import oc_shell, oc_ai, oc_user, oc_list, oc_one, oc_options, oc_actions, oc_composer %}
+{# 10c: Fix a Sheets tab with Othor AI in the one chat's UX (Chat 1.1, owner 18 Nov 2026). The
+   units form is code; a typed line goes to Othor AI, whose fix is a typed shape change shown as
+   a numbered Draft; Apply re-reads the tab by code. #}
 {% set shape_url = "/setup/sources/" ~ src.id ~ "/check/" ~ tab.id ~ "/shape" %}
 {% set here = "/setup/sources/" ~ src.id ~ "/check/" ~ tab.id %}
-{% call el('a', 'scrim', attrs={'href': here, 'aria-label': 'Close'}) %}{% endcall %}
-{% call el('aside', 'panel chat', attrs={'aria-label': 'Fix with Othor AI', 'id': 'fix-panel', 'hx-get': (here ~ '?fix=1') if fix.pending else none, 'hx-trigger': 'every 1s' if fix.pending else none, 'hx-select': '#fix-panel' if fix.pending else none, 'hx-swap': 'outerHTML' if fix.pending else none}) %}
-  {% call el('header', 'panel-head') %}<div>{% call el("p", "panel-title") %}Fix with Othor AI{% endcall %}{% call el("p", "hint") %}{{ tab.tab_name }} · {{ tab.spreadsheet_title }}{% endcall %}</div>
-    {% call el('a', 'btn quiet', attrs={'href': here, 'aria-label': 'Close'}) %}×{% endcall %}{% endcall %}
-  {% call el('div', 'panel-body', layout='flex flex-col gap-16') %}
-    {% call el('div', 'msg-ai') %}{% call el("span", "avatar-ai") %}AI{% endcall %}<div class="flex flex-col gap-12 flex-1 min-w-0">
-      <p>Tell me what looks wrong, or set a column’s unit here.</p>
-      {% if fix.numbers %}
+{% set editing = request.query_params.get("edit") == "1" or fix.messages | length > 0 %}
+{% call(part) oc_shell("Fix with Othor AI", here, sub=tab.tab_name ~ " · " ~ tab.spreadsheet_title, id="fix-panel", poll=(here ~ "?fix=1") if fix.pending else none) %}
+{% if part == "body" %}
+  {% call oc_ai() %}
+    <p>Tell me what looks wrong, or set a column’s unit here.</p>
+    {# the unit form only once the owner opens Suggest edits (owner, 18 Nov 2026: no pills) #}
+    {% if fix.numbers and editing %}{% call oc_list() %}{% call oc_one(1, "Are the values in another unit?", "Needs you", "needs") %}
+      {% call oc_options() %}<li>
       <details>{% call el("summary", "chip lg") %}Values are in another unit{% endcall %}
         <form class="flex items-end gap-8 flex-wrap mt-8" method="post" action="{{ shape_url }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="header_row" value="{{ tab.header_row }}"><input type="hidden" name="last_row" value="{{ tab.last_row or '' }}">
           {% call el("label", "field") %}{% call el("span", "field-label") %}Column{% endcall %}{% call el('select', 'select compact', attrs={'name': 'unit_col'}) %}{% for c in fix.numbers %}<option value="{{ c }}">{{ c }}</option>{% endfor %}{% endcall %}{% endcall %}
           {% call el("label", "field") %}{% call el("span", "field-label") %}Unit{% endcall %}{% call el('select', 'select compact', attrs={'name': 'unit'}) %}{% for u, name in fix.units %}<option value="{{ u }}">{{ name }}</option>{% endfor %}{% endcall %}{% endcall %}
-          {% call el('button', 'btn', attrs='type="submit"') %}Read it again{% endcall %}
+          {{ button("Read it again", size="sm", type="submit") }}
         </form></details>
-      {% endif %}
-    </div>{% endcall %}
-    {% for m in fix.messages %}
-      {% if m.role == "user" %}{% call el("p", "msg-user") %}{{ m.text }}{% endcall %}
-      {% elif m.role == "ai" %}{% call el("div", "msg-ai") %}{% call el("span", "avatar-ai") %}AI{% endcall %}<div class="flex flex-col gap-12 flex-1 min-w-0"><p>{{ m.text }}</p>
-        {% if m.proposal %}
-        {% call oc_draft(m.proposal.lines) %}
+      </li>{% endcall %}
+    {% endcall %}{% endcall %}{% endif %}
+    {% call oc_actions() %}
+      {% if not editing %}{{ button("Suggest edits", href=here ~ "?fix=1&edit=1") }}{% endif %}
+    {% endcall %}
+  {% endcall %}
+  {% for m in fix.messages %}
+    {% if m.role == "user" %}{{ oc_user(m.text) }}
+    {% elif m.role == "ai" %}{% call oc_ai() %}<p>{{ m.text }}</p>
+      {% if m.proposal %}{% call oc_list() %}{% call oc_one(1, "", "Draft", "pick") %}{% for line in m.proposal.lines %}{% call el("p", "strong") %}{{ line }}{% endcall %}{% endfor %}{% endcall %}{% endcall %}
         {% if not m.applied %}{% call oc_actions() %}<form class="flex items-center gap-8" method="post" action="{{ shape_url }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="msg" value="{{ m.id }}">
           {% for k, val in m.proposal.shape.items() %}<input type="hidden" name="{{ k }}" value="{{ val }}">{% endfor %}
-          {% call el('button', 'btn primary', attrs='type="submit"') %}Apply{% endcall %}{% call el('span', 'hint') %}The tab is read again{% endcall %}</form>{% endcall %}{% endif %}
-        {% endcall %}
-        {% endif %}</div>{% endcall %}
-      {% else %}{% call el("p", "hint") %}{{ m.text }}{% endcall %}{% endif %}
-    {% endfor %}
-    {% if fix.pending %}{% call el("p", "progress-line") %}Working it out…{% endcall %}{% endif %}
-  {% endcall %}
-  {% call el('form', 'composer', attrs={'method': 'post', 'action': here ~ '/fix'}) %}
-    <input type="hidden" name="csrf" value="{{ csrf_token }}">
-    {% if fix.model %}
-    <div class="flex items-center gap-8">{{ el('input', 'input', layout='flex-1 min-w-0', attrs={'name': 'text', 'placeholder': 'e.g. values are in ₹ crore', 'aria-label': 'Tell Othor AI what looks wrong'}) }}{% call el('button', 'btn primary', attrs='type="submit"') %}Send{% endcall %}</div>
-    {% else %}
-    <div class="flex items-center gap-8">{{ el('input', 'input', layout='flex-1 min-w-0', attrs={'placeholder': fix.not_available, 'aria-label': fix.not_available, 'disabled': true}) }}{% call el('button', 'btn', attrs='type="button" disabled') %}Send{% endcall %}</div>
-    {% endif %}
-    {{ draft_note() }}
-  {% endcall %}
+          {{ button("Apply", "primary", type="submit", attrs={"data-busy": "Applying…"}) }}</form>{% endcall %}{% endif %}
+      {% endif %}
+    {% endcall %}
+    {% else %}{% call el("p", "hint") %}{{ m.text }}{% endcall %}{% endif %}
+  {% endfor %}
+  {% if fix.pending %}{% call el("p", "progress-line") %}Working it out…{% endcall %}{% endif %}
+{% elif editing %}
+  {{ oc_composer(here ~ "/fix", csrf_token, placeholder="e.g. values are in ₹ crore", enabled=fix.model, off=fix.not_available) }}
+{% endif %}
 {% endcall %}
