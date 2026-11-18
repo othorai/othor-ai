@@ -1082,7 +1082,7 @@ document.addEventListener("submit", (e) => {
 (function () {
   let saved = null;
   document.addEventListener("click", (e) => {
-    const a = e.target.closest(".side a.nav-item, .side a.nav-usage");
+    const a = e.target.closest(".side a.nav-item");
     if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     if (a.target && a.target !== "_self") return;
     const url = new URL(a.href, location.href);

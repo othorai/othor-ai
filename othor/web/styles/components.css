@@ -330,20 +330,9 @@ body:has(.panel.wide:not(.in-page), .panel.chat:not(.in-page)) .toast-dock { lef
 /* ---------- account menu (shared; drawn open on 4d1) ---------- */
 .side .account { margin-top: auto; position: relative; padding-top: 8px; border-top: 1px solid var(--color-rule); }
 /* M15.8 (owner, 14 Nov 2026): AI usage just above the profile, a card: tokens in 7 days, a bar a day */
-.side .nav-usage { margin-top: auto; margin-bottom: 8px; display: grid; grid-template-columns: 1fr auto; row-gap: 6px; padding: 10px; border: 1px solid var(--color-border); border-radius: var(--radius-8); background: var(--color-bg); color: var(--color-ink-2); text-decoration: none; }
-.side .nav-usage:hover { border-color: var(--color-accent-border); }  /* grey border, cyan on hover (owner, 14 Nov 2026) */
-.side .nav-usage:focus-visible { box-shadow: var(--shadow-focus); outline: none; }
-.side .nav-usage.is-on { background: var(--color-bg); }  /* the card looks the same on every page, its own too (owner, 14 Nov 2026) */
-.nav-usage-head { display: flex; align-items: center; gap: 10px; font-size: var(--text-15); font-weight: 400; color: var(--color-ink-2); }  /* exactly as .nav-item (owner, 14 Nov 2026) */
-.nav-usage-head svg { width: 18px; height: 18px; stroke: var(--color-muted); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.nav-usage-card { display: contents; }
-.nav-usage-card:empty::after { content: ""; grid-column: 1 / -1; height: 28px; }  /* the card's place, before it fills */
-.nav-usage-num { justify-self: end; align-self: center; font-size: var(--text-15); font-weight: 400; color: var(--color-ink-2); font-variant-numeric: tabular-nums; }
-.nav-usage-chart { grid-column: 1 / -1; display: block; line-height: 0; }
-.nav-usage-chart svg { display: block; width: 100%; max-width: 200px; height: auto; }  /* left-aligned, the same on a phone */
-.nav-usage-chart svg rect { fill: var(--color-border); }  /* the bars in the border's light grey (owner, 14 Nov 2026) */
+.side .side-fill { margin-top: auto; }  /* keeps the profile at the bottom (0.26) */
+.nav-item .nav-count { margin-left: auto; font-size: var(--text-meta); color: var(--color-muted); font-variant-numeric: tabular-nums; }
 
-.side .nav-usage + .account { margin-top: 0; }
 .account-trigger { display: flex; align-items: center; gap: 8px; width: 100%; height: 40px; padding: 0 8px; border-radius: var(--radius-6);
   cursor: pointer; list-style: none; }
 .account-trigger::-webkit-details-marker { display: none; }
@@ -575,10 +564,9 @@ button.link-muted:disabled { color: var(--color-muted-2); cursor: default; text-
   .side { border-right: 0; border-bottom: 1px solid var(--color-rule); padding: 10px 12px; position: sticky; top: 0; height: auto; overflow: visible; background: var(--color-bg); z-index: 30; }
   .side-top .brand { padding: 0; }
   .nav-button { display: inline-flex; }
-  .nav-links, .side .account, .side .nav-usage { display: none; }
+  .nav-links, .side .account, .side .side-fill { display: none; }
   .nav-toggle:checked ~ .nav-button { background: var(--color-surface-2); }
   .side:has(.nav-toggle:checked) .nav-links, .side:has(.nav-toggle:checked) .account { display: block; }
-  .side:has(.nav-toggle:checked) .nav-usage { display: grid; margin: 8px 0 0; }
   .side:has(.nav-toggle:checked) .nav-links { margin-top: 8px; }
   .app-header, .app-header:has(+ .app-main:not(.flush)) { padding: 8px 16px; height: auto; min-height: 48px; flex-wrap: wrap; gap: 8px; }
   /* a phone shows where you are, not the whole trail; actions wrap below and never break mid-phrase (10g) */
@@ -2217,7 +2205,6 @@ a.bp-tile:hover { border-color: var(--color-border-hover); }
     linear-gradient(90deg, #00FF99 0%, #22DDE0 30%, var(--color-accent) 100%) border-box; }
 
 /* the AI cap's pause line under the side menu's usage card (open sign-up, owner 16 Nov 2026) */
-.nav-usage-paused { display: block; margin-top: 4px; font-size: var(--text-label); font-weight: 600; color: var(--color-warn-text); }
 
 /* open sign-up's free trial on Home's title row (owner, 16 Nov 2026) */
 .trial-chip { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--color-border); font-size: var(--text-row); color: var(--color-ink-2); background: var(--color-white); }
@@ -2239,3 +2226,55 @@ form:has(> .fold[open]) > .fold-hide { display: none; }
 .lbk-from { border: 0; padding: 0; margin: 0; min-width: 0; }
 .lbk-from .lbk-file { display: none; }
 .lbk-from:has(input[value="file"]:checked) .lbk-file { display: flex; }
+
+/* ---------- the Othor AI chat (Chat 1.0, owner 18 Nov 2026; design/questions-chat/) ---------- */
+.panel.chat.oc { width: 520px; }
+.oc-thread { gap: 18px; }
+.oc-msg { display: flex; flex-direction: column; gap: 12px; min-width: 0; flex: 1; }
+.oc-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.oc-item { display: flex; gap: 10px; padding-top: 12px; border-top: 1px solid var(--color-rule); }
+.oc-item:first-child { border-top: 0; padding-top: 0; }
+.oc-n { flex: none; width: 20px; height: 20px; border-radius: var(--radius-full); background: var(--color-ink); color: var(--color-white);
+  font-size: var(--text-label); font-weight: 600; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px; }
+.oc-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.oc-q { font-weight: 600; color: var(--color-ink); }
+.oc-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.oc-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: var(--radius-full); font-size: var(--text-meta); font-weight: 600; }
+.oc-badge.pick { background: var(--color-accent-tint); color: var(--color-accent-deep); }
+.oc-badge.needs { background: var(--color-warn-tint); color: var(--color-warn-text); }
+.oc-badge.changed { background: var(--color-accent-deep); color: var(--color-white); }
+.oc-badge.skipped { background: var(--color-surface-2); color: var(--color-muted); }
+.oc-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--radius-6); background: var(--color-surface-2); color: var(--color-ink-2);
+  font-size: var(--text-meta); white-space: nowrap; }
+.oc-tag .icon { width: 12px; height: 12px; }
+.oc-tag code { font-family: var(--font-mono); color: var(--color-ink); }
+.oc-effect, .oc-note { color: var(--color-muted); font-size: var(--text-meta); }
+.oc-others { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: var(--text-meta); color: var(--color-ink-2); }
+.oc-others li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.oc-close { color: var(--color-ink-2); }
+.oc-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.oc-actions .btn { height: 44px; padding: 0 18px; }
+.oc-applied { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.oc-applied li { display: flex; gap: 8px; align-items: flex-start; }
+.oc-applied .icon { width: 16px; height: 16px; color: var(--color-ok-text, var(--color-accent-deep)); flex: none; margin-top: 3px; }
+@media (max-width: 640px) { .panel.chat.oc { width: 100%; } }
+/* the top bar's Ask Othor AI (Chat 1.0): before the page's own actions; the mark only on phones */
+.app-header-end { display: flex; align-items: center; gap: 8px; min-width: 0; }
+@media (max-width: 640px) { .app-header-end .btn.ai span { display: none; } }
+
+/* Real rows behind a choice in the Othor AI chat (0.26, M26.3) */
+.oc-preview { margin: 4px 0 8px; }
+.oc-others .oc-preview { flex-basis: 100%; margin: 0; }
+.oc-preview-title { font-size: var(--text-meta); color: var(--color-muted); margin: 0 0 4px; }
+.oc-rows { border-collapse: collapse; font-size: var(--text-meta); font-variant-numeric: tabular-nums; }
+.oc-rows th { text-align: left; font-weight: 500; color: var(--color-muted); padding: 2px 16px 2px 0; }
+.oc-rows td { padding: 3px 16px 3px 0; border-top: 1px solid var(--color-border); color: var(--color-ink); }
+.oc-where summary { cursor: pointer; font-size: var(--text-meta); color: var(--color-muted); }
+.oc-where pre { white-space: pre-wrap; font-size: var(--text-meta); font-family: var(--font-mono); }
+
+/* Ask Othor AI's answer card (0.26, M26.6): computed facts, where they came from */
+.oc-card { margin-top: 8px; padding: 12px 14px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface, transparent); display: flex; flex-direction: column; gap: 6px; }
+.oc-card-title { font-weight: 600; color: var(--color-ink); }
+.oc-facts { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; margin: 0; font-size: var(--text-meta); }
+.oc-facts dt { color: var(--color-ink-2); }
+.oc-facts dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; color: var(--color-ink); }

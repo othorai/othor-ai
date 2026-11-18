@@ -12,7 +12,7 @@
 {% block actions %}{% call top_menu() %}{{ menu_link("History", "/ontology?panel=history") }}{% endcall %}{% endblock %}
 {% block main %}
 {% set q = "&numbers=" ~ filter if filter else "" %}
-{% set page_chat = "/ontology?panel=chat&subject=page" %}
+{% set page_chat = "/ontology?panel=othor&subject=ontology" %}
 {# the page style (owner, 13 Nov 2026): the title row with what waits on Home as its button #}
 {# #43: the description behind an info icon beside the title #}
 {% call page_title("Business Model", info="What Othor AI knows about " ~ company.name ~ ("" if company.name.endswith(".") else ".") ~ " Every brief and every Sweep reads from it. Changes apply from the next run. Every version is kept; any brief can be replayed on the version it used. In data terms, this is the Ontology.") %}{% if home_count %}{{ button(fmt.num(home_count) ~ " to review on Home", "primary", href="/home", attrs={"title": home_line}) }}{% endif %}{% endcall %}
@@ -22,7 +22,7 @@
   {% call el("div", layout="flex items-center gap-8 flex-wrap") %}{{ toast("Business Model v" ~ done.number ~ " · applies from tonight’s run", sub=done.reason) }}{% call el("form", attrs={"data-inplace": true, "method": "post", "action": "/ontology/versions/" ~ done.number ~ "/undo"}) %}<input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="back" value="/ontology">{{ button("Undo", type="submit") }}{% endcall %}{% endcall %}
   {% endif %}
 
-  {% call el("form", attrs={"data-inplace": true, "method": "post", "action": "/ontology/chat"}) %}<input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="subject" value="page">{{ tell_line("Tell Othor AI what changed…", ["Kochi plant starts invoicing in December", "The Surat shutdown moves to September"]) }}{% endcall %}
+  {% call el("form", attrs={"data-inplace": true, "method": "post", "action": "/othor/reply"}) %}<input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="subject" value="ontology"><input type="hidden" name="back" value="/ontology?panel=othor&amp;subject=ontology">{{ tell_line("Tell Othor AI what changed…", ["Kochi plant starts invoicing in December", "The Surat shutdown moves to September"]) }}{% endcall %}
 
   {# Let Othor AI decide (v0.12): its decisions, listed to confirm or fix #}
   {% if decided and not expanded %}
@@ -58,10 +58,10 @@
       {% call el("td", "wrap") %}{{ r.definition }}{% endcall %}
       {% call el("td", "wrap") %}{{ r.source }}{% endcall %}
       {% call el("td", "num" ~ (" nodata" if r.nodata else "")) %}{{ r.today }}{% endcall %}
-      {% call el("td", "act") %}{% if r.needs %}{{ ont_act("Fix", "/ontology?metric=" ~ r.key ~ q, always=True) }}{% else %}{{ ont_act("Change", "/ontology?panel=chat&subject=metric:" ~ r.key) }}{% endif %}{% endcall %}
+      {% call el("td", "act") %}{% if r.needs %}{{ ont_act("Fix", "/ontology?metric=" ~ r.key ~ q, always=True) }}{% else %}{{ ont_act("Change", "/ontology?panel=othor&subject=ontology:metric:" ~ r.key) }}{% endif %}{% endcall %}
     {% endcall %}{% endfor %}
     </tbody>{% endcall %}{% endcall %}
-    {% if expanded %}{% call el("div", "section-head") %}{{ link("+ Add a number", "/ontology?panel=chat&subject=add") }}{% endcall %}{% endif %}
+    {% if expanded %}{% call el("div", "section-head") %}{{ link("+ Add a number", "/ontology?panel=othor&subject=ontology:add") }}{% endcall %}{% endif %}
   {% endcall %}
 
   {% if expanded %}
@@ -90,5 +90,4 @@
 {% block overlay %}
 {% if metric %}{% include "ontology/_metric.html" %}{% endif %}
 {% if history %}{% include "ontology/_history.html" %}{% endif %}
-{% if chat %}{% include "ontology/_chat.html" %}{% endif %}
 {% endblock %}

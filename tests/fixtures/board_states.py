@@ -100,7 +100,7 @@ STATES: dict[str, BoardState] = {
         # Ontology
         _S("6a", "night", "/ontology"),
         _S("6a2", "night", "/ontology?metric=net_revenue"),
-        _S("6a3", "night", "/ontology?panel=chat&subject=page"),
+        _S("6a3", "night", "/ontology?panel=othor&subject=ontology"),
         _S("6a4", "night", "/ontology?panel=history"),
         # Sources
         _S("6c", "night", "/sources"),

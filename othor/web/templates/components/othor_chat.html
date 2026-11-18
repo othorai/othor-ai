@@ -1,0 +1,85 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# The Othor AI chat (Chat 1.0, owner 18 Nov 2026; design/questions-chat/): one panel for every
+   purpose. Othor AI's message holds the set: numbered items, each with its status, the pick and
+   where it reads from, other choices, what it does. Apply N applies; Suggest edits opens the reply
+   box; a reply only reshapes the set. #}
+{% from "components/forms.html" import action_form %}
+{% from "components/buttons.html" import button %}
+{% from "components/panels.html" import draft_note %}
+
+{% macro source_tag(t) -%}
+{% if t %}<span class="oc-tag"><svg class="icon" aria-hidden="true"><use href="{{ asset('icons/sprite.svg') }}#sources"></use></svg>{{ t.plain }}{% if not t.same %} ({{ t.source }}){% endif %} › <code>{{ t.table }}</code></span>{% endif %}
+{%- endmacro %}
+
+{# Real rows behind a choice (M26.3): read live when shown, never stored, never sent to a model #}
+{% macro preview_slot(url, now=False) -%}
+{% if url %}{% if now %}<div class="oc-preview" hx-get="{{ url }}" hx-trigger="load" hx-swap="outerHTML"><p class="oc-note">Reading a few rows…</p></div>
+{% else %}<div class="oc-preview"><button class="link" type="button" hx-get="{{ url }}" hx-target="closest .oc-preview" hx-swap="outerHTML">See a few rows</button></div>{% endif %}{% endif %}
+{%- endmacro %}
+
+{% macro oc_item(i, p, csrf, buttons=False) -%}
+<li class="oc-item">
+  <span class="oc-n" aria-hidden="true">{{ i.n }}</span>
+  <div class="oc-body">
+    <p class="oc-q">{{ i.text }}</p>
+    {% if i.change %}<p class="oc-pick"><span class="oc-badge {{ i.badge_class }}">{{ i.badge }}</span>{% if i.before and i.after and i.before != i.after %}<s>{{ i.before }}</s> → <b>{{ i.after }}</b>{% elif i.after %}<b>{{ i.after }}</b>{% else %}<s>{{ i.before }}</s>{% endif %}</p>
+    {% if i.lines and i.status != "skipped" %}{% for l in i.lines %}<p class="oc-effect">{{ l }}</p>{% endfor %}{% elif i.status == "needs_you" %}<p class="oc-note">{{ i.effect }}</p>{% endif %}
+    {% if i.values_url and i.status != "skipped" %}{{ preview_slot(i.values_url, now=True) }}{% endif %}
+    {% elif i.pick %}<p class="oc-pick"><span class="oc-badge {{ i.badge_class }}">{{ i.badge }}</span><b>{{ i.pick.label }}</b>{{ source_tag(i.pick.tag) }}</p>{{ preview_slot(i.pick.preview, now=True) }}
+    {% elif i.answer %}<p class="oc-pick"><span class="oc-badge {{ i.badge_class }}">{{ i.badge }}</span><b>“{{ i.answer }}”</b></p>
+    {% else %}<p class="oc-pick"><span class="oc-badge {{ i.badge_class }}">{{ i.badge }}</span>{% if i.free_text %}Tell me in a sentence, or skip it for now.{% endif %}</p>{% endif %}
+    {% if i.why_not and i.status == "needs_you" %}<p class="oc-note">{{ i.why_not }}</p>{% endif %}
+    {% if i.effect and i.status != "skipped" and not i.change %}<p class="oc-effect">{{ i.effect }}</p>{% endif %}
+    {% if i.others and not i.change %}<ul class="oc-others">{% for o in i.others %}<li>{% if buttons %}{% call action_form("/othor/choose", csrf, kind="contents") %}<input type="hidden" name="subject" value="{{ p.subject }}"><input type="hidden" name="item" value="{{ i.id }}"><input type="hidden" name="option" value="{{ o.key }}"><input type="hidden" name="back" value="{{ p.here }}">{{ button(o.label, "quiet", size="sm", type="submit") }}{% endcall %}{% else %}<b>{{ o.label }}</b>{% endif %}{% if o.note %}<span class="oc-note"> — {{ o.note }}</span>{% endif %}{{ source_tag(o.tag) }}{{ preview_slot(o.preview) }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+</li>
+{%- endmacro %}
+
+{# Chat 1.1 (M26.5): onboarding's chats (Fix with Othor AI, the Sheets tab fix) keep their own
+   logic and draw their draft with the one chat's parts: a numbered item with its badge, the
+   lines code computed, and the actions row (the caller: Apply). #}
+{% macro oc_draft(lines, badge="Draft") -%}
+<ol class="oc-items"><li class="oc-item"><span class="oc-n" aria-hidden="true">1</span><div class="oc-body">
+  <p class="oc-pick"><span class="oc-badge pick">{{ badge }}</span></p>
+  {% for l in lines %}<p class="oc-q">{{ l }}</p>{% endfor %}
+  {% if caller %}{{ caller() }}{% endif %}
+</div></li></ol>
+{%- endmacro %}
+
+{% macro oc_actions() -%}<div class="oc-actions">{{ caller() }}</div>{%- endmacro %}
+
+{% macro oc_apply_note() -%}<span class="note">Nothing is applied until you press Apply.</span>{%- endmacro %}
+
+{% macro othor_chat(p, csrf) -%}
+<a class="scrim" href="{{ p.close }}" aria-label="Close"></a>
+<aside class="panel chat oc" aria-label="{{ p.title }}" id="othor-chat">
+  <header class="panel-head"><div><p class="panel-title">{{ p.title }}</p>{% if p.subject == "questions" or p.has_set %}<p class="hint">{{ draft_note() }}</p>{% endif %}</div><a class="btn quiet" href="{{ p.close }}" aria-label="Close">×</a></header>
+  <div class="panel-body oc-thread">
+    {% if p.opening %}<div class="msg-ai"><span class="avatar-ai">AI</span><p>{{ p.opening }}</p></div>{% endif %}
+    {% if p.empty %}<div class="msg-ai"><span class="avatar-ai">AI</span><p>No questions for you right now. I'll ask when an answer would make Sweep or your briefs sharper.</p></div>{% endif %}
+    {% for m in p.messages %}
+      {% if m.role == "user" %}<p class="msg-user">{{ m.text }}</p>
+      {% else %}<div class="msg-ai"><span class="avatar-ai">AI</span><div class="oc-msg">
+        <p>{{ m.text }}</p>
+        {% if m.rows %}<ol class="oc-items">{% for i in m.rows %}{{ oc_item(i, p, csrf, m.buttons) }}{% endfor %}</ol>
+          <p class="oc-close">{{ "Apply them now, or tell me what to change." if p.is_change else ("Apply it, decline it, or ask me about it below." if p.is_proposal else "Apply my picks now, or suggest edits if anything looks wrong.") }}</p>
+          <div class="oc-actions">{% if p.is_proposal %}{% call action_form("/othor/apply", csrf, kind="contents") %}<input type="hidden" name="subject" value="{{ p.subject }}"><input type="hidden" name="back" value="{{ p.here }}">{{ button("Apply", "primary", type="submit", attrs={"data-busy": "Applying…"}) }}{% endcall %}{% call action_form("/othor/apply", csrf, kind="contents") %}<input type="hidden" name="subject" value="{{ p.subject }}"><input type="hidden" name="decision" value="decline"><input type="hidden" name="back" value="{{ p.here }}">{{ button("Decline", type="submit") }}{% endcall %}{% elif p.counts and p.counts.apply %}{% call action_form("/othor/apply", csrf, kind="contents") %}<input type="hidden" name="subject" value="{{ p.subject }}"><input type="hidden" name="back" value="{{ p.here }}">{{ button("Apply " ~ p.counts.apply ~ ((" change" if p.counts.apply == 1 else " changes") if p.is_change else (" answer" if p.counts.apply == 1 else " answers")), "primary", type="submit", attrs={"data-busy": "Applying…"}) }}{% endcall %}{% endif %}{% if not p.editing and not p.is_proposal %}{{ button("Suggest edits", href=p.edit_url, attrs={"data-panel": true}) }}{% endif %}</div>
+        {% endif %}
+        {% if m.card %}<div class="oc-card"><p class="oc-card-title">{{ m.card.title }}</p>
+          {% if m.card.facts %}<dl class="oc-facts">{% for k, v in m.card.facts %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl>{% endif %}
+          {% for l in m.card.lines %}<p class="oc-note">{{ l }}</p>{% endfor %}
+          <details class="oc-where"><summary>How this was worked out</summary><p class="oc-note">Computed by code{% if m.card.where %} · {{ m.card.where }}{% endif %}. Othor AI only chose where to look{% if m.text %} and put it in words{% endif %}; every figure is from the computed result.</p></details>
+        </div>{% endif %}
+        {% if m.to_change %}{{ button("Open Tell Othor AI", href="/ontology?panel=othor&subject=ontology", size="sm") }}{% endif %}
+        {% if m.applied %}<ul class="oc-applied">{% for a in m.applied %}<li><svg class="icon" aria-hidden="true"><use href="{{ asset('icons/sprite.svg') }}#check"></use></svg><span><b>{{ a.text }}</b> {{ a.answer }}{% if a.effect %}<span class="oc-note"> · {{ a.effect }}</span>{% endif %}</span></li>{% endfor %}</ul>{% endif %}
+      </div></div>{% endif %}
+    {% endfor %}
+  </div>
+  {% if p.editing %}{% call action_form("/othor/reply", csrf, kind="composer") %}
+    <input type="hidden" name="subject" value="{{ p.subject }}"><input type="hidden" name="back" value="{{ p.here }}">
+    <label class="sr-only" for="oc-reply">Reply to Othor AI</label>
+    <textarea class="input" id="oc-reply" name="text" rows="2" autofocus placeholder="{% if p.is_proposal %}Ask about this proposal{% elif p.is_change %}{{ 'Tell me what to change' if p.has_set else 'What changed in the business?' }}{% elif p.applied_once %}Reply to change any answer…{% elif p.has_set %}Tell me what to change{% else %}Ask about your numbers{% endif %}"></textarea>
+    <div class="flex items-center justify-between gap-8"><span class="note">{{ "Every figure is computed by code; I only look things up." if p.subject == "ask" else "Nothing is applied until you press Apply." }}</span>{{ button("Send", "primary", size="sm", type="submit", attrs={"data-busy": "Thinking…"}) }}</div>
+  {% endcall %}{% endif %}
+</aside>
+{%- endmacro %}

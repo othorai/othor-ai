@@ -44,7 +44,7 @@
 </div>
 {% else %}
   {% call el("div", layout="flex items-center justify-between gap-8 w-full flex-wrap") %}
-    {{ link("Change with Othor AI", "/ontology?panel=chat&subject=metric:" ~ m.key) }}
+    {{ link("Change with Othor AI", "/ontology?panel=othor&subject=ontology:metric:" ~ m.key) }}
     {% call el("span", layout="flex items-center gap-8") %}
     {% if m.needs %}
       {% call el("form", attrs={"data-inplace": true, "method": "post", "action": "/ontology/metric/" ~ m.key ~ "/remove"}) %}<input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Remove this number", type="submit") }}{% endcall %}

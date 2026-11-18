@@ -16,21 +16,22 @@
     {% for key, label, href, ic, tag, badge in nav_items("company", [("home", "Home", "/home"), ("brief", "Morning Brief", "/brief"), ("sweep", "Sweep", "/sweep"), ("summary", "Summary", "/summary")]) %}
     <a class="nav-item{{ ' is-on' if nav == key else '' }}" href="{{ href }}"{% if nav == key %} aria-current="page"{% endif %}>{{ icon(ic) }}{{ label }}{% if badge %}<span class="nav-badge" aria-label="{{ fmt.num(badge) }} new">{{ fmt.num(badge) }}</span>{% endif %}{% if tag == "ee" %}{{ ee_tag(short=True) }}{% endif %}</a>{% endfor %}
     <p class="group">Setup</p>
-    {% for key, label, href, ic, tag, badge in nav_items("setup", [("ontology", "Business Model", "/ontology"), ("sources", "Data sources", "/sources"), ("settings", "Settings", "/settings")]) %}
-    <a class="nav-item{{ ' is-on' if nav == key else '' }}" href="{{ href }}"{% if nav == key %} aria-current="page"{% endif %}>{{ icon(ic) }}{{ label }}{% if badge %}<span class="nav-badge" aria-label="{{ fmt.num(badge) }} new">{{ fmt.num(badge) }}</span>{% endif %}{% if tag == "ee" %}{{ ee_tag(short=True) }}{% endif %}</a>{% endfor %}
+    {# owner, 18 Nov 2026 (0.26): AI usage is a plain menu item above Settings, this month's
+       tokens on its right (loaded after the page, so no page waits for it) #}
+    {% for key, label, href, ic, tag, badge in nav_items("setup", [("ontology", "Business Model", "/ontology"), ("sources", "Data sources", "/sources"), ("usage", "AI usage", "/usage"), ("settings", "Settings", "/settings")]) %}
+    <a class="nav-item{{ ' is-on' if nav == key else '' }}" href="{{ href }}"{% if nav == key %} aria-current="page"{% endif %}>{{ icon(ic) }}{{ label }}{% if key == "usage" %}<span class="nav-count" hx-get="/usage/count" hx-trigger="load" hx-swap="outerHTML"></span>{% endif %}{% if badge %}<span class="nav-badge" aria-label="{{ fmt.num(badge) }} new">{{ fmt.num(badge) }}</span>{% endif %}{% if tag == "ee" %}{{ ee_tag(short=True) }}{% endif %}</a>{% endfor %}
     </div>
-    {# M15.8 (owner, 13 Nov 2026): AI usage, just above the profile at the bottom #}
-    <a class="nav-usage{{ ' is-on' if nav == 'usage' else '' }}" href="/usage"{% if nav == "usage" %} aria-current="page"{% endif %}><span class="nav-usage-head">{{ icon("usage") }}AI usage</span><span class="nav-usage-card" hx-get="/usage/card" hx-trigger="load" hx-swap="innerHTML"></span></a>
+    <div class="side-fill"></div>
     {{ account_menu(user, csrf_token) }}
   </nav>
   <div>
     {% if request.cookies.get("othor_first_run") %}<div hx-get="/first-run/strip" hx-trigger="load" hx-swap="outerHTML"></div>{% endif %}
-    <header class="app-header"><div class="flex items-center gap-10 min-w-0"><p class="crumbs"><span>{{ company.name }}</span><span>/</span><span class="here">{% block crumb %}{% endblock %}</span></p>{% block crumb_after %}{% endblock %}</div><div id="app-actions">{% block actions %}{% endblock %}</div></header>
+    <header class="app-header"><div class="flex items-center gap-10 min-w-0"><p class="crumbs"><span>{{ company.name }}</span><span>/</span><span class="here">{% block crumb %}{% endblock %}</span></p>{% block crumb_after %}{% endblock %}</div><div class="app-header-end">{% if company %}{% from "components/buttons.html" import ai_button %}{{ ai_button("Ask Othor AI", href=request.url.path ~ "?panel=othor&subject=ask", attrs={"data-panel": true}) }}{% endif %}<div id="app-actions">{% block actions %}{% endblock %}</div></div></header>
     <main class="app-main{% block main_class %}{% endblock %}" id="main">{% if paused %}<div class="mb-20">{{ banner("warn", "<b>Nightly runs are paused</b> · " ~ paused ~ ". Othor AI has been told.") }}</div>{% endif %}{% block main %}{% endblock %}</main>
     {# #63 (owner, 14 Nov 2026): one loading view for the main panel while a menu page loads:
        very light grey boxes in the page style's layout, shown at once on a menu click #}
     <template id="main-skeleton"><div class="skel" aria-busy="true" aria-label="Loading"><div class="skel-title"></div><div class="skel-tiles"><div></div><div></div><div></div><div></div></div><div class="skel-rows"><div></div><div></div><div></div><div></div><div></div></div></div></template>
   </div>
 </div>
-<div id="overlay">{% block overlay %}{% endblock %}{% if contact_panel %}{% from "components/panels.html" import contact_panel as _contact %}{{ _contact(contact_panel, csrf_token) }}{% endif %}</div>
+<div id="overlay">{% block overlay %}{% endblock %}{% if contact_panel %}{% from "components/panels.html" import contact_panel as _contact %}{{ _contact(contact_panel, csrf_token) }}{% endif %}{% if othor_panel %}{% from "components/othor_chat.html" import othor_chat %}{{ othor_chat(othor_panel, csrf_token) }}{% endif %}</div>
 {% endblock %}

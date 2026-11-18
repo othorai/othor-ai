@@ -44,27 +44,31 @@ def _seed(env: Env, n: int = 3, at: dt.datetime | None = None, prompt: str = "dr
         s.commit()
 
 
-def test_the_link_sits_above_the_account_menu(env: Env) -> None:
+def test_ai_usage_is_a_menu_item_above_settings(env: Env) -> None:
+    """Owner, 18 Nov 2026 (0.26): the card became a plain menu item in Setup, just above
+    Settings, with this month's tokens on its right (loaded after the page)."""
     signup(env)
     home = env.client.get(env.host("indigothread") + "/home").text
-    link = home.index('href="/usage"')
-    assert link < home.index('class="account"')
-    assert re.search(r'<a class="nav-usage" href="/usage">.*?AI usage</span>', home, re.S)
-    assert 'hx-get="/usage/card" hx-trigger="load"' in home  # filled after the page loads
+    side = home[home.index('<p class="group">Setup</p>') : home.index('class="account"')]
+    assert (
+        side.index('href="/sources"') < side.index('href="/usage"') < side.index('href="/settings"')
+    )
+    assert re.search(
+        r'<a class="nav-item" href="/usage">.*?AI usage<span class="nav-count"', side, re.S
+    )
+    assert 'hx-get="/usage/count" hx-trigger="load"' in side
+    assert "nav-usage" not in home and "/usage/card" not in home
     page = env.client.get(env.host("indigothread") + "/usage").text
-    assert '<a class="nav-usage is-on" href="/usage" aria-current="page">' in page
+    assert '<a class="nav-item is-on" href="/usage" aria-current="page">' in page
 
 
-def test_the_card_shows_seven_days_of_tokens(env: Env) -> None:
-    """Owner, 14 Nov 2026: a number and the last 7 days, a bar a day (the clock is 4 Nov)."""
+def test_the_count_is_this_months_tokens(env: Env) -> None:
     signup(env)
-    _seed(env, 3, dt.datetime(2026, 11, 2, 6, 0, tzinfo=dt.UTC))  # 3 × 1,250 on 2 Nov
-    _seed(env, 1, dt.datetime(2026, 10, 20, 6, 0, tzinfo=dt.UTC))  # outside the 7 days
-    card = env.client.get(env.host("indigothread") + "/usage/card").text
-    assert '<span class="nav-usage-num">3.8k</span>' in card
-    assert card.count("<rect") == 7 and "tokens · last 7 days" not in card  # no caption
-    assert 'aria-label="3,750 tokens in the last 7 days; the busiest day 2 Nov"' in card
-    assert SECRET_IN not in card and SECRET_OUT not in card
+    _seed(env, 3, dt.datetime(2026, 11, 2, 6, 0, tzinfo=dt.UTC))  # 3 × 1,250 this month
+    _seed(env, 1, dt.datetime(2026, 10, 20, 6, 0, tzinfo=dt.UTC))  # last month
+    got = env.client.get(env.host("indigothread") + "/usage/count").text
+    assert 'class="nav-count"' in got and "tokens this month" in got
+    assert SECRET_IN not in got and SECRET_OUT not in got
 
 
 def test_the_page_counts_the_month_in_the_owners_words(env: Env) -> None:

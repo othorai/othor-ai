@@ -1225,7 +1225,7 @@ def check_confirm(
 # 6c · Sources page (with the panels 6e–6i, 10r, 10m)
 
 
-def _newest(s: Any, settings: Any, srcs: Any) -> dict[str, str]:
+def _newest(s: Any, settings: Any, srcs: Any) -> dict[str, tuple[str, str, str]]:
     """Each source's newest data, as Home's Data sources table shows it (owner, 15 Nov 2026):
     from the latest run's stored facts, so the two tables always agree."""
     from othor.web import home_view as hv
@@ -1234,7 +1234,14 @@ def _newest(s: Any, settings: Any, srcs: Any) -> dict[str, str]:
     run = hv.latest_run(s)
     got = weather_view._stored(settings, run) if run is not None else None
     facts = got[1].get("facts") if got is not None else None
-    return {str(x.id): hv.source_status(x.name, facts)[2] for x in srcs}
+    # #84: the same status words as Home's table (Updated · Not updated since …); #82: why a
+    # source has no newest date
+    out = {}
+    for x in srcs:
+        status, dot, newest = hv.source_status(x.name, facts)
+        why = hv.NEWEST_WHY.get(status, "") if newest == "–" else ""
+        out[str(x.id)] = (status, dot, newest, why)
+    return out  # type: ignore[return-value]
 
 
 @router.get("/sources", response_class=HTMLResponse)
@@ -1259,7 +1266,12 @@ def sources_page(
         # M15.1: the table list only for Manage (its Tables rows); the scan panel's view comes from
         # _source_panel_ctx below. Both read every scanned table (4,000 on a big source).
         if panel == "manage" and sel is not None:
-            panel_ctx = {"tl": sv.table_list(s, sel.src, owner_names=_names(o))}
+            from othor.connectors import naming
+
+            panel_ctx = {
+                "tl": sv.table_list(s, sel.src, owner_names=_names(o)),
+                "name_suggest": naming.suggest(s, sel.src),  # code, from the tables' labels
+            }
         if panel == "sheets":
             target = _source(s, uuid.UUID(s_)) if s_ else None
             panel_ctx = {
@@ -1681,3 +1693,26 @@ def request_connector(
     svc.relay.send(msg)
     sep = "&" if "?" in back else "?"
     return RedirectResponse(f"{back}{sep}requested={quote(name)}", 303)
+
+
+@router.post("/sources/{sid}/name", dependencies=CSRF)
+def rename(
+    request: Request,
+    sid: uuid.UUID,
+    display_name: str = Form(""),
+    use: str = Form(""),
+    o: Owner = Depends(signed_in),
+) -> Response:
+    """The source's plain name (0.26, M26.3): saved in place; empty shows the connector's name;
+    `use` saves the suggestion (code's, from the tables' labels)."""
+    from othor.connectors import naming
+
+    svc = services(request)
+    with svc.sf() as s, tenant_scope(o.company.id):
+        src = _source(s, sid)
+        if src is None:
+            return not_found(request, o.site, *GONE)
+        text = naming.suggest(s, src) if use and not display_name.strip() else display_name
+        naming.rename(s, src, text, actor=str(o.viewer.id))
+        s.commit()
+    return RedirectResponse(f"/sources?panel=manage&s={sid}", 303)

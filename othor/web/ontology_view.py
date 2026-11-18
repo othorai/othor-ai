@@ -384,7 +384,7 @@ def decided_lines(s: Session) -> list[dict[str, Any]]:
                 "evidence": str(ref.get("evidence") or ""),
                 "source": "Decided by Othor AI" + (f" · {fmt.day_month(on)}" if on else ""),
                 "question": qid,
-                "change": f"/home?panel=questions&q={qid}" if qid else "",
+                "change": "/home?panel=othor&subject=questions" if qid else "",
             }
         )
     return out

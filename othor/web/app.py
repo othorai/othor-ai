@@ -221,6 +221,7 @@ def create_app(
         links,
         meta,
         ontology,
+        othor_chat,
         pages,
         setup,
         sources,
@@ -264,6 +265,7 @@ def create_app(
     app.include_router(summary.router)  # before pages' catch-all /{area} (M16.3)
     app.include_router(big_picture.router)  # before pages' catch-all (v0.19, M19.5)
     app.include_router(ontology.router)  # before pages: /ontology (M10b)
+    app.include_router(othor_chat.router)  # the Othor AI chat's actions (Chat 1.0, 0.26)
     app.include_router(links.router)  # recipients' signed links (no sign-in) and the mail webhook
     core_paths = {getattr(r, "path", "") for r in app.routes}
     for p in loaded:  # plug-in pages, before pages' catch-alls; a core path can't be taken

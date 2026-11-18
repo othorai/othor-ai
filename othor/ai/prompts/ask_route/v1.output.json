@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "properties": {
+    "tool": {"type": ["string", "null"]},
+    "args_json": {"type": "string"},
+    "change": {"type": "boolean"},
+    "reply": {"type": "string"}
+  },
+  "required": ["tool", "args_json", "change", "reply"],
+  "additionalProperties": false
+}

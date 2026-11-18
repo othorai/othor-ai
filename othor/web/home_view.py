@@ -427,11 +427,11 @@ def checks_strip(
             reach = round(100 * (n["ran"] + n["waiting"]) / total)
             answers = f"{fmt.num(questions)} quick answer{'s' if questions != 1 else ''}"
             tail = f"Reach {reach}% with {answers}."
-            action = (f"Answer {q}", "/home?panel=questions")
+            action = (f"Answer {q}", "/home?panel=othor&subject=questions")
         elif later and n["waiting"]:
             aside = f"{fmt.num(later)} question{'s' if later != 1 else ''}"
             tail = f"You set aside {aside}; answering turns on up to {fmt.num(n['waiting'])} more."
-            action = ("Answer questions", "/home?panel=questions")
+            action = ("Answer questions", "/home?panel=othor&subject=questions")
         elif proposals:
             p = f"{fmt.num(proposals)} proposal{'s' if proposals != 1 else ''}"
             tail = f"Review {p} that change what the checks can see."
@@ -785,7 +785,16 @@ def source_status(name: str, facts: dict[str, Any] | None) -> tuple[str, str, st
         return ("No daily numbers", "muted", "–")
     if f.get("updated"):
         return ("Updated", "ok", newest)
-    return ("Not updated yesterday", "warn" if f.get("late") else "muted", newest)
+    # #82 (owner, 18 Nov 2026): whenever the newest data is older than the last read, a warning
+    # dot and the date it stopped at
+    return (f"Not updated since {newest}", "warn", newest)
+
+
+NEWEST_WHY = {  # #82: why a source shows no newest date, said instead of a bare dash
+    "Not used yet": "No number reads it yet",
+    "No daily numbers": "Its numbers carry no daily dates",
+    "Not read yet": "Read for the first time tonight",
+}
 
 
 def source_rows(s: Session, settings: Settings, run: Any) -> list[dict[str, Any]]:
@@ -811,6 +820,7 @@ def source_rows(s: Session, settings: Settings, run: Any) -> list[dict[str, Any]
                 "status": status,
                 "dot": dot,
                 "newest": newest,
+                "newest_why": NEWEST_WHY.get(status, "") if newest == "–" else "",
                 "last_read": card.last_read,
             }
         )
@@ -843,7 +853,7 @@ def panel_page(src: str | None = None) -> str:
 def panel_url_id(qid: Any, src: str | None = None) -> str:
     """A question's own URL in the panel (Back and Next link to it)."""
     page = panel_page(src)
-    return f"{page}{'&' if '?' in page else '?'}panel=questions&q={qid}"
+    return f"{page}{'&' if '?' in page else '?'}panel=othor&subject=questions"
 
 
 def panel_url(q: Question, src: str | None = None) -> str:

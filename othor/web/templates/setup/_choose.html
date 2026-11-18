@@ -1,6 +1,7 @@
 {#- SPDX-License-Identifier: Apache-2.0 -#}
 {% from "components/ui.html" import el %}
 {% from "components/panels.html" import DRAFT_NOTE, draft_note %}
+{% from "components/othor_chat.html" import oc_draft, oc_actions %}
 {% call el('aside', 'panel chat choose', attrs='aria-label="Fix with Othor AI"') %}
   {% call el('header', 'panel-head') %}<div>{% call el("p", "strong") %}Fix with Othor AI{% endcall %}{% call el("p", "hint", layout="flex items-center gap-6") %}{{ panel.name }}{% call el('span', 'chip') %}{% call el('span', 'dot neg') %}{% endcall %}Conflict{% endcall %}{% endcall %}</div>
     {% call el('a', 'btn quiet', attrs='href="/setup/metrics" aria-label="Close"') %}×{% endcall %}{% endcall %}
@@ -24,8 +25,8 @@
     {% if panel.proposal %}
     <form class="flex flex-col gap-8" method="post" action="/setup/metrics/{{ panel.key }}/choose" data-inplace>
       <input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="choice" value="{{ panel.proposal.choice }}">
-      {% call el("div", "draft proposal") %}{% call el("p", "hint") %}Will be saved to the Business Model{% endcall %}<p class="mt-4">{{ panel.proposal.text }}</p>{% endcall %}
-      <div class="flex items-center gap-8">{% call el('button', 'btn primary', attrs='type="submit"') %}Apply{% endcall %}{% call el('span', 'hint') %}{{ panel.proposal.name }} becomes High confidence{% endcall %}</div>
+      {% call oc_draft([panel.proposal.text]) %}{% call el("p", "hint") %}Will be saved to the Business Model{% endcall %}
+      {% call oc_actions() %}{% call el('button', 'btn primary', attrs='type="submit"') %}Apply{% endcall %}{% call el('span', 'hint') %}{{ panel.proposal.name }} becomes High confidence{% endcall %}{% endcall %}{% endcall %}
     </form>
     {% endif %}
   {% endcall %}

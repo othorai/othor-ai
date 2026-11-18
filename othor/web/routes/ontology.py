@@ -10,7 +10,6 @@ version is a 404.
 from __future__ import annotations
 
 import datetime as dt
-import uuid
 from typing import Any
 
 import sqlalchemy as sa
@@ -18,10 +17,8 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
-from othor.core.events import record_event
 from othor.core.localtime import local_date
 from othor.core.tenancy import tenant_scope
-from othor.home import changes
 from othor.ontology import service
 from othor.ontology.compiler import compile_version
 from othor.ontology.models import OntologyVersion
@@ -62,13 +59,6 @@ def _empty(request: Request, o: Owner) -> Response:
     )
 
 
-def _model(request: Request, s: Session) -> bool:
-    from othor.ai.gateway import model_status
-
-    svc = services(request)
-    return model_status(svc.settings, s, svc.clock())[0]
-
-
 @router.get("/ontology", response_class=HTMLResponse)
 def ontology(
     request: Request,
@@ -82,7 +72,6 @@ def ontology(
     note: str | None = None,
     text: str | None = None,
     o: Owner = Depends(signed_in),
-    values: tuple[str, list[str]] | None = None,
 ) -> Response:
     svc = services(request)
     today = _today(request, o)
@@ -114,11 +103,6 @@ def ontology(
                 if cmp_ is None:
                     return not_found(request, o.site, *GONE)
                 ctx["history"]["compare"] = cmp_
-        if panel == "chat":
-            ctx["chat"] = _chat(s, subject, _model(request, s), done=done, prefill=text)
-            d = ctx["chat"]["draft"]
-            if values and d and d["id"] == values[0]:
-                d["card"] = {**d["card"], "lines": [*d["card"]["lines"], *values[1]]}
         if done:
             v = s.scalars(sa.select(OntologyVersion).where(OntologyVersion.number == done)).first()
             if v is not None:
@@ -131,257 +115,7 @@ def ontology(
     return page(request, "ontology/ontology.html", ctx)
 
 
-# --- 6a3 · Change with Othor AI --------------------------------------------------------------
-
-
-def _thread(s: Session, subject: str, create: bool = False) -> Any:
-    from othor.setup.models import ChatThread
-
-    t = s.scalars(
-        sa.select(ChatThread).where(
-            ChatThread.purpose == "ontology", ChatThread.subject == subject[:200]
-        )
-    ).first()
-    if t is None and create:
-        t = ChatThread(purpose="ontology", subject=subject[:200], status="open")
-        s.add(t)
-        s.flush()
-    return t
-
-
-QUESTION = {
-    "add": "Which number should Othor AI compute?",
-    "page": "What changed in the business?",
-}
-
-
-def _chat(
-    s: Session, subject: str, model: bool, *, done: int | None = None, prefill: str | None = None
-) -> dict[str, Any]:
-    """Change with Othor AI as a form (v0.11, docs/plans/questions-panel.md part 4): the request
-    box, then the last request's draft card (Apply · Edit) or its reply, or the applied card
-    (Undo) right after Apply. Earlier exchanges stay in the thread, not on screen."""
-    from othor.setup.models import ChatMessage
-
-    t = _thread(s, subject)
-    msgs = (
-        list(
-            s.scalars(
-                sa.select(ChatMessage)
-                .where(ChatMessage.thread_id == t.id)
-                .order_by(ChatMessage.created_at)
-            )
-        )
-        if t is not None
-        else []
-    )
-    said = next((m.text for m in reversed(msgs) if m.role == "user"), "")
-    last = next((m for m in reversed(msgs) if m.role in ("ai", "system")), None)
-    draft = reply = None
-    p = (last.proposal or {}) if last is not None else {}
-    card = p.get("card")
-    if last is not None and not p.get("discarded"):
-        if card and not card.get("error") and (not last.applied or p.get("version") == done):
-            draft = {
-                "id": str(last.id),
-                "card": card,
-                "applied": last.applied,
-                "version": p.get("version"),
-                "said": said,
-            }
-        elif not last.applied:
-            reply = card["error"] if card and card.get("error") else last.text
-    n = service.current_number(s)
-    title, sub = "Change with Othor AI", f"Business Model · v{n}"
-    if subject.startswith("metric:"):
-        key = subject.split(":", 1)[1]
-        rec = next((r for r in service.active(s, ["metric"]) if r.key == key), None)
-        name = str((rec.body.get("name") if rec else None) or key.replace("_", " ").capitalize())
-        sub = f"{name} · {sub}"
-    if subject == "add":
-        title = "Add a number"
-    return {
-        "subject": subject,
-        "title": title,
-        "sub": sub,
-        "metric": subject.startswith("metric:"),
-        "question": QUESTION.get(subject, "What should change about this number?"),
-        "draft": draft,
-        # a reply with no change (not understood, not available): the request back in the box
-        "reply": reply,
-        "prefill": (prefill if prefill is not None else (said if reply else ""))[:500],
-        "model": model,
-        "next": n + 1,
-    }
-
-
-def _subject_ok(s: Session, subject: str) -> bool:
-    if subject in ("page", "add"):
-        return True
-    if subject.startswith("metric:"):
-        key = subject.split(":", 1)[1]
-        return any(r.key == key for r in service.active(s, ["metric"]))
-    return False
-
-
-@router.post("/ontology/chat", dependencies=CSRF)
-def chat_send(
-    request: Request,
-    line: str = Form(""),
-    subject: str = Form("page"),
-    o: Owner = Depends(signed_in),
-) -> Response:
-    from othor.ai.gateway import ModelGateway
-    from othor.setup.models import ChatMessage
-
-    svc = services(request)
-    line = line.strip()[:500]
-    today = _today(request, o)
-    back = f"/ontology?panel=chat&subject={subject}"
-    shown: tuple[str, list[str]] | None = None
-    with svc.sf() as s, tenant_scope(o.company.id):
-        if not _subject_ok(s, subject):
-            return not_found(request, o.site, *GONE)
-        if not line:
-            return RedirectResponse(back, 303)
-        t = _thread(s, subject, create=True)
-        s.add(ChatMessage(thread_id=t.id, role="user", text=line))
-        s.commit()  # the gateway logs the call in its own session: no write held open here
-        inputs = changes.model_inputs(s, line, subject, today)
-        gw = ModelGateway(
-            svc.sf,
-            provider_for(svc.settings),
-            clock=svc.clock,
-            monthly_tokens=svc.settings.ai_monthly_tokens,
-        )
-        res = gw.complete(o.company.id, *changes.PROMPT, inputs)
-        if not res.ok:
-            s.add(ChatMessage(thread_id=t.id, role="system", text=changes.NOT_AVAILABLE))
-        else:
-            d = changes.check(s, res.output, inputs, line, today)
-            card = None
-            if d.change is not None:
-                preview = changes.preview_runner(
-                    s, svc.key, o.company.id, svc.settings.analytics_path(o.company.id)
-                )
-                eff = changes.effect(s, o.company, d.change, preview=preview, today=today)
-                section, before, after = changes.card_line(s, d.change)
-                fresh = changes.value_lines(eff)  # shown now, never stored (6a3 preview)
-                eff.values = []
-                card = {
-                    "change": d.change,
-                    "section": section,
-                    "before": before,
-                    "after": after,
-                    "effect": eff.as_json(),
-                    "lines": changes.effect_lines(eff),
-                    "error": eff.error,
-                }
-            text = d.reply or (
-                "Here is the change." if card else "I couldn’t turn that into a change."
-            )
-            msg = ChatMessage(thread_id=t.id, role="ai", text=text, proposal={"card": card})
-            s.add(msg)
-            s.flush()
-            if card is not None:
-                shown = (str(msg.id), fresh)
-        record_event(
-            s,
-            actor=str(o.viewer.id),
-            action="ontology.chat",
-            object_type="chat_thread",
-            object_id=t.id,
-            after={"guard": res.guard},
-        )
-        s.commit()
-    if shown is None:
-        return RedirectResponse(back, 303)
-    # the preview's values are part of this response only (never stored as a value)
-    return ontology(request, panel="chat", subject=subject, o=o, values=shown)
-
-
-@router.post("/ontology/chat/{mid}/apply", dependencies=CSRF)
-def chat_apply(request: Request, mid: str, o: Owner = Depends(signed_in)) -> Response:
-    from othor.setup.models import ChatMessage, ChatThread
-
-    svc = services(request)
-    with svc.sf() as s, tenant_scope(o.company.id):
-        try:
-            key = uuid.UUID(mid)
-        except ValueError:
-            return not_found(request, o.site, *GONE)
-        m = s.scalars(sa.select(ChatMessage).where(ChatMessage.id == key)).first()
-        card = ((m.proposal or {}).get("card") or {}) if m else {}
-        if m is None or not card.get("change") or card.get("error"):
-            return not_found(request, o.site, *GONE)
-        t = s.scalars(sa.select(ChatThread).where(ChatThread.id == m.thread_id)).one()
-        back = f"/ontology?panel=chat&subject={t.subject}"
-        if m.applied or (m.proposal or {}).get("discarded"):
-            return RedirectResponse(back, 303)  # applied once; or dropped by Edit
-        ch = card["change"]
-        c = (
-            service.retire(ch["type"], ch["key"])
-            if ch["op"] == "retire"
-            else service.put(ch["type"], ch["key"], ch["body"], {"chat": str(t.id)})
-        )
-        v = service.apply(
-            s,
-            [c],
-            actor=str(o.viewer.id),
-            reason=f"Tell Othor AI: {card.get('after') or ch['key']}"[:300],
-        )
-        if v is None:
-            s.rollback()
-            return RedirectResponse(back + "&note=nochange", 303)
-        m.applied = True
-        m.proposal = {**(m.proposal or {}), "version": v.number}
-        compile_version(s, o.company, actor=str(o.viewer.id))
-        s.commit()
-        n = v.number
-    return RedirectResponse(f"/ontology?panel=chat&subject={t.subject}&done={n}", 303)
-
-
-@router.post("/ontology/chat/{mid}/edit", dependencies=CSRF)
-def chat_edit(request: Request, mid: str, o: Owner = Depends(signed_in)) -> Response:
-    """Edit: the draft goes (nothing was written), the request comes back to the box."""
-    from urllib.parse import quote
-
-    from othor.setup.models import ChatMessage, ChatThread
-
-    svc = services(request)
-    with svc.sf() as s, tenant_scope(o.company.id):
-        try:
-            key = uuid.UUID(mid)
-        except ValueError:
-            return not_found(request, o.site, *GONE)
-        m = s.scalars(sa.select(ChatMessage).where(ChatMessage.id == key)).first()
-        if m is None or m.role != "ai":
-            return not_found(request, o.site, *GONE)
-        t = s.scalars(sa.select(ChatThread).where(ChatThread.id == m.thread_id)).one()
-        said = next(
-            (
-                x.text
-                for x in s.scalars(
-                    sa.select(ChatMessage)
-                    .where(ChatMessage.thread_id == t.id, ChatMessage.role == "user")
-                    .order_by(ChatMessage.created_at.desc())
-                )
-                if x.created_at <= m.created_at
-            ),
-            "",
-        )
-        if not m.applied:
-            m.proposal = {**(m.proposal or {}), "discarded": True}
-            record_event(
-                s,
-                actor=str(o.viewer.id),
-                action="ontology.draft_discarded",
-                object_type="chat_message",
-                object_id=m.id,
-            )
-        s.commit()
-        subject = t.subject
-    return RedirectResponse(f"/ontology?panel=chat&subject={subject}&text={quote(said[:500])}", 303)
+# --- 6a3 · Change with Othor AI: the one Othor AI chat since 0.26 (othor.chat.changes) ------
 
 
 # --- versions: Undo, Restore, Remove ---------------------------------------------------------

@@ -45,6 +45,9 @@ LABEL = {
     "metric_areas": "Group your numbers into areas",
     "big_picture": "Big Picture report",
     # Look back (an Enterprise Edition feature; its prompts live in othor_ee)
+    "othor_chat": "Othor AI chat: a reply to a set of answers",
+    "ask_route": "Ask Othor AI: find the answer",
+    "ask_answer": "Ask Othor AI: say the answer",
     "look_back_plan": "Plan a Look back report",
     "look_back_drill": "Look further in a Look back report",
     "look_back_suggest": "Suggest Look backs",

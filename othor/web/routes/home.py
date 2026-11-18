@@ -63,13 +63,6 @@ def _uuid(v: str) -> uuid.UUID | None:
         return None
 
 
-def _model(request: Request, s: Session) -> bool:
-    from othor.ai.gateway import model_status
-
-    svc = services(request)
-    return model_status(svc.settings, s, svc.clock())[0]
-
-
 def _big_picture(request: Request, s: Session, o: Owner) -> bool:
     from othor.ai.gateway import provider_for
     from othor.web import big_picture_view as bpv
@@ -129,19 +122,6 @@ def home(
         # Big Picture (v0.19, M19.5): the button, live while a model can write it or a report is
         # already stored for tonight's run
         ctx["big_picture"] = _big_picture(request, s, o)
-        if panel == "questions":
-            cur = None
-            if q and (qid := _uuid(q)):
-                cur = s.scalars(sa.select(Question).where(Question.id == qid)).first()
-            ctx["chat"] = hv.questions_panel(
-                s,
-                o.company,
-                today,
-                current=cur,
-                follow_up=list(answers.UNTIL) if f and cur is not None else None,
-                note=NOTES.get(note or ""),
-                prefill=(text or "")[:500],  # Edit and Change answer put the text back
-            )
         # business weather (v0.12 part 1b): the forecast panel for a week card or the Ahead
         # line, and "How this was picked", both in place
         if panel == "forecast":
@@ -168,11 +148,11 @@ def home(
             from othor.web import weather_view
 
             ctx["wpanel"] = weather_view.picked_panel(svc.settings, ctx.get("weather_run"))
-        if panel == "proposal" and p:
+        if panel == "proposal" and p:  # the old Chat about this: the one chat since 0.26
             row = _proposal(s, p)
             if row is None:
                 return not_found(request, o.site, *GONE)
-            ctx["pchat"] = _proposal_chat(s, row, _model(request, s))
+            return RedirectResponse(f"/home?panel=othor&subject=proposal:{row.id}", 303)
         if done and (row := _proposal(s, done)) is not None and row.status != "open":
             ctx["proposals"] = _with_decided(s, ctx["proposals"], row)
         s.expunge_all()
@@ -250,81 +230,6 @@ def decide(request: Request, pid: str, decision: str, o: Owner = Depends(signed_
             compile_version(s, o.company, actor=actor)
         s.commit()
     return RedirectResponse("/home" if decision == "undo" else f"/home?done={pid}", 303)
-
-
-def _proposal_chat(s: Session, p: Proposal, model: bool) -> dict[str, Any]:
-    from othor.setup.models import ChatMessage, ChatThread
-
-    t = s.scalars(sa.select(ChatThread).where(ChatThread.subject == f"proposal:{p.id}")).first()
-    msgs = (
-        s.scalars(
-            sa.select(ChatMessage)
-            .where(ChatMessage.thread_id == t.id)
-            .order_by(ChatMessage.created_at)
-        ).all()
-        if t
-        else []
-    )
-    return {
-        "p": hv.proposal_row(p),
-        "messages": [{"role": m.role, "text": m.text} for m in msgs],
-        "model": model,
-    }
-
-
-@router.post("/home/proposals/{pid}/ask", dependencies=CSRF)
-def ask(
-    request: Request, pid: str, text: str = Form(""), o: Owner = Depends(signed_in)
-) -> Response:
-    """Chat about this: Othor AI explains the proposal from its computed evidence. The reply is
-    shown only when every number in it is in the evidence (the numbers guard)."""
-    from othor.ai.guards import numbers_grounded
-    from othor.setup.models import ChatMessage, ChatThread
-
-    svc = services(request)
-    text = text.strip()[:500]
-    with svc.sf() as s, tenant_scope(o.company.id):
-        p = _proposal(s, pid)
-        if p is None:
-            return not_found(request, o.site, *GONE)
-        if not text:
-            return RedirectResponse(f"/home?panel=proposal&p={pid}", 303)
-        t = s.scalars(sa.select(ChatThread).where(ChatThread.subject == f"proposal:{p.id}")).first()
-        if t is None:
-            t = ChatThread(purpose="proposal", subject=f"proposal:{p.id}", status="open")
-            s.add(t)
-            s.flush()
-        history = s.scalars(
-            sa.select(ChatMessage)
-            .where(ChatMessage.thread_id == t.id)
-            .order_by(ChatMessage.created_at)
-        ).all()
-        inputs = {
-            "proposal": {"kind": p.kind, "text": p.text, "evidence": p.evidence},
-            "conversation": [{"role": m.role, "text": m.text} for m in history][-8:],
-            "question": text,
-        }
-        s.add(ChatMessage(thread_id=t.id, role="user", text=text))
-        s.commit()  # the gateway logs the call in its own session: no write held open here
-        res = _gateway(request).complete(o.company.id, "proposal_chat", "v1", inputs)
-        reply = (res.output or {}).get("reply") if res.ok and isinstance(res.output, dict) else None
-        if not reply or not numbers_grounded(str(reply), inputs):
-            reply = (
-                answers.NOT_AVAILABLE.split(" · ")[0]
-                if not res.ok
-                else ("I can only speak to the evidence shown above.")
-            )
-        s.add(ChatMessage(thread_id=t.id, role="ai", text=str(reply)[:2000]))
-        record_event(
-            s,
-            actor=str(o.viewer.id),
-            action="proposal.chat",
-            object_type="proposal",
-            object_id=p.id,
-            after={"guard": res.guard},
-        )
-        s.commit()
-    return RedirectResponse(f"/home?panel=proposal&p={pid}", 303)
 
 
 # --- questions ---------------------------------------------------------------------------------

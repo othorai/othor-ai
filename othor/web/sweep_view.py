@@ -477,7 +477,7 @@ def detector_rows(rv: RunView, s: Session | None = None) -> list[dict[str, Any]]
                 missing = NEEDS_SHORT.get(need) or missing
                 action = (
                     "Answer 1 question →",
-                    f"/sweep?run={rv.run.number}&panel=questions&q={q.id}",
+                    f"/sweep?run={rv.run.number}&panel=othor&subject=questions",
                 )
         out.append(
             {

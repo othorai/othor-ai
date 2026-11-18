@@ -132,7 +132,7 @@ def test_expected_quiet_is_grey_not_a_problem():
     assert by["fresh"]["state"] == "warn" and not got["ok"]
     assert got["groups"][0]["title"] == "Worth a look"
     assert [x["key"] for x in got["groups"][0]["lights"]] == ["fresh"]
-    assert by["checks"]["href"] == "/home?panel=questions"
+    assert by["checks"]["href"] == "/home?panel=othor&subject=questions"
     assert by["ai"]["details"] == [
         "Othor AI was unavailable, so the brief was written from templates"
     ]

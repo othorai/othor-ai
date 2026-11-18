@@ -123,7 +123,45 @@ def page(request: Request, name: str, ctx: dict[str, Any], status: int = 200) ->
         base["paused"] = paused_text(request, company)
     if request.query_params.get("panel") == "contact" and ctx.get("user") and company:
         base["contact_panel"] = contact_view(request, company, ctx["user"])
+    # the one Othor AI chat (0.26); "questions" is the old Questions panel's link (emails, history)
+    old_ontology = request.query_params.get("panel") == "chat" and request.url.path == "/ontology"
+    if (
+        (request.query_params.get("panel") in ("othor", "questions") or old_ontology)
+        and ctx.get("user")
+        and company
+    ):
+        base["othor_panel"] = othor_view(request, company)
     return templates.TemplateResponse(request, name, {**base, **ctx}, status_code=status)
+
+
+def _subject(request: Request) -> str:
+    """The chat's subject; the old panels' links open it on theirs ("questions"; the Business
+    Model's panel=chat with page · add · metric:<key>)."""
+    q = request.query_params
+    if q.get("panel") == "questions":
+        return "questions"
+    if q.get("panel") == "chat":
+        old = q.get("subject") or "page"
+        return "ontology" if old == "page" else f"ontology:{old}"
+    return q.get("subject") or "ask"
+
+
+def othor_view(request: Request, company: Any) -> dict[str, Any] | None:
+    """The Othor AI chat in the side panel, on whatever page it opened (Chat 1.0, 0.26)."""
+    from othor.core.localtime import local_date
+    from othor.core.tenancy import tenant_scope
+    from othor.web.othor_chat_view import view
+
+    svc = services(request)
+    q = request.query_params
+    with svc.sf() as s, tenant_scope(company.id):
+        return view(
+            s,
+            request,
+            _subject(request),
+            editing=q.get("edit") == "1",
+            today=local_date(company, svc.clock()),
+        )
 
 
 def contact_view(request: Request, company: Any, user: Any) -> dict[str, Any] | None:

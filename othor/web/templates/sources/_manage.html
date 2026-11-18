@@ -1,6 +1,6 @@
 {#- SPDX-License-Identifier: Apache-2.0 -#}
 {% from "components/ui.html" import el %}
-{% from "components/forms.html" import chip %}{% from "components/buttons.html" import button %}
+{% from "components/forms.html" import chip, text_input %}{% from "components/buttons.html" import button %}
 {# 10r · Manage panel (680 px): tabs Overview · Connection · Tables · Sync (URL state), footer
    pinned on every tab: Pause reading and Disconnect… on the left, Done on the right. #}
 {% set base = "/sources?panel=manage&s=" ~ sel.src.id %}
@@ -44,6 +44,11 @@
 {% call(part) side_panel(kn[sel.src.kind] ~ " · " ~ (sel.src.config.database if sel.src.kind != "gsheets" else sel.title), ("Connected " ~ fmt.day_month(sel.src.connected_at.date()) if sel.src.connected_at else ("Connected" if sel.src.status in ("connected", "paused", "disconnected") or sel.src.last_read_at else "Not connected yet")) ~ (" by " ~ sel.connected_by if sel.connected_by else "") ~ " · read-only", sel.tile, "/sources?s=" ~ sel.src.id, tabs=mtabs, tab=manage_tabs[mtab]) %}
 {% if part == "body" %}
   {% if mtab == "overview" %}
+  {# its plain name (0.26): shown with the source in the chat and here; suggested from the tables #}
+  <form method="post" action="/sources/{{ sel.src.id }}/name" data-inplace class="flex items-end gap-8"><input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <div class="flex-1 min-w-0">{{ text_input("display_name", label="Plain name", value=sel.src.display_name or "", placeholder=name_suggest if name_suggest and name_suggest != sel.src.name else "", hint=("Othor AI suggests “" ~ name_suggest ~ "” from its tables. " if name_suggest and name_suggest != sel.src.name and not sel.src.display_name else "") ~ "Shown as “" ~ (sel.src.display_name or name_suggest or sel.src.name) ~ " (" ~ sel.src.name ~ ")” in Othor AI’s answers.") }}</div>
+    {{ button("Save", type="submit", size="sm") }}{% if name_suggest and name_suggest != sel.src.name and not sel.src.display_name %}{{ button("Use “" ~ name_suggest ~ "”", type="submit", size="sm", attrs={"name": "use", "value": "1"}) }}{% endif %}
+  </form>
   <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
     {% call el("div", "stat") %}{% call el("p", "v") %}{{ sel.status[0] }}{% endcall %}{% call el("p", "hint") %}{% if sel.src.last_read_at %}last read {{ sel.last_read }}{% if sel.src.health and sel.src.health.last_read %} · {{ fmt.num(sel.src.health.last_read.rows) }} rows{% endif %}{% else %}at {{ fmt.clock(run_time) }}, then nightly{% endif %}{% endcall %}{% endcall %}
     {% call el("div", "stat") %}{% call el("p", "v") %}{{ fmt.num(sel.tables_used) }} {{ unit }}{% endcall %}{% call el("p", "hint") %}used · {{ fmt.num(sel.ignored) }} ignored · {{ fmt.num(sel.excluded) }} excluded{% endcall %}{% endcall %}

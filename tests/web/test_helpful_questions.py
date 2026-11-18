@@ -29,11 +29,10 @@ from othor.engine.sources import RunInfo
 from othor.engine.store import RunFiles
 from othor.ontology import service
 from othor.ontology import suggest as sg
-from othor.ontology.compiler import compile_version
 from othor.ontology.compiler.catalog import load_catalog
 from othor.ontology.models import Question, Spec
 from tests.web.test_chat_web import need_sources, sample  # noqa: F401
-from tests.web.test_in_place import INPLACE, _post
+from tests.web.test_in_place import _post
 from tests.web.test_sweep_web import night  # noqa: F401
 
 NOTE = "Drafts only. Numbers are computed, not written. Nothing changes until you apply."
@@ -46,9 +45,10 @@ def _pair_q(svc, cid) -> Question:
         return q
 
 
-def _panel(env, h, qid) -> str:
-    page = env.client.get(f"{h}/home?panel=questions&q={qid}").text
-    return page.split('id="chat-panel"', 1)[1]
+def _panel(env, h, _qid=None) -> str:
+    """The one Othor AI chat on the questions (0.26): every question in one message."""
+    page = env.client.get(f"{h}/home?panel=othor&subject=questions").text
+    return page.split('id="othor-chat"', 1)[1]
 
 
 def _events(svc, cid, action) -> list[Event]:
@@ -72,85 +72,63 @@ def test_the_pair_question_shows_cards_with_computed_reasons(night):  # noqa: F8
         assert f" {ev['agree']} of the last {ev['weeks']} weeks" in c["sub"]
     panel = _panel(env, h, q.id)
     assert "Should these two numbers move together?" in panel
-    assert "Sweep watches pairs that should move together" in panel
     assert "Sweep test" not in panel and "could not run last night" not in panel  # #33
-    assert NOTE not in panel  # #33, option C: the answers here are the owner's
-    assert "Suggested from your data" in panel
-    for c in cards:
-        assert f'value="s:{c["key"]}"' in panel and c["label"] in panel and c["sub"] in panel
-    assert "Something else…" in panel and "Let Othor AI decide" in panel
-    assert f'formaction="/home/questions/{q.id}/decide"' in panel
-    assert "Ask me later" in panel and "We don’t have this" in panel
+    assert NOTE in panel  # Othor AI's picks are drafts until Apply (0.26)
+    pick = sub["decide"]["pick"]
+    for c in cards:  # the pick by its name; the others with what each is
+        assert c["label"] in panel
+        if c["key"] != pick:
+            assert c["sub"] in panel
+    assert "My pick" in panel and 'action="/othor/apply"' in panel
+    assert "Let Othor AI decide" not in panel and "Ask me later" not in panel
 
 
-def test_picking_a_card_drafts_it_and_apply_writes_one_version(night):  # noqa: F811
+def _chat(env, h, path, data):
+    return _post(env, h, path, {"back": "/home?panel=othor&subject=questions", **data})
+
+
+def test_picking_a_card_changes_the_set_and_apply_writes_one_version(night):  # noqa: F811
     env, h, cid, _rid, svc = night
     q = _pair_q(svc, cid)
-    card = (q.subject or {})["suggestions"][0]
+    pick = (q.subject or {})["decide"]["pick"]
+    card = next(c for c in q.subject["suggestions"] if c["key"] != pick)
+    _panel(env, h)
     with svc.sf() as s, tenant_scope(cid):
         before = service.current_number(s)
-    r = _post(
+    _chat(
         env,
         h,
-        f"/home/questions/{q.id}/answer",
-        {"pick": "s:" + card["key"]},
-        follow_redirects=True,
-        headers=INPLACE,
+        "/othor/choose",
+        {"subject": "questions", "item": f"q:{q.id}", "option": card["key"]},
     )
-    assert "Draft · not applied yet" in r.text and f"You picked: {card['label']}" in r.text
-    assert card["change"]["body"]["text"] in r.text
+    panel = _panel(env, h)
+    assert "Changed" in panel and card["label"] in panel
     with svc.sf() as s, tenant_scope(cid):
         assert service.current_number(s) == before  # nothing changes until Apply
-    r = _post(env, h, f"/home/questions/{q.id}/apply", follow_redirects=True, headers=INPLACE)
-    assert "You answered" in r.text and "Sweep watches these two numbers together" in r.text
-    assert "Decided by Othor AI" not in r.text  # the owner's own pick
+    _chat(env, h, "/othor/apply", {"subject": "questions"})
     with svc.sf() as s, tenant_scope(cid):
-        assert service.current_number(s) == before + 1
+        assert service.current_number(s) == before + 1  # every answer in one version
         rec = next(x for x in service.active(s, ["rule"]) if x.key == card["change"]["key"])
         assert rec.body["kind"] == "pair" and "decided_by" not in (rec.source_ref or {})
-    assert _events(svc, cid, "question.drafted") and _events(svc, cid, "question.answered")
+        assert s.get(Question, q.id).status == "answered"
+    ev = next(e for e in _events(svc, cid, "question.answered") if e.object_id == str(q.id))
+    assert ev.after["via"] == "othor_chat" and ev.after["picked_by"] == "owner"
+    assert "Applied" in _panel(env, h)
 
 
-def test_let_othor_ai_decide_applies_tagged_capped_and_listed(night):  # noqa: F811
+def test_othor_ais_pick_applies_on_the_owners_apply(night):  # noqa: F811
     env, h, cid, _rid, svc = night
     q = _pair_q(svc, cid)
     pick = (q.subject or {})["decide"]["pick"]
     assert pick, "the sample's strongest pair clears the bar"
     card = next(c for c in q.subject["suggestions"] if c["key"] == pick)
+    _panel(env, h)
+    _chat(env, h, "/othor/apply", {"subject": "questions"})
     with svc.sf() as s, tenant_scope(cid):
-        before = service.current_number(s)
-    r = _post(env, h, f"/home/questions/{q.id}/decide", follow_redirects=True, headers=INPLACE)
-    assert "Decided by Othor AI" in r.text and card["sub"] in r.text
-    assert "Confidence capped at Medium until you confirm it" in r.text
-    with svc.sf() as s, tenant_scope(cid):
-        assert service.current_number(s) == before + 1
         rec = next(x for x in service.active(s, ["rule"]) if x.key == card["change"]["key"])
-        ref = rec.source_ref or {}
-        assert ref["decided_by"] == "othor_ai" and ref["confidence"] == "medium"
-        assert ref["evidence"] == card["sub"] and ref["answer"] == str(q.id)
-        spec = compile_version(s, _company(s, cid))
-        assert f"pair:{rec.key}" in spec.compiled["decided_by_ai"]  # findings capped
-        rid = str(rec.id)
-        s.commit()
-    (ev,) = _events(svc, cid, "question.decided_by_ai")
-    assert ev.after["suggestion"] == pick and ev.after["confidence"] == "medium"
-    # Home's quiet count, and the Ontology's group to confirm or fix
-    home = env.client.get(h + "/home").text
-    assert "1 decision by Othor AI to check" in home
-    page = env.client.get(h + "/ontology").text
-    assert 'id="decided"' in page and "Decided by Othor AI" in page and card["sub"] in page
-    assert f'action="/ontology/decided/{rid}/confirm"' in page
-    assert f'action="/home/questions/{q.id}/undo"' in page
-    # Confirm: the owner's now, the tag goes, the spec drops the cap
-    r = _post(env, h, f"/ontology/decided/{rid}/confirm", follow_redirects=True, headers=INPLACE)
-    assert 'id="decided"' not in r.text
-    with svc.sf() as s, tenant_scope(cid):
-        assert service.current_number(s) == before + 2
-        rec = next(x for x in service.active(s, ["rule"]) if x.key == card["change"]["key"])
-        assert "decided_by" not in (rec.source_ref or {})
-        spec = compile_version(s, _company(s, cid))
-        assert "decided_by_ai" not in spec.compiled
-    assert _events(svc, cid, "ontology.decision_confirmed")
+        assert rec.body["kind"] == "pair"
+    ev = next(e for e in _events(svc, cid, "question.answered") if e.object_id == str(q.id))
+    assert ev.after["picked_by"] == "othor_ai"
 
 
 def _company(s, cid):
@@ -159,7 +137,7 @@ def _company(s, cid):
     return s.scalars(sa.select(Company).where(Company.id == cid)).one()
 
 
-def test_below_the_bar_it_says_why_and_the_next_step_and_writes_nothing(night):  # noqa: F811
+def test_below_the_bar_it_needs_the_owner_says_why_and_writes_nothing(night):  # noqa: F811
     env, h, cid, _rid, svc = night
     q = _pair_q(svc, cid)
     with svc.sf() as s, tenant_scope(cid):
@@ -175,16 +153,13 @@ def test_below_the_bar_it_says_why_and_the_next_step_and_writes_nothing(night): 
             "href": "",
         }
         row.subject = sub
-        before = service.current_number(s)
         s.commit()
-    r = _post(env, h, f"/home/questions/{q.id}/decide", follow_redirects=True, headers=INPLACE)
-    assert "Othor AI can’t decide this one yet" in r.text
-    assert sub["decide"]["why"] in r.text and sub["decide"]["next"] in r.text
-    assert sub["suggestions"][0]["label"] in r.text  # the cards stay to pick from
+    panel = _panel(env, h)
+    assert "Needs you" in panel and sub["decide"]["why"] in panel
+    assert sub["decide"]["next"] in panel and sub["suggestions"][0]["label"] in panel
+    _chat(env, h, "/othor/apply", {"subject": "questions"})
     with svc.sf() as s, tenant_scope(cid):
-        assert service.current_number(s) == before
-        assert s.get(Question, q.id).status == "open"
-    assert _events(svc, cid, "question.decide_declined")
+        assert s.get(Question, q.id).status == "open"  # not answered: it needs the owner
 
 
 def test_nothing_found_says_so_with_the_next_step(night):  # noqa: F811
@@ -207,10 +182,7 @@ def test_nothing_found_says_so_with_the_next_step(night):  # noqa: F811
         qid = q.id
     panel = _panel(env, h, qid)
     assert "Is this your customer list, with who is active?" in panel
-    assert "Nothing found yet" in panel and f.why in panel
-    assert 'href="/sources"' in panel and f.next in panel
-    assert 'value="s:' not in panel  # no empty cards
-    assert "Your answer" in panel  # the box, to say it in their own words
+    assert f.why in panel and f.next in panel and "Needs you" in panel
 
 
 class _EmptyCat:

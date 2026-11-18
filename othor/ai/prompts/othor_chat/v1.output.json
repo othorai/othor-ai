@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["edits", "reply", "clarify"],
+  "properties": {
+    "edits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "action", "option", "text"],
+        "properties": {
+          "id": {"type": "string"},
+          "action": {"type": "string", "enum": ["pick", "skip", "answer"]},
+          "option": {"type": ["string", "null"]},
+          "text": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "reply": {"type": "string"},
+    "clarify": {"type": ["string", "null"]}
+  }
+}

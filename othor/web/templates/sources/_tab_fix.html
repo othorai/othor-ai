@@ -1,6 +1,7 @@
 {#- SPDX-License-Identifier: Apache-2.0 -#}
 {% from "components/ui.html" import el %}
 {% from "components/panels.html" import DRAFT_NOTE, draft_note %}
+{% from "components/othor_chat.html" import oc_draft, oc_actions %}
 {# 10c: Fix with Othor AI. The units form is code; a typed line goes to Othor AI, whose fix is a
    typed shape change. Apply re-reads the tab by code. #}
 {% set shape_url = "/setup/sources/" ~ src.id ~ "/check/" ~ tab.id ~ "/shape" %}
@@ -25,10 +26,11 @@
       {% if m.role == "user" %}{% call el("p", "msg-user") %}{{ m.text }}{% endcall %}
       {% elif m.role == "ai" %}{% call el("div", "msg-ai") %}{% call el("span", "avatar-ai") %}AI{% endcall %}<div class="flex flex-col gap-12 flex-1 min-w-0"><p>{{ m.text }}</p>
         {% if m.proposal %}
-        {% call el("div", "draft proposal", layout="flex flex-col gap-6") %}{% call el("p", "hint") %}Draft{% endcall %}{% for line in m.proposal.lines %}<p>{{ line }}</p>{% endfor %}{% endcall %}
-        {% if not m.applied %}<form class="flex items-center gap-8" method="post" action="{{ shape_url }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="msg" value="{{ m.id }}">
+        {% call oc_draft(m.proposal.lines) %}
+        {% if not m.applied %}{% call oc_actions() %}<form class="flex items-center gap-8" method="post" action="{{ shape_url }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="msg" value="{{ m.id }}">
           {% for k, val in m.proposal.shape.items() %}<input type="hidden" name="{{ k }}" value="{{ val }}">{% endfor %}
-          {% call el('button', 'btn primary', attrs='type="submit"') %}Apply{% endcall %}{% call el('span', 'hint') %}The tab is read again{% endcall %}</form>{% endif %}
+          {% call el('button', 'btn primary', attrs='type="submit"') %}Apply{% endcall %}{% call el('span', 'hint') %}The tab is read again{% endcall %}</form>{% endcall %}{% endif %}
+        {% endcall %}
         {% endif %}</div>{% endcall %}
       {% else %}{% call el("p", "hint") %}{{ m.text }}{% endcall %}{% endif %}
     {% endfor %}

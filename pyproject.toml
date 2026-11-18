@@ -1,6 +1,6 @@
 [project]
 name = "othor"
-version = "0.25.0"
+version = "0.26.0"
 description = "Othor AI v0.1"
 requires-python = "==3.12.*"
 # Every dependency is pinned exactly (non-negotiable 2: same inputs, same numbers).
@@ -87,7 +87,7 @@ python_version = "3.12"
 strict = true
 packages = [
   "othor.core", "othor.engine", "othor.connectors", "othor.jobs", "othor.ai", "othor.ontology",
-  "othor.setup", "othor.briefs",
+  "othor.setup", "othor.briefs", "othor.chat", "othor.tools",
 ]
 plugins = []
 

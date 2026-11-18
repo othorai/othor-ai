@@ -52,15 +52,12 @@ def test_the_page_reads_the_last_run_and_counts_agree_with_sweep(night):  # noqa
     # Sweep box's counts are Sweep's own. The weather's "How this was picked" names its run (v0.12).
     head = re.sub(r'<section class="weather .*?</section>', "", page, flags=re.S)
     assert f"Business Model v{version}" not in head and f"run #{run.number:04d}" not in head
-    assert f"Questions for you · {open_q}" in page
+    assert open_q and 'aria-label="Questions for you"' not in page  # #85: in the chat now
     assert "Leadership brief" in page and "Open brief →" in page
     box = page.split('aria-label="Sweep"', 1)[1]
-    assert f"{sw['findings']} found" in box and "Open Sweep →" in box
-    # P10's question (needs confirmation) comes first
-    assert "Which system is right about these 37 orders?" in page
-    assert (
-        "Answer questions" in page and "One at a time · answers go into the Business Model" in page
-    )
+    assert f"Sweep · {sw['findings']} found" in box and "Open Sweep →" in box
+    # #85: a table with the Data sources table's structure
+    assert "<th>Finding</th><th>Status</th><th>Used in</th>" in box
 
 
 def test_a_goal_proposal_is_accepted_and_undone(night):  # noqa: F811
@@ -159,7 +156,7 @@ def test_intelligence_is_in_the_top_bar(night):  # noqa: F811
         bar,
     )
     assert m, bar
-    assert m.group(1) == "/home?panel=questions" and m.group(2)
+    assert m.group(1) == "/home?panel=othor&amp;subject=questions" and m.group(2)
     assert "% Intelligence means " in m.group(3)
     # the ring, filled to the share, with it inside; the label reads only "Intelligence"
     pct = int(m.group(4))

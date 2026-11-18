@@ -26,6 +26,8 @@ class Source(IdMixin, TenantMixin, Base):
 
     kind: Mapped[str] = mapped_column(sa.String(16))
     name: Mapped[str] = mapped_column(sa.String(200))
+    # the plain name the owner gave it ("Sales records"); shown before `name` (0.26, M26.3)
+    display_name: Mapped[str | None] = mapped_column(sa.String(80))
     # draft (credentials entered, not connected) · scanning · connected · paused · disconnected
     status: Mapped[str] = mapped_column(sa.String(16), default="draft")
     config: Mapped[dict[str, Any]] = mapped_column(default=dict)

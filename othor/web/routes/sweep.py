@@ -96,20 +96,7 @@ def _page_ctx(request: Request, s: Session, o: Owner, rv: sv.RunView, tab: str) 
                 b = None
             ctx["added"] = b.name if b else None
     panel = request.query_params.get("panel")
-    if panel == "questions":  # "Answer 1 question", in place (owner, 13 Nov 2026)
-        from othor.ontology.models import Question
-        from othor.web import home_view as hv
-
-        q = request.query_params.get("q")
-        cur = None
-        try:
-            cur = s.scalars(sa.select(Question).where(Question.id == uuid.UUID(q or ""))).first()
-        except ValueError:
-            cur = None
-        ctx["chat"] = hv.questions_panel(
-            s, o.company, _today(request, o), current=cur, src=f"sweep-{rv.run.number}"
-        )
-    elif panel == "history" and early:  # "Which numbers?" (the history note)
+    if panel == "history" and early:  # "Which numbers?" (the history note)
         ctx["history_panel"] = early
     return ctx
 

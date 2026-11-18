@@ -1011,29 +1011,24 @@ def _ai_cap(s: Any, svc: Any, company: Any, tz: Any) -> dict[str, Any] | None:
     }
 
 
-@router.get("/usage/card", response_class=HTMLResponse)
-def usage_card(request: Request, o: Owner = Depends(signed_in)) -> Response:
-    """The side menu's AI usage card (owner, 14 Nov 2026): tokens in the last 7 days and a bar
-    a day, counted from the log; loaded after the page so no page waits for it."""
+@router.get("/usage/count", response_class=HTMLResponse)
+def usage_count(request: Request, o: Owner = Depends(signed_in)) -> Response:
+    """The AI usage menu item's count (owner, 18 Nov 2026): this month's tokens, counted from
+    the model call log, short ("1.2M")."""
     from zoneinfo import ZoneInfo
 
     from othor.ai import usage
     from othor.core import fmt
-    from othor.core.localtime import local_date
 
     svc = services(request)
     tz = ZoneInfo(o.company.timezone or "Asia/Kolkata")
     with svc.sf() as s, tenant_scope(o.company.id):
-        days = usage.daily(s, tz, local_date(o.company, svc.clock()), 7)
-        cap = _ai_cap(s, svc, o.company, tz)
-    spec = usage.card_spec(days)
-    card = {
-        "total": fmt.count_short(sum(t for _, t in days)),
-        "alt": spec.alt_text,
-        "spec": spec,
-        "cap": cap,
-    }
-    return page(request, "partials/usage_card.html", {"c": card})
+        used = usage.used_this_month(s, tz, svc.clock())
+    n = fmt.count_short(used)
+    return HTMLResponse(
+        f'<span class="nav-count" title="{fmt.num(used)} tokens this month" '
+        f'aria-label="{fmt.num(used)} tokens this month">{n}</span>'
+    )
 
 
 @router.post("/contact/send", dependencies=[Depends(check_csrf), Depends(rate_limit("codes"))])

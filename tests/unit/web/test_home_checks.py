@@ -48,7 +48,7 @@ def test_a_first_week_says_what_the_rest_are_waiting_for() -> None:
     assert s["lead"] == f"At {pct}% Intelligence."
     reach = round(100 * (2 + s["waiting"]) / len(names))
     assert s["tail"] == f"Reach {reach}% with 5 quick answers."
-    assert s["action"] == ("Answer 5 questions", "/home?panel=questions")
+    assert s["action"] == ("Answer 5 questions", "/home?panel=othor&subject=questions")
     # the info box: what the percentage means, then the four groups with their checks
     assert s["explain"] == (
         f"{pct}% Intelligence means 2 of the {len(names)} checks Sweep runs every night could "
@@ -76,7 +76,7 @@ def test_waiting_with_nothing_to_answer_points_to_the_ontology() -> None:
     s = home_view.checks_strip(_rv(st), questions=0, proposals=2)
     assert s["action"] == ("Review proposals", "/home#proposals") and "2 proposals" in s["tail"]
     s = home_view.checks_strip(_rv(st), questions=3, proposals=2)
-    assert s["action"] == ("Answer 3 questions", "/home?panel=questions")
+    assert s["action"] == ("Answer 3 questions", "/home?panel=othor&subject=questions")
 
 
 def test_every_check_ran_and_found_something() -> None:
@@ -92,7 +92,7 @@ def test_set_aside_questions_still_lead_the_strip() -> None:
     st = _all()
     st[names[0]] = ("could_not_run", "pair")
     s = home_view.checks_strip(_rv(st), questions=0, proposals=2, later=4)
-    assert s["action"] == ("Answer questions", "/home?panel=questions")
+    assert s["action"] == ("Answer questions", "/home?panel=othor&subject=questions")
     assert s["tail"].startswith("You set aside 4 questions")
 
 

@@ -87,8 +87,7 @@
 
 {% block overlay %}
 {% set close = "/sweep?run=" ~ run %}
-{% if chat %}{% set qfrom, qclose = "sweep-" ~ run, close %}{% include "home/_questions_panel.html" %}
-{% elif history_panel %}
+{% if history_panel %}
 {% call overlay("Numbers still building history", close) %}
 {% call(part) pane() %}
 {% if part == "head" %}{{ pane_title("Numbers still building history", "Day " ~ fmt.num(history_panel.day) ~ " of 28 · full coverage from " ~ fmt.day_month(history_panel.full_from), close) }}

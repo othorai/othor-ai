@@ -107,13 +107,14 @@
 {% from "components/forms.html" import chip %}
 {% from "components/buttons.html" import link %}
 <section class="home-sources" aria-label="Data sources">
-  <div class="home-sources-head">{{ section_label("Data sources · " ~ fmt.num(rows | length)) }}{{ link("Data sources →", "/sources") }}</div>
+  {% set late = rows | selectattr("dot", "equalto", "warn") | list | length %}
+  <div class="home-sources-head">{{ section_label("Data sources · " ~ fmt.num(rows | length)) }}<div class="flex items-center gap-12">{% if late %}<span class="hint">{{ fmt.num(late) }} not updated</span>{% endif %}{{ link("Data sources →", "/sources") }}</div></div>
   <div class="table-wrap"><table class="table flush stack">
     <thead><tr><th>Source</th><th>Status</th><th>Newest data</th><th>Last read</th></tr></thead>
     <tbody>{% for r in rows %}<tr>
       <td><div class="home-src">{{ kind_tile({"postgres": "PG", "mysql": "MY", "gsheets": "GS"}[r.kind]) }}<a class="row-link" href="/sources?panel=manage&amp;s={{ r.id }}">{{ r.title }}</a></div></td>
       <td>{{ chip(r.status, dot=r.dot) }}</td>
-      <td>{{ r.newest }}</td>
+      <td>{{ r.newest }}{% if r.newest_why %}<p class="hint">{{ r.newest_why }}</p>{% endif %}</td>
       <td>{{ r.last_read }}</td>
     </tr>{% endfor %}</tbody>
   </table></div>
@@ -127,16 +128,25 @@
 {%- endmacro %}
 
 {# Home's Sweep box (design B2): how much was found, the top three by money, and the rest #}
+{# #85 (owner, 18 Nov 2026): Sweep as a table, the structure of the Data sources table below it:
+   Finding · Status · Used in · Impact, each row opening its finding #}
 {% macro sweep_box(b) -%}
-{% from "components/buttons.html" import button, link %}
+{% from "components/buttons.html" import link %}
 {% from "components/sweep.html" import tags %}
-<div class="sweep-box">
-  <div class="sweep-box-head"><p>{% if b.found %}{{ fmt.num(b.found) }} found{% if b.new %}, {{ fmt.num(b.new) }} new{% endif %}{% else %}Nothing found last night{% endif %}</p>{{ button("Open Sweep →", href="/sweep") }}</div>
-  {% for r in b.rows %}
-  <a class="sweep-box-row" href="/sweep/finding/{{ r.fp }}?run={{ b.run }}">{{ tags(r.state, r.confidence, r.change) }}<span class="t">{{ r.title }}</span>{% if r.in_brief %}<span class="chip soft">In a brief</span>{% endif %}<span class="m">{{ r.money }}</span></a>
-  {% endfor %}
-  {% if b.more %}<div class="sweep-box-foot"><span>+ {{ fmt.num(b.more) }} more in Sweep</span>{{ link("Open Sweep →", "/sweep") }}</div>{% endif %}
-</div>
+<section class="home-sources" aria-label="Sweep">
+  <div class="home-sources-head">{{ section_label("Sweep · " ~ (fmt.num(b.found) ~ " found" if b.found else "nothing found")) }}<div class="flex items-center gap-12">{% if b.new %}<span class="hint">{{ fmt.num(b.new) }} new</span>{% endif %}{{ link("Open Sweep →", "/sweep") }}</div></div>
+  {% if b.rows %}<div class="table-wrap"><table class="table flush stack">
+    <thead><tr><th>Finding</th><th>Status</th><th>Used in</th><th class="num">Impact</th></tr></thead>
+    <tbody>{% for r in b.rows %}<tr>
+      <td class="wrap"><a class="row-link" href="/sweep/finding/{{ r.fp }}?run={{ b.run }}">{{ r.title }}</a></td>
+      <td><div class="flex items-center gap-6 flex-wrap">{{ tags(r.state, r.confidence, r.change) }}</div></td>
+      <td>{% if r.in_brief %}<span class="chip soft">In a brief</span>{% else %}–{% endif %}</td>
+      <td class="num"><b>{{ r.money or "–" }}</b></td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% if b.more %}<p class="hint">+ {{ fmt.num(b.more) }} more in Sweep</p>{% endif %}
+  {% else %}<p class="hint">Every check came back quiet last night.</p>{% endif %}
+</section>
 {%- endmacro %}
 
 {# Home's lights (owner, 16 Nov 2026): one light per part, in the order the data flows, each its

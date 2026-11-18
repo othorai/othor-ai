@@ -53,6 +53,3 @@
 
 {# The side menu's card (owner, 14 Nov 2026): tokens in the last 7 days and a bar a day; the
    bars are a ChartSpec rendered by render_svg (`chart`). Filled after the page loads. #}
-{% macro usage_card(c) -%}
-<span class="nav-usage-num">{{ c.total }}</span><span class="nav-usage-chart" role="img" aria-label="{{ c.alt }}">{{ chart(c.spec, 180, 28) }}</span>{% if c.cap and c.cap.capped %}<span class="nav-usage-paused">AI paused until {{ fmt.day_month(c.cap.resumes) }}</span>{% endif %}
-{%- endmacro %}

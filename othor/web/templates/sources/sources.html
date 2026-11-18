@@ -28,10 +28,11 @@
       <thead><tr><th>Source</th><th>Status</th><th>Newest data</th><th>Last read</th><th>Feeds</th><th>Rows read nightly</th><th></th></tr></thead>
       <tbody>{% for c in cards %}
       <tr>
-        <td><div class="flex items-center gap-12">{{ kind_tile({"postgres": "PG", "mysql": "MY", "gsheets": "GS"}[c.src.kind]) }}<div class="min-w-0">{% call el("p", "src-name") %}{{ kn[c.src.kind] if c.src.kind != "gsheets" else c.title }}{% if c.src.kind != "gsheets" %} · {{ c.src.config.database }}{% endif %}{% endcall %}
+        <td><div class="flex items-center gap-12">{{ kind_tile({"postgres": "PG", "mysql": "MY", "gsheets": "GS"}[c.src.kind]) }}<div class="min-w-0">{% call el("p", "src-name") %}{% if c.src.display_name %}{{ c.src.display_name }} · {{ c.src.config.database if c.src.kind != "gsheets" else c.title }}{% else %}{{ kn[c.src.kind] if c.src.kind != "gsheets" else c.title }}{% if c.src.kind != "gsheets" %} · {{ c.src.config.database }}{% endif %}{% endif %}{% endcall %}
           {% call el("p", "hint") %}{% if c.src.kind == "gsheets" %}Google Sheets · {{ fmt.num(c.tables_used) }}{{ " tab" ~ ("s" if c.tables_used != 1 else "") ~ " read" }}{% else %}{{ fmt.num(c.tables_used) }} of {{ fmt.num(c.tables_total) }} tables{% endif %}{% endcall %}</div></div></td>
-        <td>{{ chip(c.status[0], dot=c.status[1]) }}</td>
-        <td>{{ newest.get(c.src.id | string, "–") }}</td>
+        {% set nw = newest.get(c.src.id | string) %}
+        <td>{% if nw and c.src.status == "connected" and c.src.last_read_at %}{{ chip(nw[0], dot=nw[1]) }}{% else %}{{ chip(c.status[0], dot=c.status[1]) }}{% endif %}</td>
+        <td>{% if nw %}{{ nw[2] }}{% if nw[3] %}{% call el("p", "hint") %}{{ nw[3] }}{% endcall %}{% endif %}{% else %}–{% endif %}</td>
         <td>{{ c.last_read }}</td>
         <td>{% if c.feeds %}{{ fmt.num(c.feeds | length) }} metric{{ "s" if c.feeds | length != 1 else "" }}{% else %}–{% endif %}</td>
         <td>{% if c.src.health and c.src.health.last_read %}{{ fmt.num(c.src.health.last_read.rows) }}{% else %}–{% endif %}</td>

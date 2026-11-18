@@ -244,7 +244,9 @@ def _checks(c: dict[str, Any] | None) -> dict[str, Any]:
     if c.get("cannot"):
         details.append(f"{_plural(int(c['cannot']), 'check')} can’t run with your data")
     href, link = (
-        ("/home?panel=questions", "Answer questions") if c.get("waiting") else ("/sweep", "Sweep")
+        ("/home?panel=othor&subject=questions", "Answer questions")
+        if c.get("waiting")
+        else ("/sweep", "Sweep")
     )
     return _light(
         "checks",

@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 
 STYLES = Path(__file__).resolve().parents[2] / "othor" / "web" / "styles"
-ALLOWED = (".auth", ".nav-item", ".nav-usage")  # selectors that may use the sign-in sizes
+ALLOWED = (".auth", ".nav-item")  # selectors that may use the sign-in sizes
 RULE = re.compile(r"([^{}]+)\{([^{}]*)\}")
 
 

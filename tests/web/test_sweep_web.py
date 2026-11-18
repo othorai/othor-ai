@@ -170,8 +170,8 @@ def test_the_overview_reads_one_run(night):
 
 
 def test_a_check_waiting_on_the_owner_is_answered_in_place(night):
-    """ "Answer 1 question →" opens Home's questions panel over Sweep; answering returns to
-    Sweep (owner, 13 Nov 2026); a `from` naming anything else returns to Home."""
+    """ "Answer 1 question →" opens the Othor AI chat on the questions over Sweep; its actions
+    return to Sweep (owner, 13 Nov 2026; one chat from 0.26)."""
     env, h, cid, _rid, svc = night
     with svc.sf() as s, tenant_scope(cid):
         asked = sv.open_needs(s)
@@ -179,27 +179,21 @@ def test_a_check_waiting_on_the_owner_is_answered_in_place(night):
     assert asked, "the sample night asks for a pair (Lead/lag could not run)"
     q = next(iter(asked.values()))
     page = env.client.get(h + "/sweep").text
-    link = f"/sweep?run={number}&amp;panel=questions&amp;q={q.id}"
+    link = f"/sweep?run={number}&amp;panel=othor&amp;subject=questions"
     assert f'href="{link}">Answer 1 question →</a>' in page
     # M15.7b: the same link in the Lag card on the strip, with what it needs
     card = _det_card(page, "lead_lag")
     assert f'href="{link}">Answer 1 question →</a>' in card
     assert "Needs two numbers that move together" in card
+    # 0.26: the one Othor AI chat opens over Sweep, and its actions come back to Sweep
     panel = env.client.get(h + link.replace("&amp;", "&")).text
     assert "Questions for you" in panel and q.text in panel
-    assert f"/home/questions/{q.id}/skip?from=sweep-{number}" in panel
-    tok = env.csrf(h + "/sweep")
-    r = env.client.post(
-        h + f"/home/questions/{q.id}/skip?from=sweep-{number}",
-        data={"csrf": tok},
-        follow_redirects=False,
-    )
-    assert r.status_code == 303 and r.headers["location"].startswith(f"/sweep?run={number}")
+    assert f'name="back" value="/sweep?run={number}&amp;panel=othor&amp;subject=questions"' in panel
     from othor.web import home_view as hv
 
     for bad in ("https://evil.example", "/admin", "sweep-1/../x", "sweep-"):
         assert hv.panel_page(bad) == "/home", bad
-    assert hv.panel_url_id("x", None) == "/home?panel=questions&q=x"
+    assert hv.panel_url_id("x", None) == "/home?panel=othor&subject=questions"
 
 
 def test_the_strips_info_says_what_answering_would_turn_on(night):

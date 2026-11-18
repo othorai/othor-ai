@@ -6,6 +6,34 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-11-18
+
+### Added
+- One Othor AI chat (`?panel=othor&subject=…`) for every purpose, opened in place from
+  "Ask Othor AI" in every top bar: Questions for you as one message (Othor AI's picks, Needs you,
+  one Apply = one Business Model version), Business Model changes (`ontology_change` v4, up to 5
+  per message, each through the existing checks; today's values before and after read live),
+  Home's proposals (answered from their evidence; Apply / Decline), and Ask v0.1.
+- Ask v0.1 on a read-only tool registry (`othor.tools`, MCP-ready): numbers, metric, findings,
+  sweep_coverage, business_model_history, questions; one gate (role, closed argument schemas, a
+  `tool.called` event); prompts `ask_route` v1 and `ask_answer` v1; without a model, the
+  question's words pick the tool.
+- Live previews: a few real rows behind a choice, built by code from its names through the
+  compiler's scope and run by the core's one reader (`othor.connectors.read`); sent `no-store`,
+  never stored or sent to a model.
+- A source's plain name (`source.display_name`, migration `0045_source_display_name`), suggested
+  from its tables' labels and saved on Data sources › Manage.
+
+### Changed
+- The old Questions panel, the Business Model's change panel and Home's "Chat about this" panel
+  are replaced by the chat; their old links open it.
+- Onboarding's chats draw their drafts with the chat's parts.
+- Home: Sweep as a table (Finding · Status · Used in · Impact); the Questions section removed.
+- Data sources: Home's status words ("Updated", "Not updated since …") with a warning dot, and why
+  a source has no newest date.
+- AI usage: a menu item above Settings with this month's tokens (the side card removed).
+- Discover: "Look again" is "Refresh suggestions".
+
 ## [0.25.0] - 2026-11-18
 
 ### Added

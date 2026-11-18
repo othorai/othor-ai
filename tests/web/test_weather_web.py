@@ -124,4 +124,4 @@ def test_home_lists_each_source_with_its_update_status(night):  # noqa: F811
         status, dot, _newest = source_status(n, w["facts"])
         assert f'<span class="dot {dot}"></span>{status}' in page
     # below the Sweep box, above the questions
-    assert page.index('aria-label="Sweep"') < page.index('class="home-sources"')
+    assert page.index('aria-label="Sweep"') < page.index('aria-label="Data sources"')

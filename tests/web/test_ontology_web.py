@@ -144,7 +144,9 @@ def test_numbers_section_latest_see_all_and_fix(night):  # noqa: F811
     assert 'class="needs"' in needs_row
     fix = needs_row[needs_row.rindex("<a ", 0, needs_row.index(">Fix</a>")) :]
     assert fix.startswith('<a class="link" href=')  # not .ont-act: always visible
-    assert '<a class="link ont-act" href="/ontology?panel=chat&amp;subject=metric:' in nums
+    assert (
+        '<a class="link ont-act" href="/ontology?panel=othor&amp;subject=ontology:metric:' in nums
+    )
     # elsewhere on the page: no per-row dots either
     for section in ("The business", "Names and words"):
         part = page[page.index(f'aria-label="{section}"') :]
@@ -258,139 +260,102 @@ def test_history_compare_restore_and_no_change(night):  # noqa: F811
 
 
 def test_change_with_othor_ai_without_a_model(night):  # noqa: F811
+    """0.26 (M26.4): Change with Othor AI opens the one chat on the number; without a model it
+    says so and nothing is drafted."""
     env, h, *_ = night
-    chat = env.client.get(h + "/ontology?panel=chat&subject=metric:net_revenue").text
-    assert "Change with Othor AI" in chat and "Net revenue · Business Model · v" in chat
-    assert (
-        "Drafts only. Numbers are computed, not written. Nothing changes until you apply." in chat
+    page = env.client.get(h + "/ontology?panel=othor&subject=ontology:metric:net_revenue").text
+    chat = page.split('id="othor-chat"', 1)[1]
+    assert "Change Net revenue" in chat and "What should change about this number?" in chat
+    assert "Drafts only" not in chat or "Nothing changes until you apply" in chat
+    back = "/ontology?panel=othor&subject=ontology:metric:net_revenue"
+    _post(
+        env,
+        h,
+        "/othor/reply",
+        {
+            "text": "Kochi starts in December",
+            "subject": "ontology:metric:net_revenue",
+            "back": back,
+        },
     )
-    # v0.11 (docs/plans/questions-panel.md part 4): a form, not a chat; the brand mark
-    panel = chat.split('id="chat-panel"', 1)[1]
-    assert "What should change about this number?" in panel and "Your request" in panel
-    assert 'class="nb-ai"' in panel and 'aria-label="Othor AI"' in panel
-    assert "avatar-ai" not in panel and "msg-user" not in panel
-    r = _post(env, h, "/ontology/chat", {"line": "Kochi starts in December", "subject": "page"})
-    assert r.status_code == 303
-    page = env.client.get(h + r.headers["location"]).text
-    assert "Not available right now" in page
-    assert ">Kochi starts in December</textarea>" not in page  # no model: the box is off
+    page = env.client.get(h + back).text
+    assert "draft changes right now" in page and "Apply 1" not in page
 
 
 def test_another_companys_objects_are_404(night):  # noqa: F811
     env, h, *_ = night
     assert _post(env, h, "/ontology/versions/9999/restore").status_code == 404
-    assert (
-        _post(env, h, "/ontology/chat", {"line": "x", "subject": "metric:nope"}).status_code == 404
-    )
+    r = _post(env, h, "/othor/reply", {"text": "x", "subject": "ontology:metric:nope"})
+    assert r.status_code == 303  # a number that isn't there: nothing drafted
+    page = env.client.get(h + "/ontology?panel=othor&subject=ontology:metric:nope").text
+    assert "x</p>" not in page.split('id="othor-chat"', 1)[-1]
     assert env.client.get(h + "/ontology?panel=history&compare=1-9999").status_code == 404
 
 
 def test_a_draft_shows_its_effect_and_todays_values_then_apply_and_undo(night, monkeypatch):  # noqa: F811
+    """0.26 (M26.4): in the one chat a drafted change shows its effect and, read live, today's
+    values before and after (never stored); Apply writes one version once; Undo still works."""
+    from othor.connectors.models import RunQuery
     from othor.setup.models import ChatMessage
-    from othor.web.routes import ontology as routes
+    from othor.web.routes import othor_chat as routes
 
     env, h, cid, _rid, svc = night
     with svc.sf() as s, tenant_scope(cid):
-        m = next(r for r in service.active(s, ["metric"]) if r.key == "receivables_open")
-        body = {"breakdowns": ["customer"]}
         n = service.current_number(s)
-    del m
+        versions = s.scalar(sa.select(sa.func.count()).select_from(OntologyVersion))
 
     class Fake:
         name, configured = "fake", True
 
         def call(self, system, messages, schema, max_tokens=0):
             out = {
-                "change": {"op": "put", "type": "metric", "key": "receivables_open", "body": body},
+                "changes": [
+                    {
+                        "op": "put",
+                        "type": "metric",
+                        "key": "receivables_open",
+                        "body_json": json.dumps({"breakdowns": ["customer"]}),
+                    }
+                ],
                 "reply": "Open receivables will be split by customer only.",
+                "clarify": None,
             }
             return ProviderReply(json.dumps(out), "fake", 1, 1)
 
     monkeypatch.setattr(routes, "provider_for", lambda settings: Fake())
-    tok = env.csrf(h + "/ontology")
-    r = env.client.post(
-        h + "/ontology/chat",
-        data={
-            "csrf": tok,
-            "line": "split open receivables by customer only",
-            "subject": "metric:receivables_open",
-        },
+    subject = "ontology:metric:receivables_open"
+    back = f"/ontology?panel=othor&subject={subject}"
+    _post(
+        env,
+        h,
+        "/othor/reply",
+        {"text": "split open receivables by customer only", "subject": subject, "back": back},
     )
-    page = r.text
-    for text in ("Will be saved · Numbers", "Today · computed", "Open receivables", "Apply"):
-        assert text.lower() in page.lower(), text
-    assert "Open receivables today:" in page  # the preview, in this response only
-    # v0.11: the draft card with Apply · Edit, the request above it; nothing written yet
-    panel = page.split('id="chat-panel"', 1)[1]
-    assert "Draft · will be saved" in panel and "You asked: “split open receivables" in panel
+    page = env.client.get(h + back).text
+    chat = page.split('id="othor-chat"', 1)[1]
+    assert "Open receivables will be split by customer only." in chat
+    assert "change meaning:" in chat and "Open receivables" in chat and "Apply 1 change" in chat
+    m = re.search(r'hx-get="(/othor/preview\?[^"]+)"', chat)
+    assert m, "today's values load as the chat opens"
+    vals = env.client.get(h + m.group(1).replace("&amp;", "&"))
+    assert "Open receivables today:" in vals.text and vals.headers["cache-control"] == "no-store"
     with svc.sf() as s, tenant_scope(cid):
-        msg = s.scalars(sa.select(ChatMessage).where(ChatMessage.role == "ai")).all()[-1]
-        assert "today:" not in json.dumps(msg.proposal)  # never stored as a value
-        mid = str(msg.id)
-        from othor.connectors.models import RunQuery
-
+        stored = json.dumps([x.proposal for x in s.scalars(sa.select(ChatMessage))])
+        assert "today:" not in stored  # never stored as a value
         assert s.scalars(sa.select(RunQuery).where(RunQuery.purpose == "preview")).first()
         assert service.current_number(s) == n  # nothing before Apply
-        versions = s.scalar(sa.select(sa.func.count()).select_from(OntologyVersion))
-    assert f'action="/ontology/chat/{mid}/apply"' in panel
-    assert f'action="/ontology/chat/{mid}/edit"' in panel
-    r = _post(env, h, f"/ontology/chat/{mid}/apply")
-    assert f"done={n + 1}" in r.headers["location"]
-    assert "Applied · Business Model v" in env.client.get(h + r.headers["location"]).text
-    with svc.sf() as s, tenant_scope(cid):  # Apply writes exactly one version
-        assert s.scalar(sa.select(sa.func.count()).select_from(OntologyVersion)) == versions + 1
-        assert service.current_number(s) == n + 1
-    _post(env, h, f"/ontology/chat/{mid}/apply")  # a second Apply writes nothing
+    _post(env, h, "/othor/apply", {"subject": subject, "back": back})
+    _post(env, h, "/othor/apply", {"subject": subject, "back": back})  # once
+    assert f"as Business Model v{n + 1}" in env.client.get(h + back).text
     with svc.sf() as s, tenant_scope(cid):
         assert s.scalar(sa.select(sa.func.count()).select_from(OntologyVersion)) == versions + 1
+        rec = next(r for r in service.active(s, ["metric"]) if r.key == "receivables_open")
+        assert rec.body["breakdowns"] == ["customer"]
     _post(env, h, f"/ontology/versions/{n + 1}/undo", {"back": "/ontology"})
     with svc.sf() as s, tenant_scope(cid):
         assert service.current_number(s) == n + 2
         rec = next(r for r in service.active(s, ["metric"]) if r.key == "receivables_open")
         assert rec.body["breakdowns"] != ["customer"]
-
-
-def test_edit_drops_the_draft_and_puts_the_request_back(night, monkeypatch):  # noqa: F811
-    from othor.setup.models import ChatMessage
-    from othor.web.routes import ontology as routes
-
-    env, h, cid, _rid, svc = night
-    with svc.sf() as s, tenant_scope(cid):
-        n = service.current_number(s)
-
-    class Fake:
-        name, configured = "fake", True
-
-        def call(self, system, messages, schema, max_tokens=0):
-            out = {
-                "change": {
-                    "op": "put",
-                    "type": "metric",
-                    "key": "receivables_open",
-                    "body": {"breakdowns": ["customer"]},
-                },
-                "reply": "Split by customer.",
-            }
-            return ProviderReply(json.dumps(out), "fake", 1, 1)
-
-    monkeypatch.setattr(routes, "provider_for", lambda settings: Fake())
-    monkeypatch.setattr(routes, "_model", lambda request, s: True)
-    tok = env.csrf(h + "/ontology")
-    env.client.post(
-        h + "/ontology/chat",
-        data={"csrf": tok, "line": "split by customer", "subject": "metric:receivables_open"},
-    )
-    with svc.sf() as s, tenant_scope(cid):
-        mid = str(s.scalars(sa.select(ChatMessage).where(ChatMessage.role == "ai")).all()[-1].id)
-    r = _post(env, h, f"/ontology/chat/{mid}/edit")
-    assert r.status_code == 303 and "text=split%20by%20customer" in r.headers["location"]
-    page = env.client.get(h + r.headers["location"]).text
-    panel = page.split('id="chat-panel"', 1)[1]
-    assert ">split by customer</textarea>" in panel and "Draft · will be saved" not in panel
-    _post(env, h, f"/ontology/chat/{mid}/apply")  # a dropped draft can't be applied
-    with svc.sf() as s, tenant_scope(cid):
-        assert service.current_number(s) == n  # Edit writes nothing
-    assert _events(svc, cid, "ontology.draft_discarded")
 
 
 def test_the_page_description_is_behind_an_info_icon(night):  # noqa: F811
