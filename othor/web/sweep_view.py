@@ -26,7 +26,7 @@ from othor.core.config import Settings
 from othor.core.models import Event
 from othor.engine import findings as fnd
 from othor.engine import holds, sweep_text, watches
-from othor.engine.detectors import REGISTRY
+from othor.engine.detectors import REGISTRY, core
 from othor.engine.detectors.base import SeriesIndex
 from othor.engine.models import DETECTING_KINDS, Finding, Proposal, Run, RunStep, Watch
 from othor.engine.store import RunFiles, read_json, read_points_cached
@@ -100,7 +100,7 @@ def shipped() -> list[str]:
     boards' order (5f, 10i)."""
     on = {
         d.name
-        for d in REGISTRY.values()
+        for d in core().values()  # a plug-in's checks show in their own places
         if d.enabled or (d.name == "forecast_breach" and features.FORECASTS)
     }
     return [n for n in BOARD_ORDER if n in on] + sorted(on - set(BOARD_ORDER))

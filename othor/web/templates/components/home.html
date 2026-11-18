@@ -156,11 +156,22 @@
 <span class="trial-chip{{ ' is-urgent' if t.urgent else '' }}">Trial · {{ fmt.num(t.left) }} day{{ "" if t.left == 1 else "s" }} left{% if t.form %} · <a class="link-u" href="?panel=contact&amp;topic=trial" data-panel>Talk to us to continue</a>{% elif t.support %} · <a class="link-u" href="mailto:{{ t.support }}">Talk to us to continue</a>{% endif %}</span>
 {%- endmacro %}
 
+{# Intelligence in the top bar (owner, 17 Nov 2026): "Intelligence at 92%", the share of the
+   checks that ran; it opens what raises it (the questions to answer), in place. Its meaning is
+   in the title, as the strip's (i) said it. #}
+{% macro intel_button(c) -%}
+{% from "components/icons.html" import icon %}
+{%- set href = c.action[1] if c.state == "partial" else "/sweep" -%}
+{#- the ring, filled to the computed share, with it inside (owner, 17 Nov 2026) -#}
+{%- set circ = 69.115 -%}{# 2π × 11 #}
+<a class="btn intel is-{{ 'partial' if c.state == 'partial' else 'full' }}" href="{{ href }}"{% if href.startswith('/home?panel=') %} data-panel{% endif %} title="{{ c.explain }} {{ c.tail }}" aria-label="Intelligence at {{ c.pct }}%"><svg class="intel-ring" viewBox="0 0 28 28" aria-hidden="true"><circle class="track" cx="14" cy="14" r="11"/><circle class="fill" cx="14" cy="14" r="11" stroke-dasharray="{{ '%.2f' | format(circ * c.pct / 100) }} {{ '%.2f' | format(circ) }}" transform="rotate(-90 14 14)"/><text x="14" y="14.6" text-anchor="middle" dominant-baseline="middle">{{ c.pct }}{% if c.pct < 100 %}<tspan class="pc">%</tspan>{% endif %}</text></svg><span>Intelligence</span></a>
+{%- endmacro %}
+
 {% macro health_button(L) -%}
 {% from "components/icons.html" import icon %}
 {%- set level = "bad" if L.bad else ("warn" if not L.ok else "ok") -%}
 {%- set n = L.lights | selectattr("state", "in", ["warn", "bad"]) | list | length -%}
-<a class="btn health is-{{ level }}" href="/home?panel=lights" data-panel title="{{ L.summary }}">{{ icon("checked") }}<span>System Health</span>{% if n %}<span class="health-count" aria-label="{{ n }} need you">{{ n }}</span>{% else %}<span class="health-dot" aria-hidden="true"></span>{% endif %}</a>
+<a class="btn health is-{{ level }}" href="/home?panel=lights" data-panel title="System Health · {{ L.summary }}" aria-label="System Health · {{ L.summary }}">{{ icon("checked") }}<span class="health-label">System Health</span>{% if n %}<span class="health-count" aria-label="{{ n }} need you">{{ n }}</span>{% else %}<span class="health-dot" aria-hidden="true"></span>{% endif %}</a>
 {%- endmacro %}
 
 {% macro lights_panel(L, close="/home") -%}

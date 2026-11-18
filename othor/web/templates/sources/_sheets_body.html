@@ -1,10 +1,11 @@
 {#- SPDX-License-Identifier: Apache-2.0 -#}
 {% from "components/ui.html" import el %}
-{# 10b / 6eb body: signed in, Choose spreadsheets (Picker), tabs. #}
+{# 10b / 6eb body: signed in, Choose spreadsheets (Picker), tabs. While the tabs are read it
+   redraws itself and the footer (#sheets-foot), so the button wakes when the tabs arrive (#77). #}
 {% from "components/forms.html" import chip %}
 {% from "components/sources.html" import kind_tile %}
 {% from "components/buttons.html" import button %}
-<div class="flex flex-col gap-16" id="sheets-live"{% if running %} hx-get="{{ request.url.path }}?{{ request.url.query }}" hx-trigger="every 1s" hx-select="#sheets-live" hx-swap="outerHTML"{% endif %}>
+<div class="flex flex-col gap-16" id="sheets-live"{% if running %} hx-get="{{ request.url.path }}?{{ request.url.query }}" hx-trigger="every 1s" hx-select="#sheets-live" hx-select-oob="#sheets-foot" hx-swap="outerHTML"{% endif %}>
   {% call el('div', 'card board', layout='flex items-center justify-between') %}
     {% if account %}
     <div class="flex items-center gap-12">{{ kind_tile("GS") }}<div>{% call el('p', 'strong') %}Signed in as {{ account }}{% endcall %}{% call el('p', 'hint') %}Google · read-only access to the files you pick{% endcall %}</div></div>

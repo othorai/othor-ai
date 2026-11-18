@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 """Business weather on Home (v0.12 part 1a) on the steady 1 Nov night: the banner reads the run's
-stored weather (computed at its brief step), above the checks strip, with the phone scene, alt
+stored weather (computed at its brief step), above the briefs, with the phone scene, alt
 text, the line as real text and "How this was picked". The first brief is Sunrise; the next night
 picks its scene from the data, and replay reproduces it byte for byte. Needs `make dev && make
 seed`."""
@@ -56,8 +56,8 @@ def test_home_shows_the_first_briefs_sunrise(night):  # noqa: F811
     assert w["scene"] == "sunrise" and w["file"] == "13-sunrise"
     page = env.client.get(h + "/home").text
     assert 'class="weather wx-sunrise"' in page
-    # above the checks strip
-    assert page.index('class="weather ') < page.index('class="checks ')
+    # above the briefs
+    assert page.index('class="weather ') < page.index('aria-label="Briefs"')
     assert "Today · First brief" in page and w["line"] in page
     # no picture, only the scene's pastel (owner, 17 Nov 2026)
     assert "weather-scene" not in page and "/static/weather/web/" not in page

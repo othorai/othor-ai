@@ -402,11 +402,11 @@ def forecast_note(steps: Any) -> str | None:
 def _detectors(spec: dict[str, Any], steps: Any) -> Column:
     """2o's Detectors column: the detectors shipped tonight (Forecast breach from M7) and the
     run's tests, from the detect step."""
-    from othor.engine.detectors import REGISTRY
+    from othor.engine.detectors import core
 
     shipped = [
         d
-        for d in REGISTRY.values()
+        for d in core().values()
         if d.enabled or (d.name == "forecast_breach" and features.FORECASTS)
     ]
     det = next((st for st in steps if st.name == "detect"), None)

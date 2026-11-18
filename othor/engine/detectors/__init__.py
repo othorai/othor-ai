@@ -13,6 +13,6 @@ from othor.engine.detectors import (  # noqa: F401  (registration)
     pairs,
     rising_variance,
 )
-from othor.engine.detectors.base import REGISTRY
+from othor.engine.detectors.base import REGISTRY, core
 
-__all__ = ["REGISTRY"]
+__all__ = ["REGISTRY", "core"]

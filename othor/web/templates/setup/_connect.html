@@ -39,10 +39,12 @@
     {% set n = (panel.added | length) + (1 if panel.target else 0) %}
     {% call el("span", "hint") %}{{ fmt.num(n) }} metric{{ "s" if n != 1 else "" }} added to the list{% endcall %}{{ button("Back to Metrics", "primary", href="/setup/metrics") }}
   {% else %}
+    <span id="sheets-foot" class="contents">
     {% if not (panel.src and panel.rows) %}{% call el("span", "hint") %}Pick a spreadsheet to continue{% endcall %}{% endif %}
     {{ button("Cancel", href="/setup/metrics") }}
     {% if panel.src and panel.rows %}{% call el('button', 'btn primary', attrs='type="submit" form="tabs-form"') %}{{ scan_label(panel.to_check, panel.selected) }}{% endcall %}
     {% else %}{% call el('button', 'btn primary', attrs='type="button" disabled') %}Connect and scan{% endcall %}{% endif %}
+    </span>
   {% endif %}
 {% endif %}
 {% endcall %}

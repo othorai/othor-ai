@@ -146,17 +146,27 @@ def test_another_companys_ids_are_404(night):  # noqa: F811
     assert env.client.get(h + f"/home?panel=proposal&p={fake}").status_code == 404
 
 
-def test_the_checks_strip_leads_home(night):  # noqa: F811
-    """Owner's design, 11 Nov 2026: the strip (how many checks ran last night, and why the rest
-    didn't) is the first block on Home, above the cards, from the same run as Sweep."""
+def test_intelligence_is_in_the_top_bar(night):  # noqa: F811
+    """Owner, 17 Nov 2026: Home's Intelligence strip became one top-bar button, "Intelligence at
+    N%", left of System Health; it opens what raises it (the questions), in place, and its title
+    says what the percentage means."""
     env, h, *_ = night
     page = env.client.get(h + "/home").text
-    assert 'aria-label="Checks last night"' in page
-    assert page.index('aria-label="Checks last night"') < page.index('class="brief-cards home"')
-    assert re.search(r"At \d+% Intelligence\.", page)
-    # the (i) opens what it means and the checks by group, in place (v0.11, owner 12 Nov)
-    assert 'x-data="popover"' in page and "% Intelligence means " in page
-    assert "Waiting on you" in page and "data-pop-close" in page
+    bar = page[page.index('id="app-actions"') :][:2000]
+    m = re.search(
+        r'<a class="btn intel is-partial" href="([^"]+)"( data-panel)? title="([^"]+)"'
+        r' aria-label="Intelligence at (\d+)%"',
+        bar,
+    )
+    assert m, bar
+    assert m.group(1) == "/home?panel=questions" and m.group(2)
+    assert "% Intelligence means " in m.group(3)
+    # the ring, filled to the share, with it inside; the label reads only "Intelligence"
+    pct = int(m.group(4))
+    assert f'stroke-dasharray="{69.115 * pct / 100:.2f} {69.115:.2f}"' in bar
+    assert f"{pct}<tspan" in bar and "<span>Intelligence</span>" in bar
+    assert bar.index('class="btn intel') < bar.index('class="btn health') < bar.index("top-more")
+    assert 'aria-label="Checks last night"' not in page  # the strip is gone from the page
 
 
 def test_the_top_bar_and_the_title_row(night):  # noqa: F811
@@ -167,9 +177,9 @@ def test_the_top_bar_and_the_title_row(night):  # noqa: F811
     page = env.client.get(h + "/home").text
     row = page[page.index('<div class="page-title">') :][:1200]
     assert "<h1>Indigo Thread Co.</h1>" in row and 'class="btn ai"' in row, row
-    # System Health left of Big Picture (owner, 16 Nov 2026)
-    assert row.index('class="btn health') < row.index('class="btn ai"'), row
+    # System Health moved to the top bar (owner, 17 Nov 2026)
+    assert 'class="btn health' not in row
     assert "Updated " not in row
-    bar = page[page.index('class="hint">Updated ') :][:1200]
+    bar = page[page.index(">Updated ") :][:2000]
     assert 'class="use top-more"' in bar and ">History</a>" in bar and "Run again now" in bar
     assert "<h1>Home</h1>" not in page

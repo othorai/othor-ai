@@ -18,7 +18,7 @@
 </div>
 {% call el('div', 'onb-foot') %}
   {% call el('a', 'link-u', attrs='href="/setup/sources/new"') %}Back{% endcall %}
-  <span class="flex items-center gap-16">
+  <span id="sheets-foot" class="flex items-center gap-16">
   {% if not (src and rows) %}{% call el('span', 'hint') %}Pick a spreadsheet to continue{% endcall %}{% elif not selected %}{% call el('span', 'hint') %}Tick at least one tab{% endcall %}{% endif %}
   {% if src and rows %}{% call el('button', 'btn primary lg', attrs={'type': 'submit', 'form': 'tabs-form', 'disabled': ((not selected) and true or none)}) %}{{ scan_label(to_check, selected) }}{% endcall %}
   {% else %}{% call el('button', 'btn primary lg', attrs='type="button" disabled') %}Connect and scan{% endcall %}{% endif %}

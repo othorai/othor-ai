@@ -6,6 +6,32 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-11-18
+
+### Added
+- Enterprise Edition, Look back on connected data: the owner asks only a question; Othor picks a
+  confirmed money number, the tables its confirmed join rules reach, its groupings and its
+  deduction variant (stacked as minus; a filtered number only with the deductions its own filter
+  reaches), counts the window's records and reads nothing until Apply. Then one read-only query
+  (`othor/ontology/compiler/rows.py`: the compiler's scope, filter and personal-column guards, a
+  500,000-row cap). The plan's Change switches to another number's records or to the confirmed
+  numbers' monthly totals (no record read). Regenerate keeps the table; Read again reads anew.
+- Suggested Look backs: up to three after each sealed night, from computed results only (a year or
+  quarter closed, a finding open 8 weeks, a group's share that moved, a goal off track, the top five
+  customers carrying more); the model only words the question, numbers from the evidence only.
+  Make this report plans it; Dismiss is kept.
+- What outside moved (with External Signals): each outside figure with a reason, tested on the
+  report's own months (also the same month), its effect as a range in its own waterfall; the rest
+  "tested, no link". On uploads too.
+- What Othor AI would have caught: the nightly detectors replayed at each month-end on a connected
+  report's records, the first month each finding would have fired.
+
+### Changed
+- Every Look back report's table is kept encrypted (DuckDB Parquet, AES-GCM, a per-company key);
+  existing clear tables are sealed in place by the worker. Migration `e0004_look_back_source`.
+- The analyses name the number in their sentences ("Net revenue went from …").
+- External Signals' link test takes `min_lag` (the nightly test is unchanged, 1 to 6 months).
+
 ## [0.23.0] - 2026-11-17
 
 ### Added

@@ -291,6 +291,14 @@ class Spec:
 REGISTRY: dict[str, Spec] = {}
 
 
+def core() -> dict[str, Spec]:
+    """The core's own detectors (the open core's Sweep, the website's count): a plug-in's
+    detectors (External Signals' outside_moved) run in their own pool and are counted apart."""
+    return {
+        k: d for k, d in REGISTRY.items() if d.run.__module__.startswith("othor.engine.detectors.")
+    }
+
+
 def register(spec: Spec) -> Spec:
     REGISTRY[spec.name] = spec
     return spec

@@ -13,7 +13,7 @@ from tests.ui.css_build import build_css_module
 pytestmark = pytest.mark.browser
 
 PAGE = """<!doctype html><html><head><style>{css}</style></head><body style="padding:40px">
-<div class="brief-cards home"><div class="card-stack"><a class="brief-card has-visual" href="#">
+<div class="brief-cards"><div class="card-stack"><a class="brief-card has-visual" href="#">
 <div class="visual"></div><div class="body"><p class="headline">A card</p></div></a></div></div>
 </body></html>"""
 

@@ -1384,7 +1384,7 @@ button.brief-card { font: inherit; width: 100%; cursor: pointer; }  /* a card th
 .shared-strip b { font-weight: 600; color: var(--color-ink); }
 .shared-strip .end { font-size: var(--text-12); color: var(--color-muted-2); }
 /* Home (3a, 3aa, 3b, 10k; M10a) */
-@media (min-width: 1200px) { .brief-cards.home { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+/* #74 (owner, 17 Nov 2026): Home's brief cards the size of the Morning Brief page's (three across) */
 .q-steps { display: flex; gap: 4px; }
 .q-step { flex: 1; height: 4px; border-radius: 2px; background: var(--color-rule); }
 .q-step.done { background: var(--color-ink-2); }
@@ -1677,6 +1677,9 @@ tr.is-decided > td { background: var(--color-surface); }
 @view-transition { navigation: auto; }
 .side { view-transition-name: side; }
 .app-header { view-transition-name: app-header; }
+/* #67: the name makes the top bar its own layer; above the page, so its menus (Last 7 runs, ⋯)
+   open over Sweep's chart, and below the scrim and side panels */
+.app-header { position: relative; z-index: 30; }
 .onb-header { view-transition-name: onb-header; }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: var(--dur-swap); animation-timing-function: var(--ease-out); }
 
@@ -2168,11 +2171,22 @@ a.bp-tile:hover { border-color: var(--color-border-hover); }
 .top-more .use-menu a.opt { text-decoration: none; color: var(--color-ink); }
 
 /* Home · System Health (owner, 16 Nov 2026): one button, coloured by the most urgent light */
+.btn.intel { gap: 8px; }
+.btn.intel { padding-left: 6px; }
+.intel-ring { width: 28px; height: 28px; flex: none; margin: -4px 0; }
+.intel-ring circle { fill: none; stroke-width: 2.2; }
+.intel-ring .track { stroke: currentColor; opacity: 0.18; }
+.intel-ring .fill { stroke: currentColor; stroke-linecap: round; }
+.intel-ring text { fill: currentColor; font-size: 8px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
+.intel-ring .pc { font-size: 5.5px; font-weight: 600; }
+.btn.intel.is-partial { color: var(--color-accent-deep); background: var(--color-accent-tint); border-color: var(--color-accent-border); }
+.btn.intel.is-full { color: var(--color-ok-text); background: var(--color-ok-tint); border-color: var(--color-ok-border); }
 .btn.health { gap: 8px; }
 .btn.health .icon { width: 16px; height: 16px; }
 .btn.health.is-ok { color: var(--color-ok-text); background: var(--color-ok-tint); border-color: var(--color-ok-border); }
 .btn.health.is-warn { color: var(--color-warn-text); background: var(--color-warn-tint); border-color: var(--color-warn-border); }
 .btn.health.is-bad { color: var(--color-neg-text); background: var(--color-neg-tint); border-color: var(--color-neg-border); }
+@media (max-width: 767px) { .btn.health .health-label { display: none; } } /* a phone's top bar: the shield and the count */
 .health-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--color-ok); }
 .health-count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; font-size: var(--text-12); font-weight: 600; line-height: 20px; text-align: center; color: #fff; }
 .is-warn .health-count { background: var(--color-warn-text); }
@@ -2219,3 +2233,9 @@ a.bp-tile:hover { border-color: var(--color-border-hover); }
 .fold > summary svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; transition: transform .15s; }
 .fold[open] > summary svg { transform: rotate(180deg); }
 form:has(> .fold[open]) > .fold-hide { display: none; }
+
+/* Look back v2 · New report's "The data" (18 Nov 2026): connected data or a file; the file field
+   shows only when Upload a file is picked (no script) */
+.lbk-from { border: 0; padding: 0; margin: 0; min-width: 0; }
+.lbk-from .lbk-file { display: none; }
+.lbk-from:has(input[value="file"]:checked) .lbk-file { display: flex; }

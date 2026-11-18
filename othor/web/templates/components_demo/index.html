@@ -66,7 +66,7 @@
     {{ brief_extra({"key": "outside", "title": "Outside · 1", "note": "only when a linked signal moved", "items": [{"text": "Diesel is up 6% this week; Freight cost usually follows in about 4 weeks.", "line": "Diesel price · PPAC · linked to Freight cost", "state": "assessed"}]}) }}</section>
   {% from "components/home.html" import home_card, question_row, recent_row, qp_steps, qp_pick, qp_nav %}
   <section class="flex flex-col gap-12"><p class="label-caps">Home (3a, 3aa, 3b)</p>
-    <div class="brief-cards home">{{ home_card("Leadership brief", "Revenue is under its band; South explains most of it.", "4 findings · sent 06:00 to 6", "#", flag=True) }}{{ home_card("Sweep", "212 tests last night · 7 detectors", "8 findings · 2 suppressed", "#", action="Open Sweep →") }}</div>
+    <div class="brief-cards">{{ home_card("Leadership brief", "Revenue is under its band; South explains most of it.", "4 findings · sent 06:00 to 6", "#", flag=True) }}{{ home_card("Sweep", "212 tests last night · 7 detectors", "8 findings · 2 suppressed", "#", action="Open Sweep →") }}</div>
     <div class="card">{{ question_row(1, "Is Skarfab’s invoicing gap since 9 Oct expected?", "Morning Brief") }}{{ question_row(2, "Is the Surat shutdown 10–24 Aug the same every year?", "Sweep") }}</div>
     <div class="card">{{ recent_row("Sun 1 Nov", "Accepted on Home: Net revenue FY27 at risk", "Goal") }}</div>
     <div class="flex flex-col gap-12">{{ qp_steps(2, 3, 1, ["done", "now", ""]) }}<div class="flex flex-col gap-8">{{ qp_pick("demo-pick", "a", "Billing is right", checked=True) }}{{ qp_pick("demo-pick", "b", "Erp is right") }}{{ qp_pick("demo-pick", "__other", "Something else…") }}</div>{{ qp_nav("#", "#") }}</div></section>

@@ -23,15 +23,14 @@ from sqlalchemy.orm import Session
 from othor.core import fmt
 
 PROBLEM = ("warn", "bad")
-GROUPS = (
-    ("data", "Your data"),
-    ("run", "Last night’s run"),
-    ("found", "What Othor AI found"),
-    ("briefs", "Your briefs"),
-    ("next", "Next"),
-    ("outside", "Outside services"),  # only when a plug-in fetches from outside (Phase 0)
-    ("licence", "Your licence"),
+# the panel's groups: what needs the owner first (owner, 17 Nov 2026)
+SEVERITY_GROUPS = (
+    ("bad", "Needs you"),
+    ("warn", "Worth a look"),
+    ("note", "Good to have"),
+    ("ok", "Working"),
 )
+SEVERITY = {"bad": "bad", "warn": "warn", "note": "note", "ok": "ok", "info": "ok"}
 # a missing column or table, by the driver's code (PostgreSQL SQLSTATE, MySQL number): the run
 # keeps the code, never the message (it can quote the SQL)
 MISSING_COLUMN = {"42703", "1054"}
@@ -138,7 +137,8 @@ def _fresh(srcs: list[dict[str, Any]]) -> dict[str, Any]:
         + ("" if x in late else " (it usually doesn’t update that day)")
         for x in stale
     ]
-    state = "ok" if not stale else ("warn" if late else "note")
+    # any source not updated is worth a look, even one that often skips a day (owner, 17 Nov 2026)
+    state = "ok" if not stale else "warn"
     return _light(
         "fresh", "Fresh", "clock", "data", state, line, details, "/sources", "Data sources"
     )
@@ -367,49 +367,68 @@ def _ai(a: dict[str, Any]) -> dict[str, Any]:
 
 
 def _briefs(cards: list[dict[str, Any]]) -> dict[str, Any]:
+    """Whether today's brief emails went out (owner, 17 Nov 2026): what was sent, bounced or
+    couldn't be sent today, whichever run made the issue. A brief with no recipients, or a
+    re-run's copy that isn't emailed, is not a health problem and isn't listed here."""
     due = [c for c in cards if c.get("due_today", True)]
-    if not due:
+    unmade = [c for c in due if not c["made"]]
+    mailed = [c for c in due if c["made"] and c.get("recipients")]
+    if not unmade and not mailed:
         return _light(
             "briefs",
-            "Briefs",
+            "Email delivery",
             "brief",
             "briefs",
             "note",
-            "No brief due today",
+            "No brief emails due today",
             href="/brief",
             link="Morning Brief",
         )
     details, state = [], "ok"
-    for c in due:
-        if not c["made"]:
-            details.append(f"{c['name']}: not made")
+    for c in unmade:
+        details.append(f"{c['name']}: not made")
+        state = "bad"
+    for c in mailed:
+        sent = int(c.get("sent_today", c.get("sent")) or 0)
+        bounced = int(c.get("bounced") or 0)
+        failed = int(c.get("failed") or 0)
+        if bounced or failed:
+            parts = []
+            if bounced:
+                parts.append(f"{_plural(bounced, 'email')} bounced")
+            if failed:
+                parts.append(f"{_plural(failed, 'email')} couldn’t be sent")
+            details.append(f"{c['name']}: " + " · ".join(parts))
             state = "bad"
-        elif c.get("bounced"):
-            details.append(f"{c['name']}: {_plural(int(c['bounced']), 'email')} bounced")
-            state = "bad"
-        elif c["sent"]:
-            k = int(c["sent"])
-            details.append(f"{c['name']}: sent to {fmt.num(k)} {'person' if k == 1 else 'people'}")
-        elif not c.get("recipients"):
-            details.append(f"{c['name']}: made · no recipients yet")
-        elif c["due_passed"]:
-            details.append(f"{c['name']}: made but not sent yet")
+        elif sent:
+            details.append(
+                f"{c['name']}: sent to {fmt.num(sent)} {'person' if sent == 1 else 'people'}"
+            )
+        elif c.get("late", c.get("due_passed")):
+            details.append(f"{c['name']}: not sent yet")
             state = "warn" if state == "ok" else state
         else:
-            details.append(f"{c['name']}: made · goes out at {fmt.clock(c.get('time') or '06:00')}")
-    made = sum(1 for c in due if c["made"])
-    sent = sum(1 for c in due if c["sent"])
-    line = (
-        f"{_of(made, len(due), 'brief')} made"
-        if made < len(due)
-        else (
-            f"{_of(sent, len(due), 'brief')} sent"
-            if sent
-            else f"{_of(made, len(due), 'brief')} made"
-        )
-    )
+            details.append(f"{c['name']}: goes out at {fmt.clock(c.get('time') or '06:00')}")
+    sent_n = sum(1 for c in mailed if int(c.get("sent_today", c.get("sent")) or 0))
+    if unmade:
+        line = f"{_of(len(due) - len(unmade), len(due), 'brief')} made"
+    elif sent_n:
+        line = f"{_of(sent_n, len(mailed), 'brief')} sent today"
+    elif any(c.get("late", c.get("due_passed")) for c in mailed):
+        late_n = sum(1 for c in mailed if c.get("late", c.get("due_passed")))
+        line = f"{_of(late_n, len(mailed), 'brief')} not sent yet"
+    else:
+        line = f"Goes out at {fmt.clock(mailed[0].get('time') or '06:00')}"
     return _light(
-        "briefs", "Briefs", "brief", "briefs", state, line, details, "/brief", "Morning Brief"
+        "briefs",
+        "Email delivery",
+        "brief",
+        "briefs",
+        state,
+        line,
+        details,
+        "/brief",
+        "Morning Brief",
     )
 
 
@@ -490,7 +509,8 @@ def _licence(lic: dict[str, Any]) -> dict[str, Any]:
 
 
 def lights(facts: dict[str, Any]) -> dict[str, Any]:
-    """The 13 lights, in order, with a summary line for Home and the panel's groups."""
+    """The 13 lights, in order, with a summary line for Home and the panel's groups (by how much
+    each needs the owner, owner 17 Nov 2026)."""
     run, srcs = facts["run"], facts.get("sources") or []
     if run["status"] == "failed":
         row = [
@@ -528,10 +548,12 @@ def lights(facts: dict[str, Any]) -> dict[str, Any]:
         summary = "All clear"
     subtitle = f"{summary} · run #{run['number']:04d}" + when
     summary += when
+    # problems first, then warnings, then what would be good to do, then what works (owner,
+    # 17 Nov 2026); inside each, the order the data flows
     groups = [
-        {"key": g, "title": t, "lights": [x for x in row if x["group"] == g]}
-        for g, t in GROUPS
-        if any(x["group"] == g for x in row)
+        {"key": g, "title": title, "lights": [x for x in row if SEVERITY[x["state"]] == g]}
+        for g, title in SEVERITY_GROUPS
+        if any(SEVERITY[x["state"]] == g for x in row)
     ]
     return {
         "ok": not problems,

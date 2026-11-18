@@ -289,8 +289,14 @@ def test_sheets_pick_check_and_connect(env: Env, tmp_path):
         {"file": "sample-order-tracker-fy27"},
         page="/setup/sources/sheets",
     )
+    # #77: while the tabs are read, each redraw also brings the footer, so the button wakes
+    r = env.client.get(f"{h}/setup/sources/sheets?sid={sid}")
+    assert "Reading the tabs…" in r.text and 'hx-select-oob="#sheets-foot"' in r.text
+    assert 'id="sheets-foot"' in r.text and "Pick a spreadsheet to continue" in r.text
     _jobs(env)
     r = env.client.get(f"{h}/setup/sources/sheets?sid={sid}")
+    foot = r.text.split('id="sheets-foot"', 1)[1]
+    assert "Pick a spreadsheet to continue" not in foot and 'form="tabs-form"' in foot
     assert "Order tracker FY27 · edited" in r.text and "by Priya Menon" in r.text
     assert "Check the header" in r.text and re.search(
         r"Check 1 header, then scan \d+ tabs?", r.text

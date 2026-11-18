@@ -100,8 +100,11 @@ TABLES: dict[str, Rule] = {
             "upload_id": "an internal file reference; the file itself is not exported",
             "upload_sha": "an internal file reference",
             "results_hash": "an internal replay check",
+            "snapshot_sha": "an internal replay check (the table read is not exported)",
         }
     ),
+    # Look back's suggestions (Enterprise Edition, v2): the questions offered and what was decided
+    "look_back_suggestion": Rule(drop={"fingerprint": "an internal repeat check"}),
     # sources: names, tables and columns, never how to reach them or what they hold
     "source": Rule(
         drop={

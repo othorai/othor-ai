@@ -80,15 +80,11 @@ def test_all_well_is_all_clear_in_the_order_the_data_flows():
     assert got["subtitle"] == "All clear · run #0012 · finished at 02:01"
     by = {x["key"]: x for x in got["lights"]}
     assert by["findings"]["line"] == "2 new · 1 worse" and by["findings"]["state"] == "info"
-    assert by["briefs"]["line"] == "1 of 1 brief sent"
+    assert by["briefs"]["label"] == "Email delivery"
+    assert by["briefs"]["line"] == "1 of 1 brief sent today"
     assert by["briefs"]["details"] == ["Leadership: sent to 3 people"]
-    assert [g["title"] for g in got["groups"]] == [
-        "Your data",
-        "Last night’s run",
-        "What Othor AI found",
-        "Your briefs",
-        "Next",
-    ]
+    # all clear: one group, everything working (problems first when there are any)
+    assert [g["title"] for g in got["groups"]] == ["Working"]
     # every light has its own icon
     assert len({x["icon"] for x in got["lights"]}) == len(ORDER)
 
@@ -129,9 +125,13 @@ def test_expected_quiet_is_grey_not_a_problem():
         )
     )
     by = {x["key"]: x for x in got["lights"]}
-    assert got["ok"]
-    for k in ("fresh", "volume", "checks", "forecasts", "checked", "ai"):
+    for k in ("volume", "checks", "forecasts", "checked", "ai"):
         assert by[k]["state"] == "note", k
+    # a source that didn't update is worth a look, even when it often skips a day (owner,
+    # 17 Nov 2026)
+    assert by["fresh"]["state"] == "warn" and not got["ok"]
+    assert got["groups"][0]["title"] == "Worth a look"
+    assert [x["key"] for x in got["groups"][0]["lights"]] == ["fresh"]
     assert by["checks"]["href"] == "/home?panel=questions"
     assert by["ai"]["details"] == [
         "Othor AI was unavailable, so the brief was written from templates"
@@ -181,7 +181,56 @@ def test_the_run_and_the_briefs():
         "Kept at the last good day: Net revenue and DSO"
     ]
     assert by["briefs"]["state"] == "bad"
-    assert by["briefs"]["details"] == ["Leadership: made but not sent yet", "Cash: 1 email bounced"]
+    assert by["briefs"]["details"] == ["Leadership: not sent yet", "Cash: 1 email bounced"]
+    # the groups: problems, then warnings, then good to have, then working
+    titles = [g["title"] for g in got["groups"]]
+    assert titles == ["Needs you", "Worth a look", "Working"]
+    assert [x["key"] for x in got["groups"][0]["lights"]] == ["numbers", "briefs"]
+
+
+def _brief(**kw):
+    base = {
+        "name": "Leadership",
+        "made": True,
+        "sent": 0,
+        "sent_today": 0,
+        "recipients": 2,
+        "due_passed": True,
+        "late": True,
+        "bounced": 0,
+        "failed": 0,
+        "time": "06:00",
+    }
+    return {**base, **kw}
+
+
+def test_email_delivery_is_about_todays_emails():
+    """Owner, 17 Nov 2026: whether the briefs' emails go out; a brief with no recipients, or a
+    re-run's copy that isn't emailed, is not a health problem."""
+
+    def light(*briefs):
+        got = lights(_facts(briefs=list(briefs)))
+        return {x["key"]: x for x in got["lights"]}["briefs"]
+
+    # the morning's emails went out; tonight's run again made a copy that isn't emailed
+    x = light(_brief(sent=0, sent_today=2))
+    assert x["state"] == "ok" and x["line"] == "1 of 1 brief sent today"
+    assert x["details"] == ["Leadership: sent to 2 people"]
+    # no recipients: left out, nothing to warn about
+    x = light(_brief(recipients=0), _brief(name="Cash", sent_today=1))
+    assert x["state"] == "ok" and x["details"] == ["Cash: sent to 1 person"]
+    x = light(_brief(recipients=0))
+    assert x["state"] == "note" and x["line"] == "No brief emails due today"
+    # before the brief's time and in the half hour after it: not a warning
+    x = light(_brief(due_passed=False, late=False))
+    assert x["state"] == "ok" and x["details"] == ["Leadership: goes out at 6:00 AM IST"]
+    x = light(_brief(late=False))
+    assert x["state"] == "ok"
+    # half an hour late: worth a look; failed or bounced: needs you
+    x = light(_brief())
+    assert x["state"] == "warn" and x["line"] == "1 of 1 brief not sent yet"
+    x = light(_brief(sent_today=1, failed=1))
+    assert x["state"] == "bad" and x["details"] == ["Leadership: 1 email couldn’t be sent"]
 
 
 def test_a_failed_run_shows_what_still_holds():
@@ -222,7 +271,7 @@ def test_the_licence_light():
 
     ok, got = lic()
     assert ok["state"] == "ok" and ok["line"] == "Enterprise · no end date · 12 of 50 companies"
-    assert got["groups"][-1]["title"] == "Your licence"
+    assert got["groups"][-1]["title"] == "Working"
     dated, _ = lic(expires=dt.date(2027, 12, 31))
     assert dated["line"].startswith("Enterprise · until 31 Dec 2027")
     grace, got = lic(state="grace", grace_left=11)
@@ -240,10 +289,9 @@ def test_the_licence_light():
 def test_outside_services_show_only_when_a_plugin_reaches_one():
     """Advanced Intelligence Phase 0: the hosts a plug-in declares are listed on System Health."""
     got = lights(_facts())
-    assert "outside" not in [g["key"] for g in got["groups"]]
+    assert "hosts" not in [x["key"] for x in got["lights"]]
     got = lights(_facts(hosts=["api.data.gov.in", "fbil.org.in"]))
-    (g,) = [g for g in got["groups"] if g["key"] == "outside"]
-    (light,) = g["lights"]
+    (light,) = [x for x in got["lights"] if x["key"] == "hosts"]
     assert light["line"] == "Also reaches 2 outside services"
     assert light["details"] == ["api.data.gov.in", "fbil.org.in"]
     assert light["state"] == "info" and got["ok"]

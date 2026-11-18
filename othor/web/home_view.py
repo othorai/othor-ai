@@ -197,6 +197,37 @@ def _uuid(v: Any) -> Any:
 # --- cards ----------------------------------------------------------------------------------
 
 
+LATE_SEND_MINUTES = 30
+
+
+def _today_mail(
+    s: Session, brief_id: Any, company: Company, now: dt.datetime | None
+) -> dict[str, int]:
+    """This brief's emails today (the company's day), by status, whichever issue they carried."""
+    from othor.briefs.models import BriefIssue
+    from othor.mail.models import Delivery
+
+    out = {"sent": 0, "failed": 0, "bounced": 0}
+    if now is None:
+        return out
+    local = local_now(company, now)
+    start = local.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(dt.UTC)
+    rows = s.execute(
+        sa.select(Delivery.status, sa.func.count())
+        .join(BriefIssue, BriefIssue.id == Delivery.brief_issue_id)
+        .where(
+            Delivery.kind == "brief",
+            BriefIssue.brief_id == brief_id,
+            Delivery.created_at >= start,
+        )
+        .group_by(Delivery.status)
+    ).all()
+    for status, n in rows:
+        if status in out:
+            out[status] = int(n)
+    return out
+
+
 def brief_cards(
     s: Session, run: Run | None, company: Company, now: dt.datetime | None = None
 ) -> list[dict[str, Any]]:
@@ -264,6 +295,8 @@ def brief_cards(
         # isn't), made, sent, or not yet due
         here = issue is not None and run is not None and issue.run_id == run.id
         clock_now = local_now(company, now).time() if now is not None else None
+        today = _today_mail(s, b.id, company, now)
+        due_at = dt.datetime.combine(dt.date(2000, 1, 1), dt.time.fromisoformat(time))
         out.append(
             {
                 "due_today": issue is None or here or issue.status == "rerun",
@@ -271,21 +304,14 @@ def brief_cards(
                 "sent": sent,
                 "recipients": n,
                 "time": time,
-                "bounced": int(
-                    s.scalar(
-                        sa.select(sa.func.count())
-                        .select_from(Delivery)
-                        .where(
-                            Delivery.kind == "brief",
-                            Delivery.brief_issue_id == issue.id,
-                            Delivery.status == "bounced",
-                        )
-                    )
-                    or 0
-                )
-                if issue
-                else 0,
+                "bounced": today["bounced"],
                 "due_passed": clock_now is None or clock_now >= dt.time.fromisoformat(time),
+                # System Health's Email delivery (owner, 17 Nov 2026): today's emails of this
+                # brief, from whichever run made them; "not sent yet" only 30 min after its time
+                "sent_today": today["sent"],
+                "failed": today["failed"],
+                "late": clock_now is None
+                or clock_now >= (due_at + dt.timedelta(minutes=LATE_SEND_MINUTES)).time(),
                 "new": int((issue.body.get("since") or {}).get("new") or 0) if issue else 0,
                 "id": b.id,
                 "name": b.name,

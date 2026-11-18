@@ -5,7 +5,7 @@
 {% from "components/blocks.html" import banner, toast, empty_state, page_title %}
 {% from "components/panels.html" import DRAFT_NOTE, draft_note %}
 {% from "components/forms.html" import action_form, text_area %}
-{% from "components/home.html" import home_card, question_row, recent_row, qp_steps, qp_why, qp_pick, qp_nav, qp_found, qp_decided, confidence_pill, checks_strip, section_label, brief_more, sweep_box, sources_table, health_button, lights_panel, trial_chip %}
+{% from "components/home.html" import home_card, question_row, recent_row, qp_steps, qp_why, qp_pick, qp_nav, qp_found, qp_decided, confidence_pill, checks_strip, section_label, brief_more, sweep_box, sources_table, health_button, lights_panel, trial_chip, intel_button %}
 {% from "components/brief.html" import nb_head, nb_ai_tag, nb_busy %}
 {% from "components/ontology.html" import record_card %}
 {% from "components/weather.html" import weather_banner, forecast_panel, picked_panel %}
@@ -13,7 +13,8 @@
 {% from "components/big_picture.html" import bp_panel %}
 {% block title %}Home · {{ company.name }}{% endblock %}
 {% block crumb %}Home{% endblock %}
-{% block actions %}{% call el("div", layout="flex items-center gap-12") %}{% if updated %}{% call el("p", "hint") %}{{ updated }}{% endcall %}{% endif %}{% call top_menu() %}{{ menu_link("History", "/ontology?panel=history") }}{{ run_again(again, csrf_token, kind="opt") }}{% endcall %}{% endcall %}{% endblock %}
+{# the top bar (owner, 17 Nov 2026): Intelligence, then System Health, left of the ⋯ menu #}
+{% block actions %}{% call el("div", layout="flex items-center justify-end gap-8 md:gap-12 flex-wrap") %}{% if updated %}{% call el("p", "hint", layout="hidden md:block") %}{{ updated }}{% endcall %}{% endif %}{% if checks %}{{ intel_button(checks) }}{% endif %}{% if lights %}{{ health_button(lights) }}{% endif %}{% call top_menu() %}{{ menu_link("History", "/ontology?panel=history") }}{{ run_again(again, csrf_token, kind="opt") }}{% endcall %}{% endcall %}{% endblock %}
 {% block main %}
 {% if run %}<span data-run="{{ run.number }}" hidden></span>{% endif %}
 <div class="flex flex-col gap-56">
@@ -27,20 +28,18 @@
 
   {# #61 (owner, 14 Nov 2026): the company's name as the title; the crumb still says Home #}
   {# v0.19 (M19.5): Big Picture where "Updated" was; the time moved to the top bar (owner, 15 Nov 2026) #}
-  {% call page_title(company.name) %}{% call el("div", layout="flex items-center gap-12 flex-wrap") %}{# System Health left of Big Picture (owner, 16 Nov 2026) #}{{ slot("home.title_actions") }}{% if trial %}{{ trial_chip(trial) }}{% endif %}{% if lights %}{{ health_button(lights) }}{% endif %}{% if big_picture is defined %}{{ ai_button("Big Picture Report" if big_picture else "Big Picture · not available right now", href="/home?panel=big-picture", disabled=not big_picture) }}{% endif %}{% endcall %}{% endcall %}
+  {% call page_title(company.name) %}{% call el("div", layout="flex items-center gap-12 flex-wrap") %}{{ slot("home.title_actions") }}{% if trial %}{{ trial_chip(trial) }}{% endif %}{% if big_picture is defined %}{{ ai_button("Big Picture Report" if big_picture else "Big Picture · not available right now", href="/home?panel=big-picture", disabled=not big_picture) }}{% endif %}{% endcall %}{% endcall %}
 
   {% include "partials/run_again.html" %}
 
   {% if weather %}{{ weather_banner(weather, outlook) }}{% endif %}
-
-  {% if checks %}{{ checks_strip(checks) }}{% endif %}
 
   {{ slot("home.before_briefs") }}
   {# design B2 (owner, 11 Nov 2026): briefs as cards, at most two rows; Sweep as one box below #}
   {% if briefs.cards %}
   {% call el("section", attrs={"aria-label": "Briefs"}) %}
     {{ section_label("Briefs · " ~ fmt.num(briefs.cards | length + briefs.rest | length)) }}
-    {% call el("div", "brief-cards home") %}
+    {% call el("div", "brief-cards") %}
       {% for c in briefs.cards %}{{ home_card(c.name ~ " brief" if not c.name.lower().endswith("brief") else c.name, c.title, c.meta, "/brief/" ~ c.id, c.flag, chart_spec=c.chart, visual=True, count=c.count, quiet=("Quiet day" if c.quiet else "Building history to chart")) }}{% endfor %}
       {% if briefs.more %}{{ brief_more(briefs.more) }}{% endif %}
     {% endcall %}
