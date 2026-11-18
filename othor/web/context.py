@@ -84,6 +84,7 @@ def resolve_site(request: Request) -> Site:
         request.state.site = site  # the error pages and logs read it (M11a)
     if site.company is not None:  # every company page, signed in or a recipient's link (M15.6)
         fmt.set_request_currency(site.company.currency)
+        fmt.set_request_chart(site.company)  # v0.25: smooth lines, values on lines
     return site
 
 

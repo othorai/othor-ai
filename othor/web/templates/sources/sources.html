@@ -6,12 +6,12 @@
 {% from "components/blocks.html" import empty_state, page_title, banner %}
 {% from "components/panels.html" import side_panel, pane %}
 {% from "components/sources.html" import kind_tile, table_list, src_row, other_connectors, scan_label %}
+{% from "components/buttons.html" import top_menu %}
 {% block title %}Data sources · {{ company.name }}{% endblock %}
 {% block crumb %}Data sources{% endblock %}
 {% block actions %}
-<span class="flex items-center gap-8">
-  {% call el('form', 'hide-phone', attrs='data-inplace method="post" action="/sources/test-all"') %}<input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Test all connections", type="submit") }}{% endcall %}
-</span>
+{# M25.2: one ⋯ menu, on phones too #}
+{% call top_menu() %}<form class="contents" data-inplace method="post" action="/sources/test-all"><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Test all connections", "opt", type="submit") }}</form>{% endcall %}
 {% endblock %}
 {% set kn = {"postgres": "PostgreSQL", "mysql": "MySQL", "gsheets": "Google Sheets"} %}
 {% block main %}

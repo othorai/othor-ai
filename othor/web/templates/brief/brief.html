@@ -10,6 +10,7 @@
 {% from "components/panels.html" import pane, pane_title %}
 {% from "components/forms.html" import text_input, select, listbox, toggle %}
 {% from "components/weather.html" import forecast_panel %}
+{% from "components/buttons.html" import top_menu, menu_link %}
 {% block title %}{{ bv.brief.name }} · Morning Brief · {{ company.name }}{% endblock %}
 {% block crumb %}Morning Brief{% endblock %}
 {% block crumb_after %}{% call el("p", "crumbs", layout="hidden md:flex") %}{% call el("span", "crumb-sep") %}/{% endcall %}<span>{{ bv.brief.name }}</span>{% if date_label %}{% call el("span", "crumb-sep") %}/{% endcall %}<span>{{ date_label }}</span>{% endif %}{% endcall %}{% endblock %}
@@ -18,13 +19,14 @@
    Yesterday, Recipients' view and Run again under More #}
 <div class="flex items-center gap-8">
   {% if bv.issue %}{{ view_switch([("Simple", base ~ "?" ~ q), ("Full detail", base ~ "?" ~ q ~ "&view=full")], "Full detail" if view == "full" else "Simple") }}{% endif %}
-  {{ button("Recipients · " ~ fmt.num(recipients), href=base ~ "/edit?tab=delivery") }}
-  {{ button("Edit brief", href=base ~ "/edit") }}
   {% if pdf %}{{ pdf_download(pdf) }}{% endif %}
-  {% call more_menu(label="More") %}
-    {% if bv.previous %}{{ link("‹ Yesterday" if (bv.issue.date - bv.previous).days == 1 else "‹ " ~ fmt.day_month(bv.previous), base ~ "?date=" ~ bv.previous.isoformat() ~ ("&view=full" if view == "full" else "")) }}{% endif %}
-    {% if bv.issue %}{{ link("Recipients’ view", base ~ "/shared?" ~ q) }}{% endif %}
-    {{ run_again(again, csrf_token, next=base) }}
+  {# M25.2 (owner, 15 Nov 2026): the rest in one ⋯ menu, as Home #}
+  {% call top_menu() %}
+    {% if bv.previous %}{{ menu_link("‹ Yesterday" if (bv.issue.date - bv.previous).days == 1 else "‹ " ~ fmt.day_month(bv.previous), base ~ "?date=" ~ bv.previous.isoformat() ~ ("&view=full" if view == "full" else "")) }}{% endif %}
+    {{ menu_link("Edit brief", base ~ "/edit") }}
+    {{ menu_link("Recipients · " ~ fmt.num(recipients), base ~ "/edit?tab=delivery") }}
+    {% if bv.issue %}{{ menu_link("Recipients’ view", base ~ "/shared?" ~ q) }}{% endif %}
+    {{ run_again(again, csrf_token, kind="opt", next=base) }}
   {% endcall %}
 </div>
 {% endblock %}

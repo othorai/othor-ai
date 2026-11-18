@@ -91,6 +91,9 @@ class Company(IdMixin, Base):
     weekly_digest: Mapped[bool] = mapped_column(default=False)  # 8e, Sundays, owner only (M9)
     # Big Picture's language (v0.19, M19.5): en · hi (a try)
     report_language: Mapped[str] = mapped_column(sa.String(8), default="en")
+    # Settings › Charts (v0.25 M25.1): smooth lines; values on lines ("key" points or "off")
+    chart_smooth: Mapped[bool] = mapped_column(default=True)
+    chart_values: Mapped[str] = mapped_column(sa.String(8), default="key")
     # the company's logo (M15.7): a PNG we re-encoded, stored as companies/<id>/logo/<sha>.png
     logo_sha: Mapped[str | None] = mapped_column(sa.String(64))
     created_at: Mapped[datetime] = mapped_column(default=utcnow)

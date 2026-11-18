@@ -28,6 +28,14 @@
       {{ select("value", report_languages, company.report_language, id="report-language", small=True, attrs='hx-post="/settings" hx-vals=\'{"field": "report_language"}\' hx-include="this" aria-label="Big Picture language"') }}{% endcall %}
     {{ slot("settings.company.advanced") }}
   {% endcall %}
+  {# v0.25 (M25.1, owner 18 Nov 2026): how every chart is drawn, on pages, in emails and PDFs #}
+  {% call el('section', 'section lines', attrs={"aria-label": "Charts"}) %}
+    {% call el("div", "section-head") %}Charts{% endcall %}
+    {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}Smooth lines{% endcall %}{% call el('p', 'sub') %}Curves through every value, never past one · off: straight lines{% endcall %}</div>
+      {{ toggle("value", company.chart_smooth, label="Smooth lines", attrs='hx-post="/settings" hx-vals=\'{"field": "chart_smooth"}\'') }}{% endcall %}
+    {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}Values on lines{% endcall %}{% call el('p', 'sub') %}Key points: the last value, the highest, the lowest and what Othor AI found · hover any point for its value{% endcall %}</div>
+      {{ select("value", chart_values, company.chart_values, id="chart-values", small=True, attrs='hx-post="/settings" hx-vals=\'{"field": "chart_values"}\' hx-include="this" aria-label="Values on lines"') }}{% endcall %}
+  {% endcall %}
   {% call el('section', 'section lines') %}
     {% call el("div", "section-head") %}Delivery{% endcall %}
     {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}Email{% endcall %}{% call el('p', 'sub') %}Full brief as a page · from {{ sender }} · recipients set per brief{% endcall %}</div>

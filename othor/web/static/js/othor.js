@@ -268,6 +268,23 @@ function offline() {
 window.addEventListener("online", offline);
 window.addEventListener("offline", offline);
 document.addEventListener("DOMContentLoaded", offline);
+// A Look back report being made (#79, #80): the othor_lb_wait cookie names it. Any other page asks
+// every 10 s whether it's ready; when it is, the note (its headline and Open) goes in the toast
+// dock and the server clears the cookie. The report's own page shows it there instead.
+document.addEventListener("DOMContentLoaded", () => {
+  const m = document.cookie.match(/(?:^|; )othor_lb_wait=([0-9a-f-]{36})/);
+  if (!m || location.pathname === "/look-back/" + m[1]) return;
+  const timer = setInterval(async () => {
+    try {
+      const r = await fetch("/look-back/" + m[1] + "/ready", { credentials: "same-origin" });
+      if (r.status === 204) return;
+      clearInterval(timer);
+      const html = r.ok ? (await r.text()).trim() : "";
+      if (html) toastDock().innerHTML = html;
+    } catch (_) { /* offline: the offline line says so */ }
+  }, 10000);
+});
+
 // Stale page (9a): a page drawn from a run (data-run="<number>") checks once a minute whether
 // a newer run has finished, and offers Reload.
 document.addEventListener("DOMContentLoaded", () => {

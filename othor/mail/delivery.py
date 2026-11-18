@@ -185,13 +185,16 @@ def send_issue(
     )
     row.status, row.link_token_id, row.error = "queued", open_row.id, None
     s.commit()
-    msg = brief_email(
-        mail,
-        to=recipient.email,
-        open_url=settings.instance_url(company.slug, f"/l/{open_tok}"),
-        unsubscribe_url=settings.instance_url(company.slug, f"/u/{unsub_tok}"),
-        settings=settings,
-    )
+    from othor.core import fmt
+
+    with fmt.chart_style(fmt.style_of(company)):  # Settings › Charts, in its pictures too (v0.25)
+        msg = brief_email(
+            mail,
+            to=recipient.email,
+            open_url=settings.instance_url(company.slug, f"/l/{open_tok}"),
+            unsubscribe_url=settings.instance_url(company.slug, f"/u/{unsub_tok}"),
+            settings=settings,
+        )
     try:
         row.provider_id = relay.send(msg)
         row.status, row.sent_at = "sent", now

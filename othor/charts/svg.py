@@ -12,7 +12,7 @@ import datetime as dt
 import itertools
 from html import escape
 
-from othor.charts.spec import Annotation, ChartSpec, Point, Unit
+from othor.charts.spec import Annotation, ChartSpec, Point, Series, Unit
 from othor.charts.tokens import color
 from othor.core import fmt
 
@@ -69,6 +69,7 @@ class _Svg:
         self.w, self.h, self.spec, self.parts = w, h, spec, []
         self.taken: list[Box] = []  # labels and marks already placed (M12: no collisions)
         self.labels: list[str] = []  # drawn last, on top of the lines
+        self.hits: list[str] = []  # hover targets (v0.25), above everything, pages only
 
     def add(self, s: str) -> None:
         self.parts.append(s)
@@ -94,12 +95,15 @@ class _Svg:
         fill: str = AXIS_TXT,
         anchor: str = "start",
         weight: int = 400,
-    ) -> None:
+        drop: bool = False,
+    ) -> bool:
         """A text label that moves out of the way: it keeps inside the chart, then tries
         one line below, one above, two below… until it overlaps nothing placed before it.
-        Deterministic: the same spec always places it the same way."""
+        Deterministic: the same spec always places it the same way. `drop`: with no free
+        place, it isn't drawn (a value on a line is a help, never a clash; v0.25)."""
         step = size + 2
         best = None
+        free = False
         for k in (0, 1, -1, 2, -2, 3, -3, 4):
             yy = y + k * step
             b = _box(x, yy, s, size, anchor)
@@ -110,13 +114,17 @@ class _Svg:
                 best = (x + dx, yy + dy, b)
             if not any(_hit(b, t) for t in self.taken):
                 best = (x + dx, yy + dy, b)
+                free = True
                 break
         assert best is not None
+        if drop and not free:
+            return False
         bx, by, b = best
         self.reserve(b)
         n = len(self.parts)
         self.text(bx, by, s, size=size, fill=fill, anchor=anchor, weight=weight)
         self.labels.append(self.parts.pop(n))
+        return True
 
     def text(
         self,
@@ -142,7 +150,7 @@ class _Svg:
             f'font-family="{FONT}" data-chart="{escape(self.spec.id)}">'
             f"<title>{alt}</title>"
         )
-        return head + "".join(self.parts) + "".join(self.labels) + "</svg>"
+        return head + "".join(self.parts) + "".join(self.labels) + "".join(self.hits) + "</svg>"
 
 
 def _caption(svg: _Svg, x: float, y: float, unit: Unit) -> None:
@@ -204,7 +212,11 @@ def _band(svg: _Svg, spec: ChartSpec, xs: _Scale, ys: _Scale, *, legend: bool = 
     }.get(b.role, (ROLE["muted"], "0.18"))
     up = [(xs(_ord(d)), ys(v)) for d, v in b.upper]
     low = [(xs(_ord(d)), ys(v)) for d, v in reversed(b.lower)]
-    svg.add(f'<polygon points="{_poly(up + low)}" fill="{colour}" fill-opacity="{opacity}"/>')
+    if fmt.charts().smooth and len(up) >= 3 and len(low) >= 3:  # its edges curve as the line does
+        d = _smooth(up) + " L" + _smooth(low)[1:] + " Z"
+        svg.add(f'<path d="{d}" fill="{colour}" fill-opacity="{opacity}"/>')
+    else:
+        svg.add(f'<polygon points="{_poly(up + low)}" fill="{colour}" fill-opacity="{opacity}"/>')
     if b.label and spec.kind != "sparkline" and not legend:
         x, y = up[-1]
         svg.label(x - 2, y - 5, b.label, fill=colour, anchor="end")
@@ -228,12 +240,14 @@ def _spark_bars(spec: ChartSpec, w: int, h: int) -> str:
     return svg.done()
 
 
-def _smooth(xy: list[tuple[float, float]]) -> str:
-    """A monotone cubic path through every point (Fritsch–Carlson): it passes through each value
-    and never overshoots between two of them, so the curve shows no value that isn't there."""
+XY = tuple[float, float]
+
+
+def _beziers(xy: list[XY]) -> list[tuple[XY, XY, XY, XY]]:
+    """The monotone cubic (Fritsch–Carlson) as Bézier segments: (start, control, control, end)."""
     n = len(xy)
     if n < 3:
-        return "M " + " L ".join(f"{_f(x)},{_f(y)}" for x, y in xy)
+        return []
     dx = [xy[i + 1][0] - xy[i][0] for i in range(n - 1)]
     d = [(xy[i + 1][1] - xy[i][1]) / dx[i] if dx[i] else 0.0 for i in range(n - 1)]
     m = [
@@ -250,15 +264,43 @@ def _smooth(xy: list[tuple[float, float]]) -> str:
         if r > 9:
             t = 3 / r**0.5
             m[i], m[i + 1] = t * a * d[i], t * b * d[i]
-    out = [f"M {_f(xy[0][0])},{_f(xy[0][1])}"]
+    segs = []
     for i in range(n - 1):
         (x0, y0), (x1, y1) = xy[i], xy[i + 1]
         h3 = dx[i] / 3
-        out.append(
-            f"C {_f(x0 + h3)},{_f(y0 + m[i] * h3)} {_f(x1 - h3)},{_f(y1 - m[i + 1] * h3)} "
-            f"{_f(x1)},{_f(y1)}"
-        )
+        segs.append(((x0, y0), (x0 + h3, y0 + m[i] * h3), (x1 - h3, y1 - m[i + 1] * h3), (x1, y1)))
+    return segs
+
+
+def _smooth(xy: list[XY]) -> str:
+    """A monotone cubic path through every point (Fritsch–Carlson): it passes through each value
+    and never overshoots between two of them, so the curve shows no value that isn't there."""
+    segs = _beziers(xy)
+    if not segs:
+        return "M " + " L ".join(f"{_f(x)},{_f(y)}" for x, y in xy)
+    out = [f"M {_f(xy[0][0])},{_f(xy[0][1])}"]
+    for _p0, c1, c2, p1 in segs:
+        out.append(f"C {_f(c1[0])},{_f(c1[1])} {_f(c2[0])},{_f(c2[1])} {_f(p1[0])},{_f(p1[1])}")
     return " ".join(out)
+
+
+def _sampled(xy: list[XY]) -> list[XY]:
+    """Points along the drawn curve, so labels keep off what is drawn, not the straight line."""
+    segs = _beziers(xy)
+    if not segs:
+        return xy
+    out = [xy[0]]
+    for p0, c1, c2, p1 in segs:
+        for k in range(1, 9):
+            u = k / 8
+            a, b, c, d = (1 - u) ** 3, 3 * (1 - u) ** 2 * u, 3 * (1 - u) * u**2, u**3
+            out.append(
+                (
+                    a * p0[0] + b * c1[0] + c * c2[0] + d * p1[0],
+                    a * p0[1] + b * c1[1] + c * c2[1] + d * p1[1],
+                )
+            )
+    return out
 
 
 def _trace(
@@ -297,10 +339,11 @@ def _sparkline(spec: ChartSpec, w: int, h: int) -> str:
     for other in spec.series[1:]:
         if other.role == "muted" and other.points:
             oxy = [(xs(_ord(d)), ys(v)) for d, v in other.points]
-            _trace(svg, oxy, ROLE["muted"], other.style == "smooth", "1.5", other.style == "dotted")
+            _trace(svg, oxy, ROLE["muted"], _smooth_on(other), "1.5", other.style == "dotted")
     colour = ROLE[spec.series[0].role]
     xy = [(xs(_ord(d)), ys(v)) for d, v in pts]
-    _trace(svg, xy, colour, spec.series[0].style == "smooth", "2")
+    _trace(svg, xy, colour, _smooth_on(spec.series[0]), "2")
+    _hover(svg, spec, spec.series[0], xy, r=4)
     x, y = xy[-1]
     if spec.series[0].role == "edge":
         svg.add(
@@ -463,7 +506,7 @@ def _line(spec: ChartSpec, w: int, h: int, *, step: bool = False, legend: bool =
                 stepped.append((x, y))
             xy = stepped
         lines.append((sr, xy))
-        svg.reserve_line(xy)
+        svg.reserve_line(_sampled(xy) if not step and _smooth_on(sr) else xy)
     for a in spec.annotations:  # the marked points keep their space: no label on a breach
         if a.type == "point" and a.at and a.value is not None:
             cx, cy = xs(_ord(a.at)), ys(a.value)
@@ -474,8 +517,8 @@ def _line(spec: ChartSpec, w: int, h: int, *, step: bool = False, legend: bool =
     _region_labels(svg, spec, xs)
     for sr, xy in lines:
         c = ROLE[sr.role]
-        if sr.style in ("smooth", "dotted") and not step:  # Summary's opened row (M16.3)
-            _trace(svg, xy, c, True, "2" if sr.style == "smooth" else "1.5", sr.style == "dotted")
+        if not step and (_smooth_on(sr) or sr.style == "dotted"):  # smooth by default (v0.25)
+            _trace(svg, xy, c, True, "1.5" if sr.style == "dotted" else "2", sr.style == "dotted")
         else:
             svg.add(
                 f'<polyline points="{_poly(xy)}" fill="none" stroke="{c}" stroke-width="2" '
@@ -484,11 +527,115 @@ def _line(spec: ChartSpec, w: int, h: int, *, step: bool = False, legend: bool =
         if not step and not legend:  # label lines directly (9c); Big Picture: a legend above
             x, y = xy[-1]
             ly = y + 14 if y < 34 else y - 6
-            svg.label(x - 2, ly, sr.name, fill=c, anchor="end", size=10, weight=500)
+            # values on lines (v0.25): the last value rides with the line's name
+            last = (
+                f" · {_value(sr.points[-1][1], spec.unit)}"
+                if fmt.charts().values == "key" and sr.points
+                else ""
+            )
+            # with no room for both, the name alone (as before v0.25)
+            # then the name alone, sliding left along its line before giving in (v0.25: "FY25
+            # (same month)" sat on the other line)
+            tries = [(sr.name + last, 0.0)] if last else []
+            tries += [(sr.name, -k * 36.0) for k in range(4)]
+            if not any(
+                svg.label(x - 2 + dx, ly, s, fill=c, anchor="end", size=10, weight=500, drop=True)
+                for s, dx in tries
+            ):
+                svg.label(x - 2, ly, sr.name, fill=c, anchor="end", size=10, weight=500)
         if spec.y.zero_line and xy:  # a chart of changes marks where it ends (#65)
             svg.add(f'<circle cx="{_f(xy[-1][0])}" cy="{_f(xy[-1][1])}" r="3" fill="{c}"/>')
     _points(svg, spec, xs, ys)
+    if not step:
+        _key_values(svg, spec, lines, h)
+        for sr, xy in lines:
+            _hover(svg, spec, sr, xy)
     return svg.done()
+
+
+def _smooth_on(sr: Series) -> bool:
+    """A line is drawn smooth when it asks to be (Summary), or by the company's choice (v0.25)."""
+    return sr.style == "smooth" or (sr.style == "line" and fmt.charts().smooth)
+
+
+KEY_PER_LINE, KEY_PER_CHART = 3, 6
+
+
+def _key_values(svg: _Svg, spec: ChartSpec, lines: list[tuple[Series, list[XY]]], h: int) -> None:
+    """Values on lines, Key points (owner, 18 Nov 2026): on each line its last value, a finding's
+    own points, its highest and lowest; at most three a line and six a chart, a muted line last;
+    each placed where it fits, else left out. A small chart shows the last value only."""
+    if fmt.charts().values != "key":
+        return
+    marked = {a.at for a in spec.annotations if a.type == "point" and a.at}
+    if h < 120:  # a small chart: the last value only, with the line's name
+        return
+    shown = 0
+    said: set[tuple[int, str]] = set()  # two lines meeting at one value: said once
+    for sr, xy in sorted(lines, key=lambda p: p[0].role == "muted"):
+        pts = list(sr.points)
+        if not pts or sr.style == "dots":
+            continue
+        vals = [v for _d, v in pts]
+        last = len(pts) - 1
+        order = [i for i, (d, _v) in enumerate(pts) if d in marked]
+        order += [vals.index(max(vals)), vals.index(min(vals))]
+        picked: list[int] = []
+        for i in order:
+            if i not in picked and i != last:  # the last rides with the name
+                picked.append(i)
+        for i in picked[: KEY_PER_LINE - 1]:
+            if shown >= KEY_PER_CHART:
+                return
+            x, y = xy[i]
+            text = _value(vals[i], spec.unit)
+            if (round(x), text) in said:
+                continue
+            above = i != vals.index(min(vals))
+            ok = svg.label(
+                x,
+                y - 7 if above else y + 14,
+                text,
+                size=10,
+                fill=INK,
+                anchor="middle",
+                weight=500,
+                drop=True,
+            )
+            if ok:
+                said.add((round(x), text))
+                svg.add(f'<circle cx="{_f(x)}" cy="{_f(y)}" r="2.5" fill="{ROLE[sr.role]}"/>')
+                shown += 1
+
+
+def _when(d: str, monthly: bool) -> str:
+    day = dt.date.fromisoformat(d)
+    return f"{day:%b %Y}" if monthly else f"{day.day} {day:%b %Y}"
+
+
+def _tip(v: float, unit: Unit) -> str:
+    """A hover's value with its unit ("₹4.52 Cr"), the axis says the unit only once."""
+    s = _value(v, unit)
+    if unit.type == "currency" and unit.scale in ("cr", "m", "b", "l", "k"):
+        sym = fmt.SYMBOL.get(unit.code or "", fmt.currency_symbol())
+        word = {"cr": " Cr", "m": " M", "b": " B", "l": " L", "k": " K"}[unit.scale]
+        return f"{sym}{s}{word}"
+    return s
+
+
+def _hover(svg: _Svg, spec: ChartSpec, sr: Series, xy: list[XY], r: float = 7) -> None:
+    """Native hover (owner, 18 Nov 2026): a see-through target on each point with its date and
+    value; pages only, never a picture (an email's PNG can't hover)."""
+    if not fmt.charts().hover or sr.style == "dots":
+        return
+    pts = list(sr.points)
+    monthly = all(dt.date.fromisoformat(d).day == 1 for d, _v in pts)
+    for (d, v), (x, y) in zip(pts, xy, strict=False):
+        tip = f"{sr.name} · {_when(d, monthly)} · {_tip(v, spec.unit)}"
+        svg.hits.append(
+            f'<circle cx="{_f(x)}" cy="{_f(y)}" r="{_f(r)}" fill="transparent">'
+            f"<title>{escape(tip)}</title></circle>"
+        )
 
 
 def _contribution(spec: ChartSpec, w: int, h: int) -> str:
@@ -541,11 +688,13 @@ def _waterfall(spec: ChartSpec, w: int, h: int) -> str:
     base = max(0.0, lo - (hi - lo) * 0.6) if hi > lo else 0.0
     # room above the tallest bar for its value, the unit and the axis note, so none overlap
     ys = _Scale(base, hi, h - 26, 34 if base > 0 else 22)
-    if base > 0:  # placed first: the values move out of its way, never over it
+    # the unit first at the left, then the axis note at the right (it moves down, never over the
+    # caption); both before the bars, so the values move out of their way (v0.25)
+    _caption(svg, 2, 11, spec.unit)
+    if base > 0:
         svg.label(
             w - 4, 11, "axis from " + _value(base, spec.unit), size=10, fill=AXIS_TXT, anchor="end"
         )
-    _caption(svg, 2, 11, spec.unit)
     col = (w - 8) / len(cats)
     bw = col * 0.6
     prev_top: float | None = None

@@ -22,7 +22,7 @@ def test_theme_has_board_tokens_only():
     t = tokens()
     assert "--*: initial;" in THEME.read_text()
     assert t["spacing"] == "1px"
-    assert {"text-12", "text-13", "radius-8", "shadow-panel", "font-sans"} <= set(t)
+    assert {"text-meta", "text-row", "radius-8", "shadow-panel", "font-sans"} <= set(t)
     # green is for status dots only: one ok family, no data greens
     greens = {
         k

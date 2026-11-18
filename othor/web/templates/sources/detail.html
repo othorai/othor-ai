@@ -6,13 +6,14 @@
 {% from "components/blocks.html" import banner, empty_state, page_title %}
 {% from "components/sources.html" import table_list, use_toast %}
 {% set kn = {"postgres": "Postgres", "mysql": "MySQL", "gsheets": "Google Sheets"} %}
+{% from "components/buttons.html" import top_menu, menu_link %}
 {% block title %}{{ card.title }} · Data sources · {{ company.name }}{% endblock %}
 {% block crumb %}{% call el('a', 'crumb-link', attrs='href="/sources"') %}Data sources{% endcall %}{% call el("span", "crumb-sep") %}/{% endcall %}{{ src.name }}{% endblock %}
 {% block actions %}
+{# M25.2: Re-scan in view; Tables, Schemas and Test connection in the ⋯ menu #}
 <span class="flex items-center gap-8">
-  {{ button("Tables", href="/sources?panel=tables&s=" ~ src.id) }}{% if src.kind == "postgres" %}{{ button("Schemas", href="/sources?panel=schemas&s=" ~ src.id) }}{% endif %}
   <form method="post" action="/sources/{{ src.id }}/action/rescan" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Re-scan", type="submit") }}</form>
-  {% if src.kind != "gsheets" %}<form method="post" action="/sources/{{ src.id }}/action/test" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Test connection", type="submit") }}</form>{% endif %}
+  {% call top_menu() %}{{ menu_link("Tables", "/sources?panel=tables&s=" ~ src.id) }}{% if src.kind == "postgres" %}{{ menu_link("Schemas", "/sources?panel=schemas&s=" ~ src.id) }}{% endif %}{% if src.kind != "gsheets" %}<form class="contents" method="post" action="/sources/{{ src.id }}/action/test" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Test connection", "opt", type="submit") }}</form>{% endif %}{% endcall %}
 </span>
 {% endblock %}
 {% block main %}

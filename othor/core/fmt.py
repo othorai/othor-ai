@@ -15,6 +15,7 @@ import datetime as dt
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
+from dataclasses import dataclass
 from decimal import ROUND_HALF_EVEN, Decimal
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
@@ -59,11 +60,13 @@ def money_style(currency: str | None) -> Iterator[None]:
 def request_holder() -> Any:
     """For the web middleware: a fresh holder for this request, and no explicit currency left over
     from whatever ran before in this context (reset together with the token)."""
-    return (_REQUEST.set([None]), _MONEY.set(None))
+    return (_REQUEST.set([None]), _MONEY.set(None), _REQUEST_CHART.set([None]), _CHART.set(None))
 
 
 def end_request(token: Any) -> None:
-    box, money = token
+    box, money, cbox, chart = token
+    _CHART.reset(chart)
+    _REQUEST_CHART.reset(cbox)
     _MONEY.reset(money)
     _REQUEST.reset(box)
 
@@ -73,6 +76,64 @@ def set_request_currency(currency: str | None) -> None:
     box = _REQUEST.get()
     if box is not None:
         box[0] = _ok(currency)
+
+
+# --- how charts are drawn (v0.25 M25.1, owner 18 Nov 2026) --------------------------------------
+# Settings › Charts: smooth lines (on by default) and values on lines (Key points by default). A
+# render-time choice, like the currency: never in a chart's spec, so stored specs and results
+# keep their bytes (non-negotiable 2). `hover` is off for pictures (PNG): a tooltip needs a page.
+
+
+@dataclass(frozen=True)
+class ChartStyle:
+    smooth: bool = True
+    values: str = "key"  # "key" (last, highest, lowest, a finding's own) or "off"
+    hover: bool = True
+
+
+_CHART: ContextVar[ChartStyle | None] = ContextVar("othor_chart", default=None)
+_REQUEST_CHART: ContextVar[list[ChartStyle | None] | None] = ContextVar(
+    "othor_request_chart", default=None
+)
+
+
+def style_of(company: Any) -> ChartStyle:
+    """A company's chart choices (defaults when it has none, or none is known)."""
+    smooth = getattr(company, "chart_smooth", True)
+    values = getattr(company, "chart_values", "key")
+    return ChartStyle(
+        smooth=True if smooth is None else bool(smooth),
+        values=values if values in ("key", "off") else "key",
+    )
+
+
+def set_chart_style(style: ChartStyle) -> None:
+    _CHART.set(style)
+
+
+@contextmanager
+def chart_style(style: ChartStyle) -> Iterator[None]:
+    """The chart choices inside a block: an email, a PDF, a picture."""
+    token = _CHART.set(style)
+    try:
+        yield
+    finally:
+        _CHART.reset(token)
+
+
+def set_request_chart(company: Any) -> None:
+    box = _REQUEST_CHART.get()
+    if box is not None:
+        box[0] = style_of(company)
+
+
+def charts() -> ChartStyle:
+    """How the current render draws charts."""
+    explicit = _CHART.get()
+    if explicit is not None:
+        return explicit
+    box = _REQUEST_CHART.get()
+    return box[0] if box and box[0] else ChartStyle()
 
 
 def currency() -> str:

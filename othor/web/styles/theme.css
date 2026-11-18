@@ -109,37 +109,49 @@
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
-  /* type scale: 7 sizes, each with a role */
-  --text-11: 11px;  /* labels (caps), meta */
-  --text-12: 12px;  /* secondary text, hints */
-  --text-13: 14px;  /* tables, controls, dense body (14px since 12 Nov 2026, owner: one scale with the panels) */
-  --text-14: 15px;  /* body (15px since 12 Nov 2026) */
+  /* type scale by role (v0.25 M25.3, owner 18 Nov 2026: one scale, the Big Picture report's type) */
+  --text-label: 11px;   /* caps labels and section titles (600, tracking-caps) */
+  --text-meta: 12px;    /* secondary lines, hints, meta */
+  --text-row: 14px;     /* rows, tables, controls, dense text */
+  --text-body: 15px;    /* reading text */
+  --text-card: 17px;    /* card, section and panel titles */
+  --text-page: 20px;    /* page titles */
+  --text-figure: 22px;  /* figures in tiles and cards */
+  --text-lead: 26px;    /* a report's lead line */
+  --text-big: 28px;     /* the largest figures */
   --text-15: 15px;  /* sign-up and company sign-in only: subtitle, inputs, button (owner, 10 Nov 2026; guard) */
-  --text-16: 16px;  /* card, section and panel titles */
-  --text-20: 20px;  /* page titles */
   --text-24: 24px;  /* sign-up and company sign-in card title only (owner, 10 Nov 2026; guard) */
-  --text-28: 28px;  /* large figures */
   --text-40: 40px;  /* the public website's headline only (othor.ai, M11a) */
-  /* the public website only (M11d, design/site) */
+  /* the public website only (M11d, design/site); its look is reviewed after v0.2 (owner) */
   --text-site-15: 15px;   /* nav, buttons */
-  --text-site-18: 18px;   /* lede, hero pillars */
+  --text-site-18: 18px;   /* lede, hero pillars, large body */
   --text-site-24: 24px;   /* card titles */
   --text-site-28: 28px;   /* large card titles */
+  --text-site-32: 32px;
   --text-site-36: 36px;   /* section headlines on phones */
+  --text-site-44: 44px;   /* page headlines on phones */
+  --text-site-48: 48px;
+  --text-site-52: 52px;   /* section headlines */
   --text-site-56: 56px;   /* section headlines, stats */
+  --text-site-60: 60px;
   --text-site-64: 64px;   /* See / Hear */
+  --text-site-76: 76px;
   --text-site-88: 88px;   /* the hero */
-  --leading-tight: 1.3;
-  --leading-snug: 1.35;
-  --leading-cozy: 1.4;
-  --leading-normal: 1.45;
-  --leading-body: 1.5;
-  --leading-relaxed: 1.55;
-  --tracking-tighter: -0.03em;
-  --tracking-tight: -0.02em;
-  --tracking-snug: -0.01em;
-  --tracking-wide: 0.04em;
-  --tracking-wider: 0.06em;
+  /* line heights by role */
+  --leading-display: 1.04;  /* the site's display headlines */
+  --leading-heading: 1.2;   /* the site's headings */
+  --leading-title: 1.3;     /* titles */
+  --leading-row: 1.45;      /* rows, labels, short lines */
+  --leading-read: 1.6;      /* reading text */
+  /* letter spacing by role */
+  --tracking-caps: 0.08em;       /* caps labels */
+  --tracking-caps-site: 0.12em;  /* the site's caps eyebrows */
+  --tracking-brand: 0.04em;      /* the OTHOR AI word mark */
+  --tracking-title: -0.01em;
+  --tracking-lead: -0.015em;
+  --tracking-display: -0.02em;
+  --tracking-display-2: -0.035em;
+  --tracking-hero: -0.04em;
 
   /* radii: chips and tags 4, controls 6, cards 8, panels 12, the onboarding box 16, round things full */
   --radius-4: 4px;

@@ -4,10 +4,12 @@
 {% from "components/buttons.html" import button, link %}
 {% from "components/blocks.html" import toast, callout, page_title %}
 {% from "components/ontology.html" import ont_section, ont_cols, ont_row, ont_sub, ont_term, ont_act, ont_waiting, tell_line, metric_link, ont_decided %}
+{% from "components/buttons.html" import top_menu, menu_link %}
 {% block title %}Business Model · {{ company.name }}{% endblock %}
 {% block crumb %}Business Model{% endblock %}
 {% block crumb_after %}{% if version %}{% call el("span", "chip soft") %}v{{ version }}{% if changed %} · {{ fmt.day_month(changed) }}{% endif %}{% endcall %}{% endif %}{% endblock %}
-{% block actions %}{{ button("History", href="/ontology?panel=history") }}{% endblock %}
+{# M25.2 (owner, 15 Nov 2026): secondary actions in one ⋯ menu, as Home #}
+{% block actions %}{% call top_menu() %}{{ menu_link("History", "/ontology?panel=history") }}{% endcall %}{% endblock %}
 {% block main %}
 {% set q = "&numbers=" ~ filter if filter else "" %}
 {% set page_chat = "/ontology?panel=chat&subject=page" %}

@@ -6,6 +6,30 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-11-18
+
+### Added
+- Smooth lines on every chart (pages, emails, PDFs): a monotone curve through every value that
+  never passes one; forecast bands curve with it; step charts stay stepped.
+- Values on lines: each line's last value beside its name, and where they fit its highest, its
+  lowest and a finding's own points (three a line, six a chart); hover any point on a page for its
+  date and value.
+- Settings › Charts: Smooth lines (on) and Values on lines (Key points · Off), a render-time choice
+  that never enters a chart's spec, so stored results keep their bytes. Migration
+  `0044_company_chart_style`.
+- Every page's secondary actions in one ⋯ menu at the top right.
+
+### Changed
+- One type scale by role (label, meta, row, body, card, page, figure, lead); every size, line height
+  and letter spacing in the CSS is a token, and a guard keeps it so.
+- Home: the next four weeks sit under the briefs, titled "Next 4 weeks".
+- Charts: the waterfall's unit and "axis from" no longer overlap; an end label slides along its line
+  rather than sit on another.
+
+### Fixed
+- Enterprise Edition, Look back: a report made while the owner is on another page says so there,
+  with its headline and Open.
+
 ## [0.24.2] - 2026-11-18
 
 ### Fixed

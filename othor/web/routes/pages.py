@@ -42,11 +42,14 @@ STEP_TITLES = {
 }
 # Big Picture's language (v0.19, M19.5): English, and Hindi as a try (owner, 14 Nov 2026)
 REPORT_LANGUAGES = [("en", "English"), ("hi", "Hindi (a try)")]
+# Settings › Charts (v0.25 M25.1, owner 18 Nov 2026): values on lines, Key points or none
+CHART_VALUES = [("key", "Key points"), ("off", "Off")]
 SETTINGS_FIELDS = {
     "fiscal_year_start_month": FY_MONTHS,
     "currency": CURRENCIES,
     "timezone": TIMEZONES,
     "report_language": REPORT_LANGUAGES,
+    "chart_values": CHART_VALUES,
 }
 
 
@@ -78,6 +81,7 @@ def signed_in(request: Request) -> Owner:
     from othor.core import fmt
 
     fmt.set_request_currency(site.company.currency)  # M15.6: the route formats in it
+    fmt.set_request_chart(site.company)  # v0.25 M25.1
     with svc.sf() as s:
         user = s.scalars(sa.select(AppUser).where(AppUser.id == sess.user_id)).one()
     with svc.sf() as s, tenant_scope(site.company.id):
@@ -197,6 +201,7 @@ def settings_page(request: Request, o: Owner) -> HTMLResponse:
             "fy_months": FY_MONTHS,
             "currencies": CURRENCIES,
             "report_languages": REPORT_LANGUAGES,
+            "chart_values": CHART_VALUES,
             "timezones": TIMEZONES,
             "tz_note": TZ_NOTE,
             "sender": f"brief@{svc.settings.mail_from_domain}",
@@ -381,14 +386,14 @@ def settings_post(
         if value not in {o[0] for o in SETTINGS_FIELDS[field]}:
             return HTMLResponse("Not a valid choice.", status_code=400)
         parsed: Any = int(value) if field == "fiscal_year_start_month" else value
-    elif field in ("email_delivery", "weekly_digest"):
+    elif field in ("email_delivery", "weekly_digest", "chart_smooth"):
         parsed = value in ("on", "true", "1")
     else:
         return _plugin_setting(request, o, field, value)
     ev = _apply(request, o, {field: parsed}, "settings.changed")
     if ev is not None and field in SPEC_FIELDS:
         _settings_version(request, o, field, parsed)
-    if field in ("email_delivery", "weekly_digest"):
+    if field in ("email_delivery", "weekly_digest", "chart_smooth"):
         # a switch shows its own state; flipping it back undoes it, so no "saved · Undo" toast
         # (#17). The change is an event all the same.
         return Response(status_code=204)
@@ -397,6 +402,7 @@ def settings_post(
         "currency": "Currency",
         "timezone": "Time zone",
         "report_language": "Big Picture language",
+        "chart_values": "Values on lines",
         "email_delivery": "Email delivery",
         "weekly_digest": "Weekly digest",
     }[field]

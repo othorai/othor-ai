@@ -89,6 +89,18 @@ def test_no_label_sits_on_a_data_line(name: str) -> None:
         xy = [tuple(map(float, p.split(","))) for p in poly.split()]
         for (x0, y0), (x1, y1) in itertools.pairwise(xy):
             pts += [(x0 + (x1 - x0) * i / 10, y0 + (y1 - y0) * i / 10) for i in range(11)]
+    # smooth lines (v0.25): sample each cubic segment of the drawn path
+    for d in re.findall(r'<path d="(M [^"]+)" fill="none"', svg):
+        nums = [float(n) for n in re.findall(r"-?[\d.]+", d)]
+        x, y = nums[0], nums[1]
+        rest = nums[2:]
+        for k in range(0, len(rest) - 5, 6):
+            c1x, c1y, c2x, c2y, x1, y1 = rest[k : k + 6]
+            for i in range(11):
+                u = i / 10
+                a, b, c, e = (1 - u) ** 3, 3 * (1 - u) ** 2 * u, 3 * (1 - u) * u**2, u**3
+                pts.append((a * x + b * c1x + c * c2x + e * x1, a * y + b * c1y + c * c2y + e * y1))
+            x, y = x1, y1
     bad = {
         b[0]
         for b in boxes(svg)

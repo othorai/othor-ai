@@ -111,6 +111,8 @@ def page(request: Request, name: str, ctx: dict[str, Any], status: int = 200) ->
     company = ctx.get("company") or getattr(getattr(request.state, "site", None), "company", None)
     fmt.set_display_tz(getattr(company, "timezone", None))
     fmt.set_money_style(getattr(company, "currency", None))  # M15.6: ₹ or $, per company
+    if company is not None:  # v0.25 M25.1: Settings › Charts
+        fmt.set_chart_style(fmt.style_of(company))
     base = {
         "csrf_token": request.state.csrf,
         "root_url": root_url(request, "/"),

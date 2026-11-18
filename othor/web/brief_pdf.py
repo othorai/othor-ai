@@ -203,7 +203,11 @@ def build(
     assert bv.issue is not None
     # the run's currency (its spec's company settings), as the email and the stored words have it
     m = delivery.brief_mail(s, company, bv.brief, bv.issue, settings)
-    with fmt.display_tz(company.timezone), fmt.money_style(m.currency):
+    with (
+        fmt.display_tz(company.timezone),
+        fmt.money_style(m.currency),
+        fmt.chart_style(fmt.style_of(company)),  # Settings › Charts (v0.25)
+    ):
         ctx = context(s, settings, company, bv, m, charts=charts, appendix=appendix)
         html = env.get_template("brief.html").render(**ctx)
     ident = hashlib.sha256(html.encode()).digest()[:16]

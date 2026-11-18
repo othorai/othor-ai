@@ -33,16 +33,17 @@ def test_home_shows_the_outlook_and_its_panels(night):  # noqa: F811
     o = w["outlook"]
     page = env.client.get(h + "/home").text
     text = html.unescape(page)
-    # under the banner, inside the same card, before the briefs (the Intelligence strip moved
-    # to the top bar, owner 17 Nov 2026)
+    # #81 (owner, 18 Nov 2026): today's state at the top; the four week cards under the briefs,
+    # titled Next 4 weeks
     assert (
         page.index('class="weather ')
-        < page.index('class="wx-outlook"')
         < page.index('aria-label="Briefs"')
+        < page.index('aria-label="Next 4 weeks"')
+        < page.index('class="wx-outlook"')
     )
     assert page.count('class="wx-week wk-') == 4
     # #58 (owner, 14 Nov 2026): each card is its name, dates, icon (top right) and label; no line
-    # on the cards, no heading above them, no Ahead line under them, no box around them
+    # on the cards, no Ahead line under them, no box around them (a section heading since #81)
     week_html = page[page.index('class="wx-outlook"') :].split("</section>", 1)[0]
     for k in o["weeks"]:
         assert f"{k['name']}" in text and k["dates"] in text and k["label"] in text
