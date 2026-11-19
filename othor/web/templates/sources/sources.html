@@ -25,17 +25,16 @@
     {% call el("div", layout="flex items-baseline justify-between gap-12") %}{% call el("p", "caps-title") %}Connected · {{ fmt.num(cards | length) }}{% endcall %}{% call el("span", "hint") %}Read in place. Read-only.{% endcall %}{% endcall %}
     {% if cards %}
     {% call el('div', 'table-wrap') %}{% call el('table', 'table flush') %}
-      <thead><tr><th>Source</th><th>Status</th><th>Last read</th><th>Feeds</th><th>Rows read nightly</th><th></th></tr></thead>
+      <thead><tr><th>Source</th><th>Status</th><th>Last updated</th><th>Feeds</th><th>Rows read nightly</th><th></th></tr></thead>
       <tbody>{% for c in cards %}
       <tr>
         <td><div class="flex items-center gap-12">{{ kind_tile({"postgres": "PG", "mysql": "MY", "gsheets": "GS"}[c.src.kind]) }}<div class="min-w-0">{% call el("p", "src-name") %}{% if c.src.display_name %}{{ c.src.display_name }} · {{ c.src.config.database if c.src.kind != "gsheets" else c.title }}{% else %}{{ kn[c.src.kind] if c.src.kind != "gsheets" else c.title }}{% if c.src.kind != "gsheets" %} · {{ c.src.config.database }}{% endif %}{% endif %}{% endcall %}
           {% call el("p", "hint") %}{% if c.src.kind == "gsheets" %}Google Sheets · {{ fmt.num(c.tables_used) }}{{ " tab" ~ ("s" if c.tables_used != 1 else "") ~ " read" }}{% else %}{{ fmt.num(c.tables_used) }} of {{ fmt.num(c.tables_total) }} tables{% endif %}{% endcall %}</div></div></td>
-        {# #87 (owner, 18 Nov 2026): Status is the connection's health again; Last read is a chip,
-           green when yesterday's data arrived, amber with the date it stopped at when it didn't;
-           the Newest data column went (its date lives in Last read) #}
         {% set nw = newest.get(c.src.id | string) %}
-        <td>{{ chip(c.status[0], dot=c.status[1]) }}</td>
-        <td>{% if c.src.last_read_at %}{{ chip(c.last_read, dot=(nw[1] if nw and nw[1] in ("ok", "warn", "neg") else "ok")) }}{% if nw and nw[1] == "warn" %}{% call el("p", "hint") %}{{ nw[0] }}{% endcall %}{% elif nw and nw[3] %}{% call el("p", "hint") %}{{ nw[3] }}{% endcall %}{% endif %}{% else %}–{% endif %}</td>
+        {# owner, 19 Nov 2026: Status is the connection's health with when it was last read, in one
+           chip; Last updated is whether new data arrived, in the same chip style with its dot #}
+        <td>{{ chip(c.status[0] ~ (" · Last read " ~ c.last_read if c.src.last_read_at else ""), dot=c.status[1]) }}</td>
+        <td>{% if nw %}{{ chip((nw[0] ~ " · " ~ nw[2]) if nw[0] == "Updated" and nw[2] != "–" else (nw[3] or nw[0]), dot=(nw[1] if nw[1] in ("ok", "warn", "neg") else "muted")) }}{% else %}–{% endif %}</td>
         <td>{% if c.feeds %}{{ fmt.num(c.feeds | length) }} metric{{ "s" if c.feeds | length != 1 else "" }}{% else %}–{% endif %}</td>
         <td>{% if c.src.health and c.src.health.last_read %}{{ fmt.num(c.src.health.last_read.rows) }}{% else %}–{% endif %}</td>
         {% call el('td', 'num') %}<div class="flex items-center justify-end gap-6">{{ button("Tables", "", "sm", href="/sources?panel=tables&s=" ~ c.src.id) }}{% if c.src.kind == "postgres" %}{{ button("Schemas", "", "sm", href="/sources?panel=schemas&s=" ~ c.src.id) }}{% endif %}{{ button("Manage", "primary", "sm", href="/sources?panel=manage&s=" ~ c.src.id) }}</div>{% endcall %}

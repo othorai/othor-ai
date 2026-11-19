@@ -119,9 +119,17 @@ def check_args(schema: dict[str, Any], args: Any) -> dict[str, Any]:
 
 
 def call(
-    ctx: Ctx, name: str, args: Any, *, actor: str, role: str = "admin", via: str = "chat"
+    ctx: Ctx,
+    name: str,
+    args: Any,
+    *,
+    actor: str,
+    role: str = "admin",
+    via: str = "chat",
+    extra: dict[str, Any] | None = None,
 ) -> Card:
-    """The one gate. Raises Refused before anything runs when the call isn't allowed."""
+    """The one gate. Raises Refused before anything runs when the call isn't allowed. `extra`
+    goes into the audit row as well (0.27: the MCP key or grant a call came with)."""
     _load()
     if role not in ROLES:
         raise Refused("only an admin can ask this")
@@ -136,7 +144,13 @@ def call(
         action="tool.called",
         object_type="tool",
         object_id=name,
-        after={"tool": name, "args": clean, "via": via, "run": card.provenance.get("run")},
+        after={
+            "tool": name,
+            "args": clean,
+            "via": via,
+            "run": card.provenance.get("run"),
+            **(extra or {}),
+        },
     )
     return card
 

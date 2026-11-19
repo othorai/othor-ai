@@ -276,6 +276,8 @@ def number_rows(s: Session, rd: RunData) -> list[dict[str, Any]]:
                 "source": "—" if needs else str(e.get("source_label") or ""),
                 "today": "—" if needs else today,
                 "nodata": not needs and t is None,
+                "tile": t,  # 0.27.3: the number's period and comparison, for the numbers tool
+                "kind": "derived" if b.get("formula") else str(b.get("kind") or "flow"),
                 "briefs": ", ".join(sorted(used.get(r.key, []))) or "—",
                 "needs": needs,
                 "headline": bool(b.get("headline")),

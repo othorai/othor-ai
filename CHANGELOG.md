@@ -6,6 +6,57 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.27.5] - 2026-11-19
+
+### Security
+- Enterprise: MCP sign-in hardened (the consent screen shows where it sends you back and flags
+  unrecognised apps; sign-in codes and refresh tokens can't be used twice; limits on client
+  registration and token requests).
+
+## [0.27.4] - 2026-11-19
+
+### Fixed
+- The brief's weather says Recovering only when a finding's own test ran and stopped firing; a
+  finding closed because its check couldn't run is said plainly ("Two findings couldn't be
+  checked tonight"). A same-day rerun says "resolved today". Runs sealed before 0.27.4 keep the
+  old rule, so every run still replays byte for byte.
+
+## [0.27.3] - 2026-11-19
+
+### Added
+- Ask: a `big_picture` tool returns the latest Big Picture report as stored (no model call).
+
+### Changed
+- Ask: the numbers tool says what each number is (a total for a period, a balance on a day, or
+  worked out from other numbers), its period and its change on the last period.
+- Data sources: Status shows the connection's health with when it was last read; a new Last
+  updated column shows whether new data arrived.
+
+## [0.27.2] - 2026-11-19
+
+### Fixed
+- System Health: Fresh says "daily sources" when it counts fewer than every source; Numbers no
+  longer says "All N numbers computed" when some have no data yet; the System Health card in Ask
+  carries each light's details.
+- Intelligence's "Waiting on you" counts a check only while its question is open or set aside.
+
+## [0.27.1] - 2026-11-19
+
+### Changed
+- No changes in the open core.
+
+## [0.27.0] - 2026-11-19
+
+### Added
+- Enterprise: Othor MCP 1.0, the read-only tools for Claude, ChatGPT and other AI clients, with
+  keys in Settings › MCP for AI and OAuth sign-in.
+- Plug-ins can add an ASGI endpoint at an exact path (`Plugin.asgi`) and lifetime context
+  managers (`Plugin.lifespans`); the tool gate's audit row takes extra fields; sign-in can
+  return to the page that sent you there (a local path only).
+
+### Security
+- New dependency: `mcp==2.3.0` (the official MCP SDK) and its locked dependencies.
+
 ## [0.26.2] - 2026-11-18
 
 ### Added

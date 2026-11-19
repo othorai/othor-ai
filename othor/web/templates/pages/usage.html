@@ -7,4 +7,5 @@
 {% block main %}
 {% call page_title("AI usage") %}{{ usage_filters(u) }}{% endcall %}
 {{ usage_body(u) }}
+{{ slot("usage.end") }}
 {% endblock %}

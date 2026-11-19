@@ -470,3 +470,70 @@ def test_every_scene_s_text_reads_on_its_panel() -> None:
         assert s.text == "#1F2430", s.key
         assert s.panel == rows[s.file]["panel_hex"].upper(), s.key
         assert contrast(s.text, s.panel) >= 4.5, (s.key, contrast(s.text, s.panel))
+
+
+# --- 0.27.4: Recovering only when a test ran and stopped firing ----------------------------------
+
+
+def _closed(fp: str, reason: str) -> dict[str, Any]:
+    return _far(
+        fp, "5000000", status="resolved", resolved={"date": RUN.isoformat(), "reason": reason}
+    )
+
+
+def test_a_check_that_couldnt_run_isnt_recovering() -> None:
+    """indigo2, 19 Nov 2026: two findings closed as "No longer tested" and "insufficient history"
+    (the data had stopped) showed as a green Recovering; under 0.27.4 they're said plainly."""
+    shut = [
+        _closed("a", "No longer tested"),
+        _closed("b", "Cleared by data · insufficient history"),
+    ]
+    old = weather.make(
+        _spec(),
+        RUN,
+        kind="nightly",
+        first_brief=False,
+        findings=shut,
+        goals=[],
+        outputs_doc=_outputs(),
+        points=_days(),
+    )
+    assert old["scene"] == "rainbow"  # runs sealed before 0.27.4 keep their rule (replay)
+    new = weather.make(
+        _spec(),
+        RUN,
+        kind="nightly",
+        first_brief=False,
+        findings=shut,
+        goals=[],
+        outputs_doc=_outputs(),
+        points=_days(),
+        strict=True,
+    )
+    assert new["scene"] != "rainbow" and new["facts"]["unchecked"] == 2
+    assert "Two findings couldn't be checked tonight" in new["why"]
+    real = weather.make(
+        _spec(),
+        RUN,
+        kind="rerun",
+        first_brief=False,
+        findings=[*shut, _closed("c", "Cleared by data")],
+        goals=[],
+        outputs_doc=_outputs(),
+        points=_days(),
+        strict=True,
+    )
+    assert (
+        real["scene"] == "rainbow"
+        and real["line"] == "One finding resolved today; nothing new needs you."
+    )
+
+
+def test_the_rule_follows_the_version_that_sealed_the_run() -> None:
+    assert not weather.strict_for("0.27.3") and not weather.strict_for("0.1.0")
+    assert (
+        weather.strict_for("0.27.4")
+        and weather.strict_for("0.28.0")
+        and weather.strict_for("1.0.0")
+    )
+    assert not weather.strict_for(None) and not weather.strict_for("dev")

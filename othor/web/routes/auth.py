@@ -235,7 +235,22 @@ def event(
         return ev.id
 
 
-def resume_path(svc: Services, company_id: uuid.UUID) -> str:
+# Where to go back to after signing in (0.27): a page that sent the browser to /login first (an
+# AI client's consent screen) sets this cookie to its own path on this host; only a local path
+# is ever followed, and the cookie is cleared once used.
+RETURN_COOKIE = "othor_return"
+
+
+def return_path(request: Request) -> str | None:
+    p = request.cookies.get(RETURN_COOKIE) or ""
+    if p.startswith("/") and not p.startswith(("//", "/\\")) and len(p) <= 2000:
+        return p
+    return None
+
+
+def resume_path(svc: Services, company_id: uuid.UUID, request: Request | None = None) -> str:
+    if request is not None and (back := return_path(request)):
+        return back
     with svc.sf() as s, tenant_scope(company_id):
         state = s.scalars(sa.select(SetupState)).first()
     step = state.current_step if state else "company"
@@ -548,7 +563,9 @@ async def login_code_submit(request: Request) -> Response:
     event(
         svc, site.company.id, "auth.signed_in", actor=user.id, object_type="user", object_id=user.id
     )
-    resp = RedirectResponse(resume_path(svc, site.company.id), 303)
+    resp = RedirectResponse(resume_path(svc, site.company.id, request), 303)
+    if return_path(request):
+        clear_cookie(request, resp, RETURN_COOKIE)
     set_cookie(
         request,
         resp,
@@ -1045,7 +1062,9 @@ def handoff(request: Request, t: str = "") -> Response:
         object_type="user",
         object_id=sess.user_id,
     )
-    resp = RedirectResponse(resume_path(svc, site.company.id), 303)
+    resp = RedirectResponse(resume_path(svc, site.company.id, request), 303)
+    if return_path(request):
+        clear_cookie(request, resp, RETURN_COOKIE)
     set_cookie(
         request,
         resp,

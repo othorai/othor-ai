@@ -1,6 +1,6 @@
 [project]
 name = "othor"
-version = "0.26.2"
+version = "0.27.5"
 description = "Othor AI v0.1"
 requires-python = "==3.12.*"
 # Every dependency is pinned exactly (non-negotiable 2: same inputs, same numbers).
@@ -14,6 +14,7 @@ dependencies = [
   "fastapi==0.162.0",
   "httpx==0.28.1",
   "jinja2==3.1.6",
+  "mcp==2.3.0",  # Othor MCP (0.27, Enterprise Edition): the protocol only; auth and tenancy are ours
   "numpy==2.5.4",
   "openpyxl==3.1.5",
   "pandas==3.1.0",
@@ -161,6 +162,7 @@ forbidden_modules = ["tests"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["othor", "tests"]
+known-third-party = ["mcp"]  # the MCP SDK, not othor_ee/mcp (0.27)
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Form", "fastapi.Query", "fastapi.File"]

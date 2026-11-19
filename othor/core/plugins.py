@@ -28,7 +28,9 @@ returns a `Plugin`, every part optional:
   `ticks(worker_ctx)`: functions on the worker's minute loop, each idempotent. Each is guarded:
   a failing hook is logged and never fails the scan, run or loop;
 - `hosts`: extra outbound hosts its fetches may reach (`othor.core.http`), listed on System
-  Health.
+  Health;
+- `asgi`, `lifespans` (0.27): an ASGI endpoint at an exact path for a protocol of its own (the
+  MCP server at `/mcp`), and context managers held open for the app's lifetime.
 
 A plug-in that fails to load is logged and skipped: the app always starts. A plug-in may not
 replace a core job kind, connector kind or path. Plug-ins run with the app's full trust (only
@@ -117,6 +119,11 @@ class Plugin:
     after_seal: tuple[Callable[[Any, Any, Any], None], ...] = ()
     ticks: tuple[Callable[[Any], None], ...] = ()
     hosts: frozenset[str] = frozenset()
+    # 0.27 (Othor MCP): raw ASGI endpoints at exact paths (a protocol the plug-in speaks itself,
+    # e.g. `/mcp`), and async context managers the app enters for its lifetime (their servers'
+    # task groups). A core path can't be taken.
+    asgi: tuple[tuple[str, Any], ...] = ()
+    lifespans: tuple[Callable[[], Any], ...] = ()
 
 
 _loaded: tuple[Plugin, ...] | None = None

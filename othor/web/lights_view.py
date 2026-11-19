@@ -131,7 +131,10 @@ def _fresh(srcs: list[dict[str, Any]]) -> dict[str, Any]:
         return _light("fresh", "Fresh", "clock", "data", "note", "No source has daily numbers yet")
     stale = [x for x in daily if x["status"] != "Updated"]
     late = [x for x in stale if x.get("dot") in ("warn", "neg")]
-    line = f"{_of(len(daily) - len(stale), len(daily), 'source')} updated yesterday"
+    # 0.27.2: say "daily" when some sources have no daily numbers, so this count and
+    # Connection's (every source) never seem to disagree
+    word = "source" if len(daily) == len(srcs) else "daily source"
+    line = f"{_of(len(daily) - len(stale), len(daily), word)} updated yesterday"
     details = [
         f"{x['title']}: newest data {x.get('newest') or '–'}"
         + ("" if x in late else " (it usually doesn’t update that day)")
@@ -213,6 +216,10 @@ def _run(run: dict[str, Any]) -> dict[str, Any]:
 
 def _numbers(n: dict[str, Any]) -> dict[str, Any]:
     total, stale = int(n.get("total") or 0), list(n.get("stale") or [])
+    # 0.27.2: a confirmed number the night found no data for isn't "computed"; the run already
+    # records how many numbers have data (its outputs' series count), so no new reads
+    have = n.get("have")
+    empty = total - int(have) if have is not None and int(have) < total else 0
     if stale:
         return _light(
             "numbers",
@@ -222,6 +229,18 @@ def _numbers(n: dict[str, Any]) -> dict[str, Any]:
             "bad",
             f"{_of(total - len(stale), total, 'number')} computed fresh",
             [f"Kept at the last good day: {_names(stale)}"],
+            "/ontology",
+            "Business Model",
+        )
+    if empty:
+        return _light(
+            "numbers",
+            "Numbers",
+            "numbers",
+            "run",
+            "note",
+            f"{_of(total - empty, total, 'number')} have data",
+            [f"{_plural(empty, 'number')} with no data yet: the Business Model shows which"],
             "/ontology",
             "Business Model",
         )
@@ -722,7 +741,11 @@ def gather(
             "took": took,
         },
         "sources": srcs,
-        "numbers": {"total": len(active), "stale": stale},
+        "numbers": {
+            "total": len(active),
+            "stale": stale,
+            "have": (outputs.get("series") or {}).get("metrics"),
+        },
         "checks": checks,
         "findings": findings,
         "forecasts": {

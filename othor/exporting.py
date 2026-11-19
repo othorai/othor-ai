@@ -105,6 +105,16 @@ TABLES: dict[str, Rule] = {
     ),
     # Look back's suggestions (Enterprise Edition, v2): the questions offered and what was decided
     "look_back_suggestion": Rule(drop={"fingerprint": "an internal repeat check"}),
+    # Othor MCP (Enterprise Edition, 0.27, named here only): which AI clients were connected
+    # and when, never a key or token (only their hashes are stored, and those stay behind)
+    "mcp_key": Rule(
+        drop={
+            "token_hash": HIDDEN + " (a key's or token's hash)",
+            "refresh_hash": HIDDEN + " (a refresh token's hash)",
+            "prev_refresh_hash": HIDDEN + " (a refresh token's hash)",
+        }
+    ),
+    "mcp_client": Rule(),
     # sources: names, tables and columns, never how to reach them or what they hold
     "source": Rule(
         drop={
@@ -135,6 +145,7 @@ TABLES: dict[str, Rule] = {
     "login_code": Rule(skip=HIDDEN + " (sign-in codes)"),
     "invitation": Rule(skip=HIDDEN + " (invitation codes)"),
     "link_token": Rule(skip=HIDDEN + " (recipients' link tokens)"),
+    "mcp_code": Rule(skip=HIDDEN + " (AI clients' one-time sign-in codes)"),
     "job": Rule(skip="the internal work queue"),
     "rate_limit": Rule(skip="internal rate-limit counters"),
     "worker_heartbeat": Rule(skip="the worker's heartbeat, not company data"),

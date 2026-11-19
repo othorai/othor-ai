@@ -180,6 +180,8 @@ def _weather(
         "previous": None
         if prev is None
         else weather.previous_of(RunFiles(ctx.settings.runs_dir(run.company_id), prev.id)),
+        # 0.27.4: the rule of the version that sealed the run, so older runs replay unchanged
+        "strict": weather.strict_for(run.image_version),
     }
     diff = _same_file(path, weather.make(spec, run_date, **same), "weather")
     if per_brief.exists():

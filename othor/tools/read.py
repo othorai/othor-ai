@@ -37,15 +37,53 @@ def _rd(ctx: Ctx) -> Any:
 # --- numbers -------------------------------------------------------------------------------------
 
 
+def number_line(r: dict[str, Any], run_date: Any) -> str:
+    """0.27.3 (an outside AI charted balances beside period totals): a number's value with what
+    it is (a total for a period, a balance on a day, or worked out from other numbers), the
+    period, and its change, all as the brief's tile computed them."""
+    t = r.get("tile")
+    if not t:
+        return str(r["today"])
+    import datetime as dt
+
+    period = dt.date.fromisoformat(t["period"])
+    g = t.get("grain")
+    if g == "month":
+        when = f"{period:%b %Y}" + (
+            " so far"
+            if run_date and (period.year, period.month) == (run_date.year, run_date.month)
+            else ""
+        )
+    elif g == "week":
+        when = f"the week of {fmt.day_month(period)}"
+    else:
+        when = fmt.day_month(period)
+    what = {
+        "flow": f"total for {when}",
+        "snapshot": f"balance on {fmt.day_month(period)}"
+        if g in (None, "day", "as_of")
+        else f"balance at the end of {when}",
+        "derived": f"for {when}",
+    }.get(str(r.get("kind")), f"for {when}")
+    bits = [str(t["value"]), what]
+    comp = t.get("comparison") or {}
+    if comp.get("kind") in ("period", "band", "goal") and comp.get("text"):
+        bits.append(str(comp["text"]))
+    if t.get("stale"):
+        bits.append(str(t["stale"]))
+    return " · ".join(bits)
+
+
 def _numbers(ctx: Ctx, args: dict[str, Any]) -> Card:
     from othor.web.ontology_view import number_rows
 
     rd = _rd(ctx)
     rows = number_rows(ctx.s, rd)[: int(args.get("limit") or 12)]
+    run_date = rd.run.run_date if rd.run is not None else None
     return Card(
         "numbers",
         "Your numbers, as of the last run",
-        facts=[(r["name"], r["today"]) for r in rows],
+        facts=[(r["name"], number_line(r, run_date)) for r in rows],
         provenance=_provenance(ctx, rd),
         empty="No numbers are confirmed yet." if not rows else "",
     )
@@ -54,7 +92,9 @@ def _numbers(ctx: Ctx, args: dict[str, Any]) -> Card:
 register(
     Tool(
         "numbers",
-        "Every confirmed number with its latest value from the last nightly run.",
+        "Every confirmed number from the last nightly run: its latest value, whether it's a "
+        "total for a period or a balance on a day (never add or chart the two together), the "
+        "period, and its change on the last period.",
         {
             "type": "object",
             "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 40}},
@@ -312,7 +352,8 @@ def _system_health(ctx: Ctx, args: dict[str, Any]) -> Card:
         facts=[
             (
                 str(x.get("label") or ""),
-                f"{STATE_WORD.get(str(x.get('state')), '')} · {x.get('line')}",
+                f"{STATE_WORD.get(str(x.get('state')), '')} · {x.get('line')}"
+                + "".join(f" · {d}" for d in x.get("details") or []),  # 0.27.2: the details too
             )
             for x in rows
         ],
@@ -396,5 +437,65 @@ register(
         },
         _whats_ahead,
         ("ahead", "next week", "coming up", "forecast"),
+    )
+)
+
+
+def _segs(x: Any) -> str:
+    """A stored Big Picture sentence (checked segments, numbers already computed) as text."""
+    if isinstance(x, list):
+        return "".join(str(p.get("t", "")) for p in x if isinstance(p, dict)).strip()
+    return str(x or "").strip()
+
+
+def _big_picture(ctx: Ctx, args: dict[str, Any]) -> Card:
+    """0.27.3: the latest Big Picture report as stored (never written anew: no model call)."""
+    del args
+    from othor.briefs.models import BigPicture
+    from othor.engine.models import Run
+
+    row = ctx.s.execute(
+        sa.select(BigPicture, Run.number, Run.run_date)
+        .join(Run, Run.id == BigPicture.run_id)
+        .where(BigPicture.deleted_at.is_(None))
+        .order_by(
+            Run.number.desc(), (BigPicture.language == "en").desc(), BigPicture.created_at.desc()
+        )
+    ).first()
+    if row is None:
+        return Card(
+            "big_picture",
+            "Big Picture",
+            empty="No Big Picture report yet: open Big Picture in Othor AI to make one.",
+        )
+    bp, number, run_date = row
+    b = bp.body or {}
+    facts = [(str(k.get("label", "")), str(k.get("value", ""))) for k in b.get("kpis") or []]
+    lines = [_segs(b.get("one_line"))] + [_segs(x) for x in b.get("summary") or []]
+    for c in b.get("findings") or []:
+        lines.append(f"{_segs(c.get('title'))}: {_segs(c.get('sentence'))}")
+    for x in b.get("stakes") or []:
+        money = f"{x.get('value', '')} {x.get('unit') or ''}".strip()
+        lines.append(f"At stake: {money} · {_segs(x.get('desc'))}")
+    for a in b.get("look_first") or []:
+        lines.append(f"Look first: {_segs(a.get('text'))}")
+    return Card(
+        "big_picture",
+        f"Big Picture for night run #{number}",
+        facts=facts,
+        lines=[x for x in lines if x and x != ":"],
+        provenance={"run": number, "run_date": run_date.isoformat(), "written": bp.prompt},
+    )
+
+
+register(
+    Tool(
+        "big_picture",
+        "The latest Big Picture report as Othor AI wrote it: the situation in a few sentences, the "
+        "headline numbers, what was found, what's at stake and what to look at first. Every "
+        "figure in it was computed and checked.",
+        {"type": "object", "properties": {}, "additionalProperties": False},
+        _big_picture,
+        ("big picture", "summary report", "overall", "how are we doing"),
     )
 )

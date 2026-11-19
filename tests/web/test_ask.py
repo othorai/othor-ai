@@ -55,7 +55,7 @@ def test_a_question_is_answered_from_a_tools_card(night, monkeypatch):  # noqa: 
     _post(env, h, "/othor/reply", {"subject": "ask", "text": "what's wrong?", "back": BACK})
     page = env.client.get(h + BACK).text.split('id="othor-chat"', 1)[1]
     assert "What Sweep found in run #" in page and "How this was worked out" in page
-    assert "999" not in page and "what I found." in page
+    assert "999 problems" not in page and "what I found." in page  # not "999": hashes vary
     (ev,) = _events(svc, cid)
     assert ev.after["tool"] == "findings" and ev.after["args"] == {"limit": 3}
     assert ev.after["via"] == "chat" and ev.after["run"]
@@ -147,3 +147,48 @@ def test_the_four_home_tools_answer_from_homes_own_view(night):  # noqa: F811
 
     pct = re.search(r'aria-label="Intelligence at (\d+)%"', home).group(1)
     assert f"<dd>{pct}%</dd>" in page
+
+
+def test_big_picture_and_numbers_tools_say_what_each_number_is(night):  # noqa: F811
+    """0.27.3: the Big Picture report as stored (no model call), and numbers that say whether
+    they're a total for a period or a balance on a day."""
+    import datetime as dt
+
+    from othor.briefs.models import BigPicture
+    from othor.core.models import Company
+
+    _env, _h, cid, rid, svc = night
+    with svc.sf() as s, tenant_scope(cid):
+        company = s.get(Company, cid)
+        ctx = tools.Ctx(s, svc.settings, company, dt.date(2026, 11, 1))
+        empty = tools.call(ctx, "big_picture", {}, actor="t")
+        assert "No Big Picture report yet" in empty.empty
+        s.add(
+            BigPicture(
+                company_id=cid,
+                workspace_id=cid,
+                run_id=rid,
+                language="en",
+                body={
+                    "one_line": [{"t": "Sales held up; cash is slower."}],
+                    "summary": [[{"t": "Net revenue rose "}, {"t": "3%", "href": "#k"}]],
+                    "kpis": [{"label": "Net revenue", "value": "₹4.77 Cr"}],
+                    "findings": [],
+                    "stakes": [],
+                    "look_first": [{"text": [{"t": "Overdue in the South"}]}],
+                },
+                prompt="big_picture@v1",
+                input_hash="x",
+                guard="passed",
+            )
+        )
+        s.flush()
+        card = tools.call(ctx, "big_picture", {}, actor="t")
+        assert card.title.startswith("Big Picture for night run #")
+        assert card.facts == [("Net revenue", "₹4.77 Cr")]
+        assert card.lines[:2] == ["Sales held up; cash is slower.", "Net revenue rose 3%"]
+        assert "Look first: Overdue in the South" in card.lines
+        nums = tools.call(ctx, "numbers", {"limit": 40}, actor="t")
+        words = " ".join(v for _k, v in nums.facts)
+        assert "total for" in words and ("balance on" in words or "balance at" in words)
+        s.rollback()

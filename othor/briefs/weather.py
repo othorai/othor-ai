@@ -207,6 +207,7 @@ LINES: dict[str, str] = {
     "windy": "{title}. Unsteady, rather than lower.",
     "heat_wave": "{title}. Running above its forecast band.",
     "rainbow": "{count} since yesterday; nothing new needs you.",
+    "rainbow_rerun": "{count} today; nothing new needs you.",
     "rainbow_goal": "{goal} is back on track since the last brief; nothing new needs you.",
     "sunrise": "Your first brief: here’s how the business looks.",
     "sunrise_source": (
@@ -293,6 +294,27 @@ def rule(key: str, cfg: dict[str, Any]) -> str:
 
 def _d(v: Any) -> Decimal:
     return Decimal(str(v)) if v is not None else Decimal(0)
+
+
+# 0.27.4 (indigo2, 19 Nov 2026): "Recovering" counts only findings whose own test ran and stopped
+# firing; one closed because its check couldn't run ("No longer tested", too little history) is
+# said plainly instead. Runs sealed before 0.27.4 keep the old rule, so they replay byte for byte.
+STRICT_FROM = (0, 27, 4)
+
+
+def strict_for(image_version: str | None) -> bool:
+    """Whether a run sealed under `image_version` uses the 0.27.4 rule."""
+    try:
+        parts = tuple(int(p) for p in str(image_version or "").split(".")[:3])
+    except ValueError:
+        return False
+    return len(parts) == 3 and parts >= STRICT_FROM
+
+
+def untested(f: dict[str, Any]) -> bool:
+    """A finding closed because its check couldn't test it, not because the data cleared it."""
+    why = str((f.get("resolved") or {}).get("reason") or "")
+    return why.startswith("No longer tested") or "insufficient history" in why
 
 
 def _count(n: int, noun: str, plural: str | None = None) -> str:
@@ -483,6 +505,7 @@ def make(
     watches: list[dict[str, Any]] | None = None,
     watch_status: list[dict[str, Any]] | None = None,
     previous: dict[str, Any] | None = None,
+    strict: bool = False,
 ) -> dict[str, Any]:
     """The run's weather: the scene, its line, the rule that picked it, the facts it used, the
     thresholds read, and the outlook for the next four weeks (part 1b). `previous`: the last
@@ -499,6 +522,7 @@ def make(
         outputs_doc=outputs_doc,
         points=points,
         previous=previous,
+        strict=strict,
     )
     rev = revenue(spec, outputs_doc.get("baselines") or {})
     doc["outlook"] = outlook.make(
@@ -527,6 +551,7 @@ def _today(
     outputs_doc: dict[str, Any],
     points: list[Point],
     previous: dict[str, Any] | None,
+    strict: bool = False,
 ) -> dict[str, Any]:
     cfg = settings(spec)
     names = {k: str(m.get("name") or k) for k, m in spec.get("metrics", {}).items()}
@@ -569,6 +594,8 @@ def _today(
         if f.get("status") == "resolved"
         and (f.get("resolved") or {}).get("date") == run_date.isoformat()
     ]
+    unchecked = [f for f in resolved if untested(f)] if strict else []
+    resolved = [f for f in resolved if f not in unchecked]
     # since the last brief (part 1b): a source connected, a goal back on track
     new_sources = (
         sorted(set(sources) - set(previous.get("sources") or [])) if previous is not None else []
@@ -595,6 +622,7 @@ def _today(
         "run_kind": kind,
         "new_sources": new_sources,
         "recovered": [g["key"] for g in recovered],
+        **({"unchecked": len(unchecked)} if strict else {}),
     }
 
     def scene(
@@ -620,7 +648,13 @@ def _today(
             "text": s.text,
             "panel": s.panel,
             "line": line,
-            "why": why,
+            # 0.27.4: closed only because a check couldn't run is said plainly, never as good news
+            "why": why
+            + (
+                [f"{_cap(_count(facts['unchecked'], 'finding'))} couldn't be checked tonight"]
+                if facts.get("unchecked")
+                else []
+            ),
             "rule": rule(key, cfg),
             "facts": {**facts, "nearest": nearest, **more},
             "settings": {k: cfg[k] for k in sorted(cfg)},
@@ -850,7 +884,11 @@ def _today(
     if resolved:
         return scene(
             "rainbow",
-            LINES["rainbow"].format(count=_cap(_count(len(resolved), "finding")) + " resolved"),
+            (
+                LINES["rainbow_rerun"]
+                if strict and kind == "rerun"  # 0.27.4: a rerun repeats the night's news
+                else LINES["rainbow"]
+            ).format(count=_cap(_count(len(resolved), "finding")) + " resolved"),
             [_count(len(resolved), "finding") + " resolved"],
         )
     if recovered:
@@ -918,6 +956,7 @@ def from_files(
     kind: str,
     first_brief: bool,
     previous: dict[str, Any] | None = None,
+    strict: bool = False,
 ) -> dict[str, Any]:
     """The run's brief step: from the run's own sealed outputs (and its inputs' watches)."""
     return make(
@@ -933,6 +972,7 @@ def from_files(
         watches=(read_json(files.inputs / "context.json") or {}).get("watches") or [],
         watch_status=read_json(files.outputs / "watches.json") or [],
         previous=previous,
+        strict=strict,
     )
 
 
@@ -994,6 +1034,7 @@ def for_briefs(
     watches: list[dict[str, Any]] | None = None,
     watch_status: list[dict[str, Any]] | None = None,
     previous: dict[str, Any] | None = None,
+    strict: bool = False,
 ) -> dict[str, Any]:
     """Each active brief's weather and outlook (part 1c): the same scoring as the company's, over
     what is in the brief's scope only. Keyed by brief id, with the version it was made for."""
@@ -1025,6 +1066,7 @@ def for_briefs(
                 outputs_doc=outputs_doc,
                 points=points,
                 previous=previous,
+                strict=strict,
                 **mine,
             ),
         }
@@ -1039,6 +1081,7 @@ def briefs_from_files(
     kind: str,
     first_brief: bool,
     previous: dict[str, Any] | None = None,
+    strict: bool = False,
 ) -> dict[str, Any]:
     """The run's brief step: each brief's weather from the run's own sealed outputs."""
     context = read_json(files.inputs / "context.json") or {}
@@ -1056,6 +1099,7 @@ def briefs_from_files(
         watches=context.get("watches") or [],
         watch_status=read_json(files.outputs / "watches.json") or [],
         previous=previous,
+        strict=strict,
     )
 
 

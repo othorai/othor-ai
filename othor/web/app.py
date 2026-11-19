@@ -8,7 +8,7 @@ import re
 import threading
 import time
 from collections.abc import AsyncIterator, Callable
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -17,6 +17,7 @@ import sqlalchemy as sa
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.routing import Route
 
 from othor import __version__
 from othor.connectors.sql import hostguard
@@ -132,7 +133,11 @@ def create_app(
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         schema.on_start()
-        yield
+        async with AsyncExitStack() as stack:  # plug-ins' servers (0.27: the MCP server)
+            for p in loaded:
+                for make in p.lifespans:
+                    await stack.enter_async_context(make())
+            yield
 
     app = FastAPI(
         title="Othor AI",
@@ -268,6 +273,13 @@ def create_app(
     app.include_router(othor_chat.router)  # the Othor AI chat's actions (Chat 1.0, 0.26)
     app.include_router(links.router)  # recipients' signed links (no sign-in) and the mail webhook
     core_paths = {getattr(r, "path", "") for r in app.routes}
+    for p in loaded:  # plug-in endpoints (0.27), an exact path each, before pages' catch-alls
+        for path, endpoint in p.asgi:
+            if path in core_paths:
+                plugin_reg.log.error("plug-in %s refused its endpoint: %s is core", p.name, path)
+                continue
+            # first: an exact path of its own, ahead of every router's catch-all
+            app.router.routes.insert(0, Route(path, endpoint=endpoint))
     for p in loaded:  # plug-in pages, before pages' catch-alls; a core path can't be taken
         for router in p.routers:
             taken = sorted({getattr(r, "path", "") for r in router.routes} & core_paths)

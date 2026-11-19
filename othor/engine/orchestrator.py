@@ -835,7 +835,10 @@ def brief_step(ctx: EngineContext, info: RunInfo) -> SourceOutcome:
         prev_files = (
             None if prev is None else RunFiles(ctx.settings.runs_dir(info.company_id), prev.id)
         )
+        # 0.27.4: the rule of the version this run is sealed under, exactly as replay reads it
+        sealed = s.scalar(sa.select(Run.image_version).where(Run.number == info.number))
     previous = None if prev_files is None else weather.previous_of(prev_files)
+    strict = weather.strict_for(sealed)
     write_json(
         info.files.outputs / weather.WEATHER,
         weather.from_files(
@@ -845,6 +848,7 @@ def brief_step(ctx: EngineContext, info: RunInfo) -> SourceOutcome:
             kind=info.kind,
             first_brief=prev is None,
             previous=previous,
+            strict=strict,
         ),
     )
     # each brief's own weather (part 1c), in its own file: weather.json stays the company's
@@ -857,6 +861,7 @@ def brief_step(ctx: EngineContext, info: RunInfo) -> SourceOutcome:
             kind=info.kind,
             first_brief=prev is None,
             previous=previous,
+            strict=strict,
         ),
     )
     outputs_doc = read_json(info.files.outputs_json)

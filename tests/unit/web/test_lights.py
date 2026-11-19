@@ -295,3 +295,34 @@ def test_outside_services_show_only_when_a_plugin_reaches_one():
     assert light["line"] == "Also reaches 2 outside services"
     assert light["details"] == ["api.data.gov.in", "fbil.org.in"]
     assert light["state"] == "info" and got["ok"]
+
+
+def test_fresh_says_daily_when_it_counts_fewer_than_every_source():
+    """0.27.2 (indigo2 through MCP, 19 Nov 2026): "0 of 2 sources updated" beside "All 3
+    sources answered" read as a contradiction; the Fresh line now says which sources it counts."""
+    got = lights(
+        _facts(
+            sources=[
+                _src("erp_db", status="Not updated yesterday", dot="warn"),
+                _src("sales_dw", status="Not updated yesterday", dot="warn"),
+                _src("Sales sheet", status="No daily numbers"),
+            ]
+        )
+    )
+    by = {x["key"]: x for x in got["lights"]}
+    assert by["fresh"]["line"] == "0 of 2 daily sources updated yesterday"
+    assert by["connection"]["line"] == "All 3 sources answered"
+
+
+def test_numbers_with_no_data_arent_called_computed():
+    """0.27.2: four confirmed numbers with "No data yet" sat beside "All 19 numbers computed"."""
+    got = lights(_facts(numbers={"total": 19, "stale": [], "have": 15}))
+    by = {x["key"]: x for x in got["lights"]}
+    assert (
+        by["numbers"]["state"] == "note" and by["numbers"]["line"] == "15 of 19 numbers have data"
+    )
+    assert by["numbers"]["details"] == [
+        "4 numbers with no data yet: the Business Model shows which"
+    ]
+    got = lights(_facts(numbers={"total": 19, "stale": [], "have": 19}))
+    assert {x["key"]: x for x in got["lights"]}["numbers"]["line"] == "All 19 numbers computed"

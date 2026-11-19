@@ -118,3 +118,15 @@ def test_only_history_left_says_it_turns_on_by_itself() -> None:
     s = home_view.checks_strip(_rv(st), questions=0)
     assert s["tail"] == "1 more turns on as your history grows."
     assert s["action"] == ("Update the Business Model", "/ontology")
+
+
+def test_an_answered_question_leaves_nothing_waiting_on_you() -> None:
+    """0.27.2 (indigo2, 19 Nov 2026): lead and lag needed a pair; its one question was answered
+    and it still couldn't run, yet "Waiting on you · 1" showed with no question to answer."""
+    st = _all()
+    pair = next(iter(st))
+    st[pair] = ("could_not_run", "pair")
+    asked = home_view.checks_strip(_rv(st), questions=1, pending={"pair"})
+    assert asked["waiting"] == 1
+    answered = home_view.checks_strip(_rv(st), questions=0, pending=set())
+    assert answered["waiting"] == 0 and answered["cannot"] == 1

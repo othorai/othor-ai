@@ -371,8 +371,25 @@ def sweep_box_rows(
 ANSWERABLE = {"entity", "reconcile", "pair", "threshold", "distribution"}
 
 
+def _pending_needs(s: Session) -> set[str]:
+    """The needs a question still asks about (open or set aside), for the checks strip."""
+    from othor.ontology.models import Question
+
+    rows = s.scalars(
+        sa.select(Question.unblocks).where(
+            Question.kind == "needs", Question.status.in_(("open", "skipped"))
+        )
+    )
+    return {str((u or {}).get("needs") or "") for u in rows} - {""}
+
+
 def checks_strip(
-    rv: Any, questions: int, proposals: int = 0, later: int = 0, splits: str = ""
+    rv: Any,
+    questions: int,
+    proposals: int = 0,
+    later: int = 0,
+    splits: str = "",
+    pending: set[str] | None = None,
 ) -> dict[str, Any]:
     """Home's checks strip (owner's design, 11 Nov 2026): how many of the shipped checks ran in
     the last run, and why the rest didn't, read from the run's coverage. Its state picks the
@@ -391,7 +408,9 @@ def checks_strip(
             continue
         if c["status"] in ("ran", "partly"):
             kind = "ran"
-        elif c.get("needs") in ANSWERABLE:
+        elif c.get("needs") in ANSWERABLE and (pending is None or c.get("needs") in pending):
+            # 0.27.2: waiting on the owner only while its question is open or set aside; once
+            # answered (a question is never asked twice) and still blocked, it can't run
             kind = "waiting"
         elif c.get("needs") == "forecast":
             kind = "history"
@@ -709,6 +728,7 @@ def page(
             len(props),
             len(answers.set_aside(s, today)),
             splits=next((p["text"] for p in props if p["kind"] == KIND_LABEL["breakdowns"]), ""),
+            pending=_pending_needs(s),
         )
         if rv is not None
         else None
