@@ -6,6 +6,15 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.28.2] - 2026-11-19
+
+### Changed
+- Buttons: the page's main action stays the solid theme cyan; secondary actions that repeat on
+  rows are soft cyan (`btn soft`: Home's Accept, Data sources' Manage); "Ask Othor AI" is a quiet
+  AI button (white, a gradient edge) wherever it appears; an AI button that's off is plain grey.
+- Top bars: no frames but the ⋯ menu's; Intelligence and System Health as plain text with thin
+  dividers, their colour only in the ring and the count.
+
 ## [0.28.1] - 2026-11-19
 
 ### Added

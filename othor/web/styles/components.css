@@ -2381,3 +2381,34 @@ body:has(> .onb-header) { background: radial-gradient(1000px 240px at 50% -80px,
 .sweep-stat.boxed { border: 0; padding: 0; }
 .archive-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
 @media (max-width: 767px) { .archive-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* button colours (owner, 19 Nov 2026, option A): one solid cyan action per page (the theme cyan,
+   unchanged); soft cyan for actions that repeat on rows; Ask Othor AI quiet wherever it is (white,
+   a gradient edge, the mark), the full gradient kept for a page's own AI action; an AI button
+   that's off plain grey */
+.btn.soft { background: var(--color-accent-tint); border-color: var(--color-accent-border); color: var(--color-accent-deep); font-weight: 500; }
+.btn.soft:hover, .btn.soft.is-hover { background: #D9F3FF; border-color: var(--color-accent-border); color: var(--color-accent-deep); }
+.btn.ai.is-quiet { border: 1px solid transparent; font-weight: 500;
+  background-image: linear-gradient(var(--color-bg), var(--color-bg)), linear-gradient(90deg, #00FF99 0%, #22DDE0 45%, var(--color-accent) 100%);
+  background-origin: border-box; background-clip: padding-box, border-box; box-shadow: none; }
+.btn.ai.is-quiet:hover { background-image: linear-gradient(var(--color-accent-tint-2), var(--color-accent-tint-2)), linear-gradient(90deg, #00FF99 0%, #22DDE0 45%, var(--color-accent) 100%); }
+.btn.ai.is-quiet svg { color: #10B5A0; }
+.btn.ai:disabled, .btn.ai.is-disabled { background: var(--color-surface); background-image: none; border: 1px solid var(--color-rule); color: var(--color-muted-2); opacity: 1; font-weight: 500; }
+.btn.ai:disabled svg, .btn.ai.is-disabled svg { color: var(--color-muted-2); }
+
+/* top bars (owner, 19 Nov 2026: option C): no frames but the ⋯ menu's; Intelligence and System
+   Health as plain text with thin dividers, the colour only in their signals (the ring; the shield
+   and the count by level); Ask Othor AI keeps its quiet gradient edge */
+.app-header .btn:not(.primary):not(.ai) { background: transparent; border-color: transparent; color: var(--color-ink-2); padding: 0 10px; }
+.app-header .btn:not(.primary):not(.ai):hover { background: var(--color-surface); border-color: transparent; }
+.app-header .top-more > summary.btn:not(.primary):not(.ai) { background: var(--color-bg); border-color: var(--color-rule); }
+.app-header .btn.intel.is-partial .intel-ring { color: var(--color-accent-deep); }
+.app-header .btn.intel.is-full .intel-ring { color: var(--color-ok-text); }
+.app-header .btn.intel, .app-header .btn.health { position: relative; margin-left: 12px; color: var(--color-ink-2); }
+.app-header .btn.intel::before, .app-header .btn.health::before { content: ""; position: absolute; left: -7px; top: 9px; bottom: 9px; width: 1px; background: var(--color-rule); }
+.app-header .btn.health.is-warn .icon { color: var(--color-warn-text); }
+.app-header .btn.health.is-bad .icon { color: var(--color-neg-text); }
+.app-header .btn.health.is-ok .icon { color: var(--color-ok-text); }
+.app-header .health-count { background: transparent; color: var(--color-warn-text); min-width: 0; padding: 0; }
+.app-header .is-bad .health-count { background: transparent; color: var(--color-neg-text); }
+.app-header .health-count::before { content: "· "; color: var(--color-muted); font-weight: 400; }

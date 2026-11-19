@@ -437,14 +437,14 @@ def test_a_second_pick_adds_a_spreadsheet_and_remove_takes_it_with_its_tabs(env:
 
 
 def test_manage_is_the_primary_button_on_a_connected_source() -> None:
-    """Owner, 11 Nov 2026: Manage on each connected source is the theme's blue (primary) button;
-    Tables and Schemas stay secondary."""
+    """Owner, 11 Nov 2026: Manage on each connected source is the theme's blue button; 19 Nov
+    2026: a soft blue (the secondary blue, it repeats on every row); Tables and Schemas plain."""
     from pathlib import Path
 
     tpl = (
         Path(__file__).resolve().parents[2] / "othor/web/templates/sources/sources.html"
     ).read_text()
-    assert 'button("Manage", "primary", "sm"' in tpl
+    assert 'button("Manage", "soft", "sm"' in tpl
     assert 'button("Tables", "", "sm"' in tpl
     # owner, 12 Nov 2026: no panel docked beside the table and the row isn't a link; the source's
     # panel opens only from Manage, with the numbers it feeds and its matches

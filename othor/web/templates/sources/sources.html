@@ -37,7 +37,7 @@
         <td>{% if nw %}{{ chip((nw[0] ~ " · " ~ nw[2]) if nw[0] == "Updated" and nw[2] != "–" else (nw[3] or nw[0]), dot=(nw[1] if nw[1] in ("ok", "warn", "neg") else "muted")) }}{% else %}–{% endif %}</td>
         <td>{% if c.feeds %}{{ fmt.num(c.feeds | length) }} metric{{ "s" if c.feeds | length != 1 else "" }}{% else %}–{% endif %}</td>
         <td>{% if c.src.health and c.src.health.last_read %}{{ fmt.num(c.src.health.last_read.rows) }}{% else %}–{% endif %}</td>
-        {% call el('td', 'num') %}<div class="flex items-center justify-end gap-6">{{ button("Tables", "", "sm", href="/sources?panel=tables&s=" ~ c.src.id) }}{% if c.src.kind == "postgres" %}{{ button("Schemas", "", "sm", href="/sources?panel=schemas&s=" ~ c.src.id) }}{% endif %}{{ button("Manage", "primary", "sm", href="/sources?panel=manage&s=" ~ c.src.id) }}</div>{% endcall %}
+        {% call el('td', 'num') %}<div class="flex items-center justify-end gap-6">{{ button("Tables", "", "sm", href="/sources?panel=tables&s=" ~ c.src.id) }}{% if c.src.kind == "postgres" %}{{ button("Schemas", "", "sm", href="/sources?panel=schemas&s=" ~ c.src.id) }}{% endif %}{{ button("Manage", "soft", "sm", href="/sources?panel=manage&s=" ~ c.src.id) }}</div>{% endcall %}
       </tr>{% endfor %}</tbody>
     {% endcall %}{% endcall %}
     {% else %}
