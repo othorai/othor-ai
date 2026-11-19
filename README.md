@@ -17,6 +17,8 @@ false-discovery-rate control, forecasts each series, and emits a ranked, provena
 **Morning Brief** at 06:00. A language model is confined to drafting setup and phrasing; it is
 never on the path that produces a number.
 
+https://github.com/user-attachments/assets/3eab7dbf-8a4a-48d9-aff0-de6144c224fa
+
 ### Why it exists
 
 - **AI has made dashboards a commodity.** Charts and reports that took analysts weeks now take
