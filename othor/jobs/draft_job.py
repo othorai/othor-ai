@@ -73,6 +73,7 @@ def run(ctx: WorkerContext, job: Job) -> None:
                 drafts.store(s, got, actor=actor, redraft=mode == "redraft")
             _meta(s, state="computing", mode=mode, by=by, why=why)
             s.commit()
+        _goals(ctx, cid, available, today)
 
     with ctx.sf() as s, tenant_scope(cid):
         company = s.scalars(sa.select(Company).where(Company.id == cid)).one()
@@ -299,6 +300,37 @@ def _flush(
         )
 
 
+def _goals(ctx: WorkerContext, cid: uuid.UUID, available: bool, today: dt.date) -> None:
+    """0.28 (M28.3): the files' quoted targets as draft goals on the drafted numbers (one model
+    call; figures are the quotes' own, checked by code). No quotes: none drafted; no model: the
+    quotes stay shown as they are."""
+    import logging
+
+    from othor.ontology import goal_targets
+    from othor.setup import goal_drafts as gd
+
+    try:
+        with ctx.sf() as s, tenant_scope(cid):
+            company = s.scalars(sa.select(Company).where(Company.id == cid)).one()
+            fy_end = goal_targets.fiscal_year_end(today, int(company.fiscal_year_start_month or 4))
+            qs, nums = gd.quotes(gather(s).refs), gd.numbers(s)
+            model_in = gd.model_input(qs, nums, today, fy_end)
+            if model_in is None:
+                gd.store(s, [])
+                s.commit()
+                return
+        if not available:
+            return
+        res = ctx.gateway.complete(cid, gd.PROMPT, gd.VERSION, model_in)
+        if not res.ok or not isinstance(res.output, dict):
+            return
+        with ctx.sf() as s, tenant_scope(cid):
+            gd.store(s, gd.checked(res.output, qs, nums, today, fy_end))
+            s.commit()
+    except Exception:  # a goal draft never stops setup
+        logging.getLogger(__name__).warning("goal drafts failed", exc_info=True)
+
+
 def _discover(
     s: Session,
     inp: SetupInputs,
@@ -360,9 +392,17 @@ def records_from_setup(s: Session) -> dict[tuple[str, str], dict[str, Any]]:
         if row.state != "skipped":
             for type_, key, body in row.body.get("rules", []):
                 out[(type_, key)] = body
+    kept: set[str] | None = None
     for kind in RECORD_KINDS:
         for row in drafts.stored(s, kind):
             if row.state != "skipped":
+                if kind == "goal":  # 0.28: a goal only on a number that's kept
+                    if kept is None:
+                        from othor.setup.goal_drafts import kept as kept_numbers
+
+                        kept = kept_numbers(s)
+                    if row.body.get("metric") not in kept:
+                        continue
                 out[(kind, row.key)] = row.body
     return out
 

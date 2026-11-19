@@ -77,6 +77,28 @@ def item(q: Question) -> dict[str, Any]:
         "answer": None,
         "high_impact": False,
     }
+    if q.kind == "goal_missing":  # 0.28 (M28.2): a whole goal, suggested by code at night
+        cards = list((q.subject or {}).get("cards") or [])
+        if not cards:
+            return {**base, **_later()}
+        return {
+            **base,
+            "answer_type": "choice",
+            "options": [
+                {
+                    "key": str(c["key"]),
+                    "label": str(c["label"]),
+                    "note": str(c.get("note") or ""),
+                    "tag": None,
+                    "type": "goal",
+                }
+                for c in cards
+            ],
+            "choice": str(cards[0]["key"]),
+            "status": "pick",
+            "effect": "Every night shows how likely you are to reach it.",
+            "why_not": str(cards[0].get("note") or "").capitalize(),
+        }
     if q.kind == "needs":
         cards = answers.suggestions(q)
         opts = [
@@ -177,6 +199,14 @@ def _changes(
     s: Session, q: Question, it: dict[str, Any], today: dt.date
 ) -> tuple[list[Any], str] | None:
     """The records an item's answer writes, and the answer as the owner gave it."""
+    if q.kind == "goal_missing" and it.get("choice"):
+        card = next(
+            (c for c in (q.subject or {}).get("cards") or [] if c.get("key") == it["choice"]), None
+        )
+        if card is None:
+            return None
+        ch = card["change"]
+        return [service.put("goal", ch["key"], ch["body"], answers._ref(q))], str(card["label"])
     if q.kind == "needs" and it.get("choice"):
         card = answers._card(q, str(it["choice"]))
         ch = answers._card_change(card) if card else None

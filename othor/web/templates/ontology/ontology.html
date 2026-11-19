@@ -34,12 +34,22 @@
   {% endif %}
 
   {% if expanded %}
-  <details>{% call el("summary", "caps-title") %}1 · The business · {{ fmt.num(business_count) }} lines{% endcall %}</details>
+  <details>{% call el("summary", "caps-title") %}1 · The business · {{ fmt.num(business | length) }} lines{% endcall %}</details>
+  <details>{% call el("summary", "caps-title") %}2 · Goals · {{ fmt.num(goals | length) }}{% endcall %}</details>
   {% else %}
   {% call ont_section("company", "The business", None) %}
     {{ ont_cols(["Line", "Source"]) }}
     {% for f in business %}{{ ont_row(f.text, f.source, href=page_chat) }}{% endfor %}
-    {% if goals %}{{ ont_sub("Goals this year") }}{% for g in goals %}{{ ont_row(g.text, g.source, track=(g.mark or g.track), tone=g.tone, href=page_chat) }}{% endfor %}{% endif %}
+  {% endcall %}
+  {# 0.28 (M28.1): goals as their own section, always shown; each opens in the side panel #}
+  {% call ont_section("forecast", "Goals", (fmt.num(goals | length) ~ (" goal" if goals | length == 1 else " goals")) if goals else None, more="Add a goal" if goals else None, more_href="/ontology?panel=othor&subject=ontology:goal" if goals else None) %}
+    {% if goals %}
+    {{ ont_cols(["Goal", "Source"]) }}
+    {% for g in goals %}{{ ont_row(g.text, (g.source ~ " · watched by " ~ g.briefs) if g.briefs else g.source, track=g.track, tone=g.tone, href=g.href, action="Open") }}{% endfor %}
+    {% else %}
+    {{ ont_row("No goals yet. Add one, and every night shows how likely you are to reach it.", "") }}
+    {% call el("div", layout="flex items-center gap-8 px-14 py-10") %}{{ button("Add a goal", href="/ontology?panel=othor&subject=ontology:goal", kind="primary", attrs={"data-panel": true}) }}{% endcall %}
+    {% endif %}
   {% endcall %}
   {% endif %}
 
@@ -65,8 +75,8 @@
   {% endcall %}
 
   {% if expanded %}
-  <details>{% call el("summary", "caps-title") %}3 · Names and words · {{ fmt.num(names | length) }} lines{% endcall %}</details>
-  <details>{% call el("summary", "caps-title") %}4 · Known patterns · {{ fmt.num(patterns | length) }} lines{% endcall %}</details>
+  <details>{% call el("summary", "caps-title") %}4 · Names and words · {{ fmt.num(names | length) }} lines{% endcall %}</details>
+  <details>{% call el("summary", "caps-title") %}5 · Known patterns · {{ fmt.num(patterns | length) }} lines{% endcall %}</details>
   {% else %}
   {% call ont_section("chat", "Names and words", None) %}
     {% call el("div", "table-wrap") %}{% call el("table", "table flush ont-table ont-terms") %}<thead><tr><th>Name</th><th>Words</th><th>Source</th><th></th></tr></thead><tbody>

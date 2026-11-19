@@ -255,6 +255,7 @@ def test_ontology_draft_panel(env: Env, sample, need_sources, tmp_path):
         "Becomes Business Model v1 when you confirm metrics",
         "Draft · not live",
         "The business",
+        "Goals",
         "Numbers",
         "Names and words",
         "Known patterns",

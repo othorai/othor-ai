@@ -39,6 +39,8 @@ LABEL = {
     "conflict_chat": "Talk through a decision",
     "proposal_chat": "Talk through a proposal",
     "ontology_change": "Change the Business Model in your words",
+    "goal_parse": "Read a goal from your words",
+    "goal_from_targets": "Goals from your files",
     "metric_connect": "Connect a metric to its data",
     "metric_where": "Find where a metric lives",
     "suggest_pairs": "Suggest numbers that move together",

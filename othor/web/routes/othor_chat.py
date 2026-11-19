@@ -37,6 +37,7 @@ def reply(
     text: str = Form(""),
     line: str = Form(""),  # the Business Model page's Tell Othor AI line
     back: str = Form(""),
+    suggest: str = Form(""),  # 0.28: the goal chat's Suggest a goal (no line, no model)
     o: Owner = Depends(signed_in),
 ) -> Response:
     from othor.ai.gateway import ModelGateway
@@ -50,13 +51,28 @@ def reply(
         clock=svc.clock,
         monthly_tokens=svc.settings.ai_monthly_tokens,
     )
-    from othor.chat import changes, proposals
+    from othor.chat import changes, goals, proposals
 
     with svc.sf() as s, tenant_scope(o.company.id):
         if proposals.is_subject(subject):  # Home's proposals (M26.4)
             if proposals.subject_ok(s, subject):
                 t = chat.thread(s, subject)
                 proposals.reply(s, gw, o.company.id, t, text, actor=str(o.viewer.id))
+        elif goals.is_subject(subject):  # 0.28: a goal in one line, the rest suggested
+            if not goals.subject_ok(s, subject):
+                return RedirectResponse(_back(back, "ontology"), 303)
+            t = chat.thread(s, subject)
+            goals.draft(
+                s,
+                gw,
+                o.company,
+                svc.settings,
+                t,
+                text,
+                actor=str(o.viewer.id),
+                today=local_date(o.company, svc.clock()),
+                suggest=bool(suggest),
+            )
         elif changes.is_subject(subject):  # Business Model changes (M26.4)
             if not changes.subject_ok(s, subject):
                 return RedirectResponse(_back(back, "ontology"), 303)

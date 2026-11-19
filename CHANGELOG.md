@@ -6,6 +6,22 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-11-19
+
+### Added
+- Goals in the Business Model: a Goals section with each goal's state for the night, its chance
+  and where the number is heading, and the briefs that watch it.
+- Add a goal in one line in the Othor AI chat (prompt `goal_parse` v1): the owner's own figure
+  and date are kept, the rest is suggested by code (targets from the company's own numbers:
+  where it's heading, a stretch, last year's). One card with Apply and Suggest edits.
+- Suggest a goal (no model) and a nightly Home question while a company has no goal.
+- A goal's own chat changes it in a line, or removes it ("remove it", read by code).
+- Setup drafts goals from targets quoted in uploaded files (prompt `goal_from_targets` v1),
+  shown in the Business Model draft with their source and written at Confirm.
+
+### Changed
+- A fresh chat puts its reply box right under the opening; no closing line under the buttons.
+
 ## [0.27.5] - 2026-11-19
 
 ### Security

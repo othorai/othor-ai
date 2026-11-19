@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 """The Ontology draft (M4b: 2n0): what Confirm will write as Ontology v1, read-only.
 
-Four sections: the business (the owner's message; goals quoted from their files with the citation,
-shown only, goal records come in M7), the numbers (the drafts and what needs the owner), names and
-words (breakdowns, vocabulary, dimension maps), and known patterns. Every line is the owner's own
-words, a file's quote read by code, or a draft's definition; no figure is written by a model.
+Five sections: the business (the owner's message), goals (0.28: drafted from the targets quoted
+in their files, with the citation; the other quotes as read), the numbers (the drafts and what
+needs the owner), names and words (breakdowns, vocabulary, dimension maps), and known patterns.
+Every line is the owner's own words, a file's quote read by code, or a draft's definition; no
+figure is written by a model.
 """
 
 from __future__ import annotations
@@ -53,10 +54,30 @@ def build(s: Session) -> dict[str, Any]:
     business = Section("The business", "")
     if msg is not None and msg.text.strip():
         business.lines.append(Line(msg.text.strip(), cite="Your message"))
-    goals = [(u, ref) for u, ref in inp.refs if ref.kind == "target"]
-    for u, ref in goals[:3]:
-        business.lines.append(Line(ref.text, lead="Goal", cite=_cite(u, ref.locator)))
     business.count = f"{len(business.lines)} line{'s' if len(business.lines) != 1 else ''}"
+
+    # 0.28 (M28.3; owner, 19 Nov 2026: its own section, below the business): a quoted target
+    # read as a goal on a drafted number shows as that goal; the other quotes as they were
+    from othor.ontology.goal_targets import goal_text
+    from othor.setup import goal_drafts
+
+    goals_sec = Section("Goals", "")
+    nums = {n["key"]: n for n in goal_drafts.numbers(s)}
+    drafted = [g for g in goal_drafts.shown(s) if g.body.get("metric") in nums]
+    names = {k: n["name"] for k, n in nums.items()}
+    for g in drafted:
+        goals_sec.lines.append(
+            Line(
+                goal_text(g.body, nums[g.body["metric"]]["unit"], names),
+                cite=(g.origin or {}).get("cite"),
+            )
+        )
+    used = {(g.origin or {}).get("quote") for g in drafted}
+    quoted = [(u, ref) for u, ref in inp.refs if ref.kind == "target" and ref.text not in used]
+    for u, ref in quoted[:3]:
+        goals_sec.lines.append(Line(ref.text, cite=_cite(u, ref.locator)))
+    n_goals = len(goals_sec.lines)
+    goals_sec.count = f"{n_goals} goal{'s' if n_goals != 1 else ''}"
 
     numbers = Section("Numbers", "")
     needs = [r for r in rows if r.confidence in ("conflict", "check", "low") and not r.frozen]
@@ -116,7 +137,7 @@ def build(s: Session) -> dict[str, Any]:
         "needs": c["conflict"] + c["check"],
         "conflict": c["conflict"],
         "check": c["check"],
-        "sections": [business, numbers, words, patterns],
+        "sections": [business, goals_sec, numbers, words, patterns],
         "built": "Built from " + " · ".join(built) if built else None,
     }
 

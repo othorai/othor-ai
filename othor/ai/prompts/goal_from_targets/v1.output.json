@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "properties": {
+    "goals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "quote": {"type": "integer"},
+          "metric": {"type": "string"},
+          "target": {"type": "string"},
+          "by": {"type": ["string", "null"]},
+          "direction": {"enum": ["at_least", "at_most", null]},
+          "aggregate": {"enum": ["fiscal_year_total", "value", null]}
+        },
+        "required": ["quote", "metric", "target", "by", "direction", "aggregate"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["goals"],
+  "additionalProperties": false
+}

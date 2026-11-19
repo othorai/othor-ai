@@ -40,6 +40,10 @@ def is_subject(subject: str) -> bool:
 
 
 def subject_ok(s: Session, subject: str) -> bool:
+    from othor.chat import goals
+
+    if goals.is_subject(subject):  # 0.28: Add a goal / change one goal in the chat
+        return goals.subject_ok(s, subject)
     if subject in ("ontology", "ontology:add"):
         return True
     if subject.startswith("ontology:metric:"):
@@ -55,6 +59,10 @@ def old_subject(subject: str) -> str:
 
 
 def title(s: Session, subject: str) -> str:
+    from othor.chat import goals
+
+    if goals.is_subject(subject):
+        return goals.title(subject)
     if subject == "ontology:add":
         return "Add a number"
     if subject.startswith("ontology:metric:"):
@@ -66,6 +74,10 @@ def title(s: Session, subject: str) -> str:
 
 
 def opening(subject: str) -> str:
+    from othor.chat import goals
+
+    if goals.is_subject(subject):
+        return goals.opening(subject)
     if subject == "ontology:add":
         return (
             "Which number should I compute? Say it in your words; I'll draft it for you to apply."
@@ -212,6 +224,22 @@ def draft(
     return new
 
 
+def _picked(i: dict[str, Any]) -> dict[str, Any]:
+    """An item whose options each carry a whole change (a goal's, 0.28): the chosen one's."""
+    opt = next(
+        (o for o in i.get("options") or [] if o.get("key") == i.get("choice") and o.get("change")),
+        None,
+    )
+    if opt is None:
+        return i
+    return {
+        **i,
+        "change": opt["change"],
+        "after": opt["label"],
+        "replaces": opt.get("replaces"),
+    }
+
+
 def apply(s: Session, company: Any, t: ChatThread, *, actor: str) -> ChatMessage | None:
     """Every ready change of the current set in one Business Model version, then compiled."""
     from othor.chat import service as chat
@@ -220,7 +248,7 @@ def apply(s: Session, company: Any, t: ChatThread, *, actor: str) -> ChatMessage
     m = chat.last_set(s, t)
     if m is None:
         return None
-    ready = pending.to_apply(list(prop(m)["items"]))
+    ready = [_picked(i) for i in pending.to_apply(list(prop(m)["items"]))]
     puts = [
         service.retire(i["change"]["type"], i["change"]["key"])
         if i["change"]["op"] == "retire"
@@ -229,6 +257,8 @@ def apply(s: Session, company: Any, t: ChatThread, *, actor: str) -> ChatMessage
         )
         for i in ready
     ]
+    # 0.28: a goal changed to a new date has a new key; the old one goes in the same version
+    puts += [service.retire("goal", i["replaces"]) for i in ready if i.get("replaces")]
     v = (
         service.apply(
             s,

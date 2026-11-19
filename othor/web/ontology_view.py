@@ -227,6 +227,77 @@ def goal_lines(s: Session, rd: RunData) -> list[dict[str, Any]]:
     return out
 
 
+GOAL_GRAINS = ("month",)  # a goal reads a number's monthly series and its monthly forecast
+
+
+def _goal_unit(rd: RunData, metric: str) -> str | None:
+    return (rd.spec.get("metrics", {}).get(metric) or {}).get("unit")
+
+
+from othor.ontology.goal_targets import goal_text  # noqa: E402
+
+
+def goal_rows(s: Session, rd: RunData, today: dt.date) -> list[dict[str, Any]]:
+    """0.28 (M28.1): every goal, with how it's doing tonight (code's numbers only): the chance of
+    meeting it and where it's heading (goals_v2), on track / at risk / off track (the brief's
+    tone), reached or past (marked, never deleted), the briefs that watch it, where it came from."""
+    from othor.briefs import values
+    from othor.briefs.assemble import goal_lines as brief_goal_lines
+
+    recs = service.active(s, ["goal"])
+    names = {k: str(m.get("name") or k) for k, m in rd.spec.get("metrics", {}).items()}
+    tones = (
+        {g["key"]: g for g in brief_goal_lines(rd.spec, [r.key for r in recs], rd.goals)}
+        if rd.spec
+        else {}
+    )
+    v1 = {g["key"]: g for g in rd.goals}
+    fc = (read_json(rd.files.outputs / "forecasts.json") or {}) if rd.files else {}
+    v2 = {g["key"]: g for g in fc.get("goals_v2") or []}
+    watch: dict[str, list[str]] = {}
+    for b in briefs.active(s):
+        v = briefs.current(s, b)
+        for k in (v.body if v else {}).get("goals") or []:
+            watch.setdefault(k, []).append(b.name)
+    out = []
+    for r in sorted(recs, key=lambda r: (str(r.body.get("by")), r.key)):
+        b = r.body
+        unit = _goal_unit(rd, str(b.get("metric")))
+        by = dt.date.fromisoformat(str(b["by"]))
+        target = Decimal(str(b["target"]))
+        up = b.get("direction", "at_least") == "at_least"
+        g1, g2, tl = v1.get(r.key) or {}, v2.get(r.key) or {}, tones.get(r.key)
+        to_date = Decimal(str(g1["to_date"])) if g1.get("to_date") is not None else None
+        reached = to_date is not None and up and to_date >= target
+        if reached:
+            state, tone = "Reached", "accent"
+        elif by < today:
+            state, tone = "Past", "muted"
+        elif tl is not None:
+            state = {"off": "Off track", "risk": "At risk", "ok": "On track"}[tl["tone"]]
+            tone = {"off": "neg", "risk": "warn", "ok": "accent"}[tl["tone"]]
+        else:
+            state, tone = "Not forecast yet", "muted"
+        bits = []
+        if g2.get("probability") is not None and not reached and by >= today:
+            bits.append(f"{g2['probability']}% likely")
+        if g2.get("projection") is not None and not reached and by >= today:
+            bits.append(f"heading for {values.text(unit, g2['projection'])}")
+        out.append(
+            {
+                "key": r.key,
+                "text": goal_text(b, unit, names),
+                "state": state,
+                "tone": tone,
+                "track": " · ".join([state, *bits]),
+                "briefs": ", ".join(sorted(watch.get(r.key, []))),
+                "source": cited(s, r.source_ref, r.created_at),
+                "href": f"/ontology?panel=othor&subject=ontology:goal:{r.key}",
+            }
+        )
+    return out
+
+
 def in_briefs(s: Session) -> dict[str, list[str]]:
     out: dict[str, list[str]] = {}
     for b in briefs.active(s):
@@ -433,7 +504,7 @@ def page(
     pats = pattern_lines(s)
     names = name_lines(s)
     business = facts
-    goals = goal_lines(s, rd)
+    goals = goal_rows(s, rd, today)
     return {
         "version": v.number if v else 0,
         "changed": v.created_at.date() if v else None,

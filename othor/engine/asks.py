@@ -99,6 +99,7 @@ RANK = {
     "pattern": "3",
     "needs": "4",
     "unmapped_plant": "5",
+    "goal_missing": "3",  # 0.28: "What are you aiming for this year?"
 }
 
 

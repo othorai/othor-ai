@@ -212,3 +212,19 @@ def unmapped_plant_questions(
     """`unmapped`: (month, prefix, value) from the check's SQL; `totals`: the metric's value per
     month. Returns the questions created now (existing ones aren't created again)."""
     return raise_questions(s, unmapped_candidates(check, unmapped, totals))
+
+
+def refresh_goal_question(s: Session, candidate: dict[str, Any] | None, has_goals: bool) -> None:
+    """0.28 (M28.2): "What are you aiming for this year?" holds tonight's suggestion while it
+    waits; it closes once the company has a goal, and opens again when every goal is removed."""
+    from othor.ontology.goal_suggest import KIND
+
+    rows = s.scalars(sa.select(Question).where(Question.kind == KIND)).all()
+    for q in rows:
+        if has_goals and q.status in ("open", "skipped"):
+            q.status, q.answer_text = "answered", "A goal was added"
+        elif not has_goals and candidate is not None and q.fingerprint == candidate["fingerprint"]:
+            if q.status == "answered":
+                q.status, q.answer_text = "open", None
+            if q.status in ("open", "skipped"):
+                q.subject = dict(candidate["subject"])

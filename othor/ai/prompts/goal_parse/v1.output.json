@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "properties": {
+    "metric": {"type": ["string", "null"]},
+    "target": {"type": ["string", "null"]},
+    "by": {"type": ["string", "null"]},
+    "direction": {"enum": ["at_least", "at_most", null]},
+    "aggregate": {"enum": ["fiscal_year_total", "value", null]},
+    "reply": {"type": "string"},
+    "clarify": {"type": ["string", "null"]}
+  },
+  "required": ["metric", "target", "by", "direction", "aggregate", "reply", "clarify"],
+  "additionalProperties": false
+}

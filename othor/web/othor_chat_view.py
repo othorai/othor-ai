@@ -87,8 +87,12 @@ def _items(
         opts = i.get("options") or []
         chosen = next((o for o in opts if o.get("key") == i.get("choice")), None)
         label, cls = BADGE.get(i.get("status", ""), ("", ""))
+        # 0.28: a goal card's options are whole goals; the parts the owner left out suggested
+        whole = i.get("kind") == "change" and any(o.get("change") for o in opts)
         if i.get("kind") == "change" and i.get("status") == "pick":
             label = "Draft"  # the owner's own words, drafted: not Othor AI's pick
+            if whole and chosen is not None and chosen.get("note"):
+                label = BADGE["pick"][0]  # parts of it are Othor AI's suggestion
         out.append(
             {
                 "n": n,
@@ -130,7 +134,8 @@ def _items(
                 # a Business Model change (M26.4): the line before and after, its effect lines
                 "change": i.get("kind") == "change",
                 "before": i.get("before") or "",
-                "after": i.get("after") or "",
+                "after": (chosen["label"] if whole and chosen else i.get("after")) or "",
+                "pick_note": (chosen.get("note") or "") if whole and chosen else "",
                 "lines": list(i.get("lines") or []),
                 "values_url": (
                     "/othor/preview?" + urlencode({"subject": subject, "item": i["id"]})
@@ -220,12 +225,25 @@ def view(
             else ""
         ),
         "is_change": is_change,
+        # 0.28: the goal chat's box shows a goal to copy before the first line
+        "placeholder": (
+            "e.g. Net revenue at least ₹60 Cr this financial year"
+            if t.subject.startswith("ontology:goal")
+            else ""
+        ),
+        # 0.28 (owner, 19 Nov 2026): Add a goal opens this chat; Suggest a goal above the box makes
+        # a whole goal from the company's own numbers without a line from the owner
+        "suggest_goal": t.subject == "ontology:goal" and not msgs,
         "messages": msgs,
         "counts": counts,
         "has_set": current is not None,
         # the reply box: when there's something to reshape, or a subject that takes free words
         # (Ask, Business Model changes); never on answered questions (#89: nothing to reply to)
-        "editing": (current is not None and (editing or any(m["role"] == "user" for m in msgs)))
+        # 0.28 (owner, 19 Nov 2026): the goal chat as the chat screens: the box for the first
+        # line, then Apply with Suggest edits beside it, the box only when Suggest edits is pressed
+        "editing": (current is None or editing)
+        if t.subject.startswith("ontology:goal")
+        else (current is not None and (editing or any(m["role"] == "user" for m in msgs)))
         or is_proposal
         or is_change
         or t.subject == "ask",

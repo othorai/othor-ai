@@ -1043,6 +1043,27 @@ document.addEventListener("htmx:beforeOnLoad", (e) => {
   window.addEventListener("scroll", update, { passive: true });
 })();
 
+// The home page's intro video (owner, 19 Nov 2026): the play button starts it in place with the
+// native controls and sound; at the end it goes back to the poster and the button. Without
+// JavaScript the button does nothing and the poster stays.
+document.querySelectorAll("[data-site-video]").forEach((box) => {
+  const v = box.querySelector("video");
+  const play = box.querySelector("button");
+  if (!v || !play) return;
+  play.addEventListener("click", () => {
+    box.classList.add("is-playing");
+    v.controls = true;
+    v.play().catch(() => {});
+    v.focus();
+  });
+  v.addEventListener("ended", () => {
+    box.classList.remove("is-playing");
+    v.controls = false;
+    v.load(); // the poster again
+    play.focus();
+  });
+});
+
 // The website's part links (owner's design, 11 Nov 2026): "On this page" on the legal pages and
 // the numbered tabs on /product and /use-cases mark the part in view. Without JavaScript the
 // links still jump; only the mark is missing.

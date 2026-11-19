@@ -2230,6 +2230,7 @@ form:has(> .fold[open]) > .fold-hide { display: none; }
 /* ---------- the Othor AI chat (Chat 1.0, owner 18 Nov 2026; design/questions-chat/) ---------- */
 .panel.chat.oc { width: 520px; }
 .oc-thread { gap: 18px; }
+.composer.in-thread { padding: 0; border-top: 0; }  /* the box right under a fresh chat's opening */
 .oc-msg { display: flex; flex-direction: column; gap: 12px; min-width: 0; flex: 1; }
 .oc-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
 .oc-item { display: flex; gap: 10px; padding-top: 12px; border-top: 1px solid var(--color-rule); }

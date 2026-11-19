@@ -963,9 +963,23 @@ def questions(ctx: EngineContext, info: RunInfo) -> SourceOutcome:
     cands += pattern_candidates(info.spec)
     needs = needs_candidates(coverage, helpful_answers(ctx, info, coverage))
     cands += needs
+    # 0.28 (M28.2): a goal suggested by code while the company has none (no model needed)
+    from othor.ontology.goal_suggest import question_candidate
+    from othor.ontology.questions import refresh_goal_question
+
+    goal_q = question_candidate(
+        info.spec,
+        read_points(info.files.series),
+        (read_json(info.files.outputs / FORECASTS) or {}).get("rows") or [],
+        info.fy_start_month,
+        info.run_date,
+    )
+    if goal_q is not None:
+        cands.append(goal_q)
     with ctx.sf() as s:
         made = raise_questions(s, cands)
         refresh_needs(s, needs)
+        refresh_goal_question(s, goal_q, bool((info.spec.get("forecast") or {}).get("goals")))
         run = s.scalars(sa.select(Run).where(Run.id == info.id)).one()
         props = proposals.suppression(
             s, run, info.spec, read_json(info.files.outputs / "findings.json") or []

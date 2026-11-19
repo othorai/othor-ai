@@ -6,6 +6,7 @@ Needs `make dev && make seed`.
 
 from __future__ import annotations
 
+import html
 import json
 import re
 
@@ -40,7 +41,8 @@ def test_the_page_has_its_four_sections(night):  # noqa: F811
     assert f"v{v}" in page and "What Othor AI knows about Indigo Thread Co. Every brief" in page
     for text in (
         "The business",
-        "Goals this year",
+        "Goals",
+        "Add a goal",
         "Numbers",
         "Names and words",
         "Known patterns",
@@ -69,7 +71,10 @@ def test_the_page_has_its_four_sections(night):  # noqa: F811
     for head in ("The business", "Names and words"):
         sec = page.split(f">{head}", 1)[1].split("</div>", 1)[0]
         assert not re.search(r"\d+ lines?<", sec), head
-    assert "tracking ₹57.2 Cr" in page  # the goal's computed projection
+    # 0.28: each goal says how it's doing tonight, the chance and where it's heading (computed)
+    assert re.search(
+        r"(On track|At risk|Off track) · \d+% likely · heading for ", html.unescape(page)
+    )
     # a number that needs a source is always in the short list, with Fix (6a, M12b)
     assert "Order book value" in page and "Needs a source" in page
 
