@@ -10,6 +10,12 @@
 <div class="sweep-stat{{ ' boxed' if boxed else '' }}"><span class="v">{{ value }}</span><span class="l">{{ label }}{% if tip %} {{ info(text=tip, id=tip_id) }}{% endif %}</span></div>
 {%- endmacro %}
 
+{# Calm UI (owner, 19 Nov 2026): a number for information, not a button: no box; the label
+   above, the figure below, a quiet line under it #}
+{% macro kpi_stat(label, value, sub=None, tip=None, tip_id="stat-tip") -%}
+<div class="sweep-kpi"><span class="l">{{ label }}</span><span class="v">{{ value }}</span>{% if sub or tip %}<span class="s">{{ sub or "" }}{% if tip %} {{ info(text=tip, id=tip_id) }}{% endif %}</span>{% endif %}</div>
+{%- endmacro %}
+
 {% macro tags(state, confidence, change) -%}
 <span class="panel-tags">{{ state_tag(state, confidence | capitalize if confidence else None) }}{% if change[0] in ("new", "worse", "better", "open", "back") %}{{ change_tag(change[0], change[1]) }}{% endif %}</span>
 {%- endmacro %}
@@ -63,13 +69,13 @@
 {# M15.2 · the status strip: st = sweep_view.strip(); text = the (i)'s words. M15.7b (owner,
    13 Nov 2026): one square bar per detector with its short name under it; hover, tap or focus
    opens its card: what it finds, its status, what it covered tonight, what it needs. #}
-{% macro detectors_strip(st, text) -%}
+{% macro detectors_strip(st, text, when="today") -%}
 <div class="checks-strip">
   <p class="t">Total {{ fmt.num(st.total) }} detectors. {{ fmt.num(st.active) }} activated. <span class="off">{{ fmt.num(st.inactive) }} inactive.</span> <span class="held">{{ fmt.num(st.suppressed) }} suppressed.</span> {{ info(text=text, id="strip-info", label="What these are") }}</p>
-  <ul class="det-bars" aria-label="Detectors tonight">{% for r in st.segments %}<li class="det {{ r.kind }}{{ ' end' if loop.index > (loop.length + 1) // 2 else '' }}" x-data="popover" data-pop-hover data-key="{{ r.key }}"><button class="det-btn" type="button" aria-label="{{ r.label }}: {{ r.status }}" aria-controls="det-{{ r.key }}" aria-expanded="false"><i class="det-bar"></i><span class="det-name">{{ r.short }}</span></button><div class="det-card" role="tooltip" id="det-{{ r.key }}">
+  <ul class="det-bars" aria-label="Detectors {{ when }}">{% for r in st.segments %}<li class="det {{ r.kind }}{{ ' end' if loop.index > (loop.length + 1) // 2 else '' }}" x-data="popover" data-pop-hover data-key="{{ r.key }}"><button class="det-btn" type="button" aria-label="{{ r.label }}: {{ r.status }}" aria-controls="det-{{ r.key }}" aria-expanded="false"><i class="det-bar"></i><span class="det-name">{{ r.short }}</span></button><div class="det-card" role="tooltip" id="det-{{ r.key }}">
     <p class="det-card-head"><b>{{ r.label }}</b><span class="det-status {{ r.kind }}">{{ r.status }}</span></p>
     <p class="det-card-what">{{ r.catches }}</p>
-    {% if r.kind == "on" %}<p class="det-card-line">Tonight: {{ r.result }}</p>{% elif r.kind == "partly" %}<p class="det-card-line">Tonight: {{ r.covers }}</p>{% endif %}
+    {% if r.kind == "on" %}<p class="det-card-line">{{ when | capitalize }}: {{ r.result }}</p>{% elif r.kind == "partly" %}<p class="det-card-line">{{ when | capitalize }}: {{ r.covers }}</p>{% endif %}
     {% if r.missing %}<p class="det-card-line muted">{{ r.missing[:1] | upper }}{{ r.missing[1:] }}</p>{% endif %}
     {% if r.action %}<a class="link" href="{{ r.action[1] }}">{{ r.action[0] }}</a>{% endif %}
   </div></li>{% endfor %}</ul>
@@ -125,7 +131,7 @@
 {% macro runs_menu(runs, current) -%}
 <details class="use" x-data="menu">
   <summary class="btn" aria-label="Show another run">Last 7 runs</summary>
-  <div class="use-menu" role="menu">{% for n, d, kind in runs %}<a class="opt{{ ' is-on' if n == current else '' }}" role="menuitem" href="/sweep?run={{ n }}">Run #{{ "%04d" | format(n) }}<span class="sub">{{ fmt.date_short(d) }}{% if kind %} · {{ kind }}{% endif %}</span></a>{% endfor %}</div>
+  <div class="use-menu" role="menu">{% for n, d, kind in runs %}<a class="opt{{ ' is-on' if n == current else '' }}" role="menuitem" href="/sweep?run={{ n }}">Run #{{ "%04d" | format(n) }}<span class="sub">{{ fmt.date_short(d) }}{% if kind %} · {{ kind }}{% endif %}</span></a>{% endfor %}<a class="opt" role="menuitem" href="/sweep/history">All runs →</a></div>
 </details>
 {%- endmacro %}
 

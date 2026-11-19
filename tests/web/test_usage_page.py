@@ -81,7 +81,7 @@ def test_the_page_counts_the_month_in_the_owners_words(env: Env) -> None:
     n = 3 + signup_calls["nov"]
     tokens = 3 * 1250 + signup_calls["nov_tokens"]
     assert f'<span class="v">{tokens:,}</span>' in page
-    assert f'<span class="v">{n}</span><span class="l">calls' in page
+    assert f'<span class="l">Calls</span><span class="v">{n}</span>' in page
     assert "Draft your metrics" in page and "claude-opus-5-5" in page and "1.4 s" in page
     # the first section: tokens per day for the last 30 days, a bar a day, in colour
     first = page.index('class="use-trend"')

@@ -47,10 +47,11 @@ def _today(request: Request, o: Owner) -> dt.date:
 
 
 def _run(s: Session, number: int | None) -> Run | None:
-    runs = sv.detecting_runs(s)
+    """The latest run, or any run by its number, however old (0.28.1: Sweep history opens them)."""
     if number is None:
+        runs = sv.detecting_runs(s, 1)
         return runs[0] if runs else None
-    return next((r for r in runs if r.number == number), None)
+    return sv.run_by_number(s, number)
 
 
 def _view(request: Request, s: Session, o: Owner, number: int | None) -> sv.RunView | None:
@@ -66,9 +67,23 @@ def _page_ctx(request: Request, s: Session, o: Owner, rv: sv.RunView, tab: str) 
     base = f"/sweep?run={rv.run.number}"
     early = sv.first_days(rv, s)
     st = sv.strip(rv, s)
+    # owner, 19 Nov 2026: the night's run is read the morning after, on the same date, so Sweep
+    # says "today", not "tonight"; an earlier run by its day
+    from othor.core import fmt
+
+    today = _today(request, o)
+    rd = rv.run.run_date
+    when = (
+        "today"
+        if rd == today
+        else "yesterday"
+        if rd == today - dt.timedelta(days=1)
+        else "on " + fmt.day_month(rd)
+    )
     ctx: dict[str, Any] = {
         **shell_ctx(o, "sweep"),
         "rv": rv,
+        "when": when,
         "run": rv.run.number,
         "summary": sv.summary(rv, s),
         "tabs": sv.tabs(rv, base),
@@ -121,6 +136,38 @@ def latest_run(request: Request, o: Owner = Depends(signed_in)) -> Response:
     return Response(
         status_code=204, headers={"X-Othor-Run": str(n or 0), "Cache-Control": "no-store"}
     )
+
+
+@router.get("/sweep/history", response_class=HTMLResponse)
+def history(request: Request, month: str | None = None, o: Owner = Depends(signed_in)) -> Response:
+    """Every night since the first (0.28.1, owner 19 Nov 2026): a chart of the findings open
+    each night, then the month's nights, newest first, each opening its Sweep."""
+    svc = services(request)
+    picked: dt.date | None = None
+    if month:
+        try:
+            picked = dt.date.fromisoformat(month + "-01")
+        except ValueError:
+            return not_found(request, o.site, *GONE)
+    with svc.sf() as s, tenant_scope(o.company.id):
+        months = sv.history_months(s)
+        if picked is None and months:
+            picked = months[0]
+        tabs = [
+            (m.strftime("%B %Y") if i == 0 else m.strftime("%b"), f"/sweep/history?month={m:%Y-%m}")
+            for i, m in enumerate(months)
+        ]
+        on = next((t for (t, _), m in zip(tabs, months, strict=False) if m == picked), "")
+        ctx = {
+            **shell_ctx(o, "sweep"),
+            "chart_spec": sv.history_chart(s),
+            "first": sv.history_first(s),
+            "month_tabs": tabs,
+            "month_on": on,
+            **(sv.history_month(s, picked) if picked else {"rows": [], "line": ""}),
+        }
+        s.expunge_all()
+    return page(request, "sweep/history.html", ctx)
 
 
 @router.get("/sweep", response_class=HTMLResponse)

@@ -1664,3 +1664,145 @@ def _replay_chart(
             + ends
         ),
     )
+
+
+# --- Sweep history (0.28.1, owner 19 Nov 2026): every night since the first -----------------
+# All from what each night stored: its summary (Run.summary["sweep"]), its finding rows (the
+# open ones' amounts, summed by code) and the replay events. No source read, no model.
+
+
+HISTORY_CHART_MIN = 7  # nights before the history chart shows
+
+
+def _history_runs(s: Session) -> list[Run]:
+    return list(
+        s.scalars(
+            sa.select(Run)
+            .where(Run.kind.in_(DETECTING_KINDS), Run.status.in_(("done", "partial", "failed")))
+            .order_by(Run.number.desc())
+        )
+    )
+
+
+def run_by_number(s: Session, number: int) -> Run | None:
+    """Any detecting run by its number, however old (Sweep's last-7 menu is only a shortcut)."""
+    return s.scalars(
+        sa.select(Run).where(
+            Run.number == number,
+            Run.kind.in_(DETECTING_KINDS),
+            Run.status.in_(("done", "partial")),
+        )
+    ).first()
+
+
+def history_months(s: Session) -> list[dt.date]:
+    """The first day of each month that has a night, newest first."""
+    return sorted({r.run_date.replace(day=1) for r in _history_runs(s)}, reverse=True)
+
+
+def _sweep_counts(r: Run) -> dict[str, Any]:
+    return dict((r.summary or {}).get("sweep") or {})
+
+
+def history_chart(s: Session) -> ChartSpec | None:
+    """One bar per night since the first: the findings open that night."""
+    runs = [r for r in reversed(_history_runs(s)) if r.status != "failed"]
+    if not runs:
+        return None
+    days: dict[dt.date, int] = {}
+    for r in runs:  # a rerun replaces the night it reran
+        days[r.run_date] = int(_sweep_counts(r).get("findings") or 0)
+    pts = sorted(days.items())
+    if len(pts) < HISTORY_CHART_MIN:
+        return None  # a few bars fill the frame and say little: the table says it until then
+    busiest = max(pts, key=lambda x: (x[1], x[0]))
+    alt = f"Findings open each night, {fmt.day_month(pts[0][0])} to {fmt.day_month(pts[-1][0])}"
+    if busiest[1]:
+        alt += f"; the most on {fmt.day_month(busiest[0])} ({fmt.num(busiest[1])})"
+    return ChartSpec(
+        id="sweep-history",
+        kind="sparkline",
+        title="Findings open each night",
+        alt_text=alt,
+        series=(
+            Series(
+                "open",
+                "Open findings",
+                "positive",
+                tuple((d.isoformat(), n) for d, n in pts),
+                style="bar",
+            ),
+        ),
+    )
+
+
+def history_month(s: Session, month: dt.date) -> dict[str, Any]:
+    """The month's nights, newest first, with the month's line."""
+    nxt = (month.replace(day=28) + dt.timedelta(days=4)).replace(day=1)
+    runs = [r for r in _history_runs(s) if month <= r.run_date < nxt]
+    ids = [r.id for r in runs]
+    money: dict[uuid.UUID, Decimal] = {}
+    if ids:
+        for run_id, body in s.execute(
+            sa.select(Finding.run_id, Finding.body).where(
+                Finding.run_id.in_(ids), Finding.status == "open"
+            )
+        ):
+            try:
+                money[run_id] = money.get(run_id, Decimal(0)) + Decimal(
+                    str((body or {}).get("money") or 0)
+                )
+            except ArithmeticError:
+                continue
+    replays: dict[str, bool] = {}
+    if ids:
+        for ev in s.scalars(
+            sa.select(Event)
+            .where(Event.action == "run.replayed", Event.object_id.in_([str(i) for i in ids]))
+            .order_by(Event.created_at)
+        ):
+            replays[ev.object_id] = bool((ev.after or {}).get("ok"))  # the latest replay wins
+    rows: list[dict[str, Any]] = []
+    for r in runs:
+        c = _sweep_counts(r)
+        done = r.status != "failed"
+        rp = replays.get(str(r.id))
+        total = money.get(r.id, Decimal(0))
+        rows.append(
+            {
+                "number": r.number,
+                "date": r.run_date,
+                "kind": RUN_KIND.get(r.kind, ""),
+                "done": done,
+                "tests": int(c.get("tests") or 0),
+                "new": int(c.get("new") or 0),
+                "open": int(c.get("findings") or 0),
+                "resolved": int(c.get("resolved") or 0),
+                "money": sweep_text.money(total) if done and total else "–",
+                "replays": "Same bytes" if rp is True else "Differs" if rp is False else "–",
+                "href": f"/sweep?run={r.number}" if done else None,
+            }
+        )
+    done_rows = [x for x in rows if x["done"]]
+    line = ""
+    if done_rows:
+        nights = len({x["date"] for x in done_rows})
+        new = sum(x["new"] for x in done_rows)
+        resolved = sum(x["resolved"] for x in done_rows)
+        busy = max(done_rows, key=lambda x: (x["new"], x["date"]))
+        parts = [
+            f"{fmt.num(nights)} night{'s' if nights != 1 else ''}",
+            f"{fmt.num(new)} new finding{'s' if new != 1 else ''}",
+            f"{fmt.num(resolved)} resolved",
+        ]
+        if busy["new"]:
+            parts.append(
+                f"busiest night {fmt.day_month(busy['date'])} ({fmt.num(busy['new'])} new)"
+            )
+        line = " · ".join(parts)
+    return {"rows": rows, "line": line}
+
+
+def history_first(s: Session) -> dt.date | None:
+    runs = _history_runs(s)
+    return runs[-1].run_date if runs else None

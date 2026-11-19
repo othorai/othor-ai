@@ -8,16 +8,23 @@
 {% from "components/panels.html" import side_panel %}
 {% from "components/sweep.html" import kv %}
 
-{% macro weather_banner(w, o=None) -%}
+{# Calm UI (owner, 19 Nov 2026): on Home the banner is the page's one night band and carries the
+   lead brief (its headline, the day's line with the brief's meta, Open brief); the scene's pastel
+   becomes the kicker's colour. Elsewhere (the open brief) it stays the pastel banner. #}
+{% macro weather_banner(w, o=None, lead=None) -%}
+{% from "components/buttons.html" import button %}
 <div class="wx-card">
-<section class="weather wx-{{ w.key }}" aria-label="Today’s state of the business">
+<section class="weather wx-{{ w.key }}{{ ' is-lead' if lead else '' }}" aria-label="Today’s state of the business">
   <div class="weather-body">
     <span class="weather-icon">{{ w.icon }}</span>
     <div class="weather-text">
       <p class="weather-kicker">Today · {{ w.name }}</p>
-      <p class="weather-line">{{ w.line }}</p>
+      {% if lead and lead.title %}<p class="weather-headline">{{ lead.title }}</p>
+      <p class="weather-sub">{{ w.line }} {{ lead.meta }}</p>
+      {% else %}<p class="weather-line">{{ w.line }}</p>{% endif %}
       {% if w.picked %}<a class="weather-why" href="{{ w.picked }}" data-panel>How this was picked</a>{% endif %}
     </div>
+    {% if lead %}<div class="weather-open">{{ button("Open brief", "primary", href="/brief/" ~ lead.id) }}</div>{% endif %}
   </div>
 </section>
 {% if o %}{{ weather_outlook(o) }}{% endif %}

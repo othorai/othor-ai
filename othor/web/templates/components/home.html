@@ -122,6 +122,17 @@
 {%- endmacro %}
 
 {# the sixth brief card when there are more than six: the rest, grouped (design B2) #}
+{# Calm UI (owner, 19 Nov 2026): Sweep in "This morning", the brief cards' shape: a big number on
+   the stage, the name, the top finding as its one line #}
+{% macro sweep_card(b) -%}
+<a class="brief-card has-visual morning-card" href="/sweep">
+  <div class="visual"><span class="morning-big">{{ fmt.num(b.found) }}<small>found{% if b.new %} · {{ fmt.num(b.new) }} new{% endif %}</small></span></div>
+  <div class="body"><div class="head"><span class="brief-tag">Sweep</span></div>
+  {% if b.rows %}<p class="headline">{{ b.rows[0].title }}</p>{% if b.rows[0].money %}<p class="meta"><span>{{ b.rows[0].money }}</span></p>{% endif %}{% endif %}
+  <p class="meta"><span class="link">Open Sweep →</span></p></div>
+</a>
+{%- endmacro %}
+
 {% macro brief_more(m) -%}
 <a class="brief-card brief-more" href="{{ m.href }}"><b>+ {{ fmt.num(m.n) }} more briefs</b>
   <span>{% if m.need %}{{ fmt.num(m.need) }} need{{ 's' if m.need == 1 else '' }} you{% else %}All quiet{% endif %}</span><span class="link">All briefs →</span></a>

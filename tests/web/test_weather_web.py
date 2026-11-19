@@ -55,7 +55,7 @@ def test_home_shows_the_first_briefs_sunrise(night):  # noqa: F811
     w = _stored(svc, cid, rid)
     assert w["scene"] == "sunrise" and w["file"] == "13-sunrise"
     page = env.client.get(h + "/home").text
-    assert 'class="weather wx-sunrise"' in page
+    assert 'class="weather wx-sunrise is-lead"' in page  # Home's lead band (calm UI)
     # above the briefs
     assert page.index('class="weather ') < page.index('aria-label="Briefs"')
     assert "Today · First brief" in page and w["line"] in page
@@ -79,7 +79,7 @@ def test_the_next_night_picks_its_scene_and_replays(night):  # noqa: F811
     w = _stored(svc, cid, rid)
     assert w["scene"] != "sunrise" and w["scene"] in weather.SCENES
     page = env.client.get(h + "/home").text
-    assert f'class="weather wx-{w["scene"]}"' in page
+    assert f'class="weather wx-{w["scene"]} is-lead"' in page  # Home's lead band (calm UI)
     assert f"Today · {w['label']}" in page
     with tenant_scope(cid):
         assert replay(ctx, rid).ok

@@ -5,21 +5,23 @@
 {% from "components/buttons.html" import button, link %}
 {% from "components/forms.html" import text_input, select %}
 {% from "components/panels.html" import pane, pane_title %}
-{% from "components/sweep.html" import stat, finding_row, detector_table, detectors_strip, reasons, kv, status_pill, held_rows, pattern_groups, rows_table, question_box, runs_menu, panel_head, code, hold_form, overlay %}
+{% from "components/sweep.html" import stat, kpi_stat, finding_row, detector_table, detectors_strip, reasons, kv, status_pill, held_rows, pattern_groups, rows_table, question_box, runs_menu, panel_head, code, hold_form, overlay %}
 {% block title %}Sweep · {{ company.name }}{% endblock %}
 {% block crumb %}Sweep{% endblock %}
 {% block crumb_after %}{% call el("p", "crumbs") %}{% call el("span", "crumb-sep") %}/{% endcall %}<span>{{ fmt.date_short(summary.date) }} {{ summary.date.year }}</span>{% endcall %}{% endblock %}
-{% block actions %}{{ runs_menu(runs, run) }}{% endblock %}
+{% block actions %}{% call el("div", layout="flex items-center gap-8") %}{{ button("History", href="/sweep/history") }}{{ runs_menu(runs, run) }}{% endcall %}{% endblock %}
 {% block main %}
 {% if run and not request.query_params.get("run") %}<span data-run="{{ run }}" hidden></span>{% endif %}
 {{ page_title("Sweep", aside=fmt.date_short(summary.date) ~ " " ~ summary.date.year) }}
 <div class="flex flex-col gap-24">
 
-{{ detectors_strip(strip, strip_info) }}
-<div class="grid grid-cols-1 md:grid-cols-3 gap-16">
-  {{ stat(fmt.num(history.ok) ~ " / " ~ fmt.num(history.all), "metrics with enough history", boxed=True) }}
-  {{ stat(fmt.num(summary.tests), ("tests tonight · at most 1 in " ~ summary.chance ~ " could be chance") if summary.chance else "tests tonight", boxed=True, tip="False discovery rate " ~ summary.fdr ~ " (Benjamini–Hochberg), across every test of the night.", tip_id="sweep-chance") }}
-  {{ stat(fmt.num(findings | length) ~ " open · " ~ fmt.num(rv.counts.new) ~ " new tonight", "findings", boxed=True) }}
+{{ detectors_strip(strip, strip_info, when) }}
+<div class="grid grid-cols-1 md:grid-cols-3 gap-24">
+  {{ kpi_stat("Metrics with enough history", fmt.num(history.ok) ~ " / " ~ fmt.num(history.all)) }}
+  {{ kpi_stat("Tests " ~ when, fmt.num(summary.tests), ("at most 1 in " ~ summary.chance ~ " could be chance") if summary.chance else None, tip="False discovery rate " ~ summary.fdr ~ " (Benjamini–Hochberg), across every test of the night.", tip_id="sweep-chance") }}
+  {# owner, 19 Nov 2026: what's new is the figure, the day in the label as Tests; open (every
+     finding still unresolved, from this run or earlier) on the line under it #}
+  {{ kpi_stat("Findings " ~ when, (fmt.num(rv.counts.new) if rv.counts.new else "None") ~ " new", fmt.num(findings | length) ~ " open in total") }}
 </div>
 
 {{ tabs_bar(tabs, tabs[["findings", "watching", "suppressed", "resolved"].index(tab)][0]) }}
@@ -31,7 +33,7 @@
   {% if findings %}
   {% call el("div", layout="flex flex-col") %}{% for c in findings %}{{ finding_row(c, run) }}{% endfor %}{% endcall %}
   {% else %}
-  {% call el("p", "hint") %}Nothing unusual found tonight.{% endcall %}
+  {% call el("p", "hint") %}Nothing unusual found {{ when }}.{% endcall %}
   {% endif %}
   </div>
   {{ detector_table(detectors) }}
@@ -63,7 +65,7 @@
     {% endif %}
     <div class="flex flex-col gap-8">{% call el("p", "label-caps") %}Suppressed by your Business Model · {{ fmt.num(suppressed.by_ontology | length) }}{% endcall %}
       {% if suppressed.by_ontology %}{{ pattern_groups(suppressed.by_ontology) }}
-      {% else %}{% call el("p", "hint") %}Nothing matched a known pattern tonight.{% endcall %}{% endif %}
+      {% else %}{% call el("p", "hint") %}Nothing matched a known pattern {{ when }}.{% endcall %}{% endif %}
     </div>
     {% if suppressed.proposals %}
     <div class="flex flex-col gap-8">{% call el("p", "label-caps") %}Proposed for your Business Model · {{ fmt.num(suppressed.proposals | length) }}{% endcall %}

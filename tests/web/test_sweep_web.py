@@ -148,10 +148,11 @@ def test_the_overview_reads_one_run(night):
         assert html.escape(sweep_text.CATCHES[r["key"]], quote=False) in card
         assert r["status"] in card
         if r["kind"] == "on":
-            assert f"Tonight: {html.escape(r['result'], quote=False)}" in card
+            assert f"Today: {html.escape(r['result'], quote=False)}" in card
     # the three numbers
-    assert "metrics with enough history" in page and f"{sw['tests']}" in page
-    assert f"{sw['findings']} open · {sw['new']} new tonight" in page
+    assert "Metrics with enough history" in page and f"{sw['tests']}" in page
+    assert "Findings today" in page and f"{sw['new']} new</span>" in page
+    assert f"{sw['findings']} open in total" in page
     # every open finding, one column, in the brief ranking's order (money, then urgency)
     assert sw["findings"] == 8 and page.count('<article class="finding-row"') == 8
     titles = re.findall(r'class="finding-title" href="[^"]+">([^<]+)<', page)
@@ -334,7 +335,7 @@ def test_the_quiet_night_lists_what_each_detector_checked(night):
     env.clock.t += dt.timedelta(days=1)
     page = env.client.get(h + "/sweep").text
     # one page for every night (M15.2): the open findings, then what each detector did
-    assert " open · 0 new tonight" in page and "Open · day 2" in page
+    assert " open in total" in page and "None new</span>" in page and "Open · day 2" in page
     assert "Forecast breach" in page and 'id="detectors"' in page  # M7
 
 
@@ -367,11 +368,12 @@ def test_first_days(env: Env, sample, need_sources):  # noqa: F811
     # M15.7b: a partly running detector's card says what it covered and what it is waiting on
     partly = re.findall(r'<li class="det partly(?: end)?"[^>]*data-key="([a-z_]+)"', page)
     cards = [_det_card(page, k) for k in partly]
-    assert cards and all("Partly" in c and "Tonight: " in c and " of " in c for c in cards)
+    assert cards and all("Partly" in c and "Today: " in c and " of " in c for c in cards)
     assert any("Still building history" in c or "still building history" in c for c in cards)
     assert (
-        "metrics with enough history" in page
-        and "tests tonight · at most 1 in 100 could be chance" in page
+        "Metrics with enough history" in page
+        and "Tests today" in page
+        and "at most 1 in 100 could be chance" in page
     )
     assert "False discovery rate 1%" in page  # the term, behind the (i)
     assert "Partly" in page and "Running" in page

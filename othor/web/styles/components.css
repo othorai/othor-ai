@@ -576,6 +576,9 @@ button.link-muted:disabled { color: var(--color-muted-2); cursor: default; text-
   .table.stack tr { display: block; padding: 10px 14px; border-bottom: 1px solid var(--color-row); }
   .table.stack td { display: block; height: auto; border: 0; padding: 3px 0; }
   .table.stack td:first-child, .table.flush.stack td:first-child { padding-left: 0; }
+  /* a cell with data-label shows its column's name on a phone (Sweep history, 0.28.1) */
+  .table.stack td[data-label] { display: flex; justify-content: space-between; gap: 12px; text-align: right; }
+  .table.stack td[data-label]::before { content: attr(data-label); color: var(--color-muted); font-size: var(--text-meta); text-align: left; }
   .section-head { flex-wrap: wrap; row-gap: 4px; }  /* the hint goes under the title, not beside it */
   .app-header a, .app-header .btn { white-space: nowrap; }
   .hide-phone { display: none; }
@@ -2288,3 +2291,93 @@ form:has(> .fold[open]) > .fold-hide { display: none; }
 .oc .oc-badge.changed { background: var(--color-ink-2); color: var(--color-white); }
 .oc a:not(.btn), .oc button.link { color: var(--color-ink-2); text-decoration: underline; text-underline-offset: 2px; }
 .oc-preview svg { max-width: 100%; height: auto; }  /* the move-together chart fits a phone */
+
+/* ── Calm UI (owner, 19 Nov 2026; docs/plans/calm-ui.md) ─────────────────────────────────────────
+   The samples page's principles on every screen: one accent used for meaning, one card shape,
+   hairline lists (no grey bands), one night band per page at most. Look only; no copy or
+   behaviour changes. */
+
+/* tables: no grey header band; caps labels over a hairline */
+.table th { background: transparent; height: 34px; border-bottom: 1px solid var(--color-rule); font-size: var(--text-label);
+  font-weight: 600; letter-spacing: var(--tracking-caps); text-transform: uppercase; }
+.table tr.is-hover td, .table tbody tr:hover td { background: var(--color-accent-tint-2); }
+
+/* one card shape: 12 px radius, a hairline, a soft lift where a card opens something */
+.card, .brief-card, .wx-week { border-color: var(--color-rule); border-radius: var(--radius-12); }
+a.brief-card, a.wx-week { transition: border-color var(--dur-control) var(--ease-out), box-shadow var(--dur-control) var(--ease-out); }
+a.brief-card:hover, a.brief-card:focus-visible, a.wx-week:hover { border-color: var(--color-accent); box-shadow: 0 8px 24px -12px rgba(15, 23, 42, 0.18); }
+.brief-card.has-visual .visual { background: var(--color-surface); border-bottom: 0; margin: 12px 12px 0; border-radius: var(--radius-8); }
+
+/* Sweep's strip: white with a hairline, not a tinted box (the colour stays on the bars) */
+.checks-strip { background: var(--color-bg); border-color: var(--color-rule); }
+
+/* Home: the lead on the night band (the page's one big moment) */
+.weather.is-lead { --wx-text: #E8F8FF; color: var(--wx-text);
+  background: radial-gradient(60% 120% at 0% 0%, rgba(0, 255, 153, 0.16), transparent 60%),
+    radial-gradient(50% 120% at 100% 0%, rgba(44, 202, 255, 0.18), transparent 60%), var(--color-site-night); }
+.weather.is-lead .weather-body { align-items: flex-end; padding: 30px 32px; }
+.weather.is-lead .weather-icon { align-self: flex-start; color: var(--wx-panel); }
+.weather.is-lead .weather-kicker { color: var(--wx-panel); }
+.weather-headline { margin: 0; font-size: var(--text-lead); font-weight: 600; line-height: var(--leading-title); letter-spacing: var(--tracking-display); }
+.weather-sub { margin: 10px 0 0; font-size: var(--text-body); color: #9FB3C8; }
+.weather.is-lead .weather-text { flex: 1; max-width: 76ch; }
+.weather.is-lead .weather-why { color: #9FD8EE; }
+.weather-open { flex: none; }
+@media (max-width: 639px) {
+  .weather.is-lead .weather-body { flex-direction: column; align-items: flex-start; padding: 22px 20px; }
+  .weather-headline { font-size: var(--text-page); }
+}
+
+/* "This morning": Sweep's card, the brief cards' shape */
+.morning-card .visual { justify-content: center; }
+.morning-big { font-size: var(--text-big); font-weight: 600; letter-spacing: var(--tracking-display); }
+.morning-big small { margin-left: 8px; font-size: var(--text-row); font-weight: 500; letter-spacing: 0; color: var(--color-muted); }
+
+/* onboarding and boxed lists: no grey footer band; the drafting list as hairline rows, no box */
+.box-foot:not(.warn-foot) { background: transparent; }
+.card.progress-list { border: 0; border-radius: 0; border-top: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); }
+.card.progress-list .progress-row { padding-left: 0; padding-right: 0; }
+.card.progress-list .box-foot { padding-left: 0; }
+
+/* buttons as the calm Home preview renders them (owner, 19 Nov 2026: "really liked the buttons
+   in this", measured): 38 px tall, 16 px sides, 10 px corners, 16 px Inter; the blue and the AI
+   buttons regular weight with no border, plain buttons 500 with a hairline */
+.btn { height: 38px; padding: 0 16px; border-radius: 10px; gap: 8px; font-size: var(--text-button); font-weight: 500; border-color: var(--color-rule); }
+.btn.lg { height: 42px; padding: 0 20px; }
+.btn.sm { height: 30px; padding: 0 12px; border-radius: var(--radius-8); font-size: var(--text-row); }
+.btn.primary, .btn.ai { font-weight: 400; color: var(--color-on-accent); }
+.btn.primary { border-color: transparent; }
+/* the top bar's buttons stay compact, as the preview's top bar (34 px, row size) */
+.app-header .btn { height: 34px; padding: 0 12px; font-size: var(--text-row); }
+
+/* backgrounds (owner, 19 Nov 2026, previews): the menu keeps a small glow behind the logo only,
+   then white; onboarding sits on white with the same small glow at the top (the sign-in pages
+   keep theirs) and its card on the calm hairline */
+.side { background: radial-gradient(260px 150px at 36px -24px, rgba(44, 202, 255, 0.16), rgba(0, 255, 153, 0.05) 45%, transparent 75%), var(--color-bg); }
+body:has(> .onb-header) { background: radial-gradient(1000px 240px at 50% -80px, rgba(44, 202, 255, 0.14), rgba(0, 255, 153, 0.04) 50%, transparent 75%), var(--color-bg); background-attachment: scroll; }
+.onb-main { border-color: var(--color-rule); }
+/* sign-in pages (owner, 19 Nov 2026, previews): white with the same small glow at the top as onboarding */
+.auth { background: radial-gradient(1000px 240px at 50% -80px, rgba(44, 202, 255, 0.14), rgba(0, 255, 153, 0.04) 50%, transparent 75%), var(--color-bg); }
+
+/* Sweep's strip and numbers (owner, 19 Nov 2026: "the numbers in boxes are not clickable but
+   fyi: remove the borders, the numbers below and the description above"): the strip as a plain
+   section, thinner square bars; the numbers with no box, label above, figure below */
+.checks-strip { background: transparent; border: 0; border-radius: 0; padding: 0; gap: 14px; }
+.det-bar { height: 6px; }
+.sweep-kpi { display: flex; flex-direction: column; gap: 6px; padding: 2px 0 2px 20px; border-left: 1px solid var(--color-rule); }
+.sweep-kpi:first-child { padding-left: 0; border-left: 0; }
+.sweep-kpi .l { font-size: var(--text-label); font-weight: 600; letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-muted); }
+.sweep-kpi .v { font-size: var(--text-big); font-weight: 600; letter-spacing: var(--tracking-display); line-height: var(--leading-title); color: var(--color-ink); }
+.sweep-kpi .s { font-size: var(--text-meta); color: var(--color-muted); display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 767px) { .sweep-kpi { padding-left: 0; border-left: 0; } }
+/* the same for every number shown for information (owner, 19 Nov 2026: "apply that type style
+   for all KPI cards"): AI usage, Big Picture's tiles; a tile that opens something stays a card */
+.use-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+@media (max-width: 767px) { .use-stats { grid-template-columns: 1fr; } }
+.bp-tile { border: 0; border-left: 1px solid var(--color-rule); border-radius: 0; padding: 2px 0 2px 18px; background: transparent; }
+.bp-tile:first-child { border-left: 0; padding-left: 0; }
+.bp-tile-label { font-size: var(--text-label); font-weight: 600; letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-muted); }
+.bp-tile-value { font-size: var(--text-big); letter-spacing: var(--tracking-display); }
+.sweep-stat.boxed { border: 0; padding: 0; }
+.archive-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+@media (max-width: 767px) { .archive-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

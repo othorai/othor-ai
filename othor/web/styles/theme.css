@@ -113,6 +113,7 @@
   --text-label: 11px;   /* caps labels and section titles (600, tracking-caps) */
   --text-meta: 12px;    /* secondary lines, hints, meta */
   --text-row: 14px;     /* rows, tables, controls, dense text */
+  --text-button: 16px; /* buttons, as the calm Home preview (owner, 19 Nov 2026: "really liked the buttons") */
   --text-body: 15px;    /* reading text */
   --text-card: 17px;    /* card, section and panel titles */
   --text-page: 20px;    /* page titles */

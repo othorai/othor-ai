@@ -5,7 +5,7 @@
 {% from "components/blocks.html" import banner, toast, empty_state, page_title %}
 {% from "components/panels.html" import DRAFT_NOTE, draft_note %}
 {% from "components/forms.html" import action_form, text_area %}
-{% from "components/home.html" import home_card, question_row, recent_row, qp_steps, qp_why, qp_pick, qp_nav, qp_found, qp_decided, confidence_pill, checks_strip, section_label, brief_more, sweep_box, sources_table, health_button, lights_panel, trial_chip, intel_button %}
+{% from "components/home.html" import home_card, question_row, recent_row, qp_steps, qp_why, qp_pick, qp_nav, qp_found, qp_decided, confidence_pill, checks_strip, section_label, brief_more, sweep_box, sweep_card, sources_table, health_button, lights_panel, trial_chip, intel_button %}
 {% from "components/brief.html" import nb_head, nb_ai_tag, nb_busy %}
 {% from "components/ontology.html" import record_card %}
 {% from "components/weather.html" import weather_banner, weather_outlook, forecast_panel, picked_panel %}
@@ -35,16 +35,17 @@
 
   {# #81 (owner, 18 Nov 2026): today's state stays at the top; the four week cards go under the
      briefs, titled Next 4 weeks #}
-  {% if weather %}{{ weather_banner(weather) }}{% endif %}
+  {% if weather %}{{ weather_banner(weather, lead=briefs.cards[0] if briefs.cards else None) }}{% endif %}
 
   {{ slot("home.before_briefs") }}
   {# design B2 (owner, 11 Nov 2026): briefs as cards, at most two rows; Sweep as one box below #}
   {% if briefs.cards %}
   {% call el("section", attrs={"aria-label": "Briefs"}) %}
-    {{ section_label("Briefs · " ~ fmt.num(briefs.cards | length + briefs.rest | length)) }}
+    {{ section_label("This morning") }}
     {% call el("div", "brief-cards") %}
       {% for c in briefs.cards %}{{ home_card(c.name ~ " brief" if not c.name.lower().endswith("brief") else c.name, c.title, c.meta, "/brief/" ~ c.id, c.flag, chart_spec=c.chart, visual=True, count=c.count, quiet=("Quiet day" if c.quiet else "Building history to chart")) }}{% endfor %}
       {% if briefs.more %}{{ brief_more(briefs.more) }}{% endif %}
+      {% if swept %}{{ sweep_card(swept) }}{% endif %}
     {% endcall %}
   {% endcall %}
   {% endif %}

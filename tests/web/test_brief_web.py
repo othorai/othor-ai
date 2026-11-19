@@ -163,8 +163,9 @@ def test_the_archive_lists_issues_and_why_a_night_failed(night):  # noqa: F811
         "Sun 1 Nov",
         "failed · not made",
         "Why it failed",
-        "runs OK · last 31 days",
-        "findings promoted into briefs",
+        "Runs OK",
+        "last 31 days",
+        "Promoted into briefs",
         "no replay checked yet",
     ):
         assert text in page, text

@@ -5,7 +5,7 @@
 {% from "components/buttons.html" import button, link, link_menu, menu_link %}
 {% from "components/forms.html" import select %}
 {% from "components/panels.html" import pane, pane_title %}
-{% from "components/sweep.html" import stat, overlay, kv, run_phases %}
+{% from "components/sweep.html" import stat, kpi_stat, overlay, kv, run_phases %}
 {% block title %}Archive · Morning Brief · {{ company.name }}{% endblock %}
 {% block crumb %}Morning Brief{% endblock %}
 {% block crumb_after %}{% call el("p", "crumbs", layout="hidden md:flex") %}{% call el("span", "crumb-sep") %}/{% endcall %}<span>Archive</span>{% endcall %}{% endblock %}
@@ -24,10 +24,11 @@
   {% if month_tabs %}{{ tabs_bar(month_tabs, month_on) }}{% endif %}
 
   {% if any_runs %}{% call el("div", "archive-stats") %}
-    {{ stat(fmt.num(stats.briefs), "briefs · " ~ fmt.num(stats.brief_kinds) ~ " brief" ~ ("s" if stats.brief_kinds != 1 else ""), boxed=True) }}
-    {{ stat(fmt.num(stats.runs_ok) ~ " / " ~ fmt.num(stats.runs), "runs OK · last 31 days", boxed=True) }}
-    {{ stat(fmt.num(stats.promoted), "findings promoted into briefs", boxed=True) }}
-    {{ stat((fmt.num(stats.identical) ~ " / " ~ fmt.num(stats.replayed)) if stats.replayed else "—", "replayed identical" if stats.replayed else "no replay checked yet", boxed=True) }}
+    {# calm UI (owner, 19 Nov 2026): numbers for information, the label above, the figure below #}
+    {{ kpi_stat("Briefs", fmt.num(stats.briefs), fmt.num(stats.brief_kinds) ~ " brief" ~ ("s" if stats.brief_kinds != 1 else "")) }}
+    {{ kpi_stat("Runs OK", fmt.num(stats.runs_ok) ~ " / " ~ fmt.num(stats.runs), "last 31 days") }}
+    {{ kpi_stat("Promoted into briefs", fmt.num(stats.promoted), "findings") }}
+    {{ kpi_stat("Replayed identical", (fmt.num(stats.identical) ~ " / " ~ fmt.num(stats.replayed)) if stats.replayed else "—", None if stats.replayed else "no replay checked yet") }}
   {% endcall %}{% endif %}
 
   {% if rows %}

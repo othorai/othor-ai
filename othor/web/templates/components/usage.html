@@ -4,7 +4,7 @@
 {% from "components/ui.html" import el %}
 {% from "components/forms.html" import select %}
 {% from "components/blocks.html" import empty_state %}
-{% from "components/sweep.html" import stat %}
+{% from "components/sweep.html" import stat, kpi_stat %}
 
 {% macro usage_filters(u) -%}
 <form class="use-filters" method="get" action="/usage" hx-get="/usage" hx-trigger="change" hx-target="#usage-body" hx-select="#usage-body" hx-swap="outerHTML" hx-push-url="true">
@@ -25,10 +25,11 @@
     <div class="use-trend-axis"><span>{{ fmt.day_month(u.trend_from) }}</span><span>{{ fmt.day_month(u.trend_to) }}</span></div>
   </section>
   <div class="use-stats">
-    {{ stat(fmt.num(t.tokens), "tokens · " ~ fmt.num(t.tokens_in) ~ " in · " ~ fmt.num(t.tokens_out) ~ " out", boxed=True) }}
-    {{ stat(fmt.num(t.calls), "calls" if t.calls != 1 else "call", boxed=True) }}
-    {% if u.cap %}{{ stat(fmt.num(u.cap.used) ~ " of " ~ fmt.count_short(u.cap.limit), "tokens this month · your plan's AI allowance", boxed=True) }}{% endif %}
-    {{ stat(fmt.num(u.nights), ("nightly run" if u.nights == 1 else "nightly runs") ~ " · none uses a model", boxed=True) }}
+    {# calm UI (owner, 19 Nov 2026): numbers for information, the label above, the figure below #}
+    {{ kpi_stat("Tokens", fmt.num(t.tokens), fmt.num(t.tokens_in) ~ " in · " ~ fmt.num(t.tokens_out) ~ " out") }}
+    {{ kpi_stat("Calls" if t.calls != 1 else "Call", fmt.num(t.calls)) }}
+    {% if u.cap %}{{ kpi_stat("Tokens this month", fmt.num(u.cap.used) ~ " of " ~ fmt.count_short(u.cap.limit), "your plan's AI allowance") }}{% endif %}
+    {{ kpi_stat("Nightly runs" if u.nights != 1 else "Nightly run", fmt.num(u.nights), "none uses a model") }}
   </div>
   <p class="use-note">Numbers in your briefs never come from a model. Only setup drafting and optional brief wording use one.</p>
   {% if u.rows %}

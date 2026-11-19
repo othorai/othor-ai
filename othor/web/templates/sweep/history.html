@@ -1,0 +1,51 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# Sweep history (0.28.1, owner 19 Nov 2026): every night since the first. A chart of the findings
+   open each night, then the month's nights, newest first, each opening that night's Sweep. All
+   from what each night stored; no source read, no model. #}
+{% extends "shells/app.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import tabs as tabs_bar, empty_state, page_title %}
+{% from "components/buttons.html" import button, link %}
+{% block title %}History · Sweep · {{ company.name }}{% endblock %}
+{% block crumb %}Sweep{% endblock %}
+{% block crumb_after %}{% call el("p", "crumbs", layout="hidden md:flex") %}{% call el("span", "crumb-sep") %}/{% endcall %}<span>History</span>{% endcall %}{% endblock %}
+{% block actions %}{{ button("Back to Sweep", href="/sweep") }}{% endblock %}
+{% block main %}
+{{ page_title("Sweep history", note=("Every night since " ~ fmt.day_month(first) ~ " " ~ first.year) if first else None) }}
+<div class="flex flex-col gap-24">
+  {% if chart_spec %}
+  {% call el("section", "use-trend", attrs={"aria-label": "Findings open each night"}) %}
+    {% call el("div", "use-trend-head") %}{% call el("p", "caps-title") %}Findings open each night{% endcall %}{% endcall %}
+    {% call el("div", "use-trend-chart", attrs={"role": "img", "aria-label": chart_spec.alt_text}) %}{{ chart(chart_spec, 1040, 120) }}{% endcall %}
+  {% endcall %}
+  {% elif rows %}{% call el("p", "hint") %}The chart of findings each night starts after a week of nights.{% endcall %}
+  {% endif %}
+
+  {% if month_tabs %}{{ tabs_bar(month_tabs, month_on) }}{% endif %}
+
+  {% if rows %}
+  {% call el("div", layout="flex flex-col gap-8") %}
+    {% if line %}{% call el("p", "hint") %}{{ line }}{% endcall %}{% endif %}
+    {% call el("div", "table-wrap") %}{% call el("table", "table flush stack") %}<thead><tr><th>Night</th><th>Run</th>{% call el("th", "num") %}Tests{% endcall %}{% call el("th", "num") %}New{% endcall %}{% call el("th", "num") %}Open{% endcall %}{% call el("th", "num") %}Resolved{% endcall %}{% call el("th", "num") %}At stake{% endcall %}<th>Replays</th><th></th></tr></thead><tbody>
+    {% for r in rows %}<tr>
+      <td>{{ fmt.date_short(r.date) }}</td>
+      <td>#{{ "%04d" | format(r.number) }}{% if r.kind %} · {{ r.kind }}{% endif %}</td>
+      {% if r.done %}
+      {% call el("td", "num", attrs={"data-label": "Tests"}) %}{{ fmt.num(r.tests) }}{% endcall %}
+      {% call el("td", "num", attrs={"data-label": "New"}) %}{{ fmt.num(r.new) }}{% endcall %}
+      {% call el("td", "num", attrs={"data-label": "Open"}) %}{{ fmt.num(r.open) }}{% endcall %}
+      {% call el("td", "num", attrs={"data-label": "Resolved"}) %}{{ fmt.num(r.resolved) }}{% endcall %}
+      {% call el("td", "num", attrs={"data-label": "At stake"}) %}{{ r.money }}{% endcall %}
+      <td data-label="Replays">{{ r.replays }}</td>
+      <td>{{ link("Open", r.href) }}</td>
+      {% else %}
+      {% call el("td", "hint", attrs={"colspan": "7"}) %}Didn’t finish{% endcall %}
+      {% endif %}
+    </tr>{% endfor %}
+    </tbody>{% endcall %}{% endcall %}
+  {% endcall %}
+  {% else %}
+  {% call el("div", "card board") %}{{ empty_state(None, "Sweep history starts after the first nightly run.", "Each night’s Sweep is kept here, a month at a time.") }}{% endcall %}
+  {% endif %}
+</div>
+{% endblock %}

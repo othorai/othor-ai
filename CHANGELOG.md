@@ -6,6 +6,19 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.28.1] - 2026-11-19
+
+### Added
+- Sweep history (`/sweep/history`): every night since the first, a month at a time, from what
+  each night stored (tests, new, open, resolved, money at stake, replay result); any past run
+  opens at `/sweep?run=N`, not only the last seven.
+
+### Changed
+- A calmer look on every screen: tables without the grey header band, one card shape, roomier
+  buttons (`--text-button`), a quieter side menu, onboarding and sign-in; numbers shown for
+  information read label first with no box; Home leads with the morning's brief on one dark band.
+- Sweep's words of time follow the run being read ("today", "yesterday" or its date).
+
 ## [0.28.0] - 2026-11-19
 
 ### Added
