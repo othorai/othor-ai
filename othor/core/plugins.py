@@ -124,6 +124,9 @@ class Plugin:
     # task groups). A core path can't be taken.
     asgi: tuple[tuple[str, Any], ...] = ()
     lifespans: tuple[Callable[[], Any], ...] = ()
+    # 0.29: Ask subjects of its own ("ask:discover:collections"): prefix -> about(session,
+    # subject) returning {"title", "about" (names only, for the model), "opening"} or None
+    ask_subjects: tuple[tuple[str, Callable[[Any, str], dict[str, Any] | None]], ...] = ()
 
 
 _loaded: tuple[Plugin, ...] | None = None
@@ -215,6 +218,20 @@ def loaded() -> tuple[Plugin, ...]:
 
 def jobs() -> dict[str, Callable[..., Any]]:
     return {k: v for p in loaded() for k, v in p.jobs.items()}
+
+
+def ask_about(session: Any, subject: str) -> dict[str, Any] | None:
+    """A plug-in's Ask subject (0.29): its title, opening and what the model may know (names
+    only); None when no plug-in owns the subject."""
+    for p in loaded():
+        for prefix, about in p.ask_subjects:
+            if subject.startswith(prefix):
+                return about(session, subject)
+    return None
+
+
+def is_ask_subject(subject: str) -> bool:
+    return any(subject.startswith(prefix) for p in loaded() for prefix, _ in p.ask_subjects)
 
 
 def nav(group: str) -> tuple[NavItem, ...]:

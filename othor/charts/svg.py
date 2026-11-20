@@ -396,6 +396,8 @@ def _frame(
     left, right = (8, 34) if right_axis else (34, 8)
     top, bottom = 18, 20
     allpts = [p for s in spec.series for p in s.points]
+    if spec.band:  # 0.29: a forecast band reaches past the last actual (what's ahead)
+        allpts += [p for p in spec.band.upper if _ord(p[0]) > max(_ord(d) for d, _ in allpts)]
     xs = _Scale(min(_ord(d) for d, _ in allpts), max(_ord(d) for d, _ in allpts), left, w - right)
     lo, hi = _bounds(spec)
     ys = _Scale(lo, hi, h - bottom, top)
@@ -711,6 +713,8 @@ def _waterfall(spec: ChartSpec, w: int, h: int) -> str:
     levels = [y for a, b in spans for y in (a, b) if not (a == 0.0 and y == 0.0)]
     lo, hi = min(levels), max(levels)
     base = max(0.0, lo - (hi - lo) * 0.6) if hi > lo else 0.0
+    if spec.y.zero_based:  # 0.29: bars from zero (a dashboard's roll-forward)
+        base = 0.0
     # room above the tallest bar for its value, the unit and the axis note, so none overlap
     ys = _Scale(base, hi, h - 26, 34 if base > 0 else 22)
     # the unit first at the left, then the axis note at the right (it moves down, never over the
@@ -984,6 +988,174 @@ def _range_bar(spec: ChartSpec, w: int, h: int) -> str:
     return svg.done()
 
 
+def _shades(spec: ChartSpec) -> list[tuple[str, str]]:
+    """Each series' colour and opacity: its role's colour, lighter for the earlier series of the
+    same role (receivables by age: two light-to-strong cyans, then two light-to-strong reds)."""
+    out = []
+    for i, sr in enumerate(spec.series):
+        same = [x for x in spec.series if x.role == sr.role]
+        k = sum(1 for x in spec.series[:i] if x.role == sr.role)
+        out.append((ROLE[sr.role], _f(0.4 + 0.6 * (k + 1) / len(same)) if len(same) > 1 else "1"))
+    return out
+
+
+def _stacked_share(spec: ChartSpec, w: int, h: int) -> str:
+    """0.29: each period's parts stacked to 100%, bottom first (receivables by age, month ends).
+    The shares are computed (they add to 1 by largest remainder); a `point` annotation's label
+    sits above its period's bar in its role's colour."""
+    svg = _Svg(w, h, spec)
+    periods = [d for d, _ in spec.series[0].points]
+    top, bottom = 18, 20
+    col = (w - 8) / max(len(periods), 1)
+    bw = col * 0.64
+    shades = _shades(spec)
+    for i, d in enumerate(periods):
+        x = 4 + col * i + (col - bw) / 2
+        acc = 0.0
+        for sr, (c, o) in zip(spec.series, shades, strict=True):
+            v = dict(sr.points).get(d, 0.0)
+            hh = (h - top - bottom) * v
+            y = h - bottom - acc - hh
+            svg.add(
+                f'<rect x="{_f(x)}" y="{_f(y)}" width="{_f(bw)}" height="{_f(hh)}" fill="{c}" '
+                f'fill-opacity="{o}"/>'
+            )
+            acc += hh
+    prev: Box | None = None
+    for i, d in reversed(list(enumerate(periods))):  # the last month always; then every other
+        x = 4 + col * i + col / 2
+        label = f"{dt.date.fromisoformat(d):%b}"
+        box = _box(x, h - 5, label, 10, "middle")
+        if prev is not None and box[2] > prev[0] - 4:
+            continue
+        prev = box
+        svg.text(x, h - 5, label, anchor="middle")
+    for a in spec.annotations:
+        if a.type == "point" and a.at in periods and a.label:
+            i = periods.index(a.at)
+            c = ROLE[a.role or "negative"]
+            svg.text(
+                4 + col * i + col / 2,
+                top - 6,
+                a.label,
+                size=10,
+                fill=c,
+                anchor="middle",
+                weight=600,
+            )
+    return svg.done()
+
+
+def _heatmap(spec: ChartSpec, w: int, h: int) -> str:
+    """0.29: rows (series, their names the row labels) by columns (the first row's dates), each
+    cell darker the larger its value, in the positive colour. Every third column is dated."""
+    svg = _Svg(w, h, spec)
+    cols = [d for d, _ in spec.series[0].points]
+    left, top, gap = 36, 16, 3
+    hi = max((v for sr in spec.series for _, v in sr.points), default=0.0) or 1.0
+    cw = (w - left) / max(len(cols), 1)
+    rh = (h - top) / max(len(spec.series), 1)
+    c = ROLE["positive"]
+    for j, d in enumerate(cols):
+        if j % 3 == 0:
+            day = dt.date.fromisoformat(d)
+            svg.text(left + cw * j + 1, 11, f"{day.day} {day:%b}", size=10)
+    for i, sr in enumerate(spec.series):
+        y = top + rh * i
+        svg.text(0, y + rh / 2 + 4, sr.name, size=11, fill=INK)
+        vals = dict(sr.points)
+        for j, d in enumerate(cols):
+            v = vals.get(d)
+            if v is None:
+                continue
+            o = _f(0.08 + 0.85 * max(v, 0.0) / hi)
+            svg.add(
+                f'<rect x="{_f(left + cw * j)}" y="{_f(y)}" width="{_f(cw - gap)}" '
+                f'height="{_f(rh - gap)}" rx="4" fill="{c}" fill-opacity="{o}"/>'
+            )
+    return svg.done()
+
+
+def _bullet(spec: ChartSpec, w: int, h: int) -> str:
+    """0.29: a goal's track (its bad side tinted), the likely range, the heading value as a dark
+    dot labelled above, the goal as a line labelled below. Labels are the categories' text."""
+    svg = _Svg(w, h, spec)
+    cat = {c.key: c for c in spec.categories}
+    lo, hi, mid = cat["low"], cat["high"], cat["expected"]
+    bad_above = cat["bad_above"].value >= 0.5 if "bad_above" in cat else True
+    goal = next(
+        (a for a in spec.annotations if a.type == "threshold" and a.value is not None), None
+    )
+    vals = [lo.value, hi.value, mid.value] + (
+        [goal.value] if goal and goal.value is not None else []
+    )
+    a, b = min(vals), max(vals)
+    pad = (b - a) * 0.35 or abs(a) * 0.1 or 1.0
+    xs = _Scale(a - pad, b + pad, 4, w - 4)
+    ty = h / 2 - 2
+    svg.add(f'<rect x="4" y="{_f(ty - 7)}" width="{w - 8}" height="14" rx="3" fill="{GRID}"/>')
+    if goal is not None and goal.value is not None:
+        gx = xs(goal.value)
+        x0, x1 = (gx, w - 4.0) if bad_above else (4.0, gx)
+        svg.add(
+            f'<rect x="{_f(x0)}" y="{_f(ty - 7)}" width="{_f(max(x1 - x0, 0))}" height="14" '
+            f'rx="3" fill="{ROLE["negative"]}" fill-opacity="0.14"/>'
+        )
+    x0, x1 = xs(lo.value), xs(hi.value)
+    svg.add(
+        f'<rect x="{_f(x0)}" y="{_f(ty - 3)}" width="{_f(max(x1 - x0, 2))}" height="6" rx="3" '
+        f'fill="{ROLE["positive"]}" fill-opacity="0.6"/>'
+    )
+    if goal is not None and goal.value is not None:
+        gx = xs(goal.value)
+        svg.add(
+            f'<line x1="{_f(gx)}" x2="{_f(gx)}" y1="{_f(ty - 13)}" y2="{_f(ty + 13)}" '
+            f'stroke="{ROLE["negative"]}" stroke-width="2"/>'
+        )
+        if goal.label:
+            svg.text(gx, h - 2, goal.label, size=11, fill=ROLE["negative"], anchor="middle")
+    mx = xs(mid.value)
+    svg.add(f'<circle cx="{_f(mx)}" cy="{_f(ty)}" r="6" fill="{INK}"/>')
+    if mid.label:
+        svg.text(mx, 9, mid.label, size=11, fill=INK, anchor="middle", weight=600)
+    return svg.done()
+
+
+def _small_multiples(spec: ChartSpec, w: int, h: int) -> str:
+    """0.29: one small line per series, all on the same scale, its name at the left and its last
+    value at the right; the one to look at (`emphasis`) in its role's colour, the rest muted."""
+    svg = _Svg(w, h, spec)
+    n = max(len(spec.series), 1)
+    panel = h / n
+    vals = [v for sr in spec.series for _, v in sr.points]
+    lo, hi = (min(vals), max(vals)) if vals else (0.0, 1.0)
+    for i, sr in enumerate(spec.series):
+        y0 = panel * i
+        c = ROLE[sr.role] if sr.emphasis else ROLE["muted"]
+        svg.text(0, y0 + 12, sr.name, size=11, fill=INK)
+        if sr.points:
+            svg.text(
+                w,
+                y0 + 12,
+                _value(sr.points[-1][1], spec.unit),
+                size=11,
+                fill=ROLE[sr.role] if sr.emphasis else INK,
+                anchor="end",
+                weight=600,
+            )
+        if len(sr.points) < 2:
+            continue
+        xs = _Scale(0, len(sr.points) - 1, 3, w - 4)
+        ys = _Scale(lo, hi, y0 + panel - 4, y0 + 18)
+        xy = [(xs(k), ys(v)) for k, (_d, v) in enumerate(sr.points)]
+        svg.add(
+            f'<polyline points="{_poly(xy)}" fill="none" stroke="{c}" stroke-width="2" '
+            f'stroke-linejoin="round"/>'
+        )
+        svg.add(f'<circle cx="{_f(xy[-1][0])}" cy="{_f(xy[-1][1])}" r="3" fill="{c}"/>')
+    return svg.done()
+
+
 def render_svg(spec: ChartSpec, size: tuple[int, int] = (400, 160), *, legend: bool = False) -> str:
     """`legend`: series names and the band's label go to a legend the page draws above the chart,
     not on the plot (Big Picture, owner 15 Nov 2026; other charts from the typography release)."""
@@ -1008,4 +1180,12 @@ def render_svg(spec: ChartSpec, size: tuple[int, int] = (400, 160), *, legend: b
         return _dumbbell(spec, w, h)
     if spec.kind == "scatter":
         return _scatter(spec, w, h)
+    if spec.kind == "stacked_share":
+        return _stacked_share(spec, w, h)
+    if spec.kind == "heatmap":
+        return _heatmap(spec, w, h)
+    if spec.kind == "bullet":
+        return _bullet(spec, w, h)
+    if spec.kind == "small_multiples":
+        return _small_multiples(spec, w, h)
     raise NotImplementedError(f"{spec.kind} is rendered from M6")

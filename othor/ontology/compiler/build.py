@@ -38,7 +38,7 @@ from othor.ontology.compiler.render import (
 from othor.ontology.compiler.terms import terms as signed_terms
 from othor.ontology.types import CORE_BODIES, walk
 
-COMPILER_VERSION = "m28.3"  # M16.1: area and signed terms; M16.2: per_period; 0.28.3: meaning
+COMPILER_VERSION = "m29.1"  # M16.1: area and signed terms; M16.2: per_period; 0.28.3: meaning
 SPEC_FORMAT = 1
 GRAINS = ("day", "week", "month")
 EVIDENCE_LIMIT = 50
@@ -108,11 +108,21 @@ def _table(cat: Catalog, ref: dict[str, Any], metric: str) -> TableInfo:
     return t
 
 
+def _reads_as_of(node: Any) -> bool:
+    if isinstance(node, dict):
+        return node.get("param") == "as_of" or any(_reads_as_of(v) for v in node.values())
+    if isinstance(node, list):
+        return any(_reads_as_of(v) for v in node)
+    return False
+
+
 def _breakdown(
     scope: Scope, key: str, bd: dict[str, Any], vocabs: dict[str, Any]
 ) -> tuple[exp.Expr, dict[str, Any] | None]:
     """The SQL for one breakdown on this metric's tables, and the prefix map it used (if any)."""
     where = f"breakdown {key}"
+    if bd.get("expr") is not None:  # 0.29: a computed value (an age band), rendered as filters are
+        return render(bd["expr"], scope, where=where), None
     if bd.get("vocabulary"):
         if scope.fact.column(bd["column"]) is not None:  # the table has the value itself
             return scope.column({"col": bd["column"]}, where=where), None
@@ -206,6 +216,10 @@ def _base_sql(
             if bkey is not None:
                 if bkey not in bds:
                     raise CompileError(f"{m}: breakdown {bkey} isn't in the Business Model")
+                if flow and _reads_as_of(bds[bkey].get("expr")):
+                    raise CompileError(
+                        f"{m}: breakdown {bkey} reads the as-of date, which only a snapshot has"
+                    )
                 bexpr, vmap = _breakdown(scope, bkey, bds[bkey], vocabs)
                 cols.append(exp.alias_(bexpr, "breakdown_value", quoted=True))
                 group.append(bexpr.copy())

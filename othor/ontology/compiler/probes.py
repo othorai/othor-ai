@@ -88,6 +88,7 @@ def compile_probes(
                 and k != key
                 and bd.get("table") == e["table"]["table"]
                 and not bd.get("vocabulary")
+                and bd.get("column") is not None  # an expression breakdown isn't an attribute
                 and t.column(bd["column"]) is not None
             )
             for a in attrs:

@@ -95,6 +95,8 @@ TABLES: dict[str, Rule] = {
     # it): the question, plan, results and words are the owner's; the upload is not exported
     # Discover's groups (Enterprise Edition, named here only): what was offered and decided
     "discover_group": Rule(),
+    # Discover's write-ups (0.29): the words Othor AI wrote around the board's computed figures
+    "discover_summary": Rule(drop={"board_hash": "an internal replay check"}),
     "look_back_report": Rule(
         drop={
             "upload_id": "an internal file reference; the file itself is not exported",

@@ -11,7 +11,7 @@ from othor.ontology.compiler.build import BREAKDOWN_NOT_MEANING, meaning_hashes
 from othor.ontology.types import BreakdownBody
 
 ZERO = {"lit": 0}
-MEANING = {"column", "table", "vocabulary", "alternatives"}
+MEANING = {"column", "expr", "table", "vocabulary", "alternatives"}
 
 
 def _world() -> tuple[dict[tuple[str, str], dict[str, Any]], dict[str, Any]]:

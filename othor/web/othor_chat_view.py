@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from othor.chat import pending
 from othor.chat import service as chat
-from othor.core import fmt
+from othor.core import fmt, plugins
 
 BADGE = {
     "pick": ("My suggestion", "pick"),
@@ -206,6 +206,7 @@ def view(
     base = here + ("?" + urlencode(rest) if rest else "")
     sep = "&" if "?" in base else "?"
     open_url = f"{base}{sep}panel=othor&subject={t.subject}"
+    plug = plugins.ask_about(s, t.subject) if plugins.is_ask_subject(t.subject) else None
     counts = pending.counts(current.proposal["items"]) if current is not None else None
     applied_once = any(m.get("applied") for m in msgs)
     return {
@@ -215,7 +216,7 @@ def view(
             if is_change
             else "About this proposal"
             if is_proposal
-            else TITLE.get(t.subject, "Othor AI")
+            else (plug or {}).get("title") or TITLE.get(t.subject, "Othor AI")
         ),
         "is_proposal": is_proposal,
         "opening": (
@@ -224,6 +225,8 @@ def view(
             else "Ask me about your numbers, what Sweep found, which checks ran, your Business "
             "Model's changes or the questions waiting for you."
             if t.subject == "ask" and not msgs
+            else (plug or {}).get("opening", "")
+            if plug is not None and not msgs
             else ""
         ),
         "is_change": is_change,
@@ -248,7 +251,8 @@ def view(
         else (current is not None and (editing or any(m["role"] == "user" for m in msgs)))
         or is_proposal
         or is_change
-        or t.subject == "ask",
+        or t.subject == "ask"
+        or plug is not None,
         "applied_once": applied_once,
         "close": base,
         "here": open_url,

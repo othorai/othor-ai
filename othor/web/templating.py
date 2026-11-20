@@ -40,6 +40,16 @@ def chart(spec: ChartSpec, width: int = 400, height: int = 160, legend: bool = F
 templates.env.globals["chart"] = chart
 
 
+def chart_of(d: dict[str, Any] | None, width: int = 400, height: int = 160) -> Markup:
+    """A chart a view built as a ChartSpec dict (the dashboard's board, 0.29), drawn."""
+    if not d:
+        return Markup("")
+    return chart(ChartSpec.from_dict(d), width, height)
+
+
+templates.env.globals["chart_of"] = chart_of
+
+
 def stored_chart(text: str, width: int = 400, height: int = 160) -> Markup:
     """A chart stored in an issue body as canonical JSON (finding_charts.dump), drawn."""
     from othor.engine.finding_charts import load

@@ -51,6 +51,11 @@
     {{ chart_card("Spread band around the average", "Rising variance", chart(specs.line_spread, 400, 100), "When spread widens before the average moves. Average dark, spread red.") }}
     {{ chart_card("Two lines decoupling", "Broken relationship", chart(specs.line_decoupling, 400, 110), "When a relationship broke. The steady one dark, the one that broke away red; period shaded.") }}
     {{ chart_card("Line against forecast band", "Forecast breach", chart(specs.line_forecast, 400, 100), "When actuals leave the band or a goal slips. Line dark, band grey, the breach point red.") }}
+    {{ chart_card("Line with what's ahead", "Dashboard · 0.29", chart(specs.line_ahead, 400, 120), "The last 12 months and the likely range for the next three, past the last actual, against a goal.") }}
+    {{ chart_card("Shares stacked to 100%", "Dashboard · 0.29", chart(specs.stacked_share, 400, 140), "Each month end's parts (receivables by age). Shares add to 100% by largest remainder.") }}
+    {{ chart_card("Weekday heatmap", "Dashboard · 0.29", chart(specs.heatmap, 400, 130), "Rows by weeks, darker is more. Notes only when code finds a pattern.") }}
+    {{ chart_card("Goal bullet", "Dashboard · 0.29", chart(specs.bullet, 300, 50), "Where a goal is heading: the likely range, the expected value, the goal; its bad side tinted.") }}
+    {{ chart_card("Small multiples", "Dashboard · 0.29", chart(specs.small_multiples, 300, 170), "One small line per part on one scale; only the one to look at is coloured.") }}
     <div class="card board chart-card flex flex-col gap-12"><div class="flex items-center justify-between"><span class="card-title">No chart by design</span><span class="chart-kind">Missing records · many accounts</span></div>
       {{ records([("Shree Varada Textiles", "12 Jul", fmt.inr(6200000, unit="cr")), ("Tidewell Garments", "2 Jul", fmt.inr(4800000, unit="cr"))], "These accounts produce no rows.") }}
       <p class="caption">When the finding is that rows are missing. A short list in a dashed box, not a chart.</p></div>

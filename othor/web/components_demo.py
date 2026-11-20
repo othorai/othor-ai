@@ -17,6 +17,7 @@ from othor.charts.spec import (
     Category,
     ChartSpec,
     Period,
+    Role,
     Series,
     Unit,
     YAxis,
@@ -270,8 +271,173 @@ def demo_specs() -> dict[str, ChartSpec]:
             annotations=(Annotation("point", at="2026-10-24", value=0.96, role="negative"),),
             alt_text="Weekly net revenue Jun–Oct 2026 against the 80% forecast band: the last week is below the band.",
         ),
+        **_dashboard_demos(),
     }
     return specs
+
+
+MONTH_ENDS = (
+    "2025-11-30",
+    "2025-12-31",
+    "2026-01-31",
+    "2026-02-28",
+    "2026-03-31",
+    "2026-04-30",
+    "2026-05-31",
+    "2026-06-30",
+    "2026-07-31",
+    "2026-08-31",
+    "2026-09-30",
+    "2026-10-31",
+)
+
+
+def _dashboard_demos() -> dict[str, ChartSpec]:
+    """0.29 (Discover 2.0): the dashboard's new chart kinds, with illustrative values."""
+    ages = [
+        [62, 60, 61, 63, 59, 58, 57, 58, 56, 55, 53, 49],
+        [20, 21, 20, 19, 21, 22, 22, 21, 22, 22, 22, 22],
+        [11, 12, 12, 11, 12, 12, 13, 13, 14, 14, 15, 17],
+        [7, 7, 7, 7, 8, 8, 8, 8, 8, 9, 10, 12],
+    ]
+    bands: tuple[tuple[str, Role], ...] = (("0–30 days", "positive"), ("31–60 days", "positive"))
+    bands += (("61–90 days", "negative"), ("Over 90 days", "negative"))
+    weeks = _weeks("2026-08-10", [0.0] * 12)
+    days = ("Mon", "Tue", "Wed", "Thu", "Fri")
+    base = (0.45, 0.5, 0.55, 0.6, 0.95)
+    heat = tuple(
+        Series(
+            d.lower(),
+            d,
+            "positive",
+            tuple(
+                (w, round(base[i] * (1.7 if j == 11 else 1.4 if j == 5 else 1.0), 2))
+                for j, (w, _) in enumerate(weeks)
+            ),
+        )
+        for i, d in enumerate(days)
+    )
+    actual = [3.6, 3.9, 4.2, 3.8, 4.6, 3.9, 4.0, 4.2, 4.3, 4.2, 4.18, 4.1]
+    ahead = ("2026-10-31", "2026-11-30", "2026-12-31", "2027-01-31")
+    return {
+        "stacked_share": ChartSpec(
+            id="demo:ageing",
+            kind="stacked_share",
+            title="Receivables by age",
+            unit=PCT,
+            period=Period("month", MONTH_ENDS[0], MONTH_ENDS[-1]),
+            series=tuple(
+                Series(
+                    f"age{k}",
+                    name,
+                    role,
+                    tuple(zip(MONTH_ENDS, [v / 100 for v in row], strict=True)),
+                )
+                for k, ((name, role), row) in enumerate(zip(bands, ages, strict=True))
+            ),
+            annotations=(Annotation("point", at=MONTH_ENDS[-1], label="29%", role="negative"),),
+            alt_text="Share of the amount owed by age, each month end: over 60 days grows from 18% to 29%.",
+        ),
+        "heatmap": ChartSpec(
+            id="demo:weekday",
+            kind="heatmap",
+            title="When money comes in",
+            unit=CR,
+            period=Period("week", weeks[0][0], weeks[-1][0]),
+            series=heat,
+            alt_text="Bank credits by weekday over 12 weeks: Fridays bring the most.",
+        ),
+        "bullet": ChartSpec(
+            id="demo:goal",
+            kind="bullet",
+            title="DSO at most 45 days by 31 Mar",
+            unit=Unit(type="days"),
+            categories=(
+                Category("low", 41, "muted", label="41 d"),
+                Category("high", 47, "muted", label="47 d"),
+                Category("expected", 44, "neutral", label="44"),
+                Category("bad_above", 1, "muted"),
+            ),
+            annotations=(Annotation("threshold", value=45, label="goal 45", role="negative"),),
+            alt_text="DSO heading for 44 days by 31 March, likely between 41 and 47; the goal is at most 45.",
+        ),
+        "small_multiples": ChartSpec(
+            id="demo:dso_by",
+            kind="small_multiples",
+            title="Days to pay by region",
+            unit=Unit(type="days"),
+            period=Period("month", MONTH_ENDS[0], MONTH_ENDS[-1]),
+            series=(
+                Series(
+                    "s",
+                    "West",
+                    "muted",
+                    tuple(
+                        zip(
+                            MONTH_ENDS,
+                            [38, 39, 38, 39, 40, 39, 39, 40, 39, 40, 41, 42],
+                            strict=True,
+                        )
+                    ),
+                ),
+                Series(
+                    "c",
+                    "South",
+                    "negative",
+                    tuple(
+                        zip(
+                            MONTH_ENDS,
+                            [42, 43, 41, 42, 44, 43, 42, 43, 42, 43, 46, 51],
+                            strict=True,
+                        )
+                    ),
+                    emphasis=True,
+                ),
+                Series(
+                    "e",
+                    "Export",
+                    "muted",
+                    tuple(
+                        zip(
+                            MONTH_ENDS,
+                            [44, 45, 44, 45, 46, 45, 44, 45, 46, 45, 46, 47],
+                            strict=True,
+                        )
+                    ),
+                ),
+            ),
+            alt_text="Days to pay by region over 12 months on one scale: South rose to 51 days.",
+        ),
+        "line_ahead": ChartSpec(
+            id="demo:ahead",
+            kind="line",
+            title="Collections, last 12 months and what's ahead",
+            unit=CR,
+            period=Period("month", MONTH_ENDS[0], ahead[-1]),
+            series=(
+                Series("actual", "Actual", "positive", tuple(zip(MONTH_ENDS, actual, strict=True))),
+                Series(
+                    "expected",
+                    "Expected",
+                    "positive",
+                    tuple(zip(ahead, [4.1, 4.05, 4.25, 4.6], strict=True)),
+                    style="dotted",
+                ),
+            ),
+            band=Band(
+                "expected",
+                0.8,
+                tuple(zip(ahead, [4.1, 3.7, 3.8, 4.1], strict=True)),
+                tuple(zip(ahead, [4.1, 4.4, 4.7, 5.1], strict=True)),
+                role="positive",
+            ),
+            annotations=(
+                Annotation("threshold", value=4.5, label="Goal 4.5"),
+                Annotation("vline", at="2026-10-31", label="ahead", role="muted", style="dashed"),
+            ),
+            alt_text="Monthly collections over the last 12 months and the expected range for the next three, against a goal of ₹4.5 Cr.",
+        ),
+    }
 
 
 # --- /_components/stress (M11a): the components under real-data stress ---------------------

@@ -76,6 +76,8 @@ def _column(t: TableInfo, name: str, what: str = "column") -> str:
 def _breakdown_column(bd: dict[str, Any], t: TableInfo, records: Records) -> dict[str, Any] | None:
     """The breakdown's column as this fact table reaches it: its own column, or one on a table
     a join rule links it to (the breakdown's table, then its alternatives)."""
+    if bd.get("column") is None:  # an expression breakdown (0.29) has no column to reach
+        return None
     options = [{"table": bd.get("table"), "column": bd["column"]}, *bd.get("alternatives", [])]
     joined = {
         (r.get("to") or {}).get("table")

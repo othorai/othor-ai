@@ -31,8 +31,14 @@ SUBJECTS = ("questions", "ask")
 
 def known(subject: str) -> bool:
     from othor.chat import changes, proposals
+    from othor.core import plugins
 
-    return subject in SUBJECTS or changes.is_subject(subject) or proposals.is_subject(subject)
+    return (
+        subject in SUBJECTS
+        or changes.is_subject(subject)
+        or proposals.is_subject(subject)
+        or plugins.is_ask_subject(subject)  # 0.29: a plug-in's Ask ("ask:discover:…")
+    )
 
 
 def prop(m: ChatMessage) -> dict[str, Any]:

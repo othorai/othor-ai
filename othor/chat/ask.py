@@ -98,6 +98,7 @@ def answer(
     text: str,
     *,
     actor: str,
+    about: str = "",
 ) -> ChatMessage | None:
     from othor.chat import service as chat
 
@@ -107,7 +108,10 @@ def answer(
     hist = chat._history(s, t)
     s.add(ChatMessage(thread_id=t.id, role="user", text=text))
     s.commit()  # the gateway logs the call in its own session
-    name, args, change, reply, guard = _route(gateway, tctx.company.id, text, hist)
+    # 0.29: asked from a page of its own (a Discover group): the model also sees what it is about,
+    # names only; the message stored is the owner's own words
+    asked = f"{text}\n\n(Asked on {about})" if about else text
+    name, args, change, reply, guard = _route(gateway, tctx.company.id, asked, hist)
     card: tools.Card | None = None
     drafted = None
     if change:
@@ -136,7 +140,9 @@ def answer(
         else:
             s.commit()  # the audit event first; the wording call logs in its own session
             said = (
-                card.empty or _words(gateway, tctx.company.id, text, card) or "Here's what I found."
+                card.empty
+                or _words(gateway, tctx.company.id, asked, card)
+                or "Here's what I found."
             )
     new = ChatMessage(
         thread_id=t.id,

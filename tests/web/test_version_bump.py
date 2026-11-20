@@ -18,12 +18,12 @@ from tests.web.test_sweep_web import night  # noqa: F401
 
 
 def test_the_image_is_0_20_0() -> None:
-    assert __version__ == "0.28.5"
+    assert __version__ == "0.29.0"
 
 
 def test_a_run_sealed_under_0_1_0_still_replays_and_verifies(night):  # noqa: F811
     env, h, cid, rid, svc = night
-    assert svc.settings.image_version == "0.28.5"
+    assert svc.settings.image_version == "0.29.0"
     with svc.sf() as s, tenant_scope(cid):
         run = s.scalars(sa.select(Run).where(Run.id == rid)).one()
         assert run.image_version == "0.1.0"  # the night was sealed as an older image
@@ -33,7 +33,7 @@ def test_a_run_sealed_under_0_1_0_still_replays_and_verifies(night):  # noqa: F8
     with svc.sf() as s, tenant_scope(cid):
         v = verify(s, svc.settings, cid)
     assert v.ok, v.problems
-    assert env.client.get(h.replace("indigothread.", "") + "/healthz").json()["version"] == "0.28.5"
+    assert env.client.get(h.replace("indigothread.", "") + "/healthz").json()["version"] == "0.29.0"
 
 
 def test_the_package_and_the_project_say_the_same_version() -> None:

@@ -290,12 +290,27 @@ class Entity(Body):
 
 class BreakdownBody(Body):
     name: str
-    column: str
+    column: str | None = None
+    # 0.29 (Discover 2.0): a value computed per row instead of read, e.g. an age band from the
+    # due date and the run's as-of date; rendered like a filter, so the personal guard applies
+    expr: Expr | None = None
     table: str | None = None  # a joined table (by a join rule); None = the fact table
     vocabulary: str | None = None  # a prefix map that derives the value (plant from item code)
     alternatives: list[dict[str, str]] = Field(default_factory=list)  # [{table, column}] per source
     cap: int = 50
     entity: Entity | None = None
+
+    @model_validator(mode="after")
+    def _one_source(self) -> BreakdownBody:
+        if (self.column is None) == (self.expr is None):
+            raise ValueError("a breakdown reads a column or computes an expression, exactly one")
+        if self.expr is not None:
+            if self.vocabulary or self.entity is not None or self.alternatives:
+                raise ValueError(
+                    "an expression breakdown has no vocabulary, entity or alternatives"
+                )
+            check_expr(self.expr, path="breakdown expr")
+        return self
 
 
 class OwnerBody(Body):

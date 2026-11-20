@@ -632,6 +632,8 @@ def entity_asks(
     for (typ, bkey), b in sorted(records.items()):
         if typ != "breakdown" or b.get("entity") or b.get("vocabulary") or not b.get("table"):
             continue
+        if not b.get("column"):  # an expression breakdown (0.29) names no customers
+            continue
         # the breakdown whose values are the customers themselves (not their region)
         if not ENTITY_TABLE.search(str(b["table"]).lower()):
             continue

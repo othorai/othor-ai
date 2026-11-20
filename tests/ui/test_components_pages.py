@@ -39,7 +39,7 @@ def test_pages_render(client: TestClient, path: str, must: str) -> None:
 
 def test_9c_charts_come_from_specs(client: TestClient) -> None:
     html = client.get("/_components/9c").text
-    assert html.count("data-chart=") == 10
+    assert html.count("data-chart=") == 15  # 0.29: five dashboard kinds
 
 
 def test_components_hidden_in_prod(tmp_path: Path) -> None:

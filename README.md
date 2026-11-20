@@ -8,11 +8,12 @@
 
 [![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/othorai/othor-ai?label=release)](https://github.com/othorai/othor-ai/releases/latest)
-[![CI](https://github.com/othorai/othor-ai/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/othorai/othor-ai/actions/workflows/ci.yml)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue)](pyproject.toml)
+[![Self-hostable](https://img.shields.io/badge/self--hostable-one%20image-0A7FA8)](docs/self-host.md)
 
 ![Othor AI: a full Morning Brief on the sample company, top to bottom](docs/images/brief-tour.gif)
 
-[See it in 3 minutes](#see-it-in-3-minutes) · [Quick start](#quick-start) · [Architecture](#architecture) · [Self-hosting](docs/self-host.md) · [Contributing](CONTRIBUTING.md)
+[What is Othor AI](#what-is-othor-ai-in-1-minute) · [Quick start](#quick-start) · [Architecture](#architecture) · [Self-hosting](docs/self-host.md) · [Contributing](CONTRIBUTING.md)
 
 </div>
 
@@ -23,11 +24,11 @@ false-discovery-rate control, forecasts each series, and emits a ranked, provena
 **Morning Brief** at 06:00. A language model is confined to drafting setup and phrasing; it is
 never on the path that produces a number.
 
-## See it in 3 minutes
+## What is Othor AI, in 1 minute
 
 https://github.com/user-attachments/assets/3eab7dbf-8a4a-48d9-aff0-de6144c224fa
 
-A walkthrough on Indigo Thread Co., the invented sample company.
+A one-minute introduction: what Othor AI is, and the Morning Brief it writes every day.
 
 ### Why it exists
 

@@ -23,6 +23,10 @@ KINDS = (
     "scatter",
     "dumbbell",
     "range_bar",  # a forecast's likely range on a track, its expected value, a goal (M19.5)
+    "stacked_share",  # 0.29: each period's shares stacked to 100% (receivables by age)
+    "heatmap",  # 0.29: rows (weekdays) by columns (weeks), darker is more
+    "bullet",  # 0.29: a goal's track, its bad side tinted, the likely range and the heading
+    "small_multiples",  # 0.29: one small line per series on the same scale
 )
 ROLES = ("positive", "negative", "neutral", "muted", "edge")
 Kind = Literal[
@@ -36,6 +40,10 @@ Kind = Literal[
     "scatter",
     "dumbbell",  # two series over the same categories: each row joins its two values
     "range_bar",  # categories low, high, expected (labels: their text); a threshold: the goal
+    "stacked_share",  # one series per part (bottom first), points: (period, share 0–1)
+    "heatmap",  # one series per row (its name the row label), points: (column date, value)
+    "bullet",  # categories low, high, expected, bad_above (1 or 0); a threshold: the goal
+    "small_multiples",  # one series per panel; emphasis: the one to look at
 ]
 # edge: just outside its band, dark with a ring (M15.3)
 Role = Literal["positive", "negative", "neutral", "muted", "edge"]

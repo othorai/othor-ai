@@ -54,6 +54,8 @@ LABEL = {
     "look_back_drill": "Look further in a Look back report",
     "look_back_suggest": "Suggest Look backs",
     "look_back_write": "Write a Look back report",
+    # Discover 2.0 (Enterprise Edition, 0.29): a group's dashboard write-up
+    "discover_summary": "Write a Discover group's summary",
 }
 
 

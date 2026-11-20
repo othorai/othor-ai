@@ -1,0 +1,97 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{#- Dashboard parts (0.29, Discover 2.0; docs/design-targets/discover-2-collections.html, the
+   design target for dashboards): a header with its one AI action, chips posted in place, the one
+   night band (the write-up), headline numbers without boxes, one card shape for every chart,
+   hairline rows for findings and checks, a sortable table, and how the page was made. Every
+   figure and chart comes from the view (a board computed from the run); nothing is worked out
+   here. Reusable by any dashboard; on /_components and /_components/states. -#}
+{% from "components/buttons.html" import ai_button, info, link %}
+{% from "components/forms.html" import action_form %}
+{% from "components/sweep.html" import tags %}
+
+{# header: kicker, title, meta line (a list of short texts), and the AI action #}
+{% macro db_header(title, kicker=None, meta=(), ask=None, ask_label="Ask about this group") -%}
+<div class="db-head">
+  <div>{% if kicker %}<p class="db-kick">{{ kicker }}</p>{% endif %}<h1 class="db-title">{{ title }}</h1>
+    {% if meta %}<p class="db-meta">{% for m in meta %}<span>{{ m }}</span>{% endfor %}</p>{% endif %}</div>
+  {% if ask %}<div class="db-acts">{{ ai_button(ask_label, href=ask, attrs={"data-panel": true}) }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{# chips: each {name, value, label, on}; one in-place post per chip, the page redraws in place #}
+{% macro db_chips(chips, action, csrf) -%}
+{% if chips %}<div class="db-chips" role="group" aria-label="Show">{% for c in chips %}{% call action_form(action, csrf, kind="contents", attrs={"data-keep-focus": true}) %}<input type="hidden" name="name" value="{{ c.name }}"><button class="db-chip{{ ' is-on' if c.on else '' }}" type="submit" name="value" value="{{ c.value }}" aria-pressed="{{ 'true' if c.on else 'false' }}">{{ c.label }}</button>{% endcall %}{% endfor %}</div>{% endif %}
+{%- endmacro %}
+
+{# the night band: sm = {kicker, lead (text), next: [(label, text)], foot: [text], button:
+   {label, action} or None, auto: an address to ask for the write-up as the page opens (the band
+   comes back in place) or None} — the write-up; one per page #}
+{% macro db_summary(sm, csrf) -%}
+<section class="db-summary" aria-label="{{ sm.kicker }}" id="db-summary"{% if sm.auto %} hx-post="{{ sm.auto }}" hx-trigger="load" hx-swap="outerHTML" hx-headers='{"X-CSRF-Token": "{{ csrf }}"}' aria-busy="true"{% endif %}>
+  <div class="db-summary-top"><p class="db-summary-k">{{ sm.kicker }}</p>
+    {% if sm.button %}{% call action_form(sm.button.action, csrf, kind="contents", attrs={"data-busy-say": "Writing…"}) %}<button class="btn sm db-quiet" type="submit" data-busy="Writing…">{{ sm.button.label }}</button>{% endcall %}{% endif %}</div>
+  <p class="db-lead">{{ sm.lead }}</p>
+  {% if sm.next %}<div class="db-next">{% for label, text in sm.next %}<div><b>{{ label }}</b>{{ text }}</div>{% endfor %}</div>{% endif %}
+  {% if sm.foot %}<p class="db-foot">{% for f in sm.foot %}<span>{{ f }}</span>{% endfor %}</p>{% endif %}
+</section>
+{%- endmacro %}
+
+{# a section: caps heading, an aside at the right (text or a link) #}
+{% macro db_section(title, aside=None, href=None, label=None) -%}
+<section aria-label="{{ label or title }}"><div class="db-sec-h"><h2>{{ title }}</h2>{% if aside and href %}{{ link(aside, href) }}{% elif aside %}<span class="db-sec-r">{{ aside }}</span>{% endif %}</div>{{ caller() }}</section>
+{%- endmacro %}
+
+{# headline numbers: tiles from briefs.tiles (label, value, comparison, role, chart) #}
+{% macro db_kpis(tiles) -%}
+<div class="db-kpis">{% for t in tiles %}<div class="db-kpi"><span class="l">{{ t.label }}{% if t.info %}{{ info(text=t.info, id="kpi-" ~ loop.index) }}{% endif %}</span><span class="v">{{ t.value }}</span><span class="d is-{{ t.role }}">{{ t.comparison.text }}</span>{% if t.chart %}<span class="db-spark">{{ stored_chart(t.chart, 160, 34) }}</span>{% endif %}</div>{% endfor %}</div>
+{%- endmacro %}
+
+{# a card: title, sub line, an (i), then its body (a chart, a list) #}
+{% macro db_card(title, sub=None, info_text=None, id=None, aside=None) -%}
+<div class="db-card"{% if id %} id="{{ id }}"{% endif %}><div class="db-card-h"><h3>{{ title }}{% if info_text %}{{ info(text=info_text, id=(id or "c") ~ "-i") }}{% endif %}</h3>{% if aside %}{{ aside }}{% endif %}</div>{% if sub %}<p class="db-sub">{{ sub }}</p>{% endif %}{{ caller() }}</div>
+{%- endmacro %}
+
+{# a chart drawn twice: at its card's size, and at phone width (340 px) so its labels stay
+   readable on a phone instead of shrinking; CSS shows one. `ph`: the phone height. #}
+{% macro db_chart(spec, w=400, h=160, ph=None) -%}<div class="db-chart"><div class="db-wide">{{ chart_of(spec, w, h) }}</div>{% if w > 360 %}<div class="db-phone">{{ chart_of(spec, 340, ph or h) }}</div>{% endif %}</div>{%- endmacro %}
+
+{# legend: [(label, kind)]; kind: line, dotted, band, goal, muted, or a stacked part's index "s0".."s3" #}
+{% macro db_legend(items) -%}
+{% if items %}<p class="db-legend">{% for label, kind in items %}<span><i class="db-key is-{{ kind }}"></i>{{ label }}</span>{% endfor %}</p>{% endif %}
+{%- endmacro %}
+
+{% macro db_note(text, info_text=None, id=None) -%}
+{% if text %}<p class="db-note">{{ text }}{% if info_text %}{{ info(text=info_text, id=id or "note-i") }}{% endif %}</p>{% endif %}
+{%- endmacro %}
+
+{# a goal: {title, state, tone, chance, line, chart} #}
+{% macro db_goal(g) -%}
+<div class="db-card"><div class="db-card-h"><h3>{{ g.title }}</h3><span class="db-pill is-{{ g.tone }}">{{ g.state }}</span></div>
+  {% if g.chance %}<p class="db-chance">{{ g.chance }}</p>{% endif %}
+  {% if g.chart %}{{ db_chart(g.chart, 300, 50) }}{% endif %}
+  {% if g.line %}<p class="db-sub">{{ g.line }}</p>{% endif %}
+</div>
+{%- endmacro %}
+
+{# findings (sweep_view.card dicts) and checks ({title, state, text}) as hairline rows #}
+{% macro db_checks(findings, checks, run) -%}
+<div class="db-rows">
+  {% for c in findings %}<div class="db-row"><div><a class="t" href="/sweep/finding/{{ c.fp }}?run={{ run }}">{{ c.title }}</a><p class="m">{{ tags(c.state, c.confidence, c.change) }}<span>{{ c.label }}</span>{% if c.brief %}<span>in the {{ c.brief }} brief</span>{% endif %}</p></div><p class="v">{{ c.money }}</p></div>{% endfor %}
+  {% for k in checks %}<div class="db-row"><div><p class="t">{{ k.title }}</p><p class="m"><span class="tag">Checked</span><span>{{ k.text }}</span></p></div><p class="v is-{{ 'ok' if k.state == 'clear' else 'neg' }}">{{ "Clear" if k.state == "clear" else "Differs" }}<small>tonight</small></p></div>{% endfor %}
+</div>
+{%- endmacro %}
+
+{# the table: t = {rows, others, region, days, as_of}; sorted by the server (Owed ↓), then by a click
+   on a column ([data-sort-table], othor.js); a row's numbers sort by their raw values #}
+{% macro db_table(t) -%}
+<div class="db-table-wrap"><table class="table db-table" data-sort-table>
+  <thead><tr><th scope="col" data-sort="text" tabindex="0">Customer</th>{% if t.region %}<th scope="col" data-sort="text" tabindex="0">Region</th>{% endif %}<th scope="col" class="num" data-sort="num" tabindex="0" aria-sort="descending">Owed</th><th scope="col" class="num" data-sort="num" tabindex="0">Over 60 days</th>{% if t.days %}<th scope="col" class="num" data-sort="num" tabindex="0">Days to pay</th>{% endif %}<th scope="col">12 months</th><th scope="col" data-sort="text" tabindex="0">Status</th></tr></thead>
+  <tbody>{% for r in t.rows %}<tr><td class="nm" data-v="{{ r.name }}">{{ r.name }}</td>{% if t.region %}<td data-v="{{ r.region }}">{{ r.region }}</td>{% endif %}<td class="num" data-v="{{ r.owed_raw }}">{{ r.owed }}</td><td class="num" data-v="{{ r.over_60_raw }}">{{ r.over_60 }}</td>{% if t.days %}<td class="num" data-v="{{ r.days_raw or 0 }}">{{ r.days }}</td>{% endif %}<td class="db-row-spark">{{ chart_of(r.spark, 110, 26) }}</td><td data-v="{{ r.status }}"><span class="dot {{ r.tone }}"></span>{{ r.status }}</td></tr>{% endfor %}</tbody>
+  {% if t.others %}<tfoot><tr><td class="nm">{{ t.others.name }}</td>{% if t.region %}<td></td>{% endif %}<td class="num">{{ t.others.owed }}</td><td class="num">{{ t.others.over_60 }}</td>{% if t.days %}<td></td>{% endif %}<td></td><td></td></tr></tfoot>{% endif %}
+</table></div>
+{%- endmacro %}
+
+{# how these were made: [(title, text, info)] #}
+{% macro db_made(items) -%}
+<section class="db-made" aria-label="How these were made">{% for title, text, i in items %}<div><b>{{ title }}{% if i %}{{ info(text=i, id="made-" ~ loop.index) }}{% endif %}</b>{{ text }}</div>{% endfor %}</section>
+{%- endmacro %}

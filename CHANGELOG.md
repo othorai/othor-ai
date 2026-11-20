@@ -6,6 +6,30 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-11-20
+
+### Added
+- Discover (Enterprise Edition): a switched-on group's page is a dashboard: headline numbers,
+  the trend with what's ahead, where the change is, how the amount owed moved over the month,
+  overdue by age, when money comes in, the parts on one scale, the goal, what Sweep found with
+  the group's own cross-check, a sortable customer table and how it was made. Chips (window,
+  split, compare with last year) change it in place.
+- "What's happening here": a short write-up by Othor AI, made on the first open after a night
+  and by Write summary / Rewrite; it sees the names of the numbers and their breakdowns with
+  their totals, never rows; every figure in it is checked. Without a model, the same band from
+  the computed results.
+- Ask about this group: the Othor AI chat about one group.
+- Collections drafts more: amount owed, over 60 days, customers paying late, new invoices,
+  collected, credit notes and bank credits, split by customer, region and days past due, with
+  the check "Bank credits match collections". Switched on in one Business Model version.
+- Chart kits 1.0: shares stacked to 100%, a weekday heatmap, a goal bullet, small multiples, and
+  a line whose forecast range reaches past the last actual.
+- Breakdowns can be computed (an age band from the due date and the run's date); compiler m29.1.
+- A new table, `discover_summary` (migration `e0008_discover_summary`), included in exports.
+
+### Changed
+- DSO shows as "Days to get paid" on the dashboard, with "DSO" behind its (i).
+
 ## [0.28.5] - 2026-11-20
 
 ### Added

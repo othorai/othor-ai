@@ -1,5 +1,31 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 // Small behaviours only: code boxes move focus and paste across; Copy copies the question.
+
+// 0.29 · A table marked data-sort-table sorts by a click (or Enter) on a column with data-sort
+// ("num" or "text"); each cell's data-v is its raw value. The server's order comes first; a
+// second click reverses; aria-sort says which way. The footer row ("Others") stays last.
+function sortTable(th) {
+  const table = th.closest("table[data-sort-table]");
+  if (!table || !table.tBodies[0]) return;
+  const ths = [...th.parentElement.children];
+  const i = ths.indexOf(th);
+  const down = th.getAttribute("aria-sort") !== "descending";
+  ths.forEach((x) => x.removeAttribute("aria-sort"));
+  th.setAttribute("aria-sort", down ? "descending" : "ascending");
+  const num = th.dataset.sort === "num";
+  const val = (tr) => { const c = tr.children[i]; const v = c ? (c.dataset.v ?? c.textContent) : ""; return num ? parseFloat(v) || 0 : v.toLowerCase(); };
+  const rows = [...table.tBodies[0].rows];
+  rows.sort((a, b) => { const x = val(a), y = val(b); const d = num ? x - y : x.localeCompare(y); return down ? -d : d; });
+  rows.forEach((r) => table.tBodies[0].appendChild(r));
+}
+document.addEventListener("click", (e) => {
+  const th = e.target.closest("table[data-sort-table] th[data-sort]");
+  if (th) sortTable(th);
+});
+document.addEventListener("keydown", (e) => {
+  const th = e.target.closest && e.target.closest("table[data-sort-table] th[data-sort]");
+  if (th && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); sortTable(th); }
+});
 document.addEventListener("input", (e) => {
   const box = e.target.closest("[data-code-boxes] .digit");
   if (box && box.value && box.nextElementSibling) box.nextElementSibling.focus();

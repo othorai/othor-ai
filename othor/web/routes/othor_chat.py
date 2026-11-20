@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
+from othor.core import plugins
 from othor.core.localtime import local_date
 from othor.core.tenancy import tenant_scope
 from othor.web.context import local_path, services
@@ -86,13 +87,16 @@ def reply(
                 actor=str(o.viewer.id),
                 today=local_date(o.company, svc.clock()),
             )
-        elif subject == "ask":  # Ask v0.1 (M26.6): read-only tools through the one gate
+        elif subject == "ask" or plugins.is_ask_subject(subject):  # Ask v0.1 (M26.6)
             from othor import tools
             from othor.chat import ask
 
             t = chat.thread(s, subject)
             tctx = tools.Ctx(s, svc.settings, o.company, local_date(o.company, svc.clock()))
-            ask.answer(s, gw, tctx, t, text, actor=str(o.viewer.id))
+            about = plugins.ask_about(s, subject) if subject != "ask" else None
+            ask.answer(
+                s, gw, tctx, t, text, actor=str(o.viewer.id), about=(about or {}).get("about", "")
+            )
         else:
             t = chat.thread(s, subject)
             chat.reply(s, gw, o.company.id, t, text, actor=str(o.viewer.id))
