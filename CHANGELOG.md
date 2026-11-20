@@ -27,8 +27,15 @@ Notable changes for people running Othor AI, newest first. The format follows
 - Breakdowns can be computed (an age band from the due date and the run's date); compiler m29.1.
 - A new table, `discover_summary` (migration `e0008_discover_summary`), included in exports.
 
+- Discover: Remove a group from its ⋯ menu. A group that's on is turned off in one Business Model
+  version; it then leaves Discover and, if its tables still hold it, is offered again under
+  Suggested with today's numbers (a group switched on before 0.29 gets the new dashboard this way).
+
 ### Changed
 - DSO shows as "Days to get paid" on the dashboard, with "DSO" behind its (i).
+
+### Fixed
+- Every (i) opens in normal case, never in the capitals of the label beside it.
 
 ## [0.28.5] - 2026-11-20
 

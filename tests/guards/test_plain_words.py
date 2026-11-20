@@ -72,6 +72,8 @@ def test_the_dashboard_templates_words_are_plain() -> None:
     tags = re.compile(r"<[^>]+>")
     bad = []
     for p in TEMPLATES:
+        if not p.exists():  # the open core has no othor_ee: its templates aren't there to check
+            continue
         text = tags.sub(" ", jinja.sub(" ", p.read_text()))
         for m in TERMS.finditer(text):
             bad.append(f"{p.relative_to(ROOT)}: {m.group(0)}")

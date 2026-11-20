@@ -1634,11 +1634,11 @@ tr.is-decided > td { background: var(--color-surface); }
 .pop { position: relative; display: inline-flex; }
 .pop-body { position: absolute; top: 26px; left: 0; z-index: 60; width: 240px; padding: 8px 10px; background: var(--color-bg);
   border: 1px solid var(--color-border); border-radius: var(--radius-8); box-shadow: var(--shadow-pop);
-  font-size: var(--text-meta); line-height: var(--leading-read); color: var(--color-ink); animation: fade-in var(--dur-swap) var(--ease-out); }
-.pop-body[hidden] { display: none; }
-/* #55: an (i) beside a caps heading opens its words in normal case, never the heading's capitals */
-.caps-title .pop-body, .section-head .pop-body, .ont-head .pop-body, .home-label .pop-body, .label-caps .pop-body, .card-title .pop-body {
+  font-size: var(--text-meta); line-height: var(--leading-read); color: var(--color-ink); animation: fade-in var(--dur-swap) var(--ease-out);
+  /* #55, owner 20 Nov 2026: normal case wherever the (i) sits, never a caps label's capitals
+     (set on the popover itself, so no label can pass its capitals down) */
   text-transform: none; letter-spacing: 0; font-weight: 400; }
+.pop-body[hidden] { display: none; }
 
 /* View Transitions between app pages (Chrome 126+, Safari 18.2+): a cross-fade; the nav, the
    header and the onboarding step bar hold still. Other browsers navigate as before. */
