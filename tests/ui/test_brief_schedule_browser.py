@@ -89,3 +89,53 @@ def test_the_created_toast_goes_and_leaves_the_address(night):  # noqa: F811
         assert r is not None and r.status == 200
         assert "No issue yet" in pg.inner_text("main")
         b.close()
+
+
+def test_the_created_toast_goes_after_an_in_place_create(night):  # noqa: F811
+    """#99: after Create brief in place (no full page load) the "created · Undo" toast stayed and
+    came back on Back: the in-place swap didn't time toasts or drop "?created=". Now it does."""
+    import json
+
+    from playwright.sync_api import sync_playwright
+
+    from othor.briefs import service
+    from othor.briefs.models import Brief as B
+
+    env, _h, cid, _rid, svc = night
+    with svc.sf() as s, tenant_scope(cid):
+        base = s.scalars(sa.select(B)).one()
+        draft = {**service.current(s, base).body, "name": "Dispatch check"}
+    name, val = session_cookie(env).split("=", 1)
+    with serve(env.app) as port, sync_playwright() as p:
+        b = p.chromium.launch()
+        ctx = b.new_context(viewport={"width": 1440, "height": 1000})
+        ctx.add_cookies(
+            [{"name": name, "value": val, "domain": f"indigothread.{BASE}", "path": "/"}]
+        )
+        pg = ctx.new_page()
+        pg.clock.install()
+        pg.goto(f"http://indigothread.{BASE}:{port}/brief", wait_until="networkidle")
+        pg.evaluate("window.__stay = 1")
+        # the panel's Create, as an in-place form on the page
+        pg.evaluate(
+            """(d) => {
+              const f = document.createElement('form');
+              f.method = 'post'; f.action = '/brief/new/create'; f.setAttribute('data-inplace', '');
+              const csrf = document.querySelector('input[name=csrf]').value;
+              for (const [k, v] of [['csrf', csrf], ['draft', d]]) {
+                const i = document.createElement('input');
+                i.type = 'hidden'; i.name = k; i.value = v; f.append(i);
+              }
+              document.querySelector('#main').append(f); f.requestSubmit();
+            }""",
+            json.dumps(draft),
+        )
+        toast = pg.locator(".toast-dock .toast")
+        toast.wait_for()
+        assert "Dispatch check created" in toast.inner_text()
+        assert pg.evaluate("window.__stay") == 1  # in place, no full load
+        assert "created=" not in pg.url
+        pg.mouse.move(5, 5)
+        pg.clock.run_for(13_000)
+        assert toast.count() == 0
+        b.close()

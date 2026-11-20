@@ -8,7 +8,7 @@ from othor.briefs.drafts import DRAFT, EDIT, _on
 
 
 def test_the_prompts_are_the_versions_that_know_weekly_and_monthly() -> None:
-    assert DRAFT == ("brief_draft", "v3") and EDIT == ("brief_edit", "v3")
+    assert DRAFT == ("brief_draft", "v4") and EDIT == ("brief_edit", "v3")
 
 
 def test_a_weekday_is_kept_as_drafted() -> None:

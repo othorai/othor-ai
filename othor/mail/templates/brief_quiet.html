@@ -13,7 +13,8 @@
     <p style="margin:0;font-size:18px;font-weight:600;color:#1F2A37">{{ t.value }} <span style="font-size:13px;font-weight:400;color:{{ '#0B7AA6' if t.on_plan else ('#B33A3A' if t.role == 'negative' else '#5B6B7B') }}">{{ t.comparison.text }}</span>{% if t.stale %} <span style="font-size:12px;font-weight:400;color:#8A5E00">{{ t.stale }}</span>{% endif %}</p></td>
 {% endfor %}{% if pair | length == 1 %}<td width="50%" style="width:50%;border-top:1px solid #E3E6EA">&nbsp;</td>{% endif %}</tr>{% endfor %}
 </table>{% endcall %}{% endif %}
-{% if words.line %}{% call e.row("16px 24px 0") %}{{ e.para(words.line, size=14) }}{% endcall %}{% endif %}
+{% if words.line %}{% call e.row("16px 24px 0") %}{{ e.para(words.line, size=14) }}{% endcall %}{% endif %}{% if b.get("focus_note") %}
+{% call e.row("8px 24px 0") %}{{ e.para(b["focus_note"], size=14) }}{% endcall %}{% endif %}
 {% for sec in b.get("sections") or [] %}{% call e.row("18px 24px 0") %}{{ e.extra(sec) }}{% endcall %}{% endfor %}{% if ahead %}{% call e.row("18px 24px 0") %}{{ e.ahead(ahead, ahead_note) }}{% endcall %}{% endif %}
 {% if b.watching %}{% call e.row("12px 24px 0") %}{{ e.watching(b.watching) }}{% endcall %}{% endif %}
 {% if b.ask %}{% call e.row("16px 24px 0") %}{{ e.ask(b.ask) }}{% endcall %}{% endif %}

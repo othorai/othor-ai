@@ -23,7 +23,10 @@ from othor.briefs.models import SuggestedBrief
 
 # v2 (12 Nov 2026): exclude/include as lists of {breakdown, values}; v1's free-form maps were
 # rejected by the provider's structured output (every draft fell back to "isn't available")
-DRAFT, EDIT, SUGGEST = ("brief_draft", "v3"), ("brief_edit", "v3"), ("brief_suggest", "v1")
+# v4 (20 Nov 2026): only the numbers that answer the question (no padding to 6), what it asks
+# about that no number measures (`missing`), and the targets the owner states (`targets`)
+DRAFT, EDIT, SUGGEST = ("brief_draft", "v4"), ("brief_edit", "v3"), ("brief_suggest", "v1")
+MISSING_MAX, TARGETS_MAX, PHRASE_MAX = 3, 3, 80
 
 
 def _by_breakdown(v: Any) -> dict[str, list[str]]:
@@ -113,7 +116,9 @@ def draft_brief(
     name: str = "",
 ) -> tuple[dict[str, Any], str]:
     """(draft, how): the model's draft checked against the spec, or the fallback (the default
-    brief's numbers with this question) when the model is off or its draft doesn't hold.
+    brief's numbers with this question) when the model is off or its draft doesn't hold. The
+    draft also carries `missing` and `targets` (v4), for the panel only: `edit.clean` leaves them
+    out of the brief's version.
     The name is the model's, else `name` (a suggested brief's), else made from the question:
     never the fallback's, never an existing brief's (`taken`)."""
     taken = [str(t) for t in taken]
@@ -123,7 +128,8 @@ def draft_brief(
     own = name.strip() if name.strip().lower() not in have else ""
     base = {**fallback, "question": question, "name": own or name_from(question, taken)}
     if not got.ok or not isinstance(got.output, dict):
-        return edit.clean(base, spec, options), got.guard
+        # by rules: the default brief's numbers with this question, nothing noted
+        return {**edit.clean(base, spec, options), "missing": [], "targets": []}, got.guard
     o = got.output
     said = str(o.get("name") or "").strip()
     body = {
@@ -142,7 +148,39 @@ def draft_brief(
     cleaned = edit.clean(body, spec, options)
     if not cleaned["headline"]:
         cleaned["headline"] = edit.clean(base, spec, options)["headline"]
-    return cleaned, "drafted"
+    return {
+        **cleaned,
+        "missing": missing(o.get("missing")),
+        "targets": targets(o.get("targets"), question),
+    }, "drafted"
+
+
+def _phrases(v: Any, n: int) -> list[str]:
+    out: list[str] = []
+    for x in v if isinstance(v, list) else []:
+        t = " ".join(str(x).split()).strip(" .·")[:PHRASE_MAX]
+        if t and t.lower() not in {o.lower() for o in out}:
+            out.append(t)
+    return out[:n]
+
+
+def missing(v: Any) -> list[str]:
+    """What the question asks about that no number measures ("dispatch time"), as the model said
+    it: up to 3 short phrases, and none with a digit in it (no number from a model)."""
+    return _phrases([x for x in v or [] if not any(c.isdigit() for c in str(x))], MISSING_MAX)
+
+
+def targets(v: Any, question: str) -> list[str]:
+    """The targets the owner stated ("DSO under 45 days"), in their words: kept only when the
+    phrase has a figure and every figure in it is one the owner typed in the question (CLAUDE.md
+    1). Each becomes a goal only through Add a goal, when the owner clicks it."""
+    said = set(re.findall(r"\d+(?:\.\d+)?", question.replace(",", "")))
+    out = []
+    for t in _phrases(v, TARGETS_MAX * 2):
+        digits = re.findall(r"\d+(?:\.\d+)?", t.replace(",", ""))
+        if digits and all(d in said for d in digits):
+            out.append(t)
+    return out[:TARGETS_MAX]
 
 
 def _on(o: dict[str, Any], said: str) -> str | None:

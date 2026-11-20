@@ -2167,7 +2167,12 @@ a.bp-tile:hover { border-color: var(--color-border-hover); }
 .top-more { position: relative; }
 .top-more > summary { min-width: 32px; padding: 0 8px; }
 .top-more > summary svg { width: 16px; height: 16px; }
-.top-more .use-menu { top: 38px; width: 200px; z-index: 60; }
+/* #98 (owner, 20 Nov 2026): the ⋯ menu as a proper menu: room around and between its rows, each
+   row a hover target, a clear shadow so it reads above what's under it */
+.top-more .use-menu { top: 40px; width: 232px; z-index: 60; padding: 6px; gap: 2px; border-color: var(--color-rule);
+  border-radius: var(--radius-12); box-shadow: 0 8px 24px rgba(16, 32, 44, .14); }
+.top-more .use-menu .opt { min-height: 36px; padding: 8px 12px; border-radius: var(--radius-8); }
+.top-more .use-menu .opt:hover, .top-more .use-menu .opt:focus-visible { background: var(--color-surface-2); }
 .use-menu .btn.opt { height: auto; border: 0; background: transparent; justify-content: flex-start; font-weight: 400; box-shadow: none; }
 .use-menu .btn.opt:hover { background: var(--color-surface-2); }
 .top-more .use-menu a.opt { text-decoration: none; color: var(--color-ink); }
@@ -2497,11 +2502,16 @@ body:has(> .onb-header) { background: radial-gradient(1000px 240px at 50% -80px,
   border-color: var(--color-rule); border-radius: var(--radius-12); box-shadow: 0 4px 16px rgba(16, 32, 44, .08); }
 .toast > span:not(.dot) { flex: 1; min-width: 0; }
 .toast form { display: contents; }
-.toast .btn, .toast .action, .toast .retry { flex: none; height: auto; min-height: 0; padding: 0 2px; margin: 0; border: 0; background: none; box-shadow: none;
-  color: var(--color-accent-deep); font: inherit; font-weight: 500; line-height: var(--leading-row); text-decoration: none; cursor: pointer; }
-.toast .btn:hover, .toast .action:hover, .toast .retry:hover { background: none; text-decoration: underline; text-underline-offset: 3px; }
-.toast .btn:focus-visible, .toast .action:focus-visible, .toast .retry:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: var(--radius-4); box-shadow: none; }
-.toast.err .retry { color: var(--color-accent-deep); }
+/* #100/#101 (owner, 20 Nov 2026, option A): the toast is a dark ink bar with white words, so it's
+   noticed against the light top bar; every action (Undo, Retry, Open, Refresh everything) is a
+   small outlined button with a hover background, never underlined text */
+.toast { background: var(--color-ink); color: var(--color-bg); border-color: var(--color-ink); }
+.toast .sub { color: rgba(255, 255, 255, .72); }
+.toast .btn, .toast .action, .toast .retry { flex: none; height: auto; min-height: 0; padding: 4px 12px; margin: 0; border: 1px solid rgba(255, 255, 255, .45);
+  border-radius: var(--radius-8); background: none; box-shadow: none; color: var(--color-bg); font: inherit; font-weight: 500;
+  line-height: var(--leading-row); text-decoration: none; cursor: pointer; }
+.toast .btn:hover, .toast .action:hover, .toast .retry:hover { background: rgba(255, 255, 255, .14); border-color: rgba(255, 255, 255, .7); text-decoration: none; }
+.toast .btn:focus-visible, .toast .action:focus-visible, .toast .retry:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; box-shadow: none; }
 .toast-dock { left: auto; right: 24px; transform: none; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 @media (max-width: 639px) { .toast-dock { left: 16px; right: 16px; bottom: 16px; align-items: stretch; } .toast { max-width: none; } }
 /* in the app the toast lies over the top bar, the main panel's full width, while it shows (owner,
@@ -2510,7 +2520,7 @@ body:has(> .onb-header) { background: radial-gradient(1000px 240px at 50% -80px,
 body:has(.app):not(:has(.panel.wide:not(.in-page), .panel.chat:not(.in-page))) .toast-dock { top: 0; bottom: auto; left: 232px; right: 0; align-items: stretch; gap: 0; }
 body:has(.app):not(:has(.panel.wide:not(.in-page), .panel.chat:not(.in-page))) .toast-dock .toast {
   max-width: none; width: 100%; min-height: 48px; box-sizing: border-box; padding: 0 32px; gap: 16px; border-radius: 0; border-width: 0 0 1px;
-  border-color: var(--color-accent-border); background: var(--color-accent-tint-2); box-shadow: none; }
+  border-color: var(--color-ink); background: var(--color-ink); box-shadow: none; }
 body:has(.app):not(:has(.panel.wide:not(.in-page), .panel.chat:not(.in-page))) .toast-dock .toast > span:not(.dot) { flex: 0 1 auto; }
 @media (max-width: 1024px) and (min-width: 641px) { body:has(.app):not(:has(.panel.wide:not(.in-page), .panel.chat:not(.in-page))) .toast-dock { left: 200px; } }
 @media (max-width: 640px) { body:has(.app):not(:has(.panel.wide:not(.in-page), .panel.chat:not(.in-page))) .toast-dock { left: 0; } body:has(.app) .toast-dock .toast { min-height: 57px; padding: 8px 16px; } }
@@ -2520,9 +2530,7 @@ a.brief-card:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
 /* "Refresh everything" in a toast (owner, 20 Nov 2026: "the soft blue style … that matches the bg
    colour"): the one boxed action a toast may carry, soft cyan on the strip's light blue; Undo and
    Retry stay quiet text */
-.toast .btn:not(.quiet):not(.retry) { padding: 4px 12px; border: 1px solid var(--color-accent-border); border-radius: var(--radius-8);
-  background: var(--color-accent-tint); color: var(--color-accent-deep); }
-.toast .btn:not(.quiet):not(.retry):hover { background: #D9F3FF; text-decoration: none; }
+/* (#100: the dark toast's actions are all one outlined button, above) */
 /* 0.28.5 (owner, 19 Nov 2026): "Since last week" inside the brief, in the calm page style: no box,
    rows with a rule, the chart quiet, one suggestion */
 .week { display: flex; flex-direction: column; gap: 12px; }

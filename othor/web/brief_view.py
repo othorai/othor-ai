@@ -732,10 +732,16 @@ def edit_view(
     effect, title_now = "", ""
     if dirty:
         before = step.preview(
-            files, spec, run.run_date, {**saved, "id": str(brief.id), "number": v.number}
+            files,
+            spec,
+            run.run_date,
+            {**saved, "id": str(brief.id), "number": v.number, **_default(brief)},
         )
         after = step.preview(
-            files, spec, run.run_date, {**body, "id": str(brief.id), "number": v.number + 1}
+            files,
+            spec,
+            run.run_date,
+            {**body, "id": str(brief.id), "number": v.number + 1, **_default(brief)},
         )
         effect = edit.effect(before, after)
         title_now = str(after.get("title") or "")
@@ -880,6 +886,11 @@ def change_examples(
             break
     out.append("Weekdays only" if body.get("schedule") in (None, "daily") else "Every day")
     return out[:3]
+
+
+def _default(brief: Any) -> dict[str, Any]:
+    """The default brief keeps the whole company in a preview, as in the run (scope.focus)."""
+    return {"default": True} if getattr(brief, "is_default", False) else {}
 
 
 def new_preview(
@@ -1029,7 +1040,13 @@ def add_options(s: Session, settings: Settings, f: dict[str, Any]) -> list[dict[
                 files,
                 spec,
                 run.run_date,
-                {**body, "pinned": [*body["pinned"], pat], "id": str(b.id), "number": v.number},
+                {
+                    **body,
+                    "pinned": [*body["pinned"], pat],
+                    "id": str(b.id),
+                    "number": v.number,
+                    **_default(b),
+                },
             )
             fps = [i["fingerprint"] for i in after.get("items") or []]
             if f["fingerprint"] in fps:

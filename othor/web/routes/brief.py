@@ -577,6 +577,7 @@ async def new_draft(request: Request, o: Owner = Depends(signed_in)) -> Response
         line = str(form.get("line") or "").strip()
         suggestion = str(form.get("suggestion") or "")
         reply, rules = "", form.get("rules") == "1"
+        notes = _notes(form)
         if form.get("draft"):
             try:
                 draft = json.loads(str(form["draft"]))
@@ -617,23 +618,137 @@ async def new_draft(request: Request, o: Owner = Depends(signed_in)) -> Response
                 taken=[b.name for b in service.active(s)],
                 name=sug_name,
             )
+            notes = {"missing": draft.pop("missing", []), "targets": draft.pop("targets", [])}
             rules = how != "drafted"
             reply = RULES_LINE if rules else ""
         else:
             return _ask_step(request, s, o, error="Ask one question.")
-        tomorrow = _today(request, o) + dt.timedelta(days=1)
-        pv = bvw.new_preview(s, svc.settings, draft, tomorrow)
-        return _list_page(
+        return _draft_step(request, s, o, draft, reply, rules, suggestion, notes)
+
+
+def _notes(form: Any) -> dict[str, Any]:
+    """What the draft noted (brief_draft v4), carried by the form between the panel's posts and
+    re-checked each time: phrases with no digit, targets whose figures are the question's."""
+    import json
+
+    from othor.briefs import drafts
+
+    try:
+        question = str(json.loads(str(form.get("draft") or "{}")).get("question") or "")
+    except (ValueError, AttributeError):
+        question = ""
+    return {
+        "missing": drafts.missing(form.getlist("missing")),
+        "targets": drafts.targets(form.getlist("targets"), question),
+        "goal": str(form.get("goal") or "")[:200],
+    }
+
+
+def _discover() -> bool:
+    """Whether Discover is here to find a number in (a plug-in, M20)."""
+    from othor.core import plugins
+
+    return any(n.href == "/discover" for g in ("company", "setup") for n in plugins.nav(g))
+
+
+def _draft_step(
+    request: Request,
+    s: Session,
+    o: Owner,
+    draft: dict[str, Any],
+    reply: str,
+    rules: bool,
+    suggestion: str,
+    notes: dict[str, Any],
+) -> Response:
+    svc = services(request)
+    tomorrow = _today(request, o) + dt.timedelta(days=1)
+    pv = bvw.new_preview(s, svc.settings, draft, tomorrow)
+    return _list_page(
+        request,
+        s,
+        o,
+        new={
+            "step": "draft",
+            "pv": pv,
+            "reply": reply,
+            "rules": rules,
+            "suggestion": suggestion,
+            "missing": notes.get("missing") or [],
+            "targets": notes.get("targets") or [],
+            "goal": notes.get("goal") or "",
+            "discover": _discover(),
+        },
+    )
+
+
+@router.post("/brief/new/goal", response_class=HTMLResponse, dependencies=CSRF)
+async def new_goal(request: Request, o: Owner = Depends(signed_in)) -> Response:
+    """Add goal: {the owner's target words} (20 Nov 2026): one click drafts the goal through Add a
+    goal (the goal chat's own reading, its figure from the owner's words only); nothing is applied
+    until the owner applies it. The New brief draft stays as it was; Create opens the goal."""
+    import json
+
+    from othor.ai.gateway import ModelGateway
+    from othor.chat import goals
+    from othor.chat import service as chat
+
+    form = await request.form()
+    svc = services(request)
+    try:
+        draft = json.loads(str(form.get("draft") or "{}"))
+    except ValueError:
+        draft = {}
+    notes = _notes(form)
+    target = str(form.get("target") or "").strip()
+    with svc.sf() as s, tenant_scope(o.company.id):
+        if bvw.run_parts(s, svc.settings) is None:
+            return _ask_step(request, s, o, error="The first run hasn’t finished yet.")
+        if target in notes["targets"]:
+            gw = ModelGateway(
+                svc.sf,
+                provider_for(svc.settings),
+                clock=svc.clock,
+                monthly_tokens=svc.settings.ai_monthly_tokens,
+            )
+            t = chat.thread(s, goals.SUBJECT)
+            msg = goals.draft(
+                s,
+                gw,
+                o.company,
+                svc.settings,
+                t,
+                target,
+                actor=str(o.viewer.id),
+                today=_today(request, o),
+            )
+            s.commit()
+            items = ((msg.proposal or {}).get("items") or []) if msg is not None else []
+            if items:
+                notes["goal"] = str(items[0].get("after") or target)
+                notes["targets"] = [x for x in notes["targets"] if x != target]
+            else:
+                notes["goal"] = ""
+                reply = (msg.text if msg is not None else "") or goals.NO_MODEL
+                return _draft_step(
+                    request,
+                    s,
+                    o,
+                    draft,
+                    reply,
+                    form.get("rules") == "1",
+                    str(form.get("suggestion") or ""),
+                    notes,
+                )
+        return _draft_step(
             request,
             s,
             o,
-            new={
-                "step": "draft",
-                "pv": pv,
-                "reply": reply,
-                "rules": rules,
-                "suggestion": suggestion,
-            },
+            draft,
+            "",
+            form.get("rules") == "1",
+            str(form.get("suggestion") or ""),
+            notes,
         )
 
 
@@ -677,7 +792,9 @@ async def create_brief(request: Request, o: Owner = Depends(signed_in)) -> Respo
                     after={"brief": str(b.id)},
                 )
         s.commit()
-        return RedirectResponse(f"/brief?created={b.id}", status_code=303)
+        # a goal drafted from the panel (Add goal) opens beside the new brief, ready to apply
+        goal = "&panel=othor&subject=ontology:goal" if str(form.get("goal") or "") else ""
+        return RedirectResponse(f"/brief?created={b.id}{goal}", status_code=303)
 
 
 @router.post("/brief/{bid}/undo-create", dependencies=CSRF)

@@ -162,6 +162,8 @@ def snapshot(
             for i in ((last.body.get("items") or []) if last else [])
         ]
         row = {"id": str(b.id), "number": v.number, "name": b.name, **v.body, "previous": previous}
+        if b.is_default:  # it keeps the whole company even with picked numbers (scope.focus)
+            row["default"] = True
         if day is not None and (p := sch.period(v.body, day, last.date if last else None)):
             row["period"] = {"from": p[0].isoformat(), "word": p[1], "open": _open_at(s, last)}
         out.append(row)

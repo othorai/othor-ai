@@ -661,6 +661,8 @@ async function panelGo(url, push) {
   if (push) history.pushState({ othorPanel: true }, "", landed.pathname + landed.search + landed.hash);
   window.scrollTo(0, y);
   if (window.htmx) { htmx.process(main); if (newOv) htmx.process(newOv); }
+  timeToasts(document);
+  dropToastParam();
   const panel = document.querySelector(OPEN_PANEL);
   if (panel && !before) {
     finish(panel, "is-entering");
@@ -863,6 +865,10 @@ async function inplaceSubmit(form, submitter) {
   if (window.htmx) { htmx.process(main); if (newOv) htmx.process(newOv); }
   restorePicks(picks);
   focusSpot(spot, form);
+  // #99: a toast the new page brings (Create brief's "created · Undo") goes on its own, and its
+  // "?created=" leaves the address, as after a full load or an htmx swap
+  timeToasts(document);
+  dropToastParam();
 }
 
 document.addEventListener("submit", (e) => {

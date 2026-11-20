@@ -12,6 +12,7 @@ a rewrite of the prose happens after the run, outside it, behind the numbers gua
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Callable
 from decimal import Decimal
 from typing import Any
 
@@ -273,7 +274,7 @@ def _period_tag(f: dict[str, Any], was: dict[str, Any] | None) -> str:
 
 
 def _since_period(
-    spec: dict[str, Any], sc: dict[str, Any], found: list[dict[str, Any]], was: dict[str, Any]
+    mine: Callable[[dict[str, Any]], bool], found: list[dict[str, Any]], was: dict[str, Any]
 ) -> dict[str, int]:
     """What changed in the period: tonight's open findings by their period tag, and those open
     at the previous issue (in this brief's scope) that are open no longer."""
@@ -285,9 +286,7 @@ def _since_period(
         "worse": tags.count("Worse"),
         "better": tags.count("Better"),
         "open": sum(1 for t in tags if t.startswith("Open")),
-        "resolved": sum(
-            1 for fp, w in sorted(was.items()) if fp not in now and scope.finding_in(spec, sc, w)
-        ),
+        "resolved": sum(1 for fp, w in sorted(was.items()) if fp not in now and mine(w)),
     }
 
 
@@ -401,7 +400,17 @@ def assemble(
     sc = version.get("scope") or {}
     names = _names(spec)
     stale = set(stale_as_of or {})
-    found = [f for f in findings if scope.finding_in(spec, sc, f)]
+    # a brief with picked numbers shows items on its own numbers (Option A, owner 20 Nov 2026)
+    # (a finding the owner added to it stays one of its items, 10o)
+    from othor.engine.findings import pattern_of
+
+    mine = scope.in_brief(spec, version)
+    added = set(version.get("pinned") or [])
+    found = [
+        f
+        for f in findings
+        if mine(f) or (added and pattern_of(f) in added and scope.finding_in(spec, sc, f))
+    ]
     for f in found:
         f.setdefault("stale", f["metric"] in stale)
     period = version.get("period")
@@ -422,6 +431,13 @@ def assemble(
     }
     live = [f for f in found if f["fingerprint"] not in settled]
     ranked = rank.rank(live, spec, run_date, previous=version.get("previous") or [])
+    picked = {str(m) for m in version.get("headline") or []}
+    if scope.focus(spec, version) is not None and picked:
+        # owner, 20 Nov 2026: a focused brief's own numbers lead; findings on their parts (net
+        # revenue under DSO) only fill the places left, each group in its ranked order
+        full = rank.rank(live, spec, run_date, n=len(live), previous=version.get("previous") or [])
+        own = [f for f in full if f.get("metric") in picked]
+        ranked = (own + [f for f in full if f.get("metric") not in picked])[: rank.ITEMS]
     ranked = with_pinned(ranked, live, spec, run_date, version.get("pinned") or [])
     items = [
         {**_item(f, i + 1, spec, run_date, stale), "since": since[f["fingerprint"]].isoformat()}
@@ -517,7 +533,7 @@ def assemble(
         "tiles": shown_tiles,
         "items": items,
         "more_in_sweep": max(in_sweep - len(shown & {f["fingerprint"] for f in findings}), 0),
-        "since": _since_period(spec, sc, found, period.get("open") or {})
+        "since": _since_period(mine, found, period.get("open") or {})
         if period
         else _since(found, run_date),
         "watching": _watching(spec, sc, watches),

@@ -5,7 +5,7 @@
 {% from "components/sweep.html" import rows_table %}
 {% from "components/icons.html" import logo, icon %}
 {% from "components/forms.html" import dialog %}
-{% from "components/buttons.html" import button %}
+{% from "components/buttons.html" import button, ai_button %}
 
 {# t: brief_view.tiles() item; href: its number's panel (#38), none in the recipients' view.
    M15.3 (v0.15 design): the name, the value, its period, the sparkline, then one comparison,
@@ -240,6 +240,18 @@
   {% if pv.top_items %}<ol class="items">{% for i in pv.top_items %}<li><span class="n">{{ i.n }}</span><span><b>{{ i.title }}</b>{% if i.label %}<span class="note"> · {{ i.label }}</span>{% endif %}</span></li>{% endfor %}</ol>{% endif %}
   {% if pv.issue.ask %}<p class="ask-line"><span class="who">Ask today{% if pv.issue.ask.to %} · {{ pv.issue.ask.to }}{% endif %}</span> {{ pv.issue.ask.text }}</p>{% endif %}
 </div>
+{%- endmacro %}
+
+{# Under the draft's numbers (brief_draft v4, 20 Nov 2026): what the question asks that no number
+   watches yet, with the way to Discover when it's here; each target the owner typed as a one-click
+   Add goal (drafted through Add a goal; applied only by the owner); a goal drafted from here.
+   n: {missing, targets, goal, discover} #}
+{% macro nb_watch(n) -%}
+{% if n.missing or n.targets or n.goal %}<div class="flex flex-col gap-8">
+{% if n.missing %}<p class="hint">Not watched yet: {{ n.missing | join(", ") }}{% if n.discover %} · <a class="link" href="/discover">Find it in Discover</a>{% endif %}</p>{% endif %}
+{% if n.targets %}<div class="flex flex-wrap gap-8">{% for t in n.targets %}{{ ai_button("Add goal: " ~ t, type="submit", attrs={"formaction": "/brief/new/goal", "name": "target", "value": t, "data-busy": "Drafting the goal…", "data-busy-say": "Othor AI is drafting the goal…"}) }}{% endfor %}</div>{% endif %}
+{% if n.goal %}<p class="hint">Goal drafted: {{ n.goal }} · ready to apply after Create</p>{% endif %}
+</div>{% endif %}
 {%- endmacro %}
 
 {# The footer note where Othor AI drafts (non-negotiable 6): the quiet shared one #}

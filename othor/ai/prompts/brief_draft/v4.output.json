@@ -1,0 +1,80 @@
+{
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "question": {
+      "type": "string"
+    },
+    "headline": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "missing": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "exclude": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "breakdown": {
+            "type": "string"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "breakdown",
+          "values"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "ask_owner": {
+      "type": "string"
+    },
+    "goals": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "schedule": {
+      "type": "string",
+      "enum": [
+        "daily",
+        "weekdays",
+        "weekly",
+        "monthly"
+      ]
+    },
+    "on": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "question",
+    "headline",
+    "missing",
+    "targets"
+  ],
+  "additionalProperties": false
+}

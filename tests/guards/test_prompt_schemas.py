@@ -55,7 +55,7 @@ def test_every_prompt_in_use_has_a_schema_the_provider_accepts() -> None:
 def test_brief_drafts_read_the_list_shape() -> None:
     from othor.briefs.drafts import DRAFT, EDIT, _by_breakdown
 
-    assert DRAFT[1] == "v3" and EDIT[1] == "v3"  # M15.7c: weekly and monthly
+    assert DRAFT[1] == "v4" and EDIT[1] == "v3"  # M15.7c: weekly and monthly; v4: honest picks
     assert _by_breakdown([{"breakdown": "region", "values": ["South", "West"]}]) == {
         "region": ["South", "West"]
     }

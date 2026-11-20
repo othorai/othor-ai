@@ -6,6 +6,30 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.29.2] - 2026-11-20
+
+### Changed
+- A brief with picked numbers shows items on its own numbers first; findings on the numbers
+  they're directly computed from fill the places left. Leadership (the default brief) still sees
+  the whole company. A focused brief with nothing tonight says "Nothing new on {brief} ·
+  {default} has n items".
+- New brief picks only the numbers that answer the question (no padding to six), names what no
+  number measures yet ("Not watched yet: dispatch time · Find it in Discover"), and offers a
+  target you stated ("keep DSO under 45 days") as a draft goal in one click; the goal's figure
+  comes from your own words. Prompt `brief_draft` v4.
+
+## [0.29.1] - 2026-11-20
+
+### Changed
+- Toasts are a dark bar with white words, so they're noticed over the light top bar; every action
+  in a toast (Undo, Retry, Refresh everything) is a small outlined button, never underlined text.
+- The ⋯ menu at the top right: room around and between its rows, a hover background on each row,
+  and a clearer shadow.
+
+### Fixed
+- After Create brief (and any other action done in place), the toast now leaves on its own and
+  doesn't come back on Back: the page's `?created=` leaves the address.
+
 ## [0.29.0] - 2026-11-20
 
 ### Added

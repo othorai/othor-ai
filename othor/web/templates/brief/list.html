@@ -2,7 +2,7 @@
 {% extends "shells/app.html" %}
 {% from "components/ui.html" import el %}
 {% from "components/buttons.html" import button, link %}
-{% from "components/brief.html" import brief_card, new_brief_card, suggested_card, nb_steps, nb_head, nb_ai_tag, nb_card, nb_busy, nb_name, draft_table, mini_brief, nb_note, ai_box, ai_ask %}
+{% from "components/brief.html" import brief_card, new_brief_card, suggested_card, nb_steps, nb_head, nb_ai_tag, nb_card, nb_busy, nb_name, draft_table, mini_brief, nb_note, ai_box, ai_ask, nb_watch %}
 {% from "components/blocks.html" import toast, page_title %}
 {% from "components/sweep.html" import overlay %}
 {% from "components/panels.html" import pane %}
@@ -77,12 +77,14 @@
 {% call overlay("New brief", close) %}
 <form method="post" action="/brief/new" class="contents" data-inplace data-busy-say="Othor AI is changing the draft…"><input type="hidden" name="csrf" value="{{ csrf_token }}">
 <input type="hidden" name="draft" value="{{ d | tojson | forceescape }}"><input type="hidden" name="suggestion" value="{{ new.suggestion }}"><input type="hidden" name="rules" value="{{ '1' if new.rules else '' }}">
+{% for m in new.missing or [] %}<input type="hidden" name="missing" value="{{ m }}">{% endfor %}{% for t in new.targets or [] %}<input type="hidden" name="targets" value="{{ t }}">{% endfor %}{% if new.goal %}<input type="hidden" name="goal" value="{{ new.goal }}">{% endif %}
 {% call(part) pane("nb") %}
 {% if part == "head" %}{% call(p) nb_head(close) %}{% if p == "row" %}{{ nb_steps(2, 2, "Review the draft") }}{% else %}{% call el("div", layout="flex flex-col gap-4") %}{{ nb_name(d.name) }}{% call el("p", "hint") %}{{ "Drafted by rules" if new.rules else "Drafted by Othor AI" }} · nothing is sent until you create it{% endcall %}{% endcall %}{% endif %}{% endcall %}
 {% elif part == "body" %}
 {% call el("div", layout="flex flex-col gap-24") %}
   {% if new.reply %}{% call el("p", "nb-rules" if new.rules else "nb-reply") %}{{ new.reply }}{% endcall %}{% endif %}
   {{ draft_table(pv.rows) }}
+  {{ nb_watch(new) }}
   {% call el("div", layout="flex flex-col gap-10") %}
     {% call el("p", "caps-title") %}Change anything{% endcall %}
     {{ ai_box("Tell Othor AI what to change…", pv.examples, look="line") }}

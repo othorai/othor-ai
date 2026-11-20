@@ -7,6 +7,7 @@ every area; "Other numbers" takes the metrics without an area) and breakdown val
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from othor.ontology.areas import OTHER
@@ -65,6 +66,45 @@ def metric_in(spec: dict[str, Any], scope: dict[str, Any], metric: str | None) -
             return True
         todo += list((spec.get("metrics", {}).get(k) or {}).get("components") or [])
     return False
+
+
+def focus(spec: dict[str, Any], version: dict[str, Any]) -> list[str] | None:
+    """A focused brief's numbers (Option A, owner 20 Nov 2026): a brief with picked numbers
+    (`headline`) and no other scope shows items on its own numbers first. The picked numbers and
+    the numbers each is directly computed from (one level), sorted; None when the brief isn't
+    focused: the default brief (it keeps the whole company), a brief with no picked numbers, or
+    one scoped by its metrics or areas (that scope applies as it always has)."""
+    if version.get("default"):
+        return None
+    sc = version.get("scope") or {}
+    if sc.get("metrics") is not None or sc.get("areas") is not None:
+        return None
+    head = [str(m) for m in version.get("headline") or []]
+    if not head:
+        return None
+    # one level (owner, 20 Nov 2026): a picked number and its direct parts, never their parts in
+    # turn, so a Receivables brief (DSO is computed from net revenue) doesn't lead with revenue
+    metrics = spec.get("metrics", {})
+    seen = set(head)
+    for k in head:
+        seen.update(str(c) for c in (metrics.get(k) or {}).get("components") or [])
+    return sorted(seen)
+
+
+def in_brief(spec: dict[str, Any], version: dict[str, Any]) -> Callable[[dict[str, Any]], bool]:
+    """Whether a finding is one of this brief's: in its scope, and, for a focused brief, about
+    one of its numbers, a number they're computed from, or a number computed from them
+    (`metric_in`'s walk). A finding with no metric is company-wide: not in a focused brief."""
+    sc = version.get("scope") or {}
+    nums = focus(spec, version)
+    on: dict[str, Any] = {"metrics": nums, "exclude": {}}
+
+    def check(f: dict[str, Any]) -> bool:
+        if not finding_in(spec, sc, f):
+            return False
+        return nums is None or (f.get("metric") is not None and metric_in(spec, on, f["metric"]))
+
+    return check
 
 
 def watch_in(spec: dict[str, Any], scope: dict[str, Any], w: dict[str, Any]) -> bool:

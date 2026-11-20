@@ -92,7 +92,6 @@ def build(
 ) -> dict[str, Any] | None:
     """The section for one brief, or None when there's nothing to say (no item reported, fixed
     or open in its window). `shown`: tonight's top items, which "Still open" leaves out."""
-    sc = version.get("scope") or {}
     period = version.get("period")
     start = (
         dt.date.fromisoformat(period["from"])
@@ -104,8 +103,8 @@ def build(
     meta: dict[str, dict[str, Any]] = hist.get("meta") or {}
     nights = [n for n in hist.get("nights") or [] if n["date"] < run_date.isoformat()]
 
-    def inside(f: dict[str, Any]) -> bool:
-        return scope.finding_in(spec, sc, f)
+    # a focused brief's own numbers only, as its items (Option A, owner 20 Nov 2026)
+    inside = scope.in_brief(spec, version)
 
     now = {f["fingerprint"]: f for f in findings if inside(f)}
     known = {fp: m for fp, m in meta.items() if inside(m)}
