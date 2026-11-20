@@ -27,7 +27,12 @@ Watching · {{ fmt.num(b.watching | length) }} breached: {{ b.watching[0].text }
 Question to ask today{% if b.ask.to %} · for {{ b.ask.to }}{% if b.ask.role %} · {{ b.ask.role }}{% endif %}{% endif %}
 {{ b.ask.text }}
 {% endif %}
-Open the brief: {{ open_url }}
+{% if b.get("week") %}Since {{ b["week"].word }}
+{{ b["week"].line }}
+{% for r in b["week"].fixed %}{{ r.title }}
+   {{ r.how }}
+{% endfor %}
+{% endif %}Open the brief: {{ open_url }}
 
 {{ footer }}
 Unsubscribe: {{ unsubscribe_url }}

@@ -7,7 +7,7 @@
 {% call e.row("10px 24px 0") %}{{ e.title(words.title, 20) }}{% endcall %}
 {% if sources %}{% call e.row("10px 24px 0") %}<p style="margin:0;font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;color:#5B6B7B">{% if stale_line %}<span style="color:#E0A100">&#9679;</span> {{ stale_line }}{% else %}<span style="color:#1B8A4A">&#9679;</span> Sources fresh{% endif %}{% for x in sources %} · {{ x }}{% endfor %}</p>{% endcall %}{% endif %}
 {% if words.situation %}{% call e.row("14px 24px 0") %}{{ e.para(words.situation) }}{% endcall %}{% endif %}
-{% call e.row("20px 24px 0") %}<p style="margin:0;font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#1F2A37">Needs attention · {{ fmt.num(items | length) }}</p>{% endcall %}
+{% call e.row("20px 24px 0") %}{{ e.caps("Needs attention · " ~ fmt.num(items | length)) }}{% endcall %}
 {% call e.row("10px 24px 0") %}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
 {% for i in items %}<tr>
@@ -15,12 +15,13 @@
   <td valign="top" style="padding:12px 8px 12px 0;border-top:1px solid #E3E6EA;font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif">
     <p style="margin:0 0 6px;font-size:14px;line-height:1.45;color:#1F2A37">{{ i.title }}</p>
     <p style="margin:0">{{ e.state_tag(i.state, i.confidence) }}{% if i.change %} {{ e.change_tag(i.change) }}{% endif %}</p></td>
-  <td valign="top" align="right" style="padding:12px 0;border-top:1px solid #E3E6EA;font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#1F2A37;white-space:nowrap">{{ i.money }}</td>
+  <td valign="top" align="right" style="padding:12px 0;border-top:1px solid #E3E6EA;font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#1F2A37;white-space:nowrap">{{ i.money }}</td>
 </tr>{% endfor %}</table>
 {% endcall %}
 {% if since %}{% call e.row("12px 24px 0") %}<p style="margin:0;font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;color:#3B4756"><b style="font-weight:600;color:#1F2A37">Since {{ since_word }},</b> across every finding this brief covers: {{ since }}.</p>{% endcall %}{% endif %}
 {% for sec in b.get("sections") or [] %}{% call e.row("18px 24px 0") %}{{ e.extra(sec) }}{% endcall %}{% endfor %}{% if ahead %}{% call e.row("18px 24px 0") %}{{ e.ahead(ahead, ahead_note) }}{% endcall %}{% endif %}
 {% if b.ask %}{% call e.row("16px 24px 0") %}{{ e.ask(b.ask) }}{% endcall %}{% endif %}
+{% if b.get("week") %}{% call e.row("18px 24px 0") %}{{ e.week(b["week"]) }}{% endcall %}{% endif %}
 {% call e.row("20px 24px 24px") %}{{ e.button("Open the brief", open_url) }}{% endcall %}
 {{ e.brief_footer(footer, unsubscribe_url) }}
 {% endcall %}

@@ -14,21 +14,23 @@
 {% if sm.rows or sm.hidden %}
 {% call action_form("/summary/view", csrf, kind="sum-controls", attrs={"data-keep-focus": true}) %}
   {% if sm.all %}<input type="hidden" name="all" value="1">{% endif %}
-  {{ select("window", sm.windows, sm.view.window, small=True, attrs='data-autosubmit aria-label="Window"') }}
+  <label class="sum-dd"><span>Period</span>{{ select("window", sm.windows, sm.view.window, small=True, attrs='data-autosubmit aria-label="Period"') }}</label>
+  <span class="sum-sep" aria-hidden="true"></span>
   {# owner, 14 Nov 2026: the period alone by default; Compare turns on a grey comparison line #}
-  <label class="sum-check{{ ' is-on' if sm.view.compare != 'none' else '' }}"><input type="checkbox" name="compare_on" value="1" data-autosubmit{% if sm.view.compare != "none" %} checked{% endif %}>Compare</label>
+  <label class="sum-check{{ ' is-on' if sm.view.compare != 'none' else '' }}"><input type="checkbox" role="switch" name="compare_on" value="1" data-autosubmit{% if sm.view.compare != "none" %} checked{% endif %}>Compare</label>
   {% if sm.view.compare != "none" %}{{ _seg("compare", [("before", "Period before"), ("year", "Last year")], sm.view.compare) }}{% endif %}
-  {{ _seg("show", [("actual", "Actual"), ("pct", "%"), ("abs", "ABS")], sm.view.show) }}
-  {% if sm.splits | length > 1 %}{{ select("split", sm.splits, sm.view.split, small=True, attrs='data-autosubmit aria-label="Breakdown"') }}{% endif %}
+  {{ _seg("show", [("actual", "Actual"), ("pct", "Change %"), ("abs", "Change")], sm.view.show) }}
+  <span class="sum-sep" aria-hidden="true"></span>
+  {% if sm.splits | length > 1 %}<label class="sum-dd"><span>For</span>{{ select("split", sm.splits, sm.view.split, small=True, attrs='data-autosubmit aria-label="For"') }}</label>{% endif %}
   {# owner, 14 Nov 2026: an extra view with every number as its own row, at the top right #}
-  {{ select("rows", sm.row_views, sm.view.rows, small=True, attrs='data-autosubmit aria-label="Rows"') }}
+  <label class="sum-dd"><span>Group</span>{{ select("rows", sm.row_views, sm.view.rows, small=True, attrs='data-autosubmit aria-label="Group"') }}</label>
   <noscript><button class="btn sm" type="submit">Show</button></noscript>
 {% endcall %}
 {% endif %}
 {%- endmacro %}
 
 {% macro _change(x) -%}
-<span class="sum-change">{% if x.change_text %}<b>{{ x.change_text }}</b>{% endif %}{% if x.vs %}<span>{{ x.vs }}</span>{% endif %}</span>
+<span class="sum-change{{ ' is-wait' if x.direction == 'none' else '' }}">{% if x.change_text %}<b>{{ x.change_text }}</b>{% endif %}{% if x.vs %}<span>{{ x.vs }}</span>{% endif %}</span>
 {%- endmacro %}
 
 {% macro summary_row(r, csrf, all, number=False) -%}
@@ -38,9 +40,10 @@
     <span class="sum-left">
       <span class="sum-top">{% if not number %}<span class="sum-area">{{ r.area }}</span>{% endif %}{% if r.finding %}<a class="sum-mark" href="/sweep/finding/{{ r.finding.fp }}" aria-label="{{ r.finding.count }} open finding{{ 's' if r.finding.count != 1 else '' }}"><span class="dot"></span>{{ r.finding.count }}</a>{% endif %}</span>
       <span class="sum-name">{{ r.name }}{% if r.note %}<span class="sum-note">{{ r.note }}</span>{% endif %}</span>
-      <span class="sum-figs"><span class="sum-value">{{ r.value_text }}</span>{{ _change(r) }}</span>
+      <span class="sum-figs"><span class="sum-value{{ ' is-wait' if r.direction == 'none' and not r.change_text else '' }}">{{ r.value_text }}</span></span>
     </span>
-    <span class="sum-chart">{% if r.spark %}<span class="sum-wide">{{ chart(r.spark, 1000, 76) }}</span><span class="sum-narrow">{{ chart(r.spark, 360, 64) }}</span>{% endif %}</span>
+    <span class="sum-chart">{% if r.spark and r.spark.series[0].points | length > 1 %}<span class="sum-wide">{{ chart(r.spark, 1000, 76) }}</span><span class="sum-narrow">{{ chart(r.spark, 360, 64) }}</span>{% elif r.value_text != "No data yet" %}<span class="sum-hint">The line starts once there are a few {{ r.grain or "period" }}s to draw</span>{% endif %}</span>
+    <span class="sum-right">{{ _change(r) }}</span>
     <span class="sum-caret" aria-hidden="true"></span>
   </summary>
   <div class="sum-open">
@@ -55,18 +58,19 @@
     {% endif %}
     {% if ex.others %}
     <div class="sum-parts">
-      <p class="sum-sub">Also in {{ r.area }}</p>
-      {% for o in ex.others %}<div class="sum-part"><span class="sign"></span><span>{{ o.name }}{% if o.note %}<span class="sum-note">{{ o.note }}</span>{% endif %}</span><span class="sum-value">{{ o.value_text }}</span>{{ _change(o) }}</div>{% endfor %}
+      <div class="sum-part head"><span class="sign"></span><span class="sum-sub">Also in {{ r.area }}</span><span class="sum-sub num">Now</span><span class="sum-sub">Change</span></div>
+      {% for o in ex.others if o.value_text != "No data yet" %}<div class="sum-part"><span class="sign"></span><span>{{ o.name }}{% if o.note %}<span class="sum-note">{{ o.note }}</span>{% endif %}</span><span class="sum-value">{{ o.value_text }}</span>{{ _change(o) }}</div>{% endfor %}
+      {% for o in ex.others if o.value_text == "No data yet" %}<div class="sum-part"><span class="sign"></span><span>{{ o.name }}{% if o.note %}<span class="sum-note">{{ o.note }}</span>{% endif %}</span><span class="sum-value is-wait">{{ o.value_text }}</span><span></span></div>{% endfor %}
     </div>
     {% endif %}
     <div class="sum-foot">
-      <span class="sum-how">{{ info(text=(r.description ~ (" · " if r.description else "") ~ "From last night's run · Business Model v" ~ r.version), id="sum-info-" ~ rid) }}<a class="link" href="/ontology?metric={{ r.lead }}">How is this calculated?</a></span>
+      <span class="sum-how">{{ info(text=(r.description ~ (" · " if r.description else "") ~ "From last night's run · Business Model v" ~ r.version), id="sum-info-" ~ rid) }}<a class="link" href="/ontology?metric={{ r.lead }}">How is this worked out?</a></span>
       {% if r.metrics | length > 1 %}
       {% call action_form("/summary/lead", csrf, kind="sum-lead") %}<input type="hidden" name="area" value="{{ r.area }}">{% if all %}<input type="hidden" name="all" value="1">{% endif %}<label for="lead-{{ loop_id(r.area) }}">Lead number</label>{{ select("metric", r.metrics, r.lead, small=True, attrs='data-autosubmit', id="lead-" ~ loop_id(r.area)) }}{% endcall %}
       {% endif %}
       <span class="sum-acts">
         {# Move up / Move down: parked for a later release (owner, 14 Nov 2026; docs/plans/roadmap.md) #}
-        {% call action_form("/summary/hide", csrf) %}{% if number %}<input type="hidden" name="metric" value="{{ r.lead }}">{% else %}<input type="hidden" name="area" value="{{ r.area }}">{% endif %}{% if all %}<input type="hidden" name="all" value="1">{% endif %}<button class="btn sm" type="submit">Hide</button>{% endcall %}
+        {% call action_form("/summary/hide", csrf) %}{% if number %}<input type="hidden" name="metric" value="{{ r.lead }}">{% else %}<input type="hidden" name="area" value="{{ r.area }}">{% endif %}{% if all %}<input type="hidden" name="all" value="1">{% endif %}<button class="btn sm quiet" type="submit">Hide {{ "this number" if number else "this area" }}</button>{% endcall %}
       </span>
     </div>
   </div>

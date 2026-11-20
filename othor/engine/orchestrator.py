@@ -510,6 +510,7 @@ def _write_context(ctx: EngineContext, info: RunInfo) -> None:
 
     with ctx.sf() as s:
         run = s.scalars(sa.select(Run).where(Run.id == info.id)).one()
+        number = run.number
         prev = _previous_detecting(s, run)
         rows = watches.snapshot(s)
         holds = active_holds(s, info.run_date)
@@ -522,6 +523,13 @@ def _write_context(ctx: EngineContext, info: RunInfo) -> None:
         status = read_json(files.outputs / "watches.json") or []
     ctx_doc = carry_context(previous, rows, status, holds)
     ctx_doc["forecasts"] = record
+    # 0.28.3: a full re-read asked for this run (othor admin reread), sealed with the inputs so a
+    # replay forecasts the same; only when there is one, so earlier runs' contexts are unchanged
+    from othor.engine.sources import reread_request
+
+    asked = (reread_request(ctx, info.company_id) or {}).get("metrics")
+    if asked:
+        ctx_doc["reread"] = sorted(str(m) for m in asked)
     if info.kind in BRIEF_KINDS:  # the briefs tonight's run makes (M8), as inputs
         from othor.briefs import service as briefs
 
@@ -531,6 +539,13 @@ def _write_context(ctx: EngineContext, info: RunInfo) -> None:
             briefs.ensure_default(s, info.spec)
             s.commit()
             ctx_doc["briefs"] = briefs.snapshot(s, before=before, day=info.run_date)
+            # 0.28.5: the stored nights each brief's "Since last week" reads; only when there
+            # are some, so a first run's context is as before
+            from othor.briefs import history
+
+            nights = history.collect(s, number, info.run_date)
+            if nights:
+                ctx_doc["history"] = nights
     write_json(info.files.inputs / CONTEXT, ctx_doc)
 
 
@@ -719,6 +734,7 @@ def forecast_doc(info: RunInfo) -> tuple[dict[str, Any], dict[str, Any]]:
         first=info.prev is None,
         prev=prev_forecasts(info.prev),
         also=brief_headlines(read_json(info.files.inputs / CONTEXT) or {}, info.spec, points),
+        reread=tuple((read_json(info.files.inputs / CONTEXT) or {}).get("reread") or ()),
     )
 
 
@@ -1042,6 +1058,10 @@ def seal(ctx: EngineContext, info: RunInfo, spec: Spec) -> SourceOutcome:
         )
         s.commit()
     publish_series(ctx.settings.analytics_path(info.company_id), info.files.series)
+    # 0.28.3: a full re-read asked for is done once a run has read and sealed with it
+    from othor.engine.sources import REREAD
+
+    (ctx.settings.company_dir(info.company_id) / REREAD).unlink(missing_ok=True)
     return SourceOutcome(True, {"run_hash": run.run_hash})
 
 

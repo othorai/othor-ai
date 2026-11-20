@@ -7,6 +7,7 @@ CSS, a text part, images inline by cid:). Every number in an email comes from a 
 from __future__ import annotations
 
 import datetime as dt
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -208,7 +209,9 @@ def brief_subject(m: BriefMail) -> str:
     if lead is not None:
         head = str(lead["title"])
     elif items:
-        head = f"Still open · {items[0]['title']}"
+        # 0.28.5: with how long it has been open, as the brief's title says ("Open · day 9")
+        day = re.search(r"day (\d+)", str(items[0].get("change") or ""))
+        head = f"Still open{', day ' + day.group(1) if day else ''} · {items[0]['title']}"
     else:
         head = m.words.get("title", "")
     return f"{head} · {m.brief_name} · {when}"

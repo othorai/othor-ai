@@ -64,8 +64,11 @@ def test_restore_keeps_the_series_going(night):  # noqa: F811
     with svc.sf() as s, tenant_scope(cid):
         n = service.current_number(s)
         rec = next(r for r in service.active(s, ["metric"]) if r.key == KEY)
-        body = {**rec.body, "breakdowns": ["customer"]}  # a change of meaning
-        service.apply(s, [service.put("metric", KEY, body)], actor="o", reason="drop region")
+        # a change of meaning: a filter (0.28.3: a breakdown dropped restarts only that
+        # breakdown's series, so it no longer serves here)
+        floor = {"op": ">", "args": [rec.body["measure"]["expr"], {"lit": -(10**12)}]}
+        body = {**rec.body, "filters": [*rec.body.get("filters", []), floor]}
+        service.apply(s, [service.put("metric", KEY, body)], actor="o", reason="a floor")
         compile_version(s, s.scalars(sa.select(Company)).one(), actor="o")
         s.commit()
     ctx, rid2 = _run(env, svc, cid, STEADY_RUN + dt.timedelta(days=1))

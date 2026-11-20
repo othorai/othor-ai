@@ -150,7 +150,20 @@ def issue_ctx(
         "sent": bvw.sent_to(s, bv.issue.id) if bv.issue is not None else (None, 0),
         "recipients": bvw.recipient_count(s, bv.brief.id),
         "watch_since": bvw.watch_since(s, bv.body),
+        "first_at": _first_at(s, bv),
     }
+
+
+def _first_at(s: Session, bv: bvw.BriefView) -> str | None:
+    """#96: a brief created after a night has run has no issue until its first morning; the page
+    says when it comes, as its card and the toast do. None before the company's first run."""
+    from othor.briefs import service
+    from othor.engine.models import Run
+
+    if bv.issue is not None or s.scalars(sa.select(Run.id).limit(1)).first() is None:
+        return None
+    v = service.current(s, bv.brief)
+    return fmt.clock((v.body if v else {}).get("time", "06:00"))
 
 
 def _plain_email(email: str) -> bool:

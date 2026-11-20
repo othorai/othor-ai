@@ -63,21 +63,17 @@ def test_the_brief_opens_with_p1_first(night):  # noqa: F811
     page = env.client.get(h + f"/brief/{bid}").text
     for text in (
         "Leadership",
-        # M15.3: the kicker (name, day, when it went out, from which run)
+        # 0.28.4 (owner, 19 Nov 2026): the name with an (i) (run, sources, order), the day and time
         'class="brief-kicker"',
-        "Sun 1 Nov · 6:00 AM IST · from last night’s run",
+        'aria-label="About this brief"',
+        "by money, how soon, and how sure",
+        "Sun 1 Nov · 6:00 AM IST",
         "South fell ₹1.4 Cr while West’s growth hid it; three accounts carry",
-        # Ask today under the title: it settles item 01
-        'class="ask-line"',
-        "Settles 01 ↓",
-        'href="#item-1"',
         "Headline numbers",
         "Net revenue",
         "₹4.62 Cr",
         "What needs you · 4",
-        "ranked by money, how soon, and how sure",
         'class="consequence"',
-        "More info",
         "Question to ask today",
         "for Priya Menon · Head of Sales",
         "Settles item 01.",
@@ -86,6 +82,8 @@ def test_the_brief_opens_with_p1_first(night):  # noqa: F811
         "Recipients · ",
     ):
         assert text in page, text
+    # 0.28.4: no "from last night's run", no Ask line under the title (Ask stays at the foot)
+    assert "from last night’s run" not in page and 'class="ask-line"' not in page
     # the run line is Full detail's (the design drops it from Simple)
     assert "Every number is computed" not in page
     # cards numbered 01–04, Snooze and Mute returning to this brief
@@ -99,7 +97,7 @@ def test_the_brief_opens_with_p1_first(night):  # noqa: F811
     first = re.search(r'<a class="title" href="([^"]+)">', page).group(1)
     assert "tab=test" not in first
     assert f'<a class="chart visual" href="{first}"' in page
-    assert f'<a class="calc" href="{first}">More info</a>' in page
+    assert "More info" not in page  # 0.28.4 (owner): the chart and the title open it
     assert "How is this calculated?" not in page.split('class="brief-items"', 1)[1]
 
 
@@ -324,7 +322,6 @@ def test_a_new_brief_from_one_question_then_undo(night):  # noqa: F811
     for line in (
         "Step 2 of 2 · Review the draft",
         "Drafted by rules · nothing is sent until you create it",
-        "Tomorrow’s brief · from last night’s data",
         "Change anything",
         "Create brief",
         "Are my top 4 accounts still buying?",
@@ -342,6 +339,10 @@ def test_a_new_brief_from_one_question_then_undo(night):  # noqa: F811
     assert "created · first brief tomorrow 6:00 AM" in listing and "Undo" in listing
     with svc.sf() as s, tenant_scope(cid):
         new = s.scalars(sa.select(B).where(B.is_default.is_(False))).one()
+    # #96: the new brief opens before its first issue (no 500), and says when the first one comes
+    first = env.client.get(h + f"/brief/{new.id}")
+    assert first.status_code == 200, first.status_code
+    assert "No issue yet The first one arrives tomorrow at 6:00 AM IST" in _text(first.text)
     r = env.client.post(
         h + f"/brief/{new.id}/undo-create", data={"csrf": tok}, follow_redirects=False
     )
@@ -351,18 +352,17 @@ def test_a_new_brief_from_one_question_then_undo(night):  # noqa: F811
 
 
 def test_new_brief_step_1_in_the_questions_panel_style(night):  # noqa: F811
-    """Step 1 (v0.11): the step bar, the Othor AI mark, the box with Cancel and Draft brief
-    under it, suggested questions that fill the box (they don't send), and the note. While it
-    drafts the panel says so in place (#27)."""
+    """Step 1 (v0.11; calm, #95): the step bar, the box as the Othor AI chat's (no mark in it)
+    with Draft brief under it, suggested questions as rows that fill the box (they don't send),
+    each with where it came from, and the note. While it drafts the panel says so (#27)."""
     env, h, _cid, _rid, _svc = night
     page = env.client.get(h + "/brief/new").text
     panel = _panel(page)
     text = _text(panel)
     assert "Step 1 of 2 · Your question" in text
-    assert re.search(
-        r'class="nb-ai"><span class="mark"><svg role="img" aria-label="Othor AI"', panel
-    )
-    assert "Suggested for " in text
+    assert 'class="nb-ai"' not in panel and "ai-box-mark" not in panel  # #95: no logo in the box
+    assert '<textarea class="input" id="f-question" name="question"' in panel
+    assert "Suggested for " in text and 'class="nb-suggest"' in panel
     assert (
         "Drafts only. Numbers are computed, not written. Nothing changes until you apply." in text
     )
@@ -377,13 +377,14 @@ def test_new_brief_step_1_in_the_questions_panel_style(night):  # noqa: F811
     )
     assert 'data-busy="Drafting…"' in panel and "data-busy-line" in panel
     assert "Othor AI is drafting your brief…" in panel
-    # Cancel, then Draft brief, right under the box
-    assert panel.index("data-fill-target") < panel.index(">Cancel<") < panel.index("Draft brief")
+    # Draft brief right under the box (the × closes the panel; no Cancel)
+    assert panel.index("data-fill-target") < panel.index("Draft brief") and ">Cancel<" not in panel
 
 
 def test_new_brief_review_is_a_table_not_chips(night):  # noqa: F811
     """Step 2 (#28): the draft as labelled rows with Change on hover and focus, the numbers'
-    count named, the name from the question (never the default brief's), and tomorrow's brief."""
+    count named, the name from the question (never the default brief's); no preview of tomorrow's
+    brief (#95), and Change anything as one line with Send beside it and the examples as chips."""
     env, h, _cid, _rid, _svc = night
     tok = env.csrf(h + "/brief")
     q = "Are my top 4 accounts still buying?"
@@ -398,9 +399,13 @@ def test_new_brief_review_is_a_table_not_chips(night):  # noqa: F811
     # the name comes from the question, not the default brief's ("Leadership")
     assert _draft(page)["name"] == "Top 4 accounts buying"
     assert re.search(r'<input name="name" value="Top 4 accounts buying"', panel)
-    # tomorrow's brief: tiles with their band sparklines (render_svg), and the change examples
-    assert 'class="mini-brief"' in panel and 'class="brief-tile"' in panel and "<svg" in panel
-    assert 'data-tell-fill="Weekdays only"' in panel
+    # #95: no preview of tomorrow's brief; one line, Send beside it, the examples as chips
+    assert 'class="mini-brief"' not in panel and "Tomorrow’s brief" not in panel
+    assert 'class="tell ai-compose is-line"' in panel
+    assert re.search(
+        r'<button class="btn soft" type="submit" name="action" value="ai">Send</button>', panel
+    )
+    assert 'class="chip lg" type="button" data-tell-fill="Weekdays only"' in panel
     # #27 on step 2: Create says "Creating…", posts to its own action in place
     assert 'formaction="/brief/new/create" data-busy="Creating…"' in panel
 

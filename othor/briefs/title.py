@@ -158,7 +158,47 @@ def _owner_of(owners: list[dict[str, Any]], area: str) -> dict[str, Any] | None:
     return next((o for o in owners if area in (o.get("areas") or [])), None)
 
 
-def ask_today(items: list[dict[str, Any]], owners: list[dict[str, Any]]) -> dict[str, Any] | None:
+# 0.28.4 (owner, 19 Nov 2026): whom to ask, even before a team is set up: a plain role from the
+# number's area (and where it happened), worked out by code
+ROLE_OF_AREA = {
+    "Sales": "your sales head",
+    "Collections": "whoever runs collections",
+    "Operations": "your operations head",
+    "Finance": "your finance head",
+    "Customers": "your account managers",
+}
+ROLE_OF_DETECTOR = {
+    "missing_records": "your account managers",
+    "concentration": "your sales head",
+    "cross_source": "whoever keeps your books",
+}
+
+
+def role_for(item: dict[str, Any], spec: dict[str, Any] | None) -> str:
+    """'your sales head for South'; 'whoever looks after dispatch time' when nothing better."""
+    m = ((spec or {}).get("metrics") or {}).get(str(item.get("metric") or "")) or {}
+    role = ROLE_OF_AREA.get(str(m.get("area") or "")) or ROLE_OF_DETECTOR.get(
+        str(item.get("detector") or "")
+    )
+    if not role:
+        name = str(m.get("name") or "").strip()
+        role = f"whoever looks after {name[:1].lower() + name[1:]}" if name else ""
+    where = str(item.get("breakdown_value") or "").strip()
+    return f"{role} for {where}" if role and where else role
+
+
+def ask_today(
+    items: list[dict[str, Any]],
+    owners: list[dict[str, Any]],
+    spec: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    got = _ask_today(items, owners)
+    if got is not None and not got.get("to") and not got.get("role"):
+        got = {**got, "role": role_for(items[0], spec)}
+    return got
+
+
+def _ask_today(items: list[dict[str, Any]], owners: list[dict[str, Any]]) -> dict[str, Any] | None:
     if not items:
         return None
     top = items[0]

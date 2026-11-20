@@ -39,7 +39,7 @@ def test_the_page(night):  # noqa: F811
     assert nav[:4] == ["/home", "/brief", "/sweep", "/summary"]
     assert _areas(p) == ["Sales", "Collections", "Operations", "Finance", "Customers"]
     assert 'action="/summary/view"' in p and 'name="window"' in p
-    assert ">Compare</label>" in p and ">ABS</label>" in p and ">Actual</label>" in p
+    assert ">Compare</label>" in p and ">Change</label>" in p and ">Actual</label>" in p
     assert ">Period before</label>" not in p  # the period alone until Compare is on
     # Sales expands into the parts that add up to Net revenue, and the area's other numbers
     sales = p.split('<span class="sum-area">Sales</span>', 1)[1].split("</details>", 1)[0]

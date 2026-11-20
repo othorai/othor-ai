@@ -38,7 +38,7 @@ from othor.ontology.compiler.render import (
 from othor.ontology.compiler.terms import terms as signed_terms
 from othor.ontology.types import CORE_BODIES, walk
 
-COMPILER_VERSION = "m16.2"  # M16.1: area and signed terms; M16.2: per_period
+COMPILER_VERSION = "m28.3"  # M16.1: area and signed terms; M16.2: per_period; 0.28.3: meaning
 SPEC_FORMAT = 1
 GRAINS = ("day", "week", "month")
 EVIDENCE_LIMIT = 50
@@ -994,6 +994,9 @@ def compile_records(
     for m, entry in out_metrics.items():
         if entry.get("status") == "active" and (entry.get("queries") or entry.get("components")):
             entry["definition_hash"] = definition_hash(m, records, spec)
+            # 0.28.3: what each series means, the total apart from each breakdown, so a change
+            # that doesn't move the values (a breakdown added, who is active) keeps history
+            entry["meaning"] = meaning_hashes(m, records, spec)
     return spec
 
 
@@ -1066,6 +1069,81 @@ NOT_MEANING = {
     "scale",
     "text",
 }
+
+
+# a breakdown's fields that don't change its series' values: shown or used by checks only
+BREAKDOWN_NOT_MEANING = {"name", "cap", "entity"}
+
+
+def _sha(doc: dict[str, Any]) -> str:
+    import hashlib
+    import json
+
+    return hashlib.sha256(json.dumps(doc, sort_keys=True, default=str).encode()).hexdigest()[:16]
+
+
+def meaning_hashes(
+    metric: str,
+    records: dict[tuple[str, str], dict[str, Any]],
+    spec: dict[str, Any],
+    seen: frozenset[str] = frozenset(),
+) -> dict[str, str]:
+    """What each of the metric's series means (0.28.3, owner 19 Nov 2026: a number's history must
+    survive Business Model answers that don't change its values). "" is the total: the metric's
+    measure, filters, date, formula, unit and the rules, vocabularies and aliases they read, and
+    its parts' totals; never its list of breakdowns. Each breakdown key: the total's meaning plus
+    that breakdown's own record (its table, column, vocabulary; not its name, cap or entity) and
+    its formula. Only a change here starts a series again, and only that series."""
+    body = {
+        k: v
+        for k, v in (records.get(("metric", metric)) or {}).items()
+        if k not in NOT_MEANING and k not in ("breakdowns", "breakdown_formulas")
+    }
+    rules = []
+    vocabs: set[str] = set()
+    alias = False
+    for r in spec.get("rules", []):
+        if metric in (r.get("applies_to") or []):
+            rb = {k: v for k, v in (records.get(("rule", r["key"])) or {}).items() if k != "text"}
+            rules.append([r["key"], rb])
+            if rb.get("vocabulary"):
+                vocabs.add(rb["vocabulary"])
+            alias = alias or rb.get("via") == "alias"
+    doc: dict[str, Any] = {
+        "metric": body,
+        "rules": sorted(rules, key=lambda x: x[0]),
+        "vocabularies": [[v, records.get(("vocabulary", v)) or {}] for v in sorted(vocabs)],
+    }
+    if alias:
+        doc["aliases"] = sorted(
+            [b.get("source"), b.get("term"), b.get("means")]
+            for (typ, _), b in records.items()
+            if typ == "alias" and b.get("source")
+        )
+    parts = (spec.get("metrics", {}).get(metric) or {}).get("components") or []
+    doc["parts"] = [
+        [c, meaning_hashes(c, records, spec, seen | {metric}).get("", "")]
+        for c in sorted(parts)
+        if c not in seen
+    ]
+    total = _sha(doc)
+    out = {"": total}
+    full = records.get(("metric", metric)) or {}
+    for b in full.get("breakdowns") or []:
+        bb = {
+            k: v
+            for k, v in (records.get(("breakdown", b)) or {}).items()
+            if k not in BREAKDOWN_NOT_MEANING
+        }
+        bdoc: dict[str, Any] = {
+            "total": total,
+            "breakdown": bb,
+            "formula": (full.get("breakdown_formulas") or {}).get(b),
+        }
+        if bb.get("vocabulary"):
+            bdoc["vocabulary"] = records.get(("vocabulary", bb["vocabulary"])) or {}
+        out[b] = _sha(bdoc)
+    return out
 
 
 def definition_hash(

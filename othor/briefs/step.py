@@ -8,7 +8,7 @@ from __future__ import annotations
 import datetime as dt
 from typing import Any
 
-from othor.briefs import sections
+from othor.briefs import sections, since_week
 from othor.briefs.assemble import assemble
 from othor.engine.ledger import sha
 from othor.engine.store import Point, RunFiles, read_json, read_points, with_run_inputs
@@ -62,6 +62,18 @@ def make(
             stale_as_of=stale,
             forecast=forecast,
         )
+        # 0.28.5: "Since last week", from tonight's findings and the stored nights; only when
+        # there's something to say, so an issue without it keeps its bytes
+        week = since_week.build(
+            spec,
+            v,
+            run_date,
+            [dict(f) for f in findings],
+            context.get("history"),
+            [i["fingerprint"] for i in issue.get("items") or []],
+        )
+        if week:
+            issue["week"] = week
         extra = sections.build_all(spec, v, run_date, findings, ws, points, context, outputs_doc)
         if extra:  # only then, so an issue without a plug-in section keeps its bytes
             issue["sections"] = extra

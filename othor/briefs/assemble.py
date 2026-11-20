@@ -355,6 +355,34 @@ def _first_metrics(
     return out
 
 
+SETTLED_DAYS = 7
+
+
+def _changed_on(
+    found: list[dict[str, Any]], previous: list[dict[str, Any]], run_date: dt.date
+) -> dict[str, dt.date]:
+    """Each open finding's day of its last change in this brief: tonight when it's new, worse,
+    better or back; else the day yesterday's brief kept (or, for an issue from before 0.28.4,
+    the day Sweep first saw it)."""
+    prev = {p["fingerprint"]: p for p in previous}
+    out: dict[str, dt.date] = {}
+    for f in found:
+        if f.get("status") != "open":
+            continue
+        fp = f["fingerprint"]
+        moved = not str(f.get("change") or "").startswith("Open")
+        p = prev.get(fp) or {}
+        if moved:
+            out[fp] = run_date
+        elif p.get("since"):
+            out[fp] = dt.date.fromisoformat(str(p["since"]))
+        else:
+            out[fp] = dt.date.fromisoformat(
+                str((f.get("first_seen") or {}).get("date") or run_date.isoformat())
+            )
+    return out
+
+
 def assemble(
     spec: dict[str, Any],
     version: dict[str, Any],
@@ -382,9 +410,34 @@ def assemble(
         for f in found:
             if f["status"] == "open":
                 f["change"] = _period_tag(f, was.get(f["fingerprint"]))
-    ranked = rank.rank(found, spec, run_date, previous=version.get("previous") or [])
-    ranked = with_pinned(ranked, found, spec, run_date, version.get("pinned") or [])
-    items = [_item(f, i + 1, spec, run_date, stale) for i, f in enumerate(ranked)]
+    # 0.28.4 (owner, 19 Nov 2026; the 100-night test): an item unchanged for a week leaves the top
+    # items for the "Still open" line; it comes back the night it changes (worse, better, back)
+    since = _changed_on(found, version.get("previous") or [], run_date)
+    pinned = set(version.get("pinned") or [])
+    # a daily brief only: a Weekly or Monthly one sees an item once a period
+    settled = {
+        fp
+        for fp, d in since.items()
+        if not period and (run_date - d).days >= SETTLED_DAYS and fp not in pinned
+    }
+    live = [f for f in found if f["fingerprint"] not in settled]
+    ranked = rank.rank(live, spec, run_date, previous=version.get("previous") or [])
+    ranked = with_pinned(ranked, live, spec, run_date, version.get("pinned") or [])
+    items = [
+        {**_item(f, i + 1, spec, run_date, stale), "since": since[f["fingerprint"]].isoformat()}
+        for i, f in enumerate(ranked)
+    ]
+    still_open = [
+        {
+            "fingerprint": f["fingerprint"],
+            "title": (f.get("text") or {}).get("title", ""),
+            "days": (run_date - since[f["fingerprint"]]).days,
+        }
+        for f in sorted(
+            (f for f in found if f["fingerprint"] in settled and rank.eligible(f)),
+            key=lambda f: (-Decimal(str(f.get("money") or 0)), f["fingerprint"]),
+        )
+    ]
     ts = [
         t
         for m in version.get("headline") or []
@@ -422,9 +475,9 @@ def assemble(
         head = title.lead_headline(ranked)
         sub = title.line(ts, names)
         if version.get("ask_owner", "top_item") == "top_item":
-            ask = title.ask_today(ranked, spec.get("owners") or [])
+            ask = title.ask_today(ranked, spec.get("owners") or [], spec)
         else:
-            got = title.ask_today(ranked, spec.get("owners") or [])
+            got = title.ask_today(ranked, spec.get("owners") or [], spec)
             ask = {**got, "to": version["ask_owner"], "role": ""} if got else None
     shown = {i["fingerprint"] for i in items}
     in_sweep = sweep_counts.get("findings", 0)
@@ -438,7 +491,13 @@ def assemble(
         for x in [
             first,
             title.headline(ranked) if ranked and title.headline(ranked) != head else "",
-            *[i["line"] for i in items],
+            # 0.28.4 (100-night test): each item's own title, which says what it's about, not
+            # every item's detail lines run together ("From ₹1.52 Cr to ₹1.64 Cr, held for…")
+            *[
+                str(i["title"]).rstrip(".") + "."
+                for i in items
+                if i.get("title") and str(i["title"]) not in head
+            ],
         ]
         if x
     )
@@ -463,6 +522,7 @@ def assemble(
         else _since(found, run_date),
         "watching": _watching(spec, sc, watches),
         "ask": ask,
+        "still_open": still_open,
         "situation": situation,
         "goals": goal_lines(spec, version.get("goals") or [], goals, sc),
         # v0.19 (M19.4): where each headline number is heading, in plain words

@@ -178,4 +178,34 @@ def _mark(text: str, q: str) -> Markup:
 templates.env.filters["mark"] = _mark
 
 
+def _prose(text: str) -> Markup:
+    """An Othor AI answer as formatted text (0.28.4, owner 19 Nov 2026): paragraphs at blank
+    lines, **bold**, and lines starting "- " as a list. Everything is escaped first; nothing else
+    a model writes becomes markup (no links, no HTML)."""
+    import re
+
+    out: list[Markup] = []
+    for block in re.split(r"\n\s*\n", (text or "").strip()):
+        lines = [ln.strip() for ln in block.splitlines() if ln.strip()]
+        if not lines:
+            continue
+
+        def inline(s: str) -> Markup:
+            parts = re.split(r"\*\*(.+?)\*\*", s)  # odd parts were in **bold**
+            return Markup("").join(
+                Markup("<b>{}</b>").format(p) if i % 2 else Markup.escape(p)
+                for i, p in enumerate(parts)
+            )
+
+        if all(ln.startswith(("- ", "• ")) for ln in lines):
+            items = Markup("").join(Markup("<li>{}</li>").format(inline(ln[2:])) for ln in lines)
+            out.append(Markup("<ul>{}</ul>").format(items))
+        else:
+            out.append(Markup("<p>{}</p>").format(inline(" ".join(lines))))
+    return Markup("").join(out)
+
+
+templates.env.filters["prose"] = _prose
+
+
 # the website's `fill` and `site_links` filters moved with it into the othor_site plug-in (M20.2)

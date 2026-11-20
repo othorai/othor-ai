@@ -394,6 +394,7 @@ def charts(ctx: Ctx, fig: dict[str, Any]) -> tuple[ChartSpec | None, ChartSpec |
         return change_charts(ctx, fig)
     now = s[-n:]
     start = len(s) - len(now)
+    small = unit == "inr" and values.small_money([v for _p, v in s])
     comp: list[tuple[str, float]] = []
     for j, (p, _v) in enumerate(now):
         if ctx.view.compare == "none":
@@ -404,8 +405,8 @@ def charts(ctx: Ctx, fig: dict[str, Any]) -> tuple[ChartSpec | None, ChartSpec |
             else (s[start + j - n][1] if start + j - n >= 0 else None)
         )
         if c is not None:
-            comp.append((p.isoformat(), values.chart_value(unit, c)))
-    pts = tuple((p.isoformat(), values.chart_value(unit, v)) for p, v in now)
+            comp.append((p.isoformat(), values.chart_value(unit, c, small)))
+    pts = tuple((p.isoformat(), values.chart_value(unit, v, small)) for p, v in now)
     label = COMPARES[ctx.view.compare] if ctx.view.compare == "year" else "Period before"
     split = ctx.view.split if fig.get("pair") else ""
     prov = {
@@ -423,15 +424,15 @@ def charts(ctx: Ctx, fig: dict[str, Any]) -> tuple[ChartSpec | None, ChartSpec |
     period = Period(g, now[0][0].isoformat(), now[-1][0].isoformat())  # type: ignore[arg-type]
     v = ctx.view
     cid = f"summary:{metric}:{g}:{now[-1][0].isoformat()}:{v.window}:{v.compare}:{split}"
-    sers = [Series("now", WINDOWS[ctx.view.window][2], "neutral", pts, style="smooth")]
-    if comp:  # owner, 14 Nov 2026: ink for the period, the comparison dotted grey
+    sers = [Series("now", WINDOWS[ctx.view.window][2], "positive", pts, style="smooth")]
+    if comp:  # the period in theme blue (calm, 19 Nov 2026), the comparison dotted grey
         sers.append(Series("compare", label, "muted", tuple(comp), style="dotted"))
     line = ChartSpec(
         id=cid,
         kind="line",
         title=f"{name} · {WINDOWS[ctx.view.window][2]}",
         alt_text=alt,
-        unit=values.chart_unit(unit),
+        unit=values.chart_unit(unit, small),
         period=period,
         series=tuple(sers),
         provenance=prov,
@@ -441,11 +442,11 @@ def charts(ctx: Ctx, fig: dict[str, Any]) -> tuple[ChartSpec | None, ChartSpec |
         kind="sparkline",
         title=f"{name} · {WINDOWS[ctx.view.window][2]}",
         alt_text=alt,
-        unit=values.chart_unit(unit),
+        unit=values.chart_unit(unit, small),
         period=period,
-        # the row's long chart (owner, 14 Nov 2026): the period smoothed in ink, the comparison
-        # dotted grey behind it
-        series=(Series("now", name, "neutral", pts, style="smooth"),)
+        # the row's long chart (owner, 14 Nov 2026): the period smoothed (theme blue from
+        # 0.28.4), the comparison dotted grey behind it
+        series=(Series("now", name, "positive", pts, style="smooth"),)
         + ((Series("compare", label, "muted", tuple(comp), style="dotted"),) if comp else ()),
         provenance=prov,
     )
@@ -460,15 +461,16 @@ def change_charts(ctx: Ctx, fig: dict[str, Any]) -> tuple[ChartSpec | None, Char
     g, n, unit, name, metric = fig["grain"], fig["periods"], fig["unit"], fig["name"], fig["metric"]
     v = ctx.view
     start = max(len(s) - n, 0)
-    pts: list[tuple[str, float]] = []
+    raw: list[tuple[str, Decimal]] = []
     for i in range(start, len(s)):
         d = delta(unit, s[i][1], compared(s, g, v.basis, at=i), v.show)
-        if d is None:
-            continue
-        if v.show == "pct" or unit in ("percent", "ratio"):
-            pts.append((s[i][0].isoformat(), float(d)))
-        else:
-            pts.append((s[i][0].isoformat(), values.chart_value(unit, d)))
+        if d is not None:
+            raw.append((s[i][0].isoformat(), d))
+    plain = v.show == "pct" or unit in ("percent", "ratio")
+    small = not plain and unit == "inr" and values.small_money([d for _p, d in raw])
+    pts: list[tuple[str, float]] = [
+        (p, float(d) if plain else values.chart_value(unit, d, small)) for p, d in raw
+    ]
     if len(pts) < 2:  # a line needs two points
         return None, None
     if v.show == "pct":
@@ -476,7 +478,7 @@ def change_charts(ctx: Ctx, fig: dict[str, Any]) -> tuple[ChartSpec | None, Char
     elif unit in ("percent", "ratio"):
         cu = Unit("count", decimals=1)  # a share's change, in points
     else:
-        cu = values.chart_unit(unit)
+        cu = values.chart_unit(unit, small)
     against = "the same period last year" if v.basis == "year" else f"the {g} before"
     last = fig.get("change_text") or ""
     alt = f"{name}, change on {against}, {len(pts)} {g}s to {_when(g, s[-1][0])}" + (
@@ -505,7 +507,7 @@ def change_charts(ctx: Ctx, fig: dict[str, Any]) -> tuple[ChartSpec | None, Char
         unit=cu,
         period=period,
         y=y,
-        series=(Series("now", WINDOWS[v.window][2], "neutral", tuple(pts), style="smooth"),),
+        series=(Series("now", WINDOWS[v.window][2], "positive", tuple(pts), style="smooth"),),
         provenance=prov,
     )
     spark = ChartSpec(
@@ -516,7 +518,7 @@ def change_charts(ctx: Ctx, fig: dict[str, Any]) -> tuple[ChartSpec | None, Char
         unit=cu,
         period=period,
         y=y,
-        series=(Series("now", name, "neutral", tuple(pts), style="smooth"),),
+        series=(Series("now", name, "positive", tuple(pts), style="smooth"),),
         provenance=prov,
     )
     return line, spark

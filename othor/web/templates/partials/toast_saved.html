@@ -1,4 +1,4 @@
 {#- SPDX-License-Identifier: Apache-2.0 -#}
 {% from "components/ui.html" import el %}
 {% from "components/blocks.html" import toast %}
-{% if event_id %}{% call el("div", "toast", attrs='role="status"') %}{% call el("span", "dot accent") %}{% endcall %}<span>{{ text }}</span>{% call el("button", "action btn quiet", attrs={"type": "button", "hx-post": "/settings/undo/" ~ event_id, "hx-headers": '{"X-CSRF-Token": "' ~ csrf_token ~ '"}'}) %}Undo{% endcall %}{% endcall %}{% elif text %}{% call el("div", "toast", attrs='role="status"') %}{% call el("span", "dot accent") %}{% endcall %}<span>{{ text }}</span>{% endcall %}{% endif %}
+{% if event_id %}{% call toast(text) %}{% call el("button", "btn quiet", attrs={"type": "button", "hx-post": "/settings/undo/" ~ event_id, "hx-headers": '{"X-CSRF-Token": "' ~ csrf_token ~ '"}'}) %}Undo{% endcall %}{% endcall %}{% elif text %}{{ toast(text) }}{% endif %}

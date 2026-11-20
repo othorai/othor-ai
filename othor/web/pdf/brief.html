@@ -127,6 +127,16 @@ td.fc-line svg, .fc-range svg { width: 100%; height: auto; display: block; }
 {% if b.get('ahead_note') %}<p class="small muted">{{ b.ahead_note }}</p>{% endif %}
 </section>{% endif %}
 
+{# 0.28.5 (owner, 20 Nov 2026): "Since last week" last, after everything else in the issue #}
+{% if week %}<section style="break-inside: avoid">
+<h2>Since {{ week.word }}</h2>
+<p>{{ week.line }}</p>
+{% if week_svg %}<div class="chart">{{ week_svg | safe }}</div>{% endif %}
+{% if week.fixed %}<p class="caps">Fixed · {{ fmt.num(week.fixed | length) }}</p><table>{% for r in week.fixed %}<tr><td>{{ r.title }}</td><td class="small muted">{{ r.how }}</td></tr>{% endfor %}</table>{% endif %}
+{% if week.open %}<p class="caps">Still open · {{ fmt.num(week.open | length) }}</p><table>{% for r in week.open %}<tr><td>{{ r.title }}</td><td class="small muted">day {{ fmt.num(r.days) }} · {{ r.trend }}</td></tr>{% endfor %}</table>{% endif %}
+{% if week.get("suggest") %}<p class="small muted">Othor AI suggests: {{ week["suggest"].text }}</p>{% endif %}
+</section>{% endif %}
+
 {% if appendix and findings %}
 <section class="appendix">
   <h2 style="margin-top:0">Appendix · how each number was computed</h2>

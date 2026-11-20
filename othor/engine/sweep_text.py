@@ -234,8 +234,13 @@ def _missing(f: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
         ]
         return {
             "title": (
-                f"{fmt.num(sl['count'])} customers still marked active haven’t invoiced in "
-                f"{fmt.num(sl['quiet_days'])}+ days"
+                f"{fmt.num(sl['count'])} "
+                + (
+                    "customer still marked active hasn’t"
+                    if sl["count"] == 1
+                    else "customers still marked active haven’t"
+                )
+                + f" invoiced in {fmt.num(sl['quiet_days'])}+ days"
             ),
             "line": f"Together {money(sl['total_12m'])} over the last 12 months.{gaps}",
             "consequence": f"{money(sl['total_12m'])} a year outside view",
@@ -309,6 +314,16 @@ def _missing(f: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _slowest(f: dict[str, Any], sl: dict[str, Any]) -> str:
+    """0.28.4 (100-night test): "now take 4.5 days, up from 4.6 days". The word follows the
+    figures as they're written; the same figure says the times are scattered, not slower."""
+    now, before = _unit(f, sl["p90_recent"]), _unit(f, sl["p90_prior"])
+    if now == before:
+        return f"The slowest tenth still take about {now}; the times in between scatter more."
+    up = Decimal(str(sl["p90_recent"])) > Decimal(str(sl["p90_prior"]))
+    return f"The slowest tenth now take {now}, {'up' if up else 'down'} from {before}."
+
+
 def _variance(f: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
     sl = f["slots"]
     sd0, sd1 = Decimal(sl["sd_prior"]), Decimal(sl["sd_recent"])
@@ -321,10 +336,7 @@ def _variance(f: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
             f"{metric} spread{where} {verb} from {_d(sl['started'])} while the average held at "
             f"{_unit(f, sl['mean_recent'])}"
         ),
-        "line": (
-            f"The slowest tenth now take {_unit(f, sl['p90_recent'])}, up from "
-            f"{_unit(f, sl['p90_prior'])}."
-        ),
+        "line": _slowest(f, sl),
         "consequence": "spread usually comes before complaints",
         "why_unseen": "Reports show the average, and the average has not moved.",
         "question": f"What changed in {_lower(metric)}{where} in the week of {_d(sl['started'])}?",
@@ -542,7 +554,7 @@ def _breach(f: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
                 f"{money(sl['to_date'])} to date plus the stored forecast for the rest of the "
                 f"year: {money(sl['short_by'])} short by {_d(sl['by'])}."
                 if sl.get("to_date")
-                else f"The forecast for {_month(sl['by'])} is {sl['projection']}."
+                else f"The forecast for {_month(sl['by'])} is {money(sl['projection'])}."
             ),
             "consequence": f"the goal date, {_d(sl['by'])}",
             "why_unseen": "Each month looks close to plan; the shortfall shows only over the year.",
@@ -550,19 +562,23 @@ def _breach(f: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
         }
     when = f"the week of {_d(sl['period'])}" if sl.get("grain") == "week" else _month(sl["period"])
     side = "above" if f["direction"] == "up" else "under"
-    inr = sl.get("unit") == "inr"
+    from othor.briefs import values as vals
 
-    def value(v: Any) -> str:
-        return money(v) if inr else fmt.num(v, decimals=1)
+    unit = sl.get("unit")
+
+    def value(v: Any) -> str:  # in the number's own unit, as every page writes it (0.28.4)
+        return vals.text(unit, v)
+
+    def spread(lo: Any, hi: Any) -> str:
+        return vals.text_band(unit, lo, hi)
 
     return {
         "title": (
             f"{metric} came in {fmt.pct(abs(Decimal(sl['share'])))} {side} its forecast for {when}"
         ),
         "line": (
-            f"{value(sl['actual'])} against a forecast of {value(sl['point'])} "
-            f"(80% band {value(sl['lower'])}–{value(sl['upper'])}), stored on "
-            f"{_d(sl['forecast_as_of'])}."
+            f"{value(sl['actual'])} against the {value(sl['point'])} expected on "
+            f"{_d(sl['forecast_as_of'])} (likely range {spread(sl['lower'], sl['upper'])})."
         ),
         "consequence": f"{when} closed outside its expected range",
         "why_unseen": "The forecast was stored before the period; reports show the actual alone.",

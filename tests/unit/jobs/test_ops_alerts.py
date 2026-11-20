@@ -117,6 +117,20 @@ def test_a_sealed_run_is_quiet(session_factory, two_companies) -> None:
     _ = b
 
 
+def test_a_later_run_by_hand_doesnt_make_a_sealed_night_late(
+    session_factory, two_companies
+) -> None:
+    """19 Nov 2026: the morning's nightly sealed; an operator's re-read ran another nightly of
+    the same day in the evening, and the 05:00 check said that night needed a look."""
+    a, _ = two_companies
+    _running(session_factory, a)
+    _run(session_factory, a, "done")
+    _run(session_factory, a, "running", number=43)
+    relay = MemoryRelay()
+    assert _check(session_factory, relay, AT_0500 + dt.timedelta(hours=15)) == []
+    assert relay.outbox == []
+
+
 def test_off_without_an_address_and_nothing_but_names_and_numbers(
     session_factory, two_companies
 ) -> None:

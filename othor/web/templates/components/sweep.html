@@ -66,19 +66,27 @@
 </article>
 {%- endmacro %}
 
-{# M15.2 · the status strip: st = sweep_view.strip(); text = the (i)'s words. M15.7b (owner,
-   13 Nov 2026): one square bar per detector with its short name under it; hover, tap or focus
-   opens its card: what it finds, its status, what it covered tonight, what it needs. #}
-{% macro detectors_strip(st, text, when="today") -%}
-<div class="checks-strip">
-  <p class="t">Total {{ fmt.num(st.total) }} detectors. {{ fmt.num(st.active) }} activated. <span class="off">{{ fmt.num(st.inactive) }} inactive.</span> <span class="held">{{ fmt.num(st.suppressed) }} suppressed.</span> {{ info(text=text, id="strip-info", label="What these are") }}</p>
-  <ul class="det-bars" aria-label="Detectors {{ when }}">{% for r in st.segments %}<li class="det {{ r.kind }}{{ ' end' if loop.index > (loop.length + 1) // 2 else '' }}" x-data="popover" data-pop-hover data-key="{{ r.key }}"><button class="det-btn" type="button" aria-label="{{ r.label }}: {{ r.status }}" aria-controls="det-{{ r.key }}" aria-expanded="false"><i class="det-bar"></i><span class="det-name">{{ r.short }}</span></button><div class="det-card" role="tooltip" id="det-{{ r.key }}">
-    <p class="det-card-head"><b>{{ r.label }}</b><span class="det-status {{ r.kind }}">{{ r.status }}</span></p>
-    <p class="det-card-what">{{ r.catches }}</p>
-    {% if r.kind == "on" %}<p class="det-card-line">{{ when | capitalize }}: {{ r.result }}</p>{% elif r.kind == "partly" %}<p class="det-card-line">{{ when | capitalize }}: {{ r.covers }}</p>{% endif %}
-    {% if r.missing %}<p class="det-card-line muted">{{ r.missing[:1] | upper }}{{ r.missing[1:] }}</p>{% endif %}
-    {% if r.action %}<a class="link" href="{{ r.action[1] }}">{{ r.action[0] }}</a>{% endif %}
-  </div></li>{% endfor %}</ul>
+{# #97 (owner, 20 Nov 2026): the detectors as the first of four cards: a ring of one segment per
+   detector (cyan ran, amber ran partly, grey couldn't run), "9/11" inside; hover, tap or focus
+   opens every detector's line (what it finds, how it went), as the strip's cards did. #}
+{% macro detectors_ring(st, text, when="today") -%}
+{% set circ = 163.363 %}{% set n = st.segments | length %}{% set seg = circ / (n or 1) %}
+<div class="sweep-kpi det-kpi">
+  <div class="det-ring-wrap" x-data="popover" data-pop-hover>
+    <button class="det-ring-btn" type="button" aria-controls="det-list" aria-expanded="false" aria-label="{{ fmt.num(st.active) }} of {{ fmt.num(st.total) }} detectors ran {{ when }}">
+      <svg class="det-ring" viewBox="0 0 64 64" aria-hidden="true">{% for r in st.segments %}<circle class="{{ r.kind }}" cx="32" cy="32" r="26" stroke-dasharray="{{ '%.2f' | format(seg - 2.4) }} {{ '%.2f' | format(circ) }}" stroke-dashoffset="{{ '%.2f' | format(-seg * loop.index0) }}" transform="rotate(-90 32 32)"><title>{{ r.label }}: {{ r.status }}</title></circle>{% endfor %}</svg>
+      <span class="det-ring-v"><b>{{ fmt.num(st.active) }}</b>/{{ fmt.num(st.total) }}</span>
+    </button>
+    <div class="det-list-card" role="tooltip" id="det-list"><ul>{% for r in st.segments %}<li class="det-row {{ r.kind }}" id="det-{{ r.key }}" data-key="{{ r.key }}"><p class="det-card-head"><b><i class="det-dot {{ r.kind }}"></i>{{ r.label }}</b><span class="det-status {{ r.kind }}">{{ r.status }}</span></p>
+      {% if r.kind == "on" %}<p class="det-card-line">{{ when | capitalize }}: {{ r.result }}</p>{% elif r.kind == "partly" %}<p class="det-card-line">{{ when | capitalize }}: {{ r.covers }}</p>{% endif %}
+      {% if r.missing %}<p class="det-card-line muted">{{ r.missing[:1] | upper }}{{ r.missing[1:] }}</p>{% endif %}
+      {% if r.action %}<a class="link" href="{{ r.action[1] }}">{{ r.action[0] }}</a>{% endif %}</li>{% endfor %}</ul></div>
+  </div>
+  <div class="det-kpi-text">
+    <span class="l">Detectors {{ info(text=text, id="strip-info", label="What these are") }}</span>
+    <span class="s">{% if st.inactive %}{{ fmt.num(st.inactive) }} couldn’t run{% else %}All ran{% endif %}</span>
+    {% if st.suppressed %}<span class="s">{{ fmt.num(st.suppressed) }} suppressed</span>{% endif %}
+  </div>
 </div>
 {%- endmacro %}
 
@@ -125,14 +133,6 @@
 {# Suppressed by your Ontology (5a): one item per known pattern, expanding to its metrics #}
 {% macro pattern_groups(items) -%}
 <div class="section lines">{% for h in items %}<details class="pattern-group"><summary class="held-row"><span>{{ h.label }}</span><span class="how">{{ h.tail }}</span></summary><ul class="pattern-metrics">{% for m in h.metrics %}<li>{{ m }}</li>{% endfor %}</ul></details>{% endfor %}</div>
-{%- endmacro %}
-
-{# Last 7 runs (5a header) #}
-{% macro runs_menu(runs, current) -%}
-<details class="use" x-data="menu">
-  <summary class="btn" aria-label="Show another run">Last 7 runs</summary>
-  <div class="use-menu" role="menu">{% for n, d, kind in runs %}<a class="opt{{ ' is-on' if n == current else '' }}" role="menuitem" href="/sweep?run={{ n }}">Run #{{ "%04d" | format(n) }}<span class="sub">{{ fmt.date_short(d) }}{% if kind %} · {{ kind }}{% endif %}</span></a>{% endfor %}<a class="opt" role="menuitem" href="/sweep/history">All runs →</a></div>
-</details>
 {%- endmacro %}
 
 {# The finding panel head (5b, 5c, 4f, 10p): tags, kind, title, money, context, tabs #}

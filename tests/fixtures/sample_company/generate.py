@@ -19,7 +19,7 @@ import pandas as pd
 
 from tests.fixtures.sample_company import build as b
 from tests.fixtures.sample_company import company as co
-from tests.fixtures.sample_company import extras, sheets
+from tests.fixtures.sample_company import events, extras, sheets
 
 GENERATOR_VERSION = 1
 
@@ -77,6 +77,7 @@ class Timeline:
     deals: pd.DataFrame
     kappa: float
     notes: dict[str, Any]
+    added: list[co.Customer] = field(default_factory=list)  # customers created after the seam
 
 
 @lru_cache(maxsize=4)
@@ -134,8 +135,15 @@ def timeline(seed: int) -> Timeline:
     )
 
 
+@lru_cache(maxsize=4)
+def with_events(seed: int) -> Timeline:
+    """The timeline with the events from 23 Nov 2026 and the horizon to 31 Mar 2027 (events.py);
+    the data before 23 Nov is the timeline's own, unchanged."""
+    return events.apply(timeline(seed), seed)
+
+
 def generate(seed: int = 20261101, as_of: dt.date = dt.date(2026, 11, 4)) -> SampleCompany:
-    t = timeline(seed)
+    t = with_events(seed)
     cut = b.d64(as_of)
     erp = render_erp(t, cut, seed)
     dw = render_dw(t, cut, seed)
@@ -176,29 +184,30 @@ def _ord(code: str) -> int:
 
 
 def render_erp(t: Timeline, cut: np.datetime64, seed: int) -> dict[str, pd.DataFrame]:
-    by = {c.code: c for c in t.roster}
+    roster = events.roster_as_of(t, cut)
+    by = {c.code: c for c in roster}
     out: dict[str, pd.DataFrame] = {}
     r = co.stream(seed, "erp-customers")
     out["customers"] = pd.DataFrame(
         {
-            "customer_id": [_ord(c.code) for c in t.roster],
-            "customer_code": [c.code for c in t.roster],
-            "name": [c.name for c in t.roster],
-            "gstin": [co.gstin(seed, c) for c in t.roster],
-            "region": [c.region for c in t.roster],
-            "city": [c.city for c in t.roster],
-            "segment": [c.segment for c in t.roster],
-            "currency": [c.currency for c in t.roster],
-            "status": [c.status for c in t.roster],
-            "payment_terms_days": [c.terms for c in t.roster],
-            "credit_limit": [float(round(c.value * 30, -5)) for c in t.roster],
-            "contact_email": [extras.fake_email(c.name, r) for c in t.roster],
-            "contact_phone": [extras.fake_phone(r, c.currency) for c in t.roster],
+            "customer_id": [_ord(c.code) for c in roster],
+            "customer_code": [c.code for c in roster],
+            "name": [c.name for c in roster],
+            "gstin": [co.gstin(seed, c) for c in roster],
+            "region": [c.region for c in roster],
+            "city": [c.city for c in roster],
+            "segment": [c.segment for c in roster],
+            "currency": [c.currency for c in roster],
+            "status": [c.status for c in roster],
+            "payment_terms_days": [c.terms for c in roster],
+            "credit_limit": [float(round(c.value * 30, -5)) for c in roster],
+            "contact_email": [extras.fake_email(c.name, r) for c in roster],
+            "contact_phone": [extras.fake_phone(r, c.currency) for c in roster],
             "created_at": _ts(
-                np.array([b.d64(c.first) - 30 * b.DAY for c in t.roster]), seed, "cust"
+                np.array([b.d64(c.first) - 30 * b.DAY for c in roster]), seed, "cust"
             ),
             "updated_at": _ts(
-                np.array([min(b.d64(c.first) + 400 * b.DAY, cut - b.DAY) for c in t.roster]),
+                np.array([min(b.d64(c.first) + 400 * b.DAY, cut - b.DAY) for c in roster]),
                 seed,
                 "cust-u",
             ),
@@ -387,7 +396,8 @@ def order_status(t: Timeline, cut: np.datetime64) -> pd.DataFrame:
 def render_dw(t: Timeline, cut: np.datetime64, seed: int) -> dict[str, dict[str, pd.DataFrame]]:
     sd: dict[str, pd.DataFrame] = {}
     pub: dict[str, pd.DataFrame] = {}
-    key = {c.code: i + 1 for i, c in enumerate(t.roster)}
+    key = {c.code: i + 1 for i, c in enumerate([*t.roster, *t.added])}
+    roster = events.roster_as_of(t, cut)
     inv = t.inv[t.inv["date"].to_numpy().astype("datetime64[D]") < cut]
     created = _ts(inv["date"].to_numpy().astype("datetime64[D]"), seed, "dw-inv", 20, 23)
     fi = pd.DataFrame(
@@ -527,17 +537,17 @@ def render_dw(t: Timeline, cut: np.datetime64, seed: int) -> dict[str, dict[str,
     )
     sd["dim_customer"] = pd.DataFrame(
         {
-            "customer_key": [key[c.code] for c in t.roster],
-            "customer_code": [c.code for c in t.roster],
-            "customer_name": [c.name for c in t.roster],
-            "gstin": [co.gstin(seed, c) for c in t.roster],
-            "region": [c.region for c in t.roster],
-            "segment": [c.segment for c in t.roster],
-            "currency": [c.currency for c in t.roster],
-            "is_active": [c.status == "active" for c in t.roster],
+            "customer_key": [key[c.code] for c in roster],
+            "customer_code": [c.code for c in roster],
+            "customer_name": [c.name for c in roster],
+            "gstin": [co.gstin(seed, c) for c in roster],
+            "region": [c.region for c in roster],
+            "segment": [c.segment for c in roster],
+            "currency": [c.currency for c in roster],
+            "is_active": [c.status == "active" for c in roster],
             "owner_code": [
                 "PM" if c.segment == "key" else ("RK" if c.region in ("South", "East") else "SV")
-                for c in t.roster
+                for c in roster
             ],
             "updated_at": pd.Timestamp("2026-10-30 23:10:00"),
         }

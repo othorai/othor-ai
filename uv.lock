@@ -868,7 +868,7 @@ wheels = [
 
 [[package]]
 name = "othor"
-version = "0.28.2"
+version = "0.28.5"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },

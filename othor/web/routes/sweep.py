@@ -89,7 +89,6 @@ def _page_ctx(request: Request, s: Session, o: Owner, rv: sv.RunView, tab: str) 
         "tabs": sv.tabs(rv, base),
         "tab": tab if tab in TABS else "findings",
         # each run as the header dates it, with its kind: two runs of one day read apart (#39)
-        "runs": [(r.number, r.run_date, sv.RUN_KIND.get(r.kind, "")) for r in sv.detecting_runs(s)],
         "strip": st,
         "strip_info": sv.strip_info(st),
         "history": sv.history_counts(rv),
@@ -139,32 +138,17 @@ def latest_run(request: Request, o: Owner = Depends(signed_in)) -> Response:
 
 
 @router.get("/sweep/history", response_class=HTMLResponse)
-def history(request: Request, month: str | None = None, o: Owner = Depends(signed_in)) -> Response:
+def history(request: Request, shown: int = 0, o: Owner = Depends(signed_in)) -> Response:
     """Every night since the first (0.28.1, owner 19 Nov 2026): a chart of the findings open
-    each night, then the month's nights, newest first, each opening its Sweep."""
+    each night, then the last 10 nights, newest first, each opening its Sweep; "Show older
+    nights" adds 30 more in place."""
     svc = services(request)
-    picked: dt.date | None = None
-    if month:
-        try:
-            picked = dt.date.fromisoformat(month + "-01")
-        except ValueError:
-            return not_found(request, o.site, *GONE)
     with svc.sf() as s, tenant_scope(o.company.id):
-        months = sv.history_months(s)
-        if picked is None and months:
-            picked = months[0]
-        tabs = [
-            (m.strftime("%B %Y") if i == 0 else m.strftime("%b"), f"/sweep/history?month={m:%Y-%m}")
-            for i, m in enumerate(months)
-        ]
-        on = next((t for (t, _), m in zip(tabs, months, strict=False) if m == picked), "")
         ctx = {
             **shell_ctx(o, "sweep"),
             "chart_spec": sv.history_chart(s),
             "first": sv.history_first(s),
-            "month_tabs": tabs,
-            "month_on": on,
-            **(sv.history_month(s, picked) if picked else {"rows": [], "line": ""}),
+            **sv.history_nights(s, min(max(shown, 0), 10_000)),
         }
         s.expunge_all()
     return page(request, "sweep/history.html", ctx)

@@ -195,3 +195,26 @@ def test_a_negative_small_rupee_amount_puts_the_minus_first():
     assert fmt.inr_plain(52.9) == "₹52.9"
     assert fmt.inr_plain(-69.5) == "−₹69.5"
     assert fmt.inr_plain(-0.01) == "₹0.0"
+
+
+def test_a_chat_reply_says_when_it_was_written() -> None:
+    """0.28.4 (owner, 19 Nov 2026): each Othor AI reply carries its date and time."""
+    import datetime as dt
+
+    from othor.core import fmt
+
+    now = dt.datetime(2026, 11, 19, 14, 0, tzinfo=dt.UTC)  # 7:30 PM IST
+    with fmt.display_tz("Asia/Kolkata"):
+        assert fmt.said_at(now - dt.timedelta(hours=1), now) == "Today, 6:30 PM IST"
+        assert fmt.said_at(now - dt.timedelta(days=1), now) == "Yesterday, 7:30 PM IST"
+        assert fmt.said_at(now - dt.timedelta(days=3), now) == "16 Nov, 7:30 PM IST"
+        assert fmt.said_at(dt.datetime(2025, 12, 1, 3, 0), now) == "1 Dec 2025, 8:30 AM IST"
+
+
+def test_an_answer_reads_dates_plainly() -> None:
+    from othor.chat.ask import plain_dates
+
+    assert plain_dates("As of the last run on 2026-11-18, net revenue") == (
+        "As of the last run on 18 Nov 2026, net revenue"
+    )
+    assert plain_dates("order 2026-13-45 stays") == "order 2026-13-45 stays"

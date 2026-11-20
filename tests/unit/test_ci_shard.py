@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""The web tests split into four CI jobs (scripts/ci_shard.py): every test file runs in exactly
+"""The web tests split into two CI jobs (scripts/ci_shard.py): every test file runs in exactly
 one of them, and a new file isn't left out."""
 
 from __future__ import annotations

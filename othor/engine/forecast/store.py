@@ -269,6 +269,7 @@ def tonight(
     first: bool,
     prev: dict[str, Any] | None = None,
     also: tuple[str, ...] = (),
+    reread: tuple[str, ...] = (),
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Tonight's forecasts document and the weeks-ahead document (v0.12): each weekly series is
     fitted once, for `AHEAD_WEEKS` weeks; its first week is the row it always was.
@@ -292,7 +293,7 @@ def tonight(
     month_actuals: dict[str, list[tuple[dt.date, float]]] = {}
     listed = list(spec.get("forecast", {}).get("headline", []))
     listed += sorted(set(also) - set(listed))
-    definitions = _definitions(spec, run_date, prev, listed)
+    definitions = _definitions(spec, run_date, prev, listed, reread)
     v2_points: dict[str, list[dict[str, Any]]] = {}
     complete: dict[str, dict[str, float]] = {}
     for metric in listed:
@@ -608,22 +609,39 @@ def _definitions(
     run_date: dt.date,
     prev: dict[str, Any] | None,
     listed: list[str] | None = None,
+    reread: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     """Each headline metric's definition hash and the date it was first seen, carried forward
-    from the previous run (M19.2); unknown (None) when there's no earlier run to compare with."""
+    from the previous run (M19.2); unknown (None) when there's no earlier run to compare with.
+
+    0.28.3: a spec that carries each series' meaning compares the total's meaning, so a change
+    that doesn't move the values (a breakdown, who is active) doesn't silence the forecast; the
+    first night with meanings carries the date over when the old hash still matches. A number
+    read again in full (`othor admin reread`, from the run's sealed context) has one continuous
+    history: no definition date. A spec without meanings (every run before 0.28.3) is as it was,
+    so old runs replay byte for byte."""
     before = (prev or {}).get("definitions", {})
     out = {}
     names = spec.get("forecast", {}).get("headline", []) if listed is None else listed
     for metric in names:
-        h = (spec.get("metrics", {}).get(metric) or {}).get("definition_hash")
+        m = spec.get("metrics", {}).get(metric) or {}
+        legacy = m.get("definition_hash")
+        meaning = (m.get("meaning") or {}).get("")
+        h = meaning or legacy
         old = before.get(metric) or {}
-        if prev is None or not old:
+        if meaning and ("*" in reread or metric in reread):
+            since = None
+        elif prev is None or not old:
             since = old.get("since") if old.get("hash") == h else None
+        elif meaning and old.get("basis") != "meaning":
+            since = old.get("since") if old.get("hash") == legacy else run_date.isoformat()
         elif old.get("hash") == h:
             since = old.get("since")
         else:
             since = run_date.isoformat()
         out[metric] = {"hash": h, "since": since}
+        if meaning:
+            out[metric]["basis"] = "meaning"
     return out
 
 

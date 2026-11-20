@@ -489,10 +489,21 @@ def _card(q: Question, key: str) -> dict[str, Any] | None:
     return next((c for c in suggestions(q) if c.get("key") == key), None)
 
 
-def _card_change(c: dict[str, Any]) -> dict[str, Any] | None:
+def _card_change(s: Session, c: dict[str, Any]) -> dict[str, Any] | None:
+    """The record a card writes. A card that adds one field to a record ("merge", 0.28.3) sets
+    only that field on the record as it is at Apply: never a whole record copied the night the
+    card was found, which would undo the owner's changes since."""
     ch = c.get("change") or {}
+    body = dict(ch.get("body") or {})
+    merge = [str(f) for f in ch.get("merge") or []]
+    if merge:
+        now = next(
+            (r for r in service.active(s, [str(ch.get("type"))]) if r.key == ch.get("key")), None
+        )
+        if now is not None:
+            body = {**now.body, **{f: body[f] for f in merge if f in body}}
     try:
-        body = validate_body(str(ch.get("type")), dict(ch.get("body") or {}))
+        body = validate_body(str(ch.get("type")), body)
     except ValueError:
         return None
     return {"op": "put", "type": ch["type"], "key": ch["key"], "body": body}
@@ -504,7 +515,7 @@ def pick_suggestion(s: Session, q: Question, key: str, *, actor: str) -> Outcome
     c = _card(q, key)
     if q.status == "answered" or c is None:
         return Outcome(note="Choose one of the replies above." if c is None else None)
-    ch = _card_change(c)
+    ch = _card_change(s, c)
     if ch is None:
         return Outcome(note=NOT_AVAILABLE)
     q.draft = {"text": str(c.get("label") or ""), "changes": [ch], "picked": key}
@@ -529,7 +540,7 @@ def decide(s: Session, q: Question, *, actor: str, now: dt.datetime) -> bool:
         return False
     pick = decision(q).get("pick")
     c = _card(q, str(pick)) if pick else None
-    ch = _card_change(c) if c else None
+    ch = _card_change(s, c) if c else None
     if c is None or ch is None:
         record_event(
             s,

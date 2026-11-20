@@ -87,6 +87,12 @@
 <nav class="tabs" x-data="tabs">{% for label, href in items %}<a class="tab{{ ' is-on' if label == current else '' }}{{ ' is-' ~ state if state and label != current else '' }}" href="{{ href }}"{% if label == current %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
 {%- endmacro %}
 
+{# 0.28.4 (owner, 19 Nov 2026): tabs and an action on one line, the tabs' rule running under both
+   (Morning Brief's New brief) #}
+{% macro tabs_row(items, current) -%}
+<div class="tabs-row">{{ tabs(items, current) }}{% if caller %}<div class="tabs-aside">{{ caller() }}</div>{% endif %}</div>
+{%- endmacro %}
+
 {# Onboarding step bar: steps = list of labels; now = 1-based index of the current step. #}
 {% macro step_bar(steps, now, label="Setup steps") -%}
 <ol class="steps" aria-label="{{ label }}">

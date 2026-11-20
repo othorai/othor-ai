@@ -146,7 +146,7 @@ def test_the_four_home_tools_answer_from_homes_own_view(night):  # noqa: F811
     import re
 
     pct = re.search(r'aria-label="Intelligence at (\d+)%"', home).group(1)
-    assert f"<dd>{pct}%</dd>" in page
+    assert f"<td>{pct}%</td>" in page  # 0.28.4: the card is a table
 
 
 def test_big_picture_and_numbers_tools_say_what_each_number_is(night):  # noqa: F811
@@ -192,3 +192,23 @@ def test_big_picture_and_numbers_tools_say_what_each_number_is(night):  # noqa: 
         words = " ".join(v for _k, v in nums.facts)
         assert "total for" in words and ("balance on" in words or "balance at" in words)
         s.rollback()
+
+
+def test_a_word_that_fits_several_numbers_offers_them_all(night):  # noqa: F811
+    """#93/#94 (owner, 19 Nov 2026): "revenue" answered with Export revenue alone and "no
+    finished run yet"; "Net revenue" showed a raw dict under Compared and an ISO date. Now a word
+    that fits several numbers lists them with their values, and one number reads plainly."""
+    import datetime as dt
+
+    from othor.core.models import Company
+
+    _env, _h, cid, _rid, svc = night
+    with svc.sf() as s, tenant_scope(cid):
+        ctx = tools.Ctx(s, svc.settings, s.get(Company, cid), dt.date(2026, 11, 1))
+        many = tools.call(ctx, "metric", {"metric": "dispatch"}, actor="t")
+        names = [k for k, _ in many.facts]
+        assert {"Dispatch time", "Metres dispatched"} <= set(names) and not many.empty
+        one = tools.call(ctx, "metric", {"metric": "Net revenue"}, actor="t")
+        text = " ".join(v for _, v in one.facts)
+        assert one.title == "Net revenue" and "{" not in text and "2026-" not in text
+        assert "No finished run" not in one.empty and not one.empty

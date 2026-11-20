@@ -8,4 +8,5 @@
     {% if company.logo_sha %}{% call el("button", "btn sm quiet", attrs={"type": "button", "hx-post": "/settings/logo/remove", "hx-target": "#logo-row", "hx-swap": "outerHTML"}) %}Remove{% endcall %}{% endif %}
   {% endcall %}
 {% endcall %}
-{% if toast %}{% call el("div", "toast-dock", attrs='id="toast-dock" aria-live="polite" hx-swap-oob="innerHTML"') %}{% call el("div", "toast", attrs='role="status"') %}{% call el("span", "dot accent") %}{% endcall %}<span>{{ toast }}</span>{% endcall %}{% endcall %}{% endif %}
+{% from "components/blocks.html" import toast as toast_note %}
+{% if toast %}{% call el("div", "toast-dock", attrs='id="toast-dock" aria-live="polite" hx-swap-oob="innerHTML"') %}{{ toast_note(toast) }}{% endcall %}{% endif %}

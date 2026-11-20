@@ -3,9 +3,10 @@
 
 A question → `ask_route` v1 picks one read-only tool and its arguments from the registry's names,
 descriptions and schemas (never a row) → the tool runs through the one gate (`othor.tools.call`:
-role, schema, audit) → `ask_answer` v1 words the answer from the card's computed facts; a sentence
-with a figure the card doesn't hold is not shown (the card shows alone). The card is stored with
-the message, with where it came from; the answer's numbers are always the card's (rule 1).
+role, schema, audit) → `ask_answer` v2 (0.28.4: short formatted paragraphs) words the answer
+from the card's computed facts; a sentence with a figure the card doesn't hold is not shown (the
+card shows alone). The card is stored with the message, with where it came from; the answer's
+numbers are always the card's (rule 1).
 
 A change request ("move the Diwali goal") is drafted at once in the Business Model chat, to
 review and apply there. Without a model: the question's words are matched to a tool, and the
@@ -14,6 +15,7 @@ card shows without words (rule 4)."""
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -22,7 +24,7 @@ from othor import tools
 from othor.core.events import record_event
 from othor.setup.models import ChatMessage, ChatThread
 
-ROUTE, ANSWER = ("ask_route", "v1"), ("ask_answer", "v1")
+ROUTE, ANSWER = ("ask_route", "v1"), ("ask_answer", "v2")
 NONE = (
     "I can answer about your numbers, what Sweep found, which checks ran, your Business Model's "
     "changes and the questions waiting for you. Try one of those."
@@ -64,8 +66,28 @@ def _words(gateway: Any, company_id: Any, text: str, card: tools.Card) -> str:
     inputs = {"question": text, "card": card.as_json()}
     got = gateway.complete(company_id, *ANSWER, inputs)
     out = got.output if got.ok and isinstance(got.output, dict) else None
-    said = str((out or {}).get("answer") or "").strip()[:600]
-    return said if said and numbers_grounded(said, inputs) else ""
+    said = str((out or {}).get("answer") or "").strip()[:1200]
+    return plain_dates(said) if said and numbers_grounded(said, inputs) else ""
+
+
+ISO_DAY = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
+
+
+def plain_dates(text: str) -> str:
+    """A date the card carries as 2026-11-18 reads '18 Nov 2026' in the answer (#94: "Net
+    revenue for 2026-10-01")."""
+    import datetime as dt
+
+    from othor.core import fmt
+
+    def one(m: re.Match[str]) -> str:
+        try:
+            d = dt.date(int(m[1]), int(m[2]), int(m[3]))
+        except ValueError:
+            return m[0]
+        return fmt.day_month_year(d)
+
+    return ISO_DAY.sub(one, text)
 
 
 def answer(

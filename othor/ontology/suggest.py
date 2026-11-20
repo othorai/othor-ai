@@ -693,7 +693,13 @@ def entities(
                 key=f"entity:{ask.key}",
                 label=f"{t.name} in {t.source_name}",
                 sub=sub,
-                change={"type": "breakdown", "key": ask.breakdown, "body": body},
+                # merge: at Apply only "entity" is set on the record as it is then (0.28.3)
+                change={
+                    "type": "breakdown",
+                    "key": ask.breakdown,
+                    "body": body,
+                    "merge": ["entity"],
+                },
                 evidence={"rows": rows, "active": n_active, "values": len(values)},
                 strong=bool(active),
             )
@@ -806,7 +812,12 @@ def distributions(
                     )
                     + f" · about {fmt.num(per_day)} a day"
                 ),
-                change={"type": "metric", "key": ask.metric, "body": rec},
+                change={
+                    "type": "metric",
+                    "key": ask.metric,
+                    "body": rec,
+                    "merge": ["distribution"],
+                },
                 evidence={"rows": rows, "keys": keys, "days": days, "per_day": str(per_day)},
                 strong=one and per_day >= 1,
             )

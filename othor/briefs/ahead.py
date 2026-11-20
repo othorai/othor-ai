@@ -55,8 +55,8 @@ LAKH = Decimal(100000)
 
 
 def _metres(d: Decimal) -> str:
-    """Metres whole under a lakh, then in lakh: '74,778 m', '1.25 L m'."""
-    return f"{fmt.num(d / LAKH, decimals=2)} L m" if abs(d) >= LAKH else f"{fmt.num(d)} m"
+    """Metres whole, as the tile writes them (0.28.4: '1.75 L m' beside the tile's '1,75,436 m')."""
+    return f"{fmt.num(d)} m"
 
 
 def _one(unit: str | None, v: Any) -> str:
@@ -74,12 +74,10 @@ def _one(unit: str | None, v: Any) -> str:
 def _band(unit: str | None, lo: Any, hi: Any) -> str:
     a, b = Decimal(str(lo)), Decimal(str(hi))
     if unit == "inr" and max(abs(a), abs(b)) < Decimal("1e7"):
-        return f"{values.text(unit, a)}–{values.text(unit, b)}"
+        return values.text_band(unit, a, b)
     if unit == "count":  # customers, orders: whole numbers, "106–122"
         return f"{fmt.num(a.quantize(Decimal(1)))}–{fmt.num(b.quantize(Decimal(1)))}"
     if unit == "metres":
-        if max(abs(a), abs(b)) >= LAKH:
-            return f"{fmt.num(a / LAKH, decimals=2)}–{fmt.num(b / LAKH, decimals=2)} L m"
         return f"{fmt.num(a)}–{fmt.num(b)} m"
     return values.band(unit, a, b)
 

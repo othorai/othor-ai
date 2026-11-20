@@ -736,6 +736,53 @@ def admin_reopen(
     typer.echo(f"{slug} is open again. The owner signs in, then reconnects each source.")
 
 
+@admin.command("reread")
+def admin_reread(
+    slug: Annotated[str, typer.Argument(help="The company's slug")],
+    metric: Annotated[
+        list[str] | None,
+        typer.Option("--metric", help="A metric key (repeat for more); none means every metric"),
+    ] = None,
+    yes: Annotated[bool, typer.Option("--yes", help="Don't ask to confirm")] = False,
+) -> None:
+    """Ask the company's next run to read its numbers again in full from its read-only sources
+    (0.28.3): a number whose history was cut short comes back whole. Run "Run again now" (or wait
+    for the night) after this; the request is cleared when that run seals. Logged as an event."""
+    import sqlalchemy as sa
+
+    from othor.core.config import get_settings
+    from othor.core.events import record_event
+    from othor.core.models import Company
+    from othor.core.tenancy import system_scope, tenant_scope
+    from othor.engine.sources import REREAD
+    from othor.engine.store import write_json
+
+    metrics = sorted(set(metric or [])) or ["*"]
+    with _admin_session() as s:
+        with system_scope("cli: find the company to re-read"):
+            c = s.scalars(sa.select(Company).where(Company.slug == slug)).first()
+        if c is None:
+            typer.echo(f"No company {slug!r}.", err=True)
+            raise typer.Exit(1)
+        what = "every metric" if metrics == ["*"] else ", ".join(metrics)
+        if not yes and not typer.confirm(f"Read {what} of {c.name} again in full on its next run?"):
+            raise typer.Exit(1)
+        path = get_settings().company_dir(c.id) / REREAD
+        path.parent.mkdir(parents=True, exist_ok=True)
+        write_json(path, {"metrics": metrics, "asked": _admin_now().isoformat()})
+        with tenant_scope(c.id):
+            record_event(
+                s,
+                actor="operator",
+                action="series.reread_requested",
+                object_type="company",
+                object_id=c.id,
+                after={"metrics": metrics},
+            )
+            s.commit()
+    typer.echo(f"{slug}: {what} will be read again in full on the next run.")
+
+
 @admin.command("trial")
 def admin_trial(
     slug: Annotated[str, typer.Argument(help="The company's slug")],

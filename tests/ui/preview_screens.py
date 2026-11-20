@@ -90,6 +90,22 @@ def test_preview(night) -> None:  # noqa: F811
         ("site-security", site + "/security"),
         ("sign-in", site + "/login"),
     ]
+    only = [x for x in os.environ.get("OTHOR_PREVIEW_ONLY", "").split(",") if x]
+    if only:  # OTHOR_PREVIEW_ONLY=summary,summary-open,sweep-history,ask: just these, in INR
+        extra = {
+            "summary-open": app + "/summary",
+            "sweep-history": app + "/sweep/history",
+            "ask": app + "/home?panel=othor&subject=ask",
+            "goal": app + "/ontology?panel=othor&subject=ontology:goal",
+            "new-brief": app + "/brief/new",
+            "new-brief-review": app + "/brief/new",
+            "sweep-ring": app + "/sweep",
+        }
+        shots = [(n, u) for n, u in shots if n in only] + [
+            (n, extra[n]) for n in only if n in extra
+        ]
+        if "ask" in only:
+            _ask_sample(env, svc, cid)
     if shot:  # OTHOR_PREVIEW_SHOT=<page path>:<file>, e.g. /brief/{brief}:smooth-lines.png
         path, fname = shot.split(":", 1)
         shots = [(fname.removesuffix(".png"), app + path.replace("{brief}", str(brief)))]
@@ -103,9 +119,60 @@ def test_preview(night) -> None:  # noqa: F811
             pg = ctx.new_page()
             for name, url in shots:
                 pg.goto(url, wait_until="networkidle")
-                pg.screenshot(path=str(OUT / f"{name}{tag}.png"), full_page=not shot)
+                if name == "new-brief-review":  # #95: step 2, from the first suggestion
+                    pg.fill(
+                        "textarea[name=question]",
+                        "Which customers marked active have gone quiet?",
+                    )
+                    pg.click("button:has-text('Draft brief')")
+                    pg.wait_for_selector("text=Review the draft")
+                    pg.mouse.move(0, 0)
+                    pg.evaluate("document.activeElement && document.activeElement.blur()")
+                    pg.wait_for_timeout(300)
+                if name == "sweep-ring":  # #97: the detectors' list, open
+                    pg.click(".det-ring-btn")
+                    pg.wait_for_timeout(300)
+                if name == "summary-open":
+                    pg.click(".sum-row summary")
+                    pg.wait_for_timeout(300)
+                pg.screenshot(
+                    path=str(OUT / f"{name}{tag}.png"),
+                    full_page=not shot and not name.startswith("sweep"),
+                )
             ctx.close()
         b.close()
     server.should_exit = True
     th.join(5)
     print("previews in", OUT)
+
+
+def _ask_sample(env, svc, cid) -> None:  # type: ignore[no-untyped-def]
+    """A question asked on the sample night (no model here: the card alone), then a formatted
+    answer put on it as a model would word it, so the preview shows the formatting. Preview
+    only; the figures in it are the card's."""
+    from othor.setup.models import ChatMessage
+    from tests.web.test_in_place import _post
+
+    back = "/home?panel=othor&subject=ask"
+    _post(
+        env,
+        f"http://indigothread.{BASE}",
+        "/othor/reply",
+        {"subject": "ask", "text": "update on numbers", "back": back},
+    )
+    with svc.sf() as s, tenant_scope(cid):
+        m = s.scalars(
+            sa.select(ChatMessage)
+            .where(ChatMessage.role == "ai")
+            .order_by(ChatMessage.created_at.desc())
+        ).first()
+        if m is None:
+            return
+        facts = dict((m.proposal or {}).get("card", {}).get("facts") or [])
+        nr = facts.get("Net revenue", "").split(" · ")[0]
+        inv = facts.get("Invoiced value", "").split(" · ")[0]
+        m.text = (
+            f"Net revenue is **{nr}** on invoiced value of {inv}.\n\n"
+            "The bigger story is cash: what's still owed is well above what came in."
+        )
+        s.commit()

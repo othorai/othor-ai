@@ -39,7 +39,9 @@ jobs:
           fi
           changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA")
           echo "$changed"
-          other=$(echo "$changed" | grep -vE '^(docs|design)/|\.md$' || true)
+          # docs, designs and the hand-run preview scripts never need the tests (ci-cost; not
+          # marketing/, which the website reads, nor .claude/, which the export test reads)
+          other=$(echo "$changed" | grep -vE '^(docs|design)/|^tests/ui/preview_[a-z0-9_]+\.py$|\.md$' || true)
           if [ -n "$other" ]; then echo "code=true"; else echo "code=false"; fi >> "$GITHUB_OUTPUT"
       - uses: astral-sh/setup-uv@v6
         if: steps.diff.outputs.code == 'false'
@@ -75,15 +77,12 @@ jobs:
         area:
           - name: unit, detectors, guards, ui, sample company
             paths: tests/unit tests/detectors tests/guards tests/ui tests/sample_company
-          # the web tests in four jobs side by side (scripts/ci_shard.py; one job took ~56 min)
-          - name: web 1/4
+          # the web tests in two jobs side by side (scripts/ci_shard.py; one job took ~56 min; four
+          # jobs until 20 Nov 2026, two since: each job's setup is billed, docs/plans/ci-cost.md)
+          - name: web 1/2
             shard: 1
-          - name: web 2/4
+          - name: web 2/2
             shard: 2
-          - name: web 3/4
-            shard: 3
-          - name: web 4/4
-            shard: 4
           # the slowest job (22 min of tests) in two halves of about 11 min (v0.11, 12 Nov 2026):
           # every test still runs on every push and before every deploy
           - name: e2e nights, sample run

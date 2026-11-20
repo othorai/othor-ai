@@ -44,7 +44,8 @@ DISPATCH = "Dispatch time spread at Coimbatore tripled"
 
 def test_nothing_changed_says_still_open_with_the_date() -> None:
     m = _mail([_item(1, SOUTH, "Open · day 3"), _item(2, DISPATCH, "Open · day 3")])
-    assert brief_subject(m) == f"Still open · {SOUTH} · Leadership · Sat 14 Nov"
+    # 0.28.5: with how long the top item has been open
+    assert brief_subject(m) == f"Still open, day 3 · {SOUTH} · Leadership · Sat 14 Nov"
     assert brief_preheader(m) == "2 things need you · ask Priya one question today"
 
 
@@ -76,4 +77,4 @@ def test_a_weekly_issue_leads_with_what_changed_in_its_week() -> None:
         [_item(1, SOUTH, "Open · day 9")],
         period={"from": "2026-11-07", "word": "last week"},
     )
-    assert brief_subject(m) == f"Still open · {SOUTH} · Leadership · Sat 14 Nov"
+    assert brief_subject(m) == f"Still open, day 9 · {SOUTH} · Leadership · Sat 14 Nov"

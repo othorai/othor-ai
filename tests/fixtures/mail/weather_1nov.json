@@ -23,6 +23,23 @@
    "month": "47037353.226667"
   },
   "run_kind": "nightly",
+  "sources_fresh": {
+   "MIS-Weekly": {
+    "late": false,
+    "newest": "2026-10-26",
+    "updated": false
+   },
+   "erp_db": {
+    "late": false,
+    "newest": "2026-10-31",
+    "updated": true
+   },
+   "sales_dw": {
+    "late": false,
+    "newest": "2026-10-31",
+    "updated": true
+   }
+  },
   "unread": []
  },
  "file": "13-sunrise",
@@ -230,7 +247,7 @@
   ],
   "worst": 1
  },
- "panel": "#2BCAFF",
+ "panel": "#FFFFFF",
  "rule": "First brief: the first brief, or a source connected since the last one.",
  "scene": "sunrise",
  "settings": {
@@ -247,7 +264,7 @@
   "sudden_days": 7,
   "today_days": 7
  },
- "text": "#0B1220",
+ "text": "#1F2430",
  "why": [
   "7 items",
   "10 of 11 checks ran"

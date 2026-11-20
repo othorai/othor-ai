@@ -137,7 +137,9 @@ def load(
             return None
         date = issue.date
     else:
-        issue = all_[0] if date is None else next((i for i in all_ if i.date == date), None)
+        # #96: a brief created today has no issue until its first morning
+        latest = all_[0] if all_ else None
+        issue = latest if date is None else next((i for i in all_ if i.date == date), None)
     if date is not None and issue is None:
         return None
     failed = _failed_after(s, issue) if date is None else None

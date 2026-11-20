@@ -50,6 +50,31 @@ SUGGEST_LINE = "Suggest a goal"
 # 0.28: "remove this goal" in a goal's own chat drafts its removal, read by code (no model)
 REMOVE = re.compile(r"\b(remove|delete|drop|scrap|cancel|get rid of)\b", re.I)
 WHICH = "Which number is the goal for? Name it, for example “net revenue” or “DSO”."
+# 0.28.4 (owner, 19 Nov 2026): named numbers whose history is too short to suggest from got WHICH
+# again and again; now the chat says what's missing and what to type
+SHORT = (
+    "{name} doesn't have enough history yet for me to suggest a target. Tell me the target you "
+    "have in mind and by when, and I'll set it up."
+)
+NONE_YET = (
+    "Your numbers don't have enough history yet for me to suggest a goal. Name a number and the "
+    "target you have in mind, and I'll set it up."
+)
+
+
+def named(text: str, numbers: list[dict[str, Any]]) -> str | None:
+    """The number the owner's words name, by code: its full name or key, else the one number
+    whose name holds the words. None when it's none or more than one."""
+    low = text.strip().lower()
+    if not low:
+        return None
+    exact = [str(n["key"]) for n in numbers if low in (n["name"].lower(), n["key"].lower())]
+    if exact:
+        return exact[0]
+    near = [
+        str(n["key"]) for n in numbers if re.search(rf"\b{re.escape(low)}\b", n["name"].lower())
+    ]
+    return near[0] if len(near) == 1 else None
 
 
 def _and(parts: list[str]) -> str:
@@ -299,6 +324,10 @@ def draft(
         new = ChatMessage(thread_id=t.id, role="ai", text=NO_MODEL, proposal={"kind": "reply"})
     else:
         fields = read(out, numbers, text, today)
+        if "metric" not in fields and not suggest:
+            by_name = named(text, numbers)
+            if by_name:
+                fields["metric"] = by_name
         # the parts the owner gave before stay unless this line changes them
         for k, v in current.items():
             if k not in fields and v is not None:
@@ -316,9 +345,15 @@ def draft(
         if said and not numbers_grounded(said, {"said": text}):
             said = ""
         if not opts:
-            said = str(out.get("clarify") or "").strip()[:300] or WHICH
-            if not numbers_grounded(said, {"said": text}):
-                said = WHICH
+            names = {n["key"]: n["name"] for n in numbers}
+            if fields.get("metric") in names:
+                said = SHORT.format(name=names[fields["metric"]])
+            elif suggest:
+                said = NONE_YET
+            else:
+                said = str(out.get("clarify") or "").strip()[:300] or WHICH
+                if not numbers_grounded(said, {"said": text}):
+                    said = WHICH
             new = ChatMessage(thread_id=t.id, role="ai", text=said, proposal={"kind": "reply"})
         else:
             missing = [

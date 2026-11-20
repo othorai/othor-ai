@@ -118,7 +118,7 @@ def test_a_stale_source_and_an_unsubscribe_show_first(night):  # noqa: F811
     assert "unsubscribed from" not in env.client.get(h + "/home").text
 
 
-def test_all_caught_up_lists_what_was_accepted(night):  # noqa: F811
+def test_all_caught_up_without_a_recently_accepted_list(night):  # noqa: F811
     env, h, cid, _rid, svc = night
     with svc.sf() as s, tenant_scope(cid):
         goal = s.scalars(sa.select(Proposal).where(Proposal.kind == "goal")).one()
@@ -132,7 +132,7 @@ def test_all_caught_up_lists_what_was_accepted(night):  # noqa: F811
     _post(env, h, f"/home/proposals/{gid}/accept")
     page = env.client.get(h + "/home").text
     assert "All caught up" in page
-    assert "Recently accepted" in page and "Goal" in page
+    assert "Recently accepted" not in page  # #92 (owner, 19 Nov 2026): not on Home
 
 
 def test_another_companys_ids_are_404(night):  # noqa: F811
@@ -178,5 +178,5 @@ def test_the_top_bar_and_the_title_row(night):  # noqa: F811
     assert 'class="btn health' not in row
     assert "Updated " not in row
     bar = page[page.index(">Updated ") :][:2000]
-    assert 'class="use top-more"' in bar and ">History</a>" in bar and "Run again now" in bar
+    assert 'class="use top-more"' in bar and ">History</a>" in bar and "Refresh everything" in bar
     assert "<h1>Home</h1>" not in page

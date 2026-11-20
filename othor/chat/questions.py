@@ -209,7 +209,7 @@ def _changes(
         return [service.put("goal", ch["key"], ch["body"], answers._ref(q))], str(card["label"])
     if q.kind == "needs" and it.get("choice"):
         card = answers._card(q, str(it["choice"]))
-        ch = answers._card_change(card) if card else None
+        ch = answers._card_change(s, card) if card else None
         if ch is None or card is None:
             return None
         return [service.put(ch["type"], ch["key"], ch["body"], answers._ref(q))], str(

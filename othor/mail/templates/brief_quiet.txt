@@ -20,7 +20,10 @@ What's ahead
 {% endif %}{% endif %}{% if b.watching %}
 Watching · {{ fmt.num(b.watching | length) }} breached: {{ b.watching[0].text }}{% if b.watching | length > 1 %} · {{ fmt.num(b.watching | length - 1) }} more{% endif %}
 {% endif %}
-Open the brief: {{ open_url }}
+{% if b.get("week") %}Since {{ b["week"].word }}
+{{ b["week"].line }}
+
+{% endif %}Open the brief: {{ open_url }}
 
 {{ footer }}
 Unsubscribe: {{ unsubscribe_url }}

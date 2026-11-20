@@ -107,8 +107,8 @@
      "high": "125289.8490",
      "low": "74778.1853"
     },
-    "expected": "1.00 L m",
-    "high": "1.25 L m",
+    "expected": "1,00,034 m",
+    "high": "1,25,290 m",
     "label": "Metres dispatched · this week",
     "low": "74,778 m",
     "target": null,
@@ -129,7 +129,7 @@
    "grain": "week",
    "metric": "metres_dispatched",
    "name": "Metres dispatched",
-   "says": "0.75–1.25 L m expected this week"
+   "says": "74,778–1,25,290 m expected this week"
   },
   {
    "card": {
@@ -212,6 +212,7 @@
    "rank": 1,
    "rows": null,
    "score": "14000001.60",
+   "since": "2026-11-01",
    "stale": false,
    "state": "assessed",
    "title": "South fell ₹1.4 Cr; West’s rise hid it"
@@ -234,6 +235,7 @@
    "rank": 2,
    "rows": null,
    "score": "13766785.73",
+   "since": "2026-11-01",
    "stale": false,
    "state": "assessed",
    "title": "Dispatch time spread at Coimbatore tripled from 7 Sep while the average held at 4.3 days"
@@ -283,6 +285,7 @@
     "total": 14
    },
    "score": "10800000.00",
+   "since": "2026-11-01",
    "stale": false,
    "state": "measured",
    "title": "14 customers still marked active haven’t invoiced in 90+ days"
@@ -305,6 +308,7 @@
    "rank": 4,
    "rows": null,
    "score": "4909546.03",
+   "since": "2026-11-01",
    "stale": false,
    "state": "assessed",
    "title": "Freight expense tracked metres dispatched for 20 weeks, then decoupled on 14 Sep"
@@ -324,8 +328,9 @@
   "resolved": 0,
   "worse": 0
  },
- "situation": "Net revenue moved −₹0.19 Cr from September to October: South −₹1.4 Cr, West +₹1.21 Cr. Three accounts carry 72% of the drop. None has invoiced since 9 Oct. Skarfab is on a known pause to 1 Dec (your answer, 30 Oct). The slowest tenth now take 4.9 days, up from 4.6 days. Together ₹3.6 Cr over the last 12 months. Correlation fell from 0.78 to −0.03. Freight expense per metre is up 32%.",
+ "situation": "South fell ₹1.4 Cr; West’s rise hid it. Dispatch time spread at Coimbatore tripled from 7 Sep while the average held at 4.3 days. 14 customers still marked active haven’t invoiced in 90+ days. Freight expense tracked metres dispatched for 20 weeks, then decoupled on 14 Sep.",
  "stale": [],
+ "still_open": [],
  "tests": 362,
  "tiles": [
   {
@@ -408,19 +413,56 @@
  "title": "South fell ₹1.4 Cr while West’s growth hid it; three accounts carry 72% of the drop and none has invoiced since 9 Oct; one is Skarfab’s known pause to 1 Dec.",
  "watching": [
   {
-   "id": "536f47c8-ab5a-4b25-8302-2868a933219c",
+   "id": "07b24dd4-2fa5-446d-8876-06f352b73b51",
    "label": "Active customers silent 90+ days",
    "text": "Active customers silent 90+ days · 14 · alert above 8 · owner Priya Menon"
   },
   {
-   "id": "9d05e377-914a-4625-8988-6080acd1afee",
+   "id": "51eaa92d-e0b0-4ef0-b1ed-6808bd03f44e",
    "label": "Dispatch time spread, Coimbatore · 7 days",
    "text": "Dispatch time spread, Coimbatore · 7 days · 2.2 · alert above 1.6 · owner Aditya Naik"
   },
   {
-   "id": "b19104fd-c8f0-44e4-b25b-5cd32333f32f",
+   "id": "a962a537-8e2a-4711-863d-d5c56dbc935b",
    "label": "Freight per metre vs 6-month average",
    "text": "Freight per metre vs 6-month average · +13% · alert above +10% · owner Leela Tandon"
   }
- ]
+ ],
+ "week": {
+  "counts": {
+   "fixed": 0,
+   "in_items": 4,
+   "open": 7,
+   "reported": 8
+  },
+  "fixed": [],
+  "from": "2026-10-26",
+  "line": "Last 7 days: 8 reported · 0 fixed · 7 still open (4 in today’s items) · longest open: Ravira Exports stopped invoicing on 9 Oct, day 1",
+  "longest": {
+   "days": 1,
+   "fingerprint": "d25c7394616f11c4ad91460b",
+   "title": "Ravira Exports stopped invoicing on 9 Oct"
+  },
+  "open": [
+   {
+    "days": 1,
+    "fingerprint": "226703f10328b0ed3ec3e09f",
+    "title": "Four customers now hold 58% of the order book",
+    "trend": "about the same"
+   },
+   {
+    "days": 1,
+    "fingerprint": "d25c7394616f11c4ad91460b",
+    "title": "Ravira Exports stopped invoicing on 9 Oct",
+    "trend": "about the same"
+   },
+   {
+    "days": 1,
+    "fingerprint": "cf2a8b3571166a3f5e47b10a",
+    "title": "Receivables over 60 days stepped up in the week of 10 Aug",
+    "trend": "about the same"
+   }
+  ],
+  "word": "last week"
+ }
 }

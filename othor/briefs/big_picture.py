@@ -227,7 +227,19 @@ def facts(
                 "name": b["name"],
                 "title": s.note(body.get("title", ""), href),
                 "line": s.note(body.get("line", ""), href),
-                "situation": s.note(body.get("situation", ""), href),
+                # 0.28.4: the brief's opening names each item by its title; Big Picture still
+                # reads every item's detail line, so it keeps all the night's figures
+                "situation": s.note(
+                    " ".join(
+                        x
+                        for x in [
+                            body.get("situation", ""),
+                            *[str(i.get("line") or "") for i in body.get("items") or []],
+                        ]
+                        if x
+                    ),
+                    href,
+                ),
                 "numbers": tiles,
                 "findings": items,
                 "goals": [s.note(g.get("text", ""), href) for g in body.get("goals") or []],

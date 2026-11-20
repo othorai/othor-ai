@@ -19,7 +19,7 @@
 <div class="flex flex-col gap-56">
   {% if note %}{{ callout(note | e) }}{% endif %}
   {% if done and not chat %}
-  {% call el("div", layout="flex items-center gap-8 flex-wrap") %}{{ toast("Business Model v" ~ done.number ~ " · applies from tonight’s run", sub=done.reason) }}{% call el("form", attrs={"data-inplace": true, "method": "post", "action": "/ontology/versions/" ~ done.number ~ "/undo"}) %}<input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="back" value="/ontology">{{ button("Undo", type="submit") }}{% endcall %}{% endcall %}
+  {% call toast("Business Model v" ~ done.number ~ " · applies from tonight’s run", sub=done.reason) %}{% call el("form", attrs={"data-inplace": true, "method": "post", "action": "/ontology/versions/" ~ done.number ~ "/undo"}) %}<input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="back" value="/ontology">{{ button("Undo", type="submit") }}{% endcall %}{% endcall %}
   {% endif %}
 
   {# the Tell Othor AI line went: "Chat to update" by the title opens the one chat (owner, 18 Nov 2026) #}

@@ -31,7 +31,7 @@ from othor.engine import sweep_text
 from othor.engine.models import DETECTING_KINDS, Proposal, Run, SeriesMeta
 from othor.home import answers
 from othor.ontology import service
-from othor.ontology.models import OntologyRecord, OntologyVersion, Question
+from othor.ontology.models import OntologyRecord, Question
 from othor.ontology.questions import NEEDS_EXPLAIN, NEEDS_QUESTIONS
 from othor.web import sweep_view as sv
 from othor.web import weather_view
@@ -641,52 +641,6 @@ def question_rows(qs: list[Question], in_briefs: set[str]) -> list[dict[str, Any
     return [{"id": str(q.id), "text": q.text, "origin": origin_of(q, in_briefs).label} for q in qs]
 
 
-# --- 3b: recently accepted -------------------------------------------------------------------
-
-
-def recently_accepted(s: Session, limit: int = 5) -> list[dict[str, Any]]:
-    """Ontology versions written from Home (an accepted proposal or an answer), newest first."""
-    out = []
-    for v in service.history(s):
-        got = _kind_from_records(s, v)
-        if got is None:
-            continue
-        kind, text = got
-        out.append({"date": v.created_at.date(), "text": text or v.reason, "kind": kind})
-        if len(out) >= limit:
-            break
-    return out
-
-
-def _kind_from_records(s: Session, v: OntologyVersion) -> tuple[str, str] | None:
-    """(kind tag, what changed) for a version written from Home, else None."""
-    from othor.home.answers import record_line
-
-    recs = s.scalars(sa.select(OntologyRecord).where(OntologyRecord.version_from == v.number)).all()
-    for r in recs:
-        ref = r.source_ref or {}
-        if "proposal" in ref:
-            p = s.scalars(sa.select(Proposal).where(Proposal.id == _uuid(ref["proposal"]))).first()
-            if p is None:
-                return "Proposal", ""
-            if p.kind == "goal":
-                return "Goal", f"Marked at risk: {r.body.get('name', '')}"
-            return kind_label(p.kind, "Proposal"), record_line(r)
-        if "answer" in ref and _uuid(ref["answer"]) is not None:  # a question answered on Home
-            q = s.scalars(sa.select(Question).where(Question.id == _uuid(ref["answer"]))).first()
-            return (KIND_ANSWER.get(q.kind, "Answer"), record_line(r)) if q else None
-    return None
-
-
-KIND_ANSWER = {
-    "not_determinable": "Known pause",
-    "pattern": "Known pattern",
-    "unmapped_plant": "Names and words",
-    "needs_confirmation": "Answer",
-    "needs": "Answer",
-}
-
-
 # --- the page --------------------------------------------------------------------------------
 
 
@@ -758,7 +712,6 @@ def page(
         "sources": sources,
         "questions": question_rows(qs[:3], fps),
         "question_count": len(qs),
-        "recent": recently_accepted(s) if not props and not qs else [],
         "version": version,
     }
 

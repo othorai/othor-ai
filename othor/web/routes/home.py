@@ -230,7 +230,9 @@ def decide(request: Request, pid: str, decision: str, o: Owner = Depends(signed_
         if decision in ("accept", "undo"):
             compile_version(s, o.company, actor=actor)
         s.commit()
-    return RedirectResponse("/home" if decision == "undo" else f"/home?done={pid}", 303)
+    # External signals reviews its links in place too (owner, 20 Nov 2026): back to that page
+    page_ = "/signals" if request.query_params.get("back") == "signals" else "/home"
+    return RedirectResponse(page_ if decision == "undo" else f"{page_}?done={pid}", 303)
 
 
 # --- questions ---------------------------------------------------------------------------------

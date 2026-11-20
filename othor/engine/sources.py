@@ -273,10 +273,14 @@ def previous_archive(info: RunInfo, source: str) -> list[Point]:
     return read_points(info.prev.archive_points(source)) if info.prev is not None else []
 
 
-def definitions(spec: dict[str, Any], source: str) -> dict[str, dict[str, str]]:
+def definitions(spec: dict[str, Any], source: str) -> dict[str, dict[str, Any]]:
     """Each metric's definition hash and scale on this source (series versions, 5 Nov 2026)."""
     return {
-        key: {"hash": m.get("definition_hash", ""), "scale": str(m.get("scale") or "1")}
+        key: {
+            "hash": m.get("definition_hash", ""),
+            "scale": str(m.get("scale") or "1"),
+            **({"meaning": dict(m["meaning"])} if m.get("meaning") else {}),
+        }
         for key, m in metrics_on(spec, source)
     }
 
@@ -327,6 +331,28 @@ def _qhash(sql: str) -> str:
     return hashlib.sha256(sql.encode()).hexdigest()
 
 
+REREAD = "reread.json"  # a request to read every series again in full (0.28.3, admin reread)
+
+
+def reread_request(ctx: EngineContext, company_id: Any) -> dict[str, Any] | None:
+    """`othor admin reread` asks the next run to read the company's series again in full, from
+    the read-only sources: {"metrics": [...]} or {"metrics": ["*"]}. Cleared when a run seals."""
+    got = read_json(ctx.settings.company_dir(company_id) / REREAD)
+    return got if isinstance(got, dict) else None
+
+
+def _changed(before: dict[str, Any], d: dict[str, Any]) -> tuple[bool, set[str]]:
+    """(the whole metric's meaning changed, the breakdowns whose own meaning changed). With both
+    nights' meanings (0.28.3) only a real change of what a series means counts, and a breakdown
+    added or changed restarts that breakdown alone; a night before that compares the old hash."""
+    bm, dm = before.get("meaning") or {}, d.get("meaning") or {}
+    if bm and dm:
+        if bm.get("") != dm.get(""):
+            return True, set()
+        return False, {b for b in (set(bm) | set(dm)) - {""} if bm.get(b) != dm.get(b)}
+    return before["hash"] != d["hash"], set()
+
+
 def materialise(ctx: EngineContext, info: RunInfo, source: str, *, read_ok: bool) -> SourceOutcome:
     prev_meta = (read_json(info.prev.source_meta(source)) if info.prev else None) or {}
     prev = previous_points(info, source)
@@ -335,7 +361,7 @@ def materialise(ctx: EngineContext, info: RunInfo, source: str, *, read_ok: bool
     run_date, as_of = info.run_date, periods.as_of(info.run_date)
     window = periods.history_start(run_date, info.fy_start_month)
     prev_hashes: dict[str, str] = prev_meta.get("query_hashes", {})
-    prev_defs: dict[str, dict[str, str]] = prev_meta.get("definitions", {})
+    prev_defs: dict[str, dict[str, Any]] = prev_meta.get("definitions", {})
     by_series: dict[tuple[str, str, str], list[Point]] = {}
     for p in prev:
         by_series.setdefault((p.metric, p.grain, p.breakdown), []).append(p)
@@ -343,11 +369,30 @@ def materialise(ctx: EngineContext, info: RunInfo, source: str, *, read_ok: bool
     versions: list[dict[str, Any]] = list(prev_meta.get("versions", []))
     conversions: list[dict[str, Any]] = list(prev_meta.get("conversions", []))
     defs = definitions(info.spec, source)
+    # series to read again in full tonight (metric, breakdown; "*" = all of the metric's): never
+    # keep nothing and read only the refresh window (0.28.3: that lost years of history)
+    refetch: set[tuple[str, str]] = set()
+    asked = (reread_request(ctx, info.company_id) or {}).get("metrics") or []
+    for key in defs:
+        if "*" in asked or key in asked:
+            refetch.add((key, "*"))
     for key, d in sorted(defs.items()):
         before = prev_defs.get(key)
         if before is None:
             continue
-        if before["hash"] != d["hash"]:
+        whole, parts = _changed(before, d)
+        if not whole and parts:
+            # one breakdown means something new: only its series start again, read in full
+            for b in sorted(parts):
+                old = [p for k, ps in by_series.items() if k[0] == key and k[2] == b for p in ps]
+                if old and info.spec["metrics"][key].get("kind") == "snapshot":
+                    tag = (before.get("meaning") or {}).get(b) or before["hash"]
+                    archive += [p._replace(metric=f"{key}@{tag}") for p in old]
+                for k in [k for k in by_series if k[0] == key and k[2] == b]:
+                    del by_series[k]
+                refetch.add((key, b))
+            continue
+        if whole:
             # a new series version: the old points are kept, apart, and never mixed
             old = sorted(
                 (p for k, ps in by_series.items() if k[0] == key for p in ps),
@@ -367,6 +412,7 @@ def materialise(ctx: EngineContext, info: RunInfo, source: str, *, read_ok: bool
                 )
             for k in [k for k in by_series if k[0] == key]:
                 del by_series[k]
+            refetch.add((key, "*"))
             # back to a definition seen before (a Restore or an Undo, M10b): its archived points
             # are the series again, so history continues instead of restarting
             back = f"{key}@{d['hash']}"
@@ -402,7 +448,12 @@ def materialise(ctx: EngineContext, info: RunInfo, source: str, *, read_ok: bool
                     continue
                 hk = f"{key}|{qkey}"
                 hashes[hk] = _qhash(sql)
-                same = prev_hashes.get(hk) == hashes[hk] and info.prev_run_date is not None
+                same = (
+                    prev_hashes.get(hk) == hashes[hk]
+                    and info.prev_run_date is not None
+                    and (key, "*") not in refetch
+                    and (key, bkey) not in refetch
+                )
                 if flow:
                     start = (
                         periods.refresh_from(info.prev_run_date, run_date, grain)  # type: ignore[arg-type]

@@ -3,8 +3,9 @@
    made it); charts are ChartSpecs rendered by render_svg. #}
 {% from "components/tags.html" import state_tag, change_tag %}
 {% from "components/sweep.html" import rows_table %}
-{% from "components/icons.html" import logo %}
+{% from "components/icons.html" import logo, icon %}
 {% from "components/forms.html" import dialog %}
+{% from "components/buttons.html" import button %}
 
 {# t: brief_view.tiles() item; href: its number's panel (#38), none in the recipients' view.
    M15.3 (v0.15 design): the name, the value, its period, the sparkline, then one comparison,
@@ -34,7 +35,8 @@
   {% if i.line %}<p class="line">{{ i.line }}</p>{% endif %}
   {% if i.consequence and i.consequence.text %}<p class="consequence">{{ i.consequence.text }}</p>{% endif %}
   <div class="actions">
-    {% if i.link == "reasons" %}<a class="calc" href="{{ calc }}">Possible reasons</a>{% else %}<a class="calc" href="{{ href }}">More info</a>{% endif %}
+    {# 0.28.4 (owner, 19 Nov 2026): no More info; the chart and the title open the finding #}
+    {% if i.link == "reasons" %}<a class="calc" href="{{ calc }}">Possible reasons</a>{% endif %}
     {% if actions %}{% set run, bid, tok = actions %}<span class="quiet-links">
       {% if hold %}<span class="held">{{ hold }}</span>{{ _hold_btn("undo", i.fingerprint, run, bid, tok, "Undo") }}
       {% else %}{{ _hold_btn("snooze", i.fingerprint, run, bid, tok, "Snooze") }}{{ _hold_btn("mute", i.fingerprint, run, bid, tok, "Mute") }}{% endif %}
@@ -44,8 +46,38 @@
 </article>
 {%- endmacro %}
 
+{# 0.28.4 (owner, 19 Nov 2026): Snooze and Mute as quiet icon buttons; hovering says what they do #}
+{% set HOLD = {
+  "snooze": ("clock", "Hide this for a week; it comes back if it gets worse"),
+  "mute": ("eye-off", "Stop showing this in your briefs; it stays in Sweep"),
+  "undo": ("undo", "Show it again"),
+} %}
 {% macro _hold_btn(action, fp, run, bid, tok, label) -%}
-<form method="post" action="/sweep/finding/{{ fp }}/{{ action }}?run={{ run }}&amp;back=brief-{{ bid }}" class="inline" data-inplace><input type="hidden" name="csrf" value="{{ tok }}"><button class="link-u" type="submit">{{ label }}</button></form>
+{% set icon, tip = HOLD[action] %}<form method="post" action="/sweep/finding/{{ fp }}/{{ action }}?run={{ run }}&amp;back=brief-{{ bid }}" class="inline" data-inplace><input type="hidden" name="csrf" value="{{ tok }}"><button class="hold-btn" type="submit" title="{{ tip }}" aria-label="{{ label }}: {{ tip }}"><svg class="icon" aria-hidden="true"><use href="{{ asset('icons/sprite.svg') }}#{{ icon }}"></use></svg><span>{{ label }}</span></button></form>
+{%- endmacro %}
+
+{# 0.28.4 (owner, 19 Nov 2026): findings unchanged for a week, out of the top items, one line each #}
+{% macro still_open(rows, href=None) -%}
+{% if rows %}<div class="still-open"><p class="caps-title">Still open · unchanged for a week or more</p><ul>{% for r in rows %}<li><span class="t">{{ r.title }}</span><span class="d">{{ fmt.num(r.days) }} days</span></li>{% endfor %}</ul>{% if href %}<a class="link" href="{{ href }}">See them in Sweep →</a>{% endif %}</div>{% endif %}
+{%- endmacro %}
+
+{# 0.28.5 (owner, 19 Nov 2026): "Since last week" inside the brief: the line, the open items
+   night by night, what got fixed and how, what's still open, at most one suggestion. w: the
+   issue's `week` (since_week.build); actions: (run, brief id, csrf) or None on a read-only link;
+   held: tonight's snoozes and mutes (brief_view.held), so an applied suggestion shows as done. #}
+{% macro since_week(w, actions=None, held=None, href=None) -%}
+<section class="week" aria-label="Since {{ w.word }}">
+  <p class="caps-title">Since {{ w.word }}</p>
+  <p class="week-line">{{ w.line }}</p>
+  {% if w.get("chart") %}<div class="week-chart">{{ stored_chart(w["chart"], 560, 150) }}</div>{% endif %}
+  {% if w.fixed %}<div class="week-group"><p class="week-k">Fixed · {{ fmt.num(w.fixed | length) }}</p><ul class="week-list">{% for r in w.fixed %}<li><span class="t">{{ r.title }}</span><span class="d">{{ r.how }}</span></li>{% endfor %}</ul></div>{% endif %}
+  {% if w.open %}<div class="week-group"><p class="week-k">Still open · {{ fmt.num(w.open | length) }}</p><ul class="week-list">{% for r in w.open %}<li><span class="t">{{ r.title }}</span><span class="d">day {{ fmt.num(r.days) }} · {{ r.trend }}</span></li>{% endfor %}</ul></div>{% endif %}
+  {% if w.get("suggest") and actions %}{% set run, bid, tok = actions %}{% set done = (held or {}).get(w.suggest.fingerprint) %}
+  <div class="week-tip"><span class="who">{{ logo() }}<span>Othor AI suggests</span></span><p>{{ w.suggest.text }}</p>
+    {% if done %}<span class="held">{{ done }}</span>{{ _hold_btn("undo", w.suggest.fingerprint, run, bid, tok, "Undo") }}{% else %}{{ _hold_btn("snooze", w.suggest.fingerprint, run, bid, tok, "Snooze 7 days") }}{% endif %}
+  </div>{% endif %}
+  {% if href %}<a class="link" href="{{ href }}">See them in Sweep →</a>{% endif %}
+</section>
 {%- endmacro %}
 
 {# title, small: the section line ("What needs you · 4", "ranked by money and how soon it bites") #}
@@ -226,3 +258,27 @@
 </form>
 {% endcall %}
 {%- endmacro %}
+
+
+{# #95 (owner, 20 Nov 2026): Othor AI inputs look exactly like the Othor AI chat's box: a plain text
+   box (the standard focus ring) and a solid Send under it on the right; ideas as chips under it,
+   as the Business Model's chips (data-tell-fill), which fill the box and send nothing. Keeps the .tell wrapper the fill script
+   looks for. look: "chat" (the chat's box, Send under it) or "line" (one line, Send beside it). #}
+{% macro ai_box(placeholder, examples=(), name="line", label="Tell Othor AI what to change", look="chat") -%}
+<div class="tell ai-compose{{ ' is-line' if look == 'line' else '' }}">
+  {% if look == "line" %}<div class="ai-compose-row"><input class="input" name="{{ name }}" placeholder="{{ placeholder }}" aria-label="{{ label }}" autocomplete="off">{{ button("Send", "soft", type="submit", attrs={"name": "action", "value": "ai"}) }}</div>
+  {% else %}<textarea class="input" name="{{ name }}" rows="2" placeholder="{{ placeholder }}" aria-label="{{ label }}"></textarea>
+  <div class="ai-compose-go">{{ button("Send", "primary", type="submit", attrs={"name": "action", "value": "ai"}) }}</div>{% endif %}
+  {% if examples %}<div class="tell-chips">{% for e in examples %}<button class="chip lg" type="button" data-tell-fill="{{ e }}">{{ e }}</button>{% endfor %}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{# #95: the question box on step 1, the chat's box; the caller puts the actions under it #}
+{% macro ai_ask(name, placeholder, error=None) -%}
+<div class="ai-compose">
+  <textarea class="input{{ ' is-error' if error else '' }}" id="f-{{ name }}" name="{{ name }}" rows="3" placeholder="{{ placeholder }}" autofocus data-fill-target{% if error %} aria-invalid="true" aria-describedby="e-{{ name }}"{% endif %}></textarea>
+  {% if error %}<p class="field-error" id="e-{{ name }}">{{ error }}</p>{% endif %}
+  <div class="ai-compose-go">{{ caller() }}</div>
+</div>
+{%- endmacro %}
+

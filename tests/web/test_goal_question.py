@@ -101,3 +101,32 @@ def test_add_a_goal_then_suggest_a_goal_makes_one_without_a_model(night, monkeyp
     _post(env, h, "/othor/apply", {"subject": "ontology:goal", "back": back})
     with svc.sf() as s, tenant_scope(cid):
         assert any(r.body["metric"] == "net_revenue" for r in service.active(s, ["goal"]))
+
+
+def test_too_little_history_says_so_instead_of_asking_again(night, monkeypatch):  # noqa: F811
+    """0.28.4 (owner, 19 Nov 2026): on a company whose history was cut, Suggest a goal and "net
+    revenue" both got "Which number is the goal for?" again and again. Now the chat says the
+    history is too short and asks for the target; the number named is read by code."""
+    from types import SimpleNamespace
+
+    from othor.ai.gateway import ModelGateway
+    from othor.chat import goals
+    from othor.ontology import goal_targets
+
+    env, h, cid, _rid, svc = night
+    with svc.sf() as s, tenant_scope(cid):
+        gone = [service.retire("goal", r.key) for r in service.active(s, ["goal"])]
+        service.apply(s, gone, actor="owner", reason="test: no goals")
+        s.commit()
+    monkeypatch.setattr(goal_targets, "candidates", lambda *a, **k: [])
+    monkeypatch.setattr(
+        ModelGateway, "complete", lambda *a, **k: SimpleNamespace(ok=True, output={}, guard="t")
+    )
+    back = "/ontology?panel=othor&subject=ontology:goal"
+    _post(env, h, "/othor/reply", {"subject": "ontology:goal", "suggest": "1", "back": back})
+    page = html.unescape(env.client.get(h + back).text)
+    assert goals.NONE_YET in page
+    _post(env, h, "/othor/reply", {"subject": "ontology:goal", "text": "net revenue", "back": back})
+    page = html.unescape(env.client.get(h + back).text)
+    assert goals.SHORT.format(name="Net revenue") in page
+    assert page.count(goals.WHICH) == 0

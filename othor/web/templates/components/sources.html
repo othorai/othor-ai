@@ -1,4 +1,5 @@
 {#- SPDX-License-Identifier: Apache-2.0 -#}
+{% from "components/blocks.html" import toast as toast_note %}
 {% from "components/icons.html" import icon %}
 {# Sources and scan components (2k–2ke, 6d, 6g). Rows come from othor.web.sources_view. #}
 {% from "components/forms.html" import chip %}
@@ -140,7 +141,7 @@
 
 {# Undo toast after a use change. #}
 {% macro use_toast(toast) -%}
-{% if toast %}<div class="toast-dock"><div class="toast" role="status"><span class="dot accent"></span><span>{{ toast.text }}</span><button class="action btn quiet" type="button" hx-post="{{ toast.undo }}">Undo</button></div></div>{% endif %}
+{% if toast %}<div class="toast-dock">{% call toast_note(toast.text) %}<button class="btn quiet" type="button" hx-post="{{ toast.undo }}">Undo</button>{% endcall %}</div>{% endif %}
 {%- endmacro %}
 
 {# Connector tile: PG · MY · GS #}

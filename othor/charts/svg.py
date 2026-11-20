@@ -364,6 +364,23 @@ def _month_ticks(points: list[Point]) -> list[tuple[int, str]]:
     return seen
 
 
+def _week_ticks(points: list[Point]) -> list[tuple[int, str]]:
+    """Dated ticks for a chart over days, labelled "27 Oct": a week apart over three weeks or
+    more, else every second day (a few days: every day), so a short history still reads."""
+    if not points:
+        return []
+    first = dt.date.fromisoformat(points[0][0])
+    last = dt.date.fromisoformat(points[-1][0])
+    span = (last - first).days
+    step = 7 if span >= 21 else (2 if span >= 6 else 1)
+    out = []
+    day = first
+    while day <= last:
+        out.append((day.toordinal(), f"{day.day} {day:%b}"))
+        day += dt.timedelta(days=step)
+    return out
+
+
 def _region_labels(svg: _Svg, spec: ChartSpec, xs: _Scale, top: int = 18) -> None:
     for a in spec.annotations:
         if a.type == "region" and a.from_ and a.to and a.label and spec.kind != "gap_block":
@@ -414,7 +431,10 @@ def _frame(
         svg.label(1, max(ys(max(ticks)) - 9, 9), f"{sym}{word}", size=9)
     svg.reserve((0.0, h - 14.0, float(w), float(h)))  # the month row: no label lands on it (9c)
     prev: Box | None = None
-    for o, label in _month_ticks(sorted(allpts)):
+    # 0.28.5: a step chart over days ("Since last week", 30 nights) is dated a week apart
+    # ("27 Oct · 3 Nov"); every other chart keeps its month row
+    by_day = spec.kind == "step" and spec.period.grain == "day"
+    for o, label in (_week_ticks if by_day else _month_ticks)(sorted(allpts)):
         x, anchor = xs(o), "start"
         if _box(x, h - 5, label, 10, "start")[2] > w - 1:
             x, anchor = w - 1, "end"  # the last month at the right edge isn't cut off (6a2)
@@ -572,6 +592,9 @@ def _key_values(svg: _Svg, spec: ChartSpec, lines: list[tuple[Series, list[XY]]]
         return
     shown = 0
     said: set[tuple[int, str]] = set()  # two lines meeting at one value: said once
+    for sr, xy in lines:  # each line's last value rides with its name: never said twice (0.28.4)
+        if sr.points and xy:
+            said.add((round(xy[-1][0]), _value(sr.points[-1][1], spec.unit)))
     for sr, xy in sorted(lines, key=lambda p: p[0].role == "muted"):
         pts = list(sr.points)
         if not pts or sr.style == "dots":
@@ -581,8 +604,10 @@ def _key_values(svg: _Svg, spec: ChartSpec, lines: list[tuple[Series, list[XY]]]
         order = [i for i, (d, _v) in enumerate(pts) if d in marked]
         order += [vals.index(max(vals)), vals.index(min(vals))]
         picked: list[int] = []
+        last_text = _value(vals[last], spec.unit)
         for i in order:
-            if i not in picked and i != last:  # the last rides with the name
+            # the last rides with the name; a high or low that reads the same is left out
+            if i not in picked and i != last and _value(vals[i], spec.unit) != last_text:
                 picked.append(i)
         for i in picked[: KEY_PER_LINE - 1]:
             if shown >= KEY_PER_CHART:

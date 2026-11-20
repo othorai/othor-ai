@@ -17,13 +17,14 @@
       <p style="margin:4px 0 8px;font-size:13px;line-height:1.4;color:#5B6B7B">{{ i.consequence.text }}</p>
       <p style="margin:0">{{ e.state_tag(i.state, i.confidence) }}{% if i.change %} {{ e.change_tag(i.change) }}{% endif %}</p></td>
     {% if i.img %}<td valign="middle" width="{{ i.img.width }}" style="width:{{ i.img.width }}px;padding:0 12px"><img src="cid:{{ i.img.cid }}" width="{{ i.img.width }}" height="{{ i.img.height }}" alt="{{ i.img.alt }}" style="display:block;border:0;width:{{ i.img.width }}px;height:{{ i.img.height }}px"></td>{% endif %}
-    <td valign="middle" align="right" style="font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:#1F2A37;white-space:nowrap">{{ i.money }}</td>
+    <td valign="middle" align="right" style="font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;color:#1F2A37;white-space:nowrap">{{ i.money }}</td>
   </tr></table></td></tr>
 {% endfor %}</table>
 {% endcall %}
 {% for sec in b.get("sections") or [] %}{% call e.row("18px 24px 0") %}{{ e.extra(sec) }}{% endcall %}{% endfor %}{% if ahead %}{% call e.row("18px 24px 0") %}{{ e.ahead(ahead, ahead_note) }}{% endcall %}{% endif %}
 {% if b.watching %}{% call e.row("8px 24px 0") %}{{ e.watching(b.watching) }}{% endcall %}{% endif %}
 {% if b.ask %}{% call e.row("16px 24px 0") %}{{ e.ask(b.ask) }}{% endcall %}{% endif %}
+{% if b.get("week") %}{% call e.row("18px 24px 0") %}{{ e.week(b["week"]) }}{% endcall %}{% endif %}
 {% call e.row("20px 24px 24px") %}{{ e.button("Open the brief", open_url) }}{% endcall %}
 {{ e.brief_footer(footer, unsubscribe_url) }}
 {% endcall %}

@@ -5,18 +5,18 @@
 {% from "components/buttons.html" import button, link %}
 {% from "components/forms.html" import text_input, select %}
 {% from "components/panels.html" import pane, pane_title %}
-{% from "components/sweep.html" import stat, kpi_stat, finding_row, detector_table, detectors_strip, reasons, kv, status_pill, held_rows, pattern_groups, rows_table, question_box, runs_menu, panel_head, code, hold_form, overlay %}
+{% from "components/sweep.html" import stat, kpi_stat, finding_row, detector_table, detectors_ring, reasons, kv, status_pill, held_rows, pattern_groups, rows_table, question_box, panel_head, code, hold_form, overlay %}
 {% block title %}Sweep · {{ company.name }}{% endblock %}
 {% block crumb %}Sweep{% endblock %}
 {% block crumb_after %}{% call el("p", "crumbs") %}{% call el("span", "crumb-sep") %}/{% endcall %}<span>{{ fmt.date_short(summary.date) }} {{ summary.date.year }}</span>{% endcall %}{% endblock %}
-{% block actions %}{% call el("div", layout="flex items-center gap-8") %}{{ button("History", href="/sweep/history") }}{{ runs_menu(runs, run) }}{% endcall %}{% endblock %}
+{% block actions %}{% call el("div", layout="flex items-center gap-8") %}{{ button("History", href="/sweep/history") }}{% endcall %}{% endblock %}
 {% block main %}
 {% if run and not request.query_params.get("run") %}<span data-run="{{ run }}" hidden></span>{% endif %}
 {{ page_title("Sweep", aside=fmt.date_short(summary.date) ~ " " ~ summary.date.year) }}
 <div class="flex flex-col gap-24">
 
-{{ detectors_strip(strip, strip_info, when) }}
-<div class="grid grid-cols-1 md:grid-cols-3 gap-24">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-24">
+  {{ detectors_ring(strip, strip_info, when) }}
   {{ kpi_stat("Metrics with enough history", fmt.num(history.ok) ~ " / " ~ fmt.num(history.all)) }}
   {{ kpi_stat("Tests " ~ when, fmt.num(summary.tests), ("at most 1 in " ~ summary.chance ~ " could be chance") if summary.chance else None, tip="False discovery rate " ~ summary.fdr ~ " (Benjamini–Hochberg), across every test of the night.", tip_id="sweep-chance") }}
   {# owner, 19 Nov 2026: what's new is the figure, the day in the label as Tests; open (every

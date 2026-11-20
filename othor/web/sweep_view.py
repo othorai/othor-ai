@@ -1695,11 +1695,6 @@ def run_by_number(s: Session, number: int) -> Run | None:
     ).first()
 
 
-def history_months(s: Session) -> list[dt.date]:
-    """The first day of each month that has a night, newest first."""
-    return sorted({r.run_date.replace(day=1) for r in _history_runs(s)}, reverse=True)
-
-
 def _sweep_counts(r: Run) -> dict[str, Any]:
     return dict((r.summary or {}).get("sweep") or {})
 
@@ -1736,10 +1731,16 @@ def history_chart(s: Session) -> ChartSpec | None:
     )
 
 
-def history_month(s: Session, month: dt.date) -> dict[str, Any]:
-    """The month's nights, newest first, with the month's line."""
-    nxt = (month.replace(day=28) + dt.timedelta(days=4)).replace(day=1)
-    runs = [r for r in _history_runs(s) if month <= r.run_date < nxt]
+HISTORY_FIRST = 10  # nights shown first (owner, 19 Nov 2026: the last 10, then more in place)
+HISTORY_MORE = 30  # nights each "Show older nights" adds
+
+
+def history_nights(s: Session, shown: int = HISTORY_FIRST) -> dict[str, Any]:
+    """The newest `shown` nights, newest first, how many older ones remain, and one line over
+    every night since the first."""
+    every = _history_runs(s)
+    shown = max(HISTORY_FIRST, shown)
+    runs = every[:shown]
     ids = [r.id for r in runs]
     money: dict[uuid.UUID, Decimal] = {}
     if ids:
@@ -1783,13 +1784,14 @@ def history_month(s: Session, month: dt.date) -> dict[str, Any]:
                 "href": f"/sweep?run={r.number}" if done else None,
             }
         )
-    done_rows = [x for x in rows if x["done"]]
+    done_all = [(r.run_date, _sweep_counts(r)) for r in every if r.status != "failed"]
     line = ""
-    if done_rows:
-        nights = len({x["date"] for x in done_rows})
-        new = sum(x["new"] for x in done_rows)
-        resolved = sum(x["resolved"] for x in done_rows)
-        busy = max(done_rows, key=lambda x: (x["new"], x["date"]))
+    if done_all:
+        nights = len({d for d, _ in done_all})
+        new = sum(int(c.get("new") or 0) for _, c in done_all)
+        resolved = sum(int(c.get("resolved") or 0) for _, c in done_all)
+        bd, bc = max(done_all, key=lambda x: (int(x[1].get("new") or 0), x[0]))
+        busy = {"date": bd, "new": int(bc.get("new") or 0)}
         parts = [
             f"{fmt.num(nights)} night{'s' if nights != 1 else ''}",
             f"{fmt.num(new)} new finding{'s' if new != 1 else ''}",
@@ -1800,7 +1802,14 @@ def history_month(s: Session, month: dt.date) -> dict[str, Any]:
                 f"busiest night {fmt.day_month(busy['date'])} ({fmt.num(busy['new'])} new)"
             )
         line = " · ".join(parts)
-    return {"rows": rows, "line": line}
+    more = len(every) - len(runs)
+    return {
+        "rows": rows,
+        "line": line,
+        "more": more,
+        "next": min(more, HISTORY_MORE),
+        "shown": len(runs),
+    }
 
 
 def history_first(s: Session) -> dt.date | None:

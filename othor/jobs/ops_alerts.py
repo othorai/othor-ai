@@ -71,11 +71,16 @@ def cases(sf: sessionmaker[Session], now: dt.datetime) -> list[Case]:
             ).first()
             if earlier is None:
                 continue  # set up today: its first night hasn't come yet
-            run = s.scalars(
-                sa.select(Run)
-                .where(Run.kind == "nightly", Run.run_date == day)
-                .order_by(Run.number.desc())
-            ).first()
+            runs = list(
+                s.scalars(
+                    sa.select(Run)
+                    .where(Run.kind == "nightly", Run.run_date == day)
+                    .order_by(Run.number.desc())
+                )
+            )
+            # a night is done once any of its nightly runs sealed: a later one started by hand
+            # (an operator's re-read, 19 Nov 2026) doesn't make the morning's late
+            run = next((r for r in runs if r.status in SEALED), runs[0] if runs else None)
             number, status = (run.number, run.status) if run else (None, None)
         who = f"{c.name} ({c.slug})"
         # this company's time zone and currency for its lines only: set and left, they leaked into

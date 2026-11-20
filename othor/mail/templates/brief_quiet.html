@@ -6,17 +6,18 @@
 {% call e.row("22px 24px 0") %}{{ e.kicker(brief_name ~ " · " ~ date_label ~ " · " ~ fmt.time_hm(b.time)) }}{% endcall %}
 {% call e.row("10px 24px 0") %}{{ e.title(words.title) }}{% endcall %}
 {% if tiles %}{% call e.row("16px 24px 0") %}
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #DDE2E8;border-collapse:collapse">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
 {% for pair in tiles | batch(2) %}<tr>{% for t in pair %}
-  <td valign="top" width="50%" style="width:50%;padding:14px;border:1px solid #DDE2E8;font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif">
+  <td valign="top" width="50%" style="width:50%;padding:12px 12px 12px 0;border-top:1px solid #E3E6EA;font-family:Inter,'Segoe UI',Helvetica,Arial,sans-serif">
     <p style="margin:0 0 6px;font-size:13px;color:#5B6B7B">{{ t.label }}</p>
-    <p style="margin:0;font-size:18px;font-weight:700;color:#1F2A37">{{ t.value }} <span style="font-size:13px;font-weight:400;color:{{ '#0B7AA6' if t.on_plan else ('#B33A3A' if t.role == 'negative' else '#5B6B7B') }}">{{ t.comparison.text }}</span>{% if t.stale %} <span style="font-size:12px;font-weight:400;color:#8A5E00">{{ t.stale }}</span>{% endif %}</p></td>
-{% endfor %}{% if pair | length == 1 %}<td width="50%" style="width:50%;border:1px solid #DDE2E8">&nbsp;</td>{% endif %}</tr>{% endfor %}
+    <p style="margin:0;font-size:18px;font-weight:600;color:#1F2A37">{{ t.value }} <span style="font-size:13px;font-weight:400;color:{{ '#0B7AA6' if t.on_plan else ('#B33A3A' if t.role == 'negative' else '#5B6B7B') }}">{{ t.comparison.text }}</span>{% if t.stale %} <span style="font-size:12px;font-weight:400;color:#8A5E00">{{ t.stale }}</span>{% endif %}</p></td>
+{% endfor %}{% if pair | length == 1 %}<td width="50%" style="width:50%;border-top:1px solid #E3E6EA">&nbsp;</td>{% endif %}</tr>{% endfor %}
 </table>{% endcall %}{% endif %}
 {% if words.line %}{% call e.row("16px 24px 0") %}{{ e.para(words.line, size=14) }}{% endcall %}{% endif %}
 {% for sec in b.get("sections") or [] %}{% call e.row("18px 24px 0") %}{{ e.extra(sec) }}{% endcall %}{% endfor %}{% if ahead %}{% call e.row("18px 24px 0") %}{{ e.ahead(ahead, ahead_note) }}{% endcall %}{% endif %}
 {% if b.watching %}{% call e.row("12px 24px 0") %}{{ e.watching(b.watching) }}{% endcall %}{% endif %}
 {% if b.ask %}{% call e.row("16px 24px 0") %}{{ e.ask(b.ask) }}{% endcall %}{% endif %}
+{% if b.get("week") %}{% call e.row("18px 24px 0") %}{{ e.week(b["week"], full=False) }}{% endcall %}{% endif %}
 {% call e.row("20px 24px 24px") %}{{ e.button("Open the brief", open_url) }}{% endcall %}
 {{ e.brief_footer(footer, unsubscribe_url) }}
 {% endcall %}

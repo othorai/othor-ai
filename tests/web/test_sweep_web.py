@@ -72,9 +72,9 @@ _NIGHT: dict[str, object] = {}  # built once per test process, copied for each t
 
 
 def _det_card(page: str, key: str) -> str:
-    """One detector's card on the strip (M15.7b)."""
+    """One detector's line in the ring's list (M15.7b; #97)."""
     m = re.search(
-        rf'<div class="det-card[^"]*" role="tooltip" id="det-{key}">(.*?)</div></li>', page, re.S
+        rf'<li class="det-row [a-z]+" id="det-{key}" data-key="{key}">(.*?)</li>', page, re.S
     )
     assert m, key
     return m.group(1)
@@ -128,25 +128,19 @@ def test_the_overview_reads_one_run(night):
         rows = sv.detector_rows(rv, s)
     assert f"Findings · {sw['findings']}" in page and f"Watching · {sw['watching']}" in page
     assert f"Suppressed · {sw['suppressed']}" in page and f"Resolved · {sw['resolved']}" in page
-    # the strip: activated + inactive = every detector; suppressed is the tab's count
+    # #97: the detectors as the first card: a ring, one segment per detector, "on/total" inside;
+    # couldn't run and suppressed (the tab's count) on their lines beside it
     on = sum(1 for c in cov if c["status"] != "could_not_run")
     off = len(cov) - on
-    assert (
-        f"Total {len(cov)} detectors. {on} activated. "
-        f'<span class="off">{off} inactive.</span> '
-        f'<span class="held">{sw["suppressed"]} suppressed.</span>'
-    ) in page
-    # M15.7b: one square bar per detector, its short name under it, and a card behind each
-    bars = re.findall(r'<li class="det (on|partly|off)(?: end)?"', page)
-    assert bars == [r["kind"] for r in rows] and len(bars) == len(cov)
-    names = re.findall(r'<span class="det-name">([^<]+)</span>', page)
-    assert names == [sweep_text.SHORT[r["key"]] for r in rows]
+    assert f'<span class="det-ring-v"><b>{on}</b>/{len(cov)}</span>' in page
+    assert f"{off} couldn’t run" in page and f"{sw['suppressed']} suppressed</span>" in page
+    segs = re.findall(r'<circle class="(on|partly|off)" cx="32"', page)
+    assert segs == [r["kind"] for r in rows] and len(segs) == len(cov)
+    # M15.7b: behind the ring, every detector's line: its name, status, and how it went
     for r in rows:
         card = _det_card(page, r["key"])
-        assert f'aria-controls="det-{r["key"]}"' in page
-        assert f'aria-label="{r["label"]}: {r["status"]}"' in page
-        assert html.escape(sweep_text.CATCHES[r["key"]], quote=False) in card
-        assert r["status"] in card
+        assert f"<title>{html.escape(r['label'], quote=False)}: {r['status']}</title>" in page
+        assert html.escape(r["label"], quote=False) in card and r["status"] in card
         if r["kind"] == "on":
             assert f"Today: {html.escape(r['result'], quote=False)}" in card
     # the three numbers
@@ -166,7 +160,7 @@ def test_the_overview_reads_one_run(night):
     for gone in ("Also in today’s briefs", "Checked, nothing found", "Coverage</p>"):
         assert gone not in page, gone
     # the last seven runs, and another run by its number
-    assert "Last " in page and "/sweep?run=" in page
+    assert 'href="/sweep/history"' in page  # 0.28.4: one History button, no runs menu
     assert env.client.get(h + "/sweep?run=9999").status_code == 404
 
 
@@ -182,7 +176,7 @@ def test_a_check_waiting_on_the_owner_is_answered_in_place(night):
     page = env.client.get(h + "/sweep").text
     link = f"/sweep?run={number}&amp;panel=othor&amp;subject=questions"
     assert f'href="{link}">Answer 1 question →</a>' in page
-    # M15.7b: the same link in the Lag card on the strip, with what it needs
+    # M15.7b: the same link in Lag's line behind the ring (#97), with what it needs
     card = _det_card(page, "lead_lag")
     assert f'href="{link}">Answer 1 question →</a>' in card
     assert "Needs two numbers that move together" in card
@@ -366,7 +360,7 @@ def test_first_days(env: Env, sample, need_sources):  # noqa: F811
     assert "<b>Day 1 of 28.</b>" in page and "Full coverage from" in page
     assert "still building history · turns on fully around" in page
     # M15.7b: a partly running detector's card says what it covered and what it is waiting on
-    partly = re.findall(r'<li class="det partly(?: end)?"[^>]*data-key="([a-z_]+)"', page)
+    partly = re.findall(r'<li class="det-row partly" id="det-[a-z_]+" data-key="([a-z_]+)"', page)
     cards = [_det_card(page, k) for k in partly]
     assert cards and all("Partly" in c and "Today: " in c and " of " in c for c in cards)
     assert any("Still building history" in c or "still building history" in c for c in cards)
@@ -429,27 +423,6 @@ def test_suppressed_lists_one_item_per_pattern_with_its_metrics(night):
     assert "catch-up week of 24 Aug" in surat and "confirmed 28 Oct" in surat
 
 
-def test_the_runs_menu_dates_each_run_as_the_page_does_and_says_its_kind(night):
-    """#39: the menu showed each run's last day of data (run date − 1) while the page header shows
-    the run date, and two runs of one day (the first run and the night) read the same: each item
-    now carries the header's date and what kind of run it was."""
-    from othor.core import fmt
-
-    env, h, cid, _rid, svc = night
-    page = env.client.get(h + "/sweep").text
-    menu = page[
-        page.index('class="use-menu"') : page.index("</details>", page.index('class="use-menu"'))
-    ]
-    with svc.sf() as s, tenant_scope(cid):
-        runs = s.scalars(sa.select(Run).where(Run.status.in_(("done", "partial")))).all()
-    for r in runs:
-        if f"?run={r.number}" not in menu:
-            continue
-        item = menu[menu.index(f"?run={r.number}") :][:400]
-        assert fmt.date_short(r.run_date) in item, (r.number, item)
-        assert {"dry": "first run", "nightly": "nightly"}.get(r.kind, "") in item, (r.kind, item)
-
-
 def test_the_sql_tab_loads_only_its_own_statements(night):
     """M15.1: the SQL tab loaded every statement of the run (about 154, with their SQL and
     params) to match a handful by text; it now asks for those by hash."""
@@ -477,8 +450,6 @@ def test_how_is_this_calculated_for_net_hiding_gross(night):
     """M15.3, the Test tab: what it tested, the waterfall from the stored contributions, the gates
     with the stored result's values, the money's arithmetic, the numbers it used."""
     from decimal import Decimal
-
-    from othor.engine import sweep_text
 
     env, h, cid, rid, svc = night
     fp = _fp(svc, cid, rid, "net_hiding_gross")

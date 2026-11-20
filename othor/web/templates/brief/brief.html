@@ -1,7 +1,7 @@
 {#- SPDX-License-Identifier: Apache-2.0 -#}
 {% extends "shells/app.html" %}
 {% from "components/ui.html" import el %}
-{% from "components/blocks.html" import tabs as tabs_bar, banner, empty_state, watching, ask_today %}
+{% from "components/blocks.html" import tabs as tabs_bar, tabs_row, banner, empty_state, watching, ask_today %}
 {% from "components/buttons.html" import button, link, run_again, view_switch %}
 {% from "components/forms.html" import action_form %}
 {% from "components/sweep.html" import overlay, more_menu %}
@@ -32,9 +32,9 @@
 {% endblock %}
 {% block main %}
 {% if bv.run and not request.query_params.get("date") %}<span data-run="{{ bv.run.number }}" hidden></span>{% endif %}
-<div class="flex flex-col gap-20">
+<div class="flex flex-col gap-24">
 {# New brief as the blue button beside the brief tabs, as on the Morning Brief page (owner, 13 Nov 2026) #}
-{% call el("div", layout="flex items-center justify-between gap-12") %}{% call el("div", layout="flex-1 min-w-0") %}{{ tabs_bar(tabs, bv.brief.name) }}{% endcall %}{% if not readonly %}{{ button("New brief", href="/brief/new", kind="primary") }}{% endif %}{% endcall %}
+{% call tabs_row(tabs, bv.brief.name) %}{% if not readonly %}{{ button("New brief", href="/brief/new", kind="primary") }}{% endif %}{% endcall %}
 {% if saved %}{{ banner("ok", "<b>Saved as v" ~ saved ~ "</b> · applies from tomorrow’s run", "Edit again", base ~ "/edit") }}{% endif %}
 {% include "partials/run_again.html" %}
 {# Run again now's brief isn't emailed unless the owner sends it (v0.11) #}

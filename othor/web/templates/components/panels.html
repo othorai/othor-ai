@@ -27,7 +27,7 @@
 {%- endmacro %}
 
 {% macro msg_user(text) -%}<p class="msg-user">{{ text }}</p>{%- endmacro %}
-{% macro msg_ai(text) -%}<div class="msg-ai"><span class="avatar-ai">AI</span><p>{{ text }}</p></div>{%- endmacro %}
+{% macro msg_ai(text) -%}<div class="msg-ai"><p>{{ text }}</p></div>{%- endmacro %}
 {% macro quick_replies(items) -%}<div class="flex items-center flex-wrap gap-6">{% for i in items %}<button class="chip lg" type="button">{{ i }}</button>{% endfor %}</div>{%- endmacro %}
 {% macro draft_card(text, value) -%}<div class="draft"><p>{{ text }}</p><p class="hint mt-4">Computed now: <b>{{ value }}</b></p></div>{%- endmacro %}
 

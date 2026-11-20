@@ -148,6 +148,32 @@ def test_a_closed_company_is_refused_and_reopened_by_support(cli_db: str) -> Non
         assert c.deleted_at is None and c.purge_after is None
 
 
+def test_admin_reread_asks_the_next_run_and_logs_it(cli_db: str) -> None:
+    """0.28.3: `othor admin reread` leaves a request the next run reads (and clears on seal),
+    and an event; an unknown company is refused."""
+    import sqlalchemy as sa
+
+    from othor.core.config import get_settings
+    from othor.core.db import make_engine, make_session_factory
+    from othor.core.models import Company, Event
+    from othor.core.tenancy import system_scope
+    from othor.engine.sources import REREAD
+    from othor.engine.store import read_json
+
+    sf = make_session_factory(make_engine(cli_db))
+    with sf() as s, system_scope("test"):
+        s.add(Company(slug="cut", name="Cut Co."))
+        s.commit()
+        cid = s.scalars(sa.select(Company.id).where(Company.slug == "cut")).one()
+    assert CliRunner().invoke(app, ["admin", "reread", "nope", "--yes"]).exit_code == 1
+    ok = CliRunner().invoke(app, ["admin", "reread", "cut", "--metric", "cogs", "--yes"])
+    assert ok.exit_code == 0, ok.output
+    assert read_json(get_settings().company_dir(cid) / REREAD)["metrics"] == ["cogs"]
+    with sf() as s, system_scope("test"):
+        ev = s.scalars(sa.select(Event).where(Event.action == "series.reread_requested")).one()
+        assert ev.after == {"metrics": ["cogs"]}
+
+
 def test_migrate_create_key_only_on_a_fresh_install(
     cli_db: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

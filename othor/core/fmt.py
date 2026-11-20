@@ -414,6 +414,23 @@ def clock(t: dt.time | dt.datetime | str | None, *, seconds: bool = False) -> st
     return f"{time_hm(t, seconds=seconds)} {tz_abbr(zone, on)}"
 
 
+def said_at(t: dt.datetime, now: dt.datetime | None = None) -> str:
+    """When a chat reply was written (owner, 19 Nov 2026): 'Today, 8:30 PM IST',
+    'Yesterday, 6:01 PM IST', '17 Nov, 6:01 PM IST', with the year when it isn't this year."""
+    when = local(t)
+    today = local(now or dt.datetime.now(dt.UTC)).date()
+    d = when.date()
+    if d == today:
+        day = "Today"
+    elif d == today - dt.timedelta(days=1):
+        day = "Yesterday"
+    elif d.year == today.year:
+        day = day_month(d)
+    else:
+        day = day_month_year(d)
+    return f"{day}, {clock(t)}"
+
+
 def code(value: int | str) -> str:
     s = f"{int(value):06d}" if isinstance(value, int) else value
     return f"{s[:3]} {s[3:]}"

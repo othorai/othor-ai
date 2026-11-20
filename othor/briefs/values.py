@@ -66,11 +66,25 @@ def parse(unit: str | None, text: str) -> Decimal:
     return v / 100 if unit in ("percent", "ratio") else v
 
 
-def chart_unit(unit: str | None) -> Unit:
-    if unit == "inr":  # ₹ crore, or $ millions (M15.6)
-        from othor.engine.finding_charts import money_unit
+def _money(small: bool) -> tuple[Unit, float]:
+    from othor.engine.finding_charts import money_unit, small_money_unit
 
-        return money_unit()[0]
+    return small_money_unit() if small else money_unit()
+
+
+def small_money(values: Any) -> bool:
+    """A money chart whose values all stay under ₹1 Cr ($1M) is drawn in ₹ lakh ($ thousands)
+    (0.28.4: Average order value at ₹1.8 L was drawn as ₹0.02 Cr)."""
+    from othor.engine.finding_charts import money_unit
+
+    big = Decimal(str(money_unit()[1]))
+    vals = [abs(Decimal(str(v))) for v in values]
+    return bool(vals) and max(vals) < big
+
+
+def chart_unit(unit: str | None, small: bool = False) -> Unit:
+    if unit == "inr":  # ₹ crore, or $ millions (M15.6); lakh / thousands when all are small
+        return _money(small)[0]
     if unit == "days":
         return Unit("days", decimals=0)
     if unit in ("percent", "ratio"):
@@ -80,14 +94,13 @@ def chart_unit(unit: str | None) -> Unit:
     return Unit("count", decimals=1)
 
 
-def chart_value(unit: str | None, v: Any) -> float:
-    """The value as the chart's axis shows it (₹ in crore, $ in millions)."""
+def chart_value(unit: str | None, v: Any, small: bool = False) -> float:
+    """The value as the chart's axis shows it (₹ in crore, $ in millions; lakh / thousands when
+    the chart is small money)."""
     d = Decimal(str(v))
     if unit != "inr":
         return float(d)
-    from othor.engine.finding_charts import money_unit
-
-    return float(d / Decimal(str(money_unit()[1])))
+    return float(d / Decimal(str(_money(small)[1])))
 
 
 def indicator_text(v: Any, kind: str | None) -> str:
@@ -113,6 +126,21 @@ def rounded(unit: str | None, v: Any) -> str:
     if unit == "inr_per_metre":
         return fmt.inr_plain(d)
     return fmt.num(d, decimals=1)
+
+
+def text_band(unit: str | None, lo: Any, hi: Any) -> str:
+    """A range written the way `text` writes each end, the shared unit once (0.28.4, 100-night
+    test: "₹0.55 Cr–₹0.78 Cr" beside "₹51.5–63.1 Cr"): '₹0.55–0.78 Cr', '₹5.8–7.1 L',
+    '74,778–1,25,000 m'; ends in different units stay whole: '₹8.7 L–₹1.2 Cr'."""
+    a, b = text(unit, lo), text(unit, hi)
+    tail_a = a.rsplit(" ", 1)[1] if " " in a else ""
+    tail_b = b.rsplit(" ", 1)[1] if " " in b else ""
+    if tail_a != tail_b:
+        return f"{a}–{b}"
+    head = a.removesuffix(" " + tail_a) if tail_a else a
+    sym = fmt.currency_symbol()
+    tail = b.removeprefix(sym) if head.startswith(sym) and b.startswith(sym) else b
+    return f"{head}–{tail}"
 
 
 def band(unit: str | None, lo: Any, hi: Any) -> str:

@@ -1,12 +1,12 @@
 {#- SPDX-License-Identifier: Apache-2.0 -#}
 {% extends "base.html" %}
-{% from "components/buttons.html" import button, link, info %}
+{% from "components/buttons.html" import button, link, info, top_menu, menu_link %}
 {% from "components/forms.html" import text_input, suffix_input, select, toggle, chip, code_boxes %}
 {% from "components/tags.html" import state_tag, change_tag, ee_tag %}
 {% from "components/blocks.html" import banner, callout, toast, empty_state, kpi, tabs, step_bar, records, link_card, link_others, page_title %}
 {% from "components/panels.html" import chat_panel, wide_panel, msg_user, msg_ai, quick_replies, draft_card %}
 {% from "components/account.html" import account_menu %}
-{% from "components/sweep.html" import stat, finding_card, detectors_strip, finding_row, detector_table, reasons, kv, status_pill, rows_table, question_box, pattern_groups, runs_menu %}
+{% from "components/sweep.html" import stat, finding_card, detectors_ring, finding_row, detector_table, reasons, kv, status_pill, rows_table, question_box, pattern_groups %}
 {% block title %}Components{% endblock %}
 {% block body %}
 <div class="board-page flex flex-col gap-24">
@@ -35,13 +35,15 @@
       <div class="grid gap-16 grid-cols-1 md:grid-cols-2">{{ kpi("Net revenue · Oct", fmt.inr(46200000), chart(specs.sparkline_below, 120, 36)) }}{{ kpi("DSO", fmt.days(46, decimals=0), chart(specs.sparkline_on_track, 120, 36)) }}</div></div></section>
   <section class="flex flex-col gap-12"><p class="label-caps">Account menu (open, as on 4d1)</p>
     <div class="account-demo">{{ account_menu(demo_user, "", open=True) }}</div>
-    <div class="flex items-center gap-8">{{ runs_menu([(12, demo_date, "nightly"), (11, demo_date, "first run")], 12) }}</div></section>
+    <div class="flex items-center gap-8">{% call top_menu() %}{{ menu_link("Edit brief", "#") }}{{ menu_link("Recipients · 3", "#") }}{% endcall %}</div></section>
   <section class="flex flex-col gap-12"><p class="label-caps">Copy (one shared script: clipboard, “Copied” toast, select-all fallback)</p>
     <div class="flex items-center gap-8">{{ button("Copy SQL", attrs={"data-copy-text": "SELECT 1", "id": "copy-demo"}) }}<pre class="code-block" id="copy-target">SELECT region, SUM(net_amount) FROM invoices GROUP BY 1</pre>{{ button("Copy the block", attrs={"data-copy-target": "#copy-target", "id": "copy-target-demo"}) }}</div>
     <div id="toast-dock" class="toast-dock" aria-live="polite"></div>
   </section>
   <section class="flex flex-col gap-12"><p class="label-caps">Sweep (5a–5f, 10i, finding panel)</p>
-    {{ detectors_strip({"total": 11, "active": 3, "inactive": 8, "suppressed": 0, "segments": [{"key": "net_hiding_gross", "label": "Net hiding gross", "short": "Net/gross", "status": "Running", "kind": "on", "catches": "A flat total hiding moves that cancel out underneath", "result": "19 breakdowns · clean", "covers": "19 breakdowns", "missing": "", "action": None}, {"key": "changepoint", "label": "Changepoint", "short": "Shift", "status": "Partly", "kind": "partly", "catches": "The week a baseline moved, and stayed moved", "result": "", "covers": "3 of 14 series", "missing": "11 still building history", "action": None}, {"key": "lead_lag", "label": "Lead/lag", "short": "Lag", "status": "Could not run", "kind": "off", "catches": "One number that moves weeks before another", "result": "", "covers": "", "missing": "Needs two numbers that move together", "action": ("Answer 1 question →", "#")}]}, "Each detector is one way Sweep tests your numbers every night.") }}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-24">
+    {{ detectors_ring({"total": 11, "active": 3, "inactive": 8, "suppressed": 0, "segments": [{"key": "net_hiding_gross", "label": "Net hiding gross", "short": "Net/gross", "status": "Running", "kind": "on", "catches": "A flat total hiding moves that cancel out underneath", "result": "19 breakdowns · clean", "covers": "19 breakdowns", "missing": "", "action": None}, {"key": "changepoint", "label": "Changepoint", "short": "Shift", "status": "Partly", "kind": "partly", "catches": "The week a baseline moved, and stayed moved", "result": "", "covers": "3 of 14 series", "missing": "11 still building history", "action": None}, {"key": "lead_lag", "label": "Lead/lag", "short": "Lag", "status": "Could not run", "kind": "off", "catches": "One number that moves weeks before another", "result": "", "covers": "", "missing": "Needs two numbers that move together", "action": ("Answer 1 question →", "#")}]}, "Each detector is one way Sweep tests your numbers every night.") }}
+    </div>
     <div class="grid gap-16 grid-cols-1 md:grid-cols-4">{{ stat("11", "detectors · 6 running fully", boxed=True) }}{{ stat("19 / 25", "metrics with enough history", boxed=True) }}</div>
     <div class="grid gap-16 grid-cols-1 md:grid-cols-2">
       {{ finding_card({"number": "01", "fp": "demo", "label": "Missing records", "money": "₹3.6 Cr", "state": "measured", "confidence": None, "change": ("new", None), "title": "14 customers still marked active haven’t invoiced in 90+ days", "line": "Together ₹3.6 Cr over the last 12 months.", "chart": None, "rows": {"headers": ["Account", "Last invoice", "Last 12 m"], "rows": [["Shree Varada Textiles", "12 Jul", "₹0.62 Cr"], ["Tidewell Garments", "2 Jul", "₹0.48 Cr"]], "note": "No chart by design: these accounts produce no rows.", "more": 12, "noun": "accounts", "total": 14}, "why": "erp_db has no churn status. Customers don’t cancel; they stop ordering, so no row is created.", "question": {"text": "Who owns an account that hasn’t cancelled but has stopped buying?", "to": [{"name": "Priya Menon", "role": "Head of Sales"}]}, "home_note": None}, 0, "") }}

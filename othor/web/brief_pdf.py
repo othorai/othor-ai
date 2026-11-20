@@ -176,6 +176,11 @@ def context(
         "since": bvw.since_line(bv),
         "since_word": since_word(bv.body),
         "findings": findings,
+        # 0.28.5: "Since last week", with its chart when charts are on
+        "week": b.get("week"),
+        "week_svg": _svg(finding_charts.load(b["week"]["chart"]), (560, 150))
+        if charts and (b.get("week") or {}).get("chart")
+        else None,
         "ahead": ahead,
         "appendix": appendix,
         "help_url": settings.help_url.rstrip("/"),  # the Learn link (M20.2)

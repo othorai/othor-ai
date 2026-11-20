@@ -1,10 +1,11 @@
 {#- SPDX-License-Identifier: Apache-2.0 -#}
 {# Sweep history (0.28.1, owner 19 Nov 2026): every night since the first. A chart of the findings
-   open each night, then the month's nights, newest first, each opening that night's Sweep. All
-   from what each night stored; no source read, no model. #}
+   open each night, then the last 10 nights, newest first, each opening that night's Sweep;
+   "Show older nights" adds 30 more in place (0.28.4). All from what each night stored; no
+   source read, no model. #}
 {% extends "shells/app.html" %}
 {% from "components/ui.html" import el %}
-{% from "components/blocks.html" import tabs as tabs_bar, empty_state, page_title %}
+{% from "components/blocks.html" import empty_state, page_title %}
 {% from "components/buttons.html" import button, link %}
 {% block title %}History · Sweep · {{ company.name }}{% endblock %}
 {% block crumb %}Sweep{% endblock %}
@@ -21,10 +22,8 @@
   {% elif rows %}{% call el("p", "hint") %}The chart of findings each night starts after a week of nights.{% endcall %}
   {% endif %}
 
-  {% if month_tabs %}{{ tabs_bar(month_tabs, month_on) }}{% endif %}
-
   {% if rows %}
-  {% call el("div", layout="flex flex-col gap-8") %}
+  {% call el("div", layout="flex flex-col gap-8", attrs={"id": "history-body"}) %}
     {% if line %}{% call el("p", "hint") %}{{ line }}{% endcall %}{% endif %}
     {% call el("div", "table-wrap") %}{% call el("table", "table flush stack") %}<thead><tr><th>Night</th><th>Run</th>{% call el("th", "num") %}Tests{% endcall %}{% call el("th", "num") %}New{% endcall %}{% call el("th", "num") %}Open{% endcall %}{% call el("th", "num") %}Resolved{% endcall %}{% call el("th", "num") %}At stake{% endcall %}<th>Replays</th><th></th></tr></thead><tbody>
     {% for r in rows %}<tr>
@@ -43,9 +42,10 @@
       {% endif %}
     </tr>{% endfor %}
     </tbody>{% endcall %}{% endcall %}
+    {% if more %}{% call el("div", layout="flex items-center gap-12") %}{% call el("button", "btn", attrs={"type": "button", "hx-get": "/sweep/history?shown=" ~ (shown + next), "hx-target": "#history-body", "hx-select": "#history-body", "hx-swap": "outerHTML"}) %}Show older nights{% endcall %}{% call el("p", "hint") %}{{ fmt.num(more) }} older{% endcall %}{% endcall %}{% endif %}
   {% endcall %}
   {% else %}
-  {% call el("div", "card board") %}{{ empty_state(None, "Sweep history starts after the first nightly run.", "Each night’s Sweep is kept here, a month at a time.") }}{% endcall %}
+  {% call el("div", "card board") %}{{ empty_state(None, "Sweep history starts after the first nightly run.", "Each night’s Sweep is kept here.") }}{% endcall %}
   {% endif %}
 </div>
 {% endblock %}

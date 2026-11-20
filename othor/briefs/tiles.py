@@ -140,7 +140,8 @@ def tile(
                 sign = "+" if change > 0 else "−"
                 comp = {"kind": "period", "text": f"{sign}{_pct(change)} vs {_when(g, before_p)}"}
         else:
-            comp = {"kind": "history", "text": f"{len(s)} {g}s of history"}
+            n = len(s)
+            comp = {"kind": "history", "text": f"{n} {g}{'' if n == 1 else 's'} of history"}
     if comp["kind"] == "band" and comp["text"] != "in band":
         end = _end(g, period)
         hit = next(

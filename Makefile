@@ -4,8 +4,6 @@
 UV ?= uv
 
 dev:  ## app + metadata Postgres + sample MySQL/Postgres + Mailpit
-	@ctx=$$(docker context show 2>/dev/null); if [ "$$ctx" != "orbstack" ]; then \
-	  echo "warning: docker context is '$$ctx', local dev expects 'orbstack' (CI uses plain Docker)"; fi
 	@test -f .env || cp .env.example .env
 	docker compose up -d --build --wait
 	@echo "app http://localhost:8000/healthz · mail http://localhost:8026"

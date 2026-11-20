@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from othor.chat import pending
 from othor.chat import service as chat
+from othor.core import fmt
 
 BADGE = {
     "pick": ("My suggestion", "pick"),
@@ -193,6 +194,7 @@ def view(
                 "to_change": bool(p.get("change")),
                 "intel": list(p.get("intel") or []),
                 "current": m is current,
+                "at": fmt.said_at(m.created_at) if m.created_at else "",
             }
         )
     here = request.url.path

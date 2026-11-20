@@ -107,28 +107,60 @@ register(
 
 
 def _metric(ctx: Ctx, args: dict[str, Any]) -> Card:
+    """One number. A word that fits several ("revenue": invoiced, net, export) gets the numbers
+    it could mean, each with its value, so the owner picks (#94, 19 Nov 2026: "the AI should be
+    helpful and guiding"), never the first that happens to contain the word."""
+    import re
+
     from othor.ontology import service
-    from othor.web.ontology_view import tile_for
+    from othor.web.ontology_view import number_rows
 
     want = str(args["metric"]).strip().lower()
     recs = [r for r in service.active(ctx.s, ["metric"]) if r.body.get("status") != "declined"]
-    rec = next(
-        (r for r in recs if r.key == want or str(r.body.get("name") or "").lower() == want),
-        None,
-    ) or next((r for r in recs if want and want in str(r.body.get("name") or "").lower()), None)
-    if rec is None:
+    exact = [r for r in recs if r.key == want or str(r.body.get("name") or "").lower() == want]
+    word = re.compile(rf"\b{re.escape(want)}", re.I) if want else None
+    near = [
+        r
+        for r in recs
+        if word and (word.search(str(r.body.get("name") or "")) or word.search(r.key))
+    ]
+    hits = exact or near
+    if not hits:
         raise Refused(f"there's no number called {args['metric']}")
     rd = _rd(ctx)
-    name = str(rec.body.get("name") or rec.key)
-    t = tile_for(rd, rec.key) if rd.run is not None else None
-    if t is None:
+    if rd.run is None:
+        name = str(hits[0].body.get("name") or hits[0].key)
         return Card("metric", name, provenance=_provenance(ctx, rd), empty=NO_RUN)
-    facts = [(str(t.get("period") or "Latest"), str(t["value"]))]
-    if t.get("comparison"):
-        facts.append(("Compared", str(t["comparison"])))
+    run_date = rd.run.run_date
+    rows = {r["key"]: r for r in number_rows(ctx.s, rd)}
+    if len(hits) > 1:
+        return Card(
+            "metric",
+            f"Numbers that match \u201c{args['metric']}\u201d",
+            facts=[
+                (str(r.body.get("name") or r.key), number_line(rows[r.key], run_date))
+                for r in hits
+                if r.key in rows
+            ],
+            lines=["Ask about one of them by name for what it counts and how it changed."],
+            provenance=_provenance(ctx, rd),
+        )
+    rec = hits[0]
+    name = str(rec.body.get("name") or rec.key)
+    row = rows.get(rec.key)
+    t = (row or {}).get("tile")
+    if not row or not t:
+        return Card(
+            "metric",
+            name,
+            provenance=_provenance(ctx, rd),
+            empty=f"{name} has no value yet: the last run had nothing to work it out from.",
+        )
+    facts = [("Latest", number_line(row, run_date))]
+    comp = t.get("comparison") or {}
+    if comp.get("kind") == "history" and comp.get("text"):
+        facts.append(("History", str(comp["text"])))
     lines = [str(rec.body.get("description") or "")] if rec.body.get("description") else []
-    if t.get("stale"):
-        lines.append(str(t["stale"]))
     return Card("metric", name, facts=facts, lines=lines, provenance=_provenance(ctx, rd))
 
 

@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
-"""The web tests in four CI jobs that run side by side (owner, 11 Nov 2026: CI took an hour,
-the web job alone 49-59 minutes, close to its 60-minute timeout).
+"""The web tests in two CI jobs that run side by side (owner, 11 Nov 2026: CI took an hour,
+the web job alone 49-59 minutes, close to its 60-minute timeout; four jobs from 12 Nov, two from
+20 Nov: each job pays ~2-3 min of setup, so fewer jobs cost fewer billable minutes,
+docs/plans/ci-cost.md).
 
     python scripts/ci_shard.py 2      # prints shard 2's test files, for `pytest $(...)`
 
@@ -15,12 +17,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "tests" / "web"
-SHARDS = 4
+SHARDS = 2
 
 # 12 Nov 2026: shard 3 took 39 min (4-14 for the others) because the four heaviest files, the
 # ones that build a sample-company night per test, were all in it. One heavy file per shard now;
 # every job prints its 30 slowest tests (--durations) for the next rebalance.
 NAMED: dict[int, tuple[str, ...]] = {
+    # 20 Nov 2026: the old shards 1-3 (~6 min of tests each) together; shard 2 is the old shard 4
+    # (every file not named here, ~13 min), so the two jobs take about the same time
     1: (
         "test_brief_web.py",
         "test_auth_flow.py",
@@ -29,8 +33,6 @@ NAMED: dict[int, tuple[str, ...]] = {
         "test_ontology_nights.py",
         "test_source_matches_web.py",
         "test_page_budget.py",
-    ),
-    2: (
         "test_ontology_web.py",
         "test_invitations.py",
         "test_errors.py",
@@ -39,8 +41,6 @@ NAMED: dict[int, tuple[str, ...]] = {
         "test_setup_web.py",
         "test_rendered_attributes.py",
         "test_metrics_checks.py",
-    ),
-    3: (
         "test_sweep_web.py",
         "test_board_states.py",
         "test_chat_web.py",

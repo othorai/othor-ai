@@ -6,7 +6,7 @@ South fell ₹1.4 Cr while West’s growth hid it; three accounts carry 72% of t
 
 Sources fresh · erp_db 02:03 · sales_dw 02:04
 
-Net revenue moved −₹0.19 Cr from September to October: South −₹1.4 Cr, West +₹1.21 Cr. Three accounts carry 72% of the drop. None has invoiced since 9 Oct. Skarfab is on a known pause to 1 Dec (your answer, 30 Oct). The slowest tenth now take 4.9 days, up from 4.6 days. Together ₹3.6 Cr over the last 12 months. Correlation fell from 0.78 to −0.03. Freight expense per metre is up 32%.
+South fell ₹1.4 Cr; West’s rise hid it. Dispatch time spread at Coimbatore tripled from 7 Sep while the average held at 4.3 days. 14 customers still marked active haven’t invoiced in 90+ days. Freight expense tracked metres dispatched for 20 weeks, then decoupled on 14 Sep.
 
 Needs attention · 4
 
@@ -28,12 +28,15 @@ What's ahead
 Net revenue: ₹56.7 Cr expected for FY27 (₹54.1–59.2 Cr) · 95% likely to miss the ₹60 Cr goal · mostly lower invoiced value · Reliable, tested on its last 11 periods: inside its range 10 times
 DSO: 44 d expected by Mar 2027 (37–50 d) · 61% likely to stay under 45 d · Reliable, tested on its last 11 periods: inside its range 9 times
 Gross margin per metre: ₹45.8–59.4 expected this week · Reliable, tested on its last 5 periods: inside its range 4 times
-Metres dispatched: 0.75–1.25 L m expected this week · Fair, tested on its last 5 periods: inside its range 4 times
+Metres dispatched: 74,778–1,25,290 m expected this week · Fair, tested on its last 5 periods: inside its range 4 times
 Receivables over 60 days: ₹0.8–1.2 Cr expected this week · Fair, tested on its last 5 periods: inside its range 4 times
 Known ahead for the whole business: Skarfab paused orders until 1 Dec (EU audit) (its effect not yet measured).
 
 Question to ask today · for Priya Menon · Head of Sales
 Have Tessora EU and Ravira Exports moved orders elsewhere, or are they on hold?
+
+Since last week
+Last 7 days: 8 reported · 0 fixed · 7 still open (4 in today’s items) · longest open: Ravira Exports stopped invoicing on 9 Oct, day 1
 
 Open the brief: https://indigothread.othor.ai/l/OPEN-TOKEN
 

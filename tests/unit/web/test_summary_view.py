@@ -421,7 +421,9 @@ def test_actual_plots_values_and_states_the_change_in_percent():
     assert r["change_text"] == fmt.pct(Decimal(1) / 118, decimals=1, sign=True)
     assert [s.style for s in r["chart"].series] == ["smooth", "dotted"]
     assert not r["chart"].y.zero_line and not r["spark"].y.zero_line
-    assert r["chart"].series[0].points[-1][1] == pytest.approx(119 / 1e7)
+    assert r["chart"].series[0].points[-1][1] == pytest.approx(
+        119 / 1e5
+    )  # 0.28.4: small money charts in lakh
 
 
 def test_percent_plots_each_week_against_the_one_before():
@@ -442,7 +444,9 @@ def test_percent_plots_each_week_against_the_one_before():
 def test_abs_plots_the_change_in_the_numbers_unit_and_points_for_a_share():
     r = _row(sv.build(SPEC, POINTS, view=View(show="abs")), "Sales")
     assert r["chart"].unit.type == "currency"
-    assert [v for _d, v in r["chart"].series[0].points] == pytest.approx([1 / 1e7] * 13)
+    assert [v for _d, v in r["chart"].series[0].points] == pytest.approx(
+        [1 / 1e5] * 13
+    )  # in lakh (0.28.4)
     share = _row(sv.build(SPEC, POINTS, view=View(show="abs")), "Export desk")
     vals = [v for _d, v in share["chart"].series[0].points]
     assert vals[-1] == pytest.approx(2.0) and set(vals[:-1]) == {0.0}

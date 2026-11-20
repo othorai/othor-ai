@@ -153,6 +153,8 @@ TABLES: dict[str, Rule] = {
     # External Signals (Enterprise Edition, named here only): public series, no company data
     "outside_point": Rule(skip="public series (rates, prices, rainfall), not company data"),
     "outside_fetch": Rule(skip="the instance's fetch log of public series"),
+    # the owner's choices (Enterprise Edition, 0.28.4, named here only): signals turned off
+    "outside_choice": Rule(),
     "access_request": Rule(skip="website requests for access, not company data"),
     "purge_lock": Rule(skip="the purge's own lock (M18.3), never company data"),
 }

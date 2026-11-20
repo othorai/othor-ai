@@ -165,7 +165,7 @@ def test_a_rerun_remakes_the_brief_replays_and_compares_with_yesterday(night):  
     # Home: the button, and its words for the run
     home = env.client.get(h + "/home").text
     # the strip's (i) says when its checks ran: today, for a rerun
-    assert "Run again now" in home and "could run on your data today" in home
+    assert "Refresh everything" in home and "could run on your data today" in home
 
 
 def test_the_owner_sends_the_update_or_keeps_it(night):  # noqa: F811

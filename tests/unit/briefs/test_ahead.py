@@ -146,9 +146,11 @@ def test_a_monthly_number_with_no_goal_reads_next_month():
     assert r["grain"] == "month" and r["says"] == "40–46 d expected in Nov"
 
 
-def test_metres_read_in_lakh_from_a_lakh():
-    assert _rows()["metres"]["says"].startswith("0.75–1.25 L m expected this week")
+def test_metres_read_whole_as_the_tile_writes_them():
+    """0.28.4 (100-night test): "0.75–1.25 L m" beside the tile's "1,75,436 m"."""
+    assert _rows()["metres"]["says"].startswith("74,778–1,25,290 m expected this week")
     assert ahead._metres(Decimal(74778)) == "74,778 m"
+    assert ahead._metres(Decimal(175436)) == "1,75,436 m"
 
 
 def test_an_abstain_says_why_with_no_number():

@@ -18,10 +18,17 @@
 {%- else %}<button class="info{{ ' is-' ~ state if state else '' }}" type="button" aria-label="{{ label }}">i</button>{% endif %}
 {%- endmacro %}
 
+{# 0.28.4 (owner, 19 Nov 2026): an (i) that opens on hover with a short list, label and value per
+   line, instead of a long sentence. rows: [(label, value)] #}
+{% macro info_list(rows, id="pop-list", label="About") -%}
+{% if rows %}<span class="pop pop-list" x-data="popover" data-pop-hover><button class="info" type="button" aria-label="{{ label }}" aria-controls="{{ id }}" aria-expanded="false">i</button><span class="pop-body" role="tooltip" id="{{ id }}"><dl>{% for k, v in rows %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endfor %}</dl></span></span>{% endif %}
+{%- endmacro %}
+
 {# Run again now (v0.11): the nightly steps on demand. Posts in place; waits while a run runs.
    a: othor.web.again_view.Again (no button before the first run has sealed). #}
-{% macro run_again(a, csrf, label="Run again now", kind="", next=None) -%}
-{% if a and a.shown %}<form class="contents" method="post" action="/runs/again" data-inplace><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="next" value="{{ next or a.next_url }}">{{ button("Running…" if a.busy else label, kind, type="submit", disabled=a.busy, attrs={"data-busy": "Starting…"}) }}</form>{% endif %}
+{# owner, 20 Nov 2026: "Refresh everything" (was Run again now / Run now); the hover says what it does #}
+{% macro run_again(a, csrf, label="Refresh everything", kind="", next=None) -%}
+{% if a and a.shown %}<form class="contents" method="post" action="/runs/again" data-inplace><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="next" value="{{ next or a.next_url }}">{{ button("Running…" if a.busy else label, kind, type="submit", disabled=a.busy, attrs={"data-busy": "Starting…", "title": "Reads your sources again and remakes today’s numbers and briefs"}) }}</form>{% endif %}
 {%- endmacro %}
 
 

@@ -6,7 +6,13 @@
 
 **Analytic tradecraft as code** · **Classical signal analysis, not LLM guesswork** · **Every number computed, none generated**
 
-[Quick start](#quick-start) · [Architecture](#architecture) · [Self-hosting](docs/self-host.md) · [Contributing](CONTRIBUTING.md)
+[![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/othorai/othor-ai?label=release)](https://github.com/othorai/othor-ai/releases/latest)
+[![CI](https://github.com/othorai/othor-ai/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/othorai/othor-ai/actions/workflows/ci.yml)
+
+![Othor AI: a full Morning Brief on the sample company, top to bottom](docs/images/brief-tour.gif)
+
+[See it in 3 minutes](#see-it-in-3-minutes) · [Quick start](#quick-start) · [Architecture](#architecture) · [Self-hosting](docs/self-host.md) · [Contributing](CONTRIBUTING.md)
 
 </div>
 
@@ -16,6 +22,12 @@ into SQL, materialises every metric and breakdown, runs a battery of statistical
 false-discovery-rate control, forecasts each series, and emits a ranked, provenance-linked
 **Morning Brief** at 06:00. A language model is confined to drafting setup and phrasing; it is
 never on the path that produces a number.
+
+## See it in 3 minutes
+
+https://github.com/user-attachments/assets/3eab7dbf-8a4a-48d9-aff0-de6144c224fa
+
+A walkthrough on Indigo Thread Co., the invented sample company.
 
 ### Why it exists
 
@@ -182,14 +194,27 @@ othor replay <run_id>
 
 ## Open core and Enterprise Edition
 
-This repository is the **open core**, Apache-2.0, one company per install: the engine, every
-detector, forecasting, the Morning Brief, Sweep, Summary and the business model.
+This repository is the **open core**. The **Enterprise Edition** (`othor-ee`) adds features
+through the same plug-in entry-point group (`othor.plugins`) this repository exposes.
 
-The **Enterprise Edition** (`othor-ee`, under a commercial licence key, verified offline) adds
-**Advanced Intelligence** and **enterprise-ready** features (several companies on one install,
-and more), with enterprise-grade support. It loads through the same plug-in entry-point group
-(`othor.plugins`) this repository exposes. Hosted on [othor.ai](https://othor.ai), the Enterprise
-Edition's features are included.
+| | Open core (this repository) | Enterprise Edition |
+|---|---|---|
+| Nightly engine: every metric and breakdown, replayable byte for byte | ✓ | ✓ |
+| All 11 detectors, with false-discovery-rate control | ✓ | ✓ |
+| Forecasts and goals, with their chance | ✓ | ✓ |
+| Morning Brief (page, email, PDF), Sweep, Summary, Big Picture | ✓ | ✓ |
+| Business Model, Ask Othor AI | ✓ | ✓ |
+| Sources: PostgreSQL, MySQL, Google Sheets (read-only) | ✓ | ✓ |
+| Look back: why a closed period went the way it did | | ✓ |
+| Discover: groups of numbers your business isn't watching yet | | ✓ |
+| External signals: exchange rates, cotton, rainfall, tested against your numbers | | ✓ |
+| Othor MCP: ask from Claude, ChatGPT or your own AI | | ✓ |
+| Companies per install | One | Several |
+| Licence | Apache-2.0 | Commercial licence key, verified offline |
+| Support | Community (GitHub issues) | Enterprise-grade |
+
+**Try the Enterprise Edition hosted:** a [14-day free trial on othor.ai](https://othor.ai), no
+credit card needed.
 
 [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) ·
 [Apache-2.0](LICENSE) · "Othor AI" is a registered trademark ([TRADEMARKS.md](TRADEMARKS.md))

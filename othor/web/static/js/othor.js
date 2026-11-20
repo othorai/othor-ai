@@ -810,7 +810,12 @@ async function inplaceSubmit(form, submitter) {
   }
   await leaving;
   const y = window.scrollY;
-  document.getElementById("main").replaceWith(main);
+  const was = document.getElementById("main");
+  const tall = was.offsetHeight;
+  was.replaceWith(main);
+  // a row that comes back a few px shorter (Undo in its place) must not pull a page scrolled to
+  // its end up: the page keeps its height until the next swap
+  if (main.offsetHeight < tall) main.style.minHeight = `${tall}px`;
   const ov = document.getElementById("overlay");
   const newOv = doc.getElementById("overlay");
   if (ov && newOv) ov.replaceWith(newOv);
@@ -941,7 +946,7 @@ document.addEventListener("click", (e) => {
   if (!chip) return;
   const box = chip.closest(".tell");
   const form = chip.closest("form");
-  const input = (box && box.querySelector('input[name="line"]'))
+  const input = (box && box.querySelector('input[name="line"], textarea[name="line"]'))
     || (form && form.querySelector('[data-fill-target], .tell input[name="line"]'));
   if (!input) return;
   e.preventDefault();
@@ -1009,6 +1014,37 @@ function goFrom(root) {
   else location.href = u.href;
 }
 document.addEventListener("htmx:afterSettle", () => goFrom(document));
+
+// #96: a toast says its line and goes: 6 s, or 12 s when it offers Undo or another action; held
+// while the pointer or focus is on it. An error toast (Retry) stays. The page's "?created=" that
+// brought a toast leaves the address at once, so Back or a reload doesn't show it again.
+function timeToasts(root) {
+  root.querySelectorAll(".toast-dock .toast:not(.err)").forEach((t) => {
+    if (t._timed) return;
+    t._timed = true;
+    let left = t.querySelector("form, .action, button") ? 12000 : 6000;
+    let since = Date.now();
+    let id = setTimeout(() => t.remove(), left);
+    const hold = () => { clearTimeout(id); left -= Date.now() - since; };
+    const go = () => {
+      if (t.matches(":hover") || t.contains(document.activeElement)) return;
+      since = Date.now();
+      id = setTimeout(() => t.remove(), Math.max(left, 2000));
+    };
+    t.addEventListener("pointerenter", hold);
+    t.addEventListener("focusin", hold);
+    t.addEventListener("pointerleave", go);
+    t.addEventListener("focusout", go);
+  });
+}
+function dropToastParam() {
+  const u = new URL(location.href);
+  if (!u.searchParams.has("created")) return;
+  u.searchParams.delete("created");
+  history.replaceState(history.state, "", u.pathname + (u.search || "") + u.hash);
+}
+document.addEventListener("DOMContentLoaded", () => { timeToasts(document); dropToastParam(); });
+document.addEventListener("htmx:afterSettle", () => { timeToasts(document); dropToastParam(); });
 document.addEventListener("DOMContentLoaded", () => goFrom(document));
 
 document.addEventListener("submit", (e) => {
@@ -1121,4 +1157,21 @@ document.addEventListener("submit", (e) => {
   window.addEventListener("pageshow", (e) => {
     if (e.persisted && saved !== null) { location.reload(); }
   });
+})();
+
+// 0.28.4 (owner, 19 Nov 2026): the Othor AI chat opens at its end, the latest answer just above
+// the reply box, however it arrives (a direct load, the panel sliding in, a reply swapped in)
+(function () {
+  const toEnd = (root) => {
+    const els = root.matches && root.matches("[data-at-end]") ? [root] : root.querySelectorAll ? root.querySelectorAll("[data-at-end]") : [];
+    els.forEach((el) => { el.scrollTop = el.scrollHeight; });
+  };
+  const start = () => {
+    toEnd(document);
+    new MutationObserver((list) => {
+      list.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType === 1) toEnd(n); }));
+    }).observe(document.body, { childList: true, subtree: true });
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
+  else start();
 })();

@@ -6,6 +6,74 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.28.5] - 2026-11-20
+
+### Added
+- Morning Brief: "Since last week" at the foot of every brief (page, PDF, and a short version in
+  the email): what was reported, what was fixed and how (back to normal, a known pattern, set
+  aside), what's still open and for how long, better or worse, a chart of open items with each
+  fix marked, and at most one suggestion (snooze a long-open item). All from stored nights: no
+  model, no source read; replayed byte for byte.
+- Sweep: the detectors as the first of four cards, a ring with each detector's line behind it.
+
+### Changed
+- Emails in the calm style: no card frame, section titles in caps, hairlines instead of boxes,
+  one solid button.
+- Toasts: quieter, over the top bar while they show, the action as quiet text; they leave on
+  their own (6 s, 12 s with Undo). "Run again now" reads "Refresh everything".
+- New brief: the question box as the chat's, suggestions with where each came from, no preview of
+  tomorrow's brief, Change anything on one line.
+- The brief's subject says how long an item has been open ("Still open, day 9 · …").
+- Enterprise: External signals has its own page (To review, Connected, Watching for connections).
+
+### Fixed
+- A brief created today opens before its first issue and says when the first one arrives.
+- An item that changed recently no longer leaves the brief's top items early.
+- Enterprise: the External signals check no longer stops on a month with no value, and a stopped
+  check says so and can be asked again.
+
+## [0.28.4] - 2026-11-19
+
+### Changed
+- Morning Brief: the brief's name with an (i) that opens a short list (run, sources, how items
+  are ordered, what changed since yesterday), the day and time under it; Question to ask today
+  only at the foot, naming whom to ask even before a team is set up; one heading style; Snooze
+  and Mute as icons that say what they do; the two item cards line up side by side.
+- An item unchanged for a week steps out of the brief's top items into a "Still open" list; it
+  comes back the night it changes. The opening paragraph names each item by its own title.
+- Brief wording: one customer reads singular; the slowest tenth says up, down or about the same;
+  forecast misses in the number's own unit and plain words; ranges written one way; metres whole.
+- Summary in the calm style: quiet controls, theme-blue lines, the change on the right; money
+  charts under ₹1 Cr drawn in ₹ lakh. Simple / Full detail uses the same switch.
+- Ask Othor AI: answers as formatted text with a plain table; opens at its latest answer; each
+  reply dated; a word that fits several numbers lists them; dates read "18 Nov 2026".
+- Sweep: one History button; History shows the last 10 nights and more in place.
+- Home: no Recently accepted list.
+
+### Added
+- Outside signals (Enterprise Edition): Turn off / Turn on per signal, and Check for links now.
+
+### Fixed
+- Suggest a goal says when a number's history is too short and reads the number named, instead
+  of asking which number again.
+- The 05:00 ops check counts a night done once any of its nightly runs sealed.
+- Chart labels say a value once.
+
+## [0.28.3] - 2026-11-19
+
+### Fixed
+- A number's history survives Business Model answers that don't change its values. Each series
+  now has its own meaning (the total leaves out its breakdowns; a breakdown leaves out its name,
+  cap and who is active): an answer such as the customer list, or a breakdown added, no longer
+  restarts every series of the number. When a meaning truly changes, that series is read again
+  in full instead of keeping only the last weeks. Forecasts wait only after a real change.
+- Suggested answers on Home and in the chat set only the field they add on the record as it is
+  when applied, never a copy of the whole record from the night they were found.
+
+### Added
+- `othor admin reread <slug> [--metric …]`: the next run reads those numbers again in full from
+  the read-only sources (brings back history cut short before this release).
+
 ## [0.28.2] - 2026-11-19
 
 ### Changed

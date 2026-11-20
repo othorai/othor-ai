@@ -210,3 +210,51 @@ def test_a_weekly_issue_says_what_changed_since_last_weeks_brief():
 
 def test_a_daily_issue_has_no_period():
     assert "period" not in _issue([])
+
+
+def test_an_item_unchanged_for_a_week_steps_out_to_still_open():
+    """0.28.4 (owner, 19 Nov 2026; the 100-night test: the same items for 63 nights)."""
+    got = _issue(
+        [
+            _dso("old", "900000"),  # open since 20 Oct, unchanged: 12 days
+            _dso("new", "600000", change="New", days=1),
+            _dso("worse", "500000", change="Worse"),  # changed tonight: stays in
+        ]
+    )
+    assert {i["fingerprint"] for i in got["items"]} == {"new", "worse"}
+    assert got["still_open"] == [{"fingerprint": "old", "title": "DSO old", "days": 12}]
+    assert all(i["since"] == RUN.isoformat() for i in got["items"])
+    # yesterday's brief kept the day it last changed: 3 days ago is still in
+    prev = [{"fingerprint": "old", "rank": 1, "score": "1", "since": "2026-10-29"}]
+    again = assemble(
+        SPEC,
+        _version(previous=prev),
+        run_date=RUN,
+        findings=[_dso("old", "900000")],
+        watches=[],
+        goals=[],
+        record=[],
+        points=_points("dso", [50] * 11 + [50.1]),
+        sweep_counts={"findings": 1},
+        tests=212,
+    )
+    assert [i["fingerprint"] for i in again["items"]] == ["old"] and again["still_open"] == []
+
+
+def test_whom_to_ask_without_a_team():
+    """0.28.4 (owner): a plain role from the number's area and where it happened."""
+    from othor.briefs import title
+
+    spec = {
+        "metrics": {
+            "net_revenue": {"name": "Net revenue", "area": "Sales"},
+            "x": {"name": "Dispatch time"},
+        }
+    }
+    assert title.role_for({"metric": "net_revenue", "breakdown_value": "South"}, spec) == (
+        "your sales head for South"
+    )
+    assert title.role_for({"metric": "x"}, spec) == "whoever looks after dispatch time"
+    assert title.role_for({"metric": "y", "detector": "missing_records"}, spec) == (
+        "your account managers"
+    )

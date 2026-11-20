@@ -154,8 +154,11 @@ def snapshot(
         last = s.scalars(
             q.order_by(BriefIssue.date.desc(), BriefIssue.created_at.desc()).limit(1)
         ).first()
+        # 0.28.5: each item's day of its last change goes with it, so an item that changed three
+        # days ago isn't counted from the day Sweep first saw it (assemble._changed_on)
         previous = [
             {"fingerprint": i["fingerprint"], "rank": i["rank"], "score": i.get("score")}
+            | ({"since": i["since"]} if i.get("since") else {})
             for i in ((last.body.get("items") or []) if last else [])
         ]
         row = {"id": str(b.id), "number": v.number, "name": b.name, **v.body, "previous": previous}
