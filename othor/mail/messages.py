@@ -225,7 +225,10 @@ def brief_preheader(m: BriefMail) -> str:
         tiles = b.get("tiles") or []
         ok = sum(1 for t in tiles if t["comparison"]["text"].startswith(ON_PLAN))
         tail = f" · {fmt.num(ok)} of {fmt.num(len(tiles))} numbers on plan" if tiles else ""
-        return "Nothing needs you today" + tail
+        held = len(b.get("still_open") or [])
+        if held:  # owner, 21 Nov 2026: items from before are still open
+            return f"Nothing new came up · {fmt.num(held)} still open" + tail
+        return "Nothing significant came up" + tail
     items = b.get("items") or []
     n = len(items)
     noun = "thing needs" if n == 1 else "things need"

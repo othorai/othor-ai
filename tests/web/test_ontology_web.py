@@ -35,6 +35,9 @@ def _events(svc, cid, action):
 def test_the_page_has_its_four_sections(night):  # noqa: F811
     env, h, cid, _rid, svc = night
     page = env.client.get(h + "/ontology").text
+    # 2.4: the level card (its checklist names the sections too) is tested on its own
+    head, card = page.split('aria-label="Business Model level"', 1)
+    page = head + card.split("</section>", 1)[1]
     with svc.sf() as s, tenant_scope(cid):
         v = service.current_number(s)
     # the company's name ends in a full stop; the lede doesn't double it (v0.11)

@@ -37,8 +37,10 @@ LABEL = {
     "brief_suggest": "Suggest briefs",
     "home_answer": "Answer a question for you",
     "conflict_chat": "Talk through a decision",
+    "decision_suggest": "Suggest the answer to a setup decision",
     "proposal_chat": "Talk through a proposal",
     "ontology_change": "Change the Business Model in your words",
+    "level_drafts": "Find Business Model items in your files",
     "goal_parse": "Read a goal from your words",
     "goal_from_targets": "Goals from your files",
     "metric_connect": "Connect a metric to its data",
@@ -57,7 +59,7 @@ LABEL = {
     # Discover 2.0 (Enterprise Edition, 0.29): a group's dashboard write-up
     "discover_summary": "Write a Discover group's summary",
     # Plain Facts (Enterprise Edition, 0.30): the weekly write-up's words
-    "plain_facts": "Plain Facts, the weekly write-up",
+    "plain_facts": "Weekly Digest",
 }
 
 

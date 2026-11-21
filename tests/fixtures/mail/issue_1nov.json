@@ -25,9 +25,9 @@
    "depth": {
     "method": "It follows the recent level, 27% more accurate on this number's own past than one that repeats the same period last year.",
     "parts": [
-     "Invoiced value: ₹4.8 Cr expected",
-     "Credit notes: ₹7.7 L expected",
-     "Rebates: ₹1.5 L expected"
+     "Invoiced value: ₹4.83 Cr expected",
+     "Credit notes: ₹7.68 L expected",
+     "Rebates: ₹1.54 L expected"
     ],
     "range": "The range held most past values without widening.",
     "technical": "ETS(A,N,N) · 80% range (P10–P90) · calibration ×1.0 · tested on 11 periods"
@@ -138,8 +138,8 @@
      "high": "1.2399",
      "low": "0.8077"
     },
-    "expected": "₹1 Cr",
-    "high": "₹1.2 Cr",
+    "expected": "₹1.02 Cr",
+    "high": "₹1.24 Cr",
     "label": "Receivables over 60 days · this week",
     "low": "₹0.81 Cr",
     "target": null,
@@ -182,14 +182,14 @@
  "goals": [
   {
    "key": "dso_under_45",
-   "on_track": true,
-   "text": "DSO · 45 d target by 31 Mar · tracking 41 d (80% band 36–47 d)",
+   "on_track": false,
+   "text": "DSO · 45 d target by 31 Mar · tracking 44 d (80% band 37–50 d) · 61% likely",
    "tone": "risk"
   },
   {
    "key": "fy27_net_revenue",
    "on_track": false,
-   "text": "Net revenue FY27 · ₹60 Cr target · tracking ₹57.2 Cr (80% band ₹56.8–57.6 Cr)",
+   "text": "Net revenue FY27 · ₹60 Cr target · tracking ₹56.7 Cr (80% band ₹54.1–59.2 Cr) · 5% likely",
    "tone": "off"
   }
  ],
@@ -205,7 +205,7 @@
    "detector": "net_hiding_gross",
    "fingerprint": "2b7b32c5f8a79322b25382aa",
    "label": "Net hiding gross",
-   "line": "Net revenue moved −₹0.19 Cr from September to October: South −₹1.4 Cr, West +₹1.21 Cr. Three accounts carry 72% of the drop. None has invoiced since 9 Oct. Skarfab is on a known pause to 1 Dec (your answer, 30 Oct).",
+   "line": "Net revenue moved −₹19 L from September to October: South −₹1.4 Cr, West +₹1.21 Cr. Three accounts carry 72% of the drop. None has invoiced since 9 Oct. Skarfab is on a known pause to 1 Dec (your answer, 30 Oct).",
    "link": "calc",
    "metric": "net_revenue",
    "money": "₹1.4 Cr",
@@ -269,17 +269,17 @@
      [
       "Shree Varada Textiles",
       "12 Jul",
-      "₹0.62 Cr"
+      "₹62 L"
      ],
      [
       "Tidewell Garments",
       "2 Jul",
-      "₹0.48 Cr"
+      "₹48 L"
      ],
      [
       "Anvika Knit Works",
       "28 Jun",
-      "₹0.41 Cr"
+      "₹41 L"
      ]
     ],
     "total": 14
@@ -304,7 +304,7 @@
    "line": "Correlation fell from 0.78 to −0.03. Freight expense per metre is up 32%.",
    "link": "calc",
    "metric": "freight",
-   "money": "₹5.8 L / month",
+   "money": "₹5.84 L / month",
    "rank": 4,
    "rows": null,
    "score": "4909546.03",
@@ -394,7 +394,7 @@
    "value": "1,75,436 m"
   },
   {
-   "chart": "{\"alt_text\":\"Receivables over 60 days, last 12 days to 31 Oct: ₹0.8 Cr.\",\"annotations\":[],\"band\":null,\"categories\":[],\"explore\":{},\"id\":\"tile:receivables_over_60:day:2026-10-31\",\"kind\":\"sparkline\",\"period\":{\"from\":\"2026-10-20\",\"grain\":\"day\",\"to\":\"2026-10-31\",\"tz\":\"Asia/Kolkata\"},\"provenance\":{\"metric_id\":\"receivables_over_60\"},\"series\":[{\"emphasis\":false,\"id\":\"receivables_over_60\",\"name\":\"Receivables over 60 days\",\"points\":[[\"2026-10-20\",\"0.890108\"],[\"2026-10-21\",\"0.880951\"],[\"2026-10-22\",\"0.844120\"],[\"2026-10-23\",\"0.802176\"],[\"2026-10-24\",\"0.763830\"],[\"2026-10-25\",\"0.763830\"],[\"2026-10-26\",\"0.742653\"],[\"2026-10-27\",\"0.749699\"],[\"2026-10-28\",\"0.746744\"],[\"2026-10-29\",\"0.743772\"],[\"2026-10-30\",\"0.792526\"],[\"2026-10-31\",\"0.797761\"]],\"role\":\"neutral\",\"style\":\"line\"}],\"spec_version\":1,\"title\":\"Receivables over 60 days · daily\",\"unit\":{\"code\":\"INR\",\"decimals\":2,\"scale\":\"cr\",\"type\":\"currency\"},\"x\":{\"label\":null,\"type\":\"time\"},\"y\":{\"label\":null,\"zero_based\":false}}",
+   "chart": "{\"alt_text\":\"Receivables over 60 days, last 12 days to 31 Oct: ₹79.8 L.\",\"annotations\":[],\"band\":null,\"categories\":[],\"explore\":{},\"id\":\"tile:receivables_over_60:day:2026-10-31\",\"kind\":\"sparkline\",\"period\":{\"from\":\"2026-10-20\",\"grain\":\"day\",\"to\":\"2026-10-31\",\"tz\":\"Asia/Kolkata\"},\"provenance\":{\"metric_id\":\"receivables_over_60\"},\"series\":[{\"emphasis\":false,\"id\":\"receivables_over_60\",\"name\":\"Receivables over 60 days\",\"points\":[[\"2026-10-20\",\"0.890108\"],[\"2026-10-21\",\"0.880951\"],[\"2026-10-22\",\"0.844120\"],[\"2026-10-23\",\"0.802176\"],[\"2026-10-24\",\"0.763830\"],[\"2026-10-25\",\"0.763830\"],[\"2026-10-26\",\"0.742653\"],[\"2026-10-27\",\"0.749699\"],[\"2026-10-28\",\"0.746744\"],[\"2026-10-29\",\"0.743772\"],[\"2026-10-30\",\"0.792526\"],[\"2026-10-31\",\"0.797761\"]],\"role\":\"neutral\",\"style\":\"line\"}],\"spec_version\":1,\"title\":\"Receivables over 60 days · daily\",\"unit\":{\"code\":\"INR\",\"decimals\":2,\"scale\":\"cr\",\"type\":\"currency\"},\"x\":{\"label\":null,\"type\":\"time\"},\"y\":{\"label\":null,\"zero_based\":false}}",
    "comparison": {
     "kind": "period",
     "text": "+1% vs 30 Oct"
@@ -406,24 +406,24 @@
    "raw": "7977607.450000",
    "role": "neutral",
    "stale": null,
-   "value": "₹0.8 Cr"
+   "value": "₹79.8 L"
   }
  ],
  "time": "06:00",
  "title": "South fell ₹1.4 Cr while West’s growth hid it; three accounts carry 72% of the drop and none has invoiced since 9 Oct; one is Skarfab’s known pause to 1 Dec.",
  "watching": [
   {
-   "id": "07b24dd4-2fa5-446d-8876-06f352b73b51",
+   "id": "7bbf3707-28dd-48ae-ae45-843017d624e6",
    "label": "Active customers silent 90+ days",
    "text": "Active customers silent 90+ days · 14 · alert above 8 · owner Priya Menon"
   },
   {
-   "id": "51eaa92d-e0b0-4ef0-b1ed-6808bd03f44e",
+   "id": "635bcf64-2da2-4849-a8ce-d9a4d018c530",
    "label": "Dispatch time spread, Coimbatore · 7 days",
    "text": "Dispatch time spread, Coimbatore · 7 days · 2.2 · alert above 1.6 · owner Aditya Naik"
   },
   {
-   "id": "a962a537-8e2a-4711-863d-d5c56dbc935b",
+   "id": "7da52b8f-bbaf-4b58-9ebe-a5c56d0435a1",
    "label": "Freight per metre vs 6-month average",
    "text": "Freight per metre vs 6-month average · +13% · alert above +10% · owner Leela Tandon"
   }

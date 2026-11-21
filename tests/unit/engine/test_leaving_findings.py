@@ -138,7 +138,7 @@ def test_a_week_that_did_not_pass_is_supporting_evidence_on_the_test_tab():
     }
     rv = SimpleNamespace(results=[week, {**week, "passed": True}])
     (line,) = supporting(rv, p1)  # type: ignore[arg-type]
-    assert line.startswith("Forecast breach · week of 12 Oct: ₹0.61 Cr against its 80% band")
+    assert line.startswith("Forecast breach · week of 12 Oct: ₹61 L against its 80% band")
     assert "under" in line and "not significant on its own" in line
     assert supporting(rv, {**p1, "breakdown_value": "South"}) == []  # type: ignore[arg-type]
 

@@ -18,7 +18,7 @@ from othor.core import fmt
 from othor.core.config import Settings
 from othor.jobs.models import Job
 from othor.ontology import service
-from othor.setup import confirm, drafts, uploads
+from othor.setup import confirm, decision_suggest, drafts, uploads
 from othor.setup.models import SetupDraft, Upload
 
 GRAIN = {"day": "daily", "week": "weekly", "month": "monthly"}
@@ -471,6 +471,7 @@ def _decision(r: SetupDraft, sugg: list[Any]) -> dict[str, Any] | None:
             "question": "Use the redrafted definition?",
             "before": (r.prev_body or {}).get("description") or "",
             "after": b.get("description") or "",
+            "pick": decision_suggest.pick(r),  # Chat 1.3: Othor AI's suggestion, None without
         }
     c = val.get("conflict") if r.confidence == "conflict" else None
     if c:
@@ -501,6 +502,7 @@ def _decision(r: SetupDraft, sugg: list[Any]) -> dict[str, Any] | None:
             "question": c["question"].split(". Which")[0].rstrip(".") + ".",
             "ask": f"Which should {name.lower()} use?",
             "options": opts,
+            "pick": decision_suggest.pick(r),  # Chat 1.3: Othor AI's suggestion, None without
         }
     if val.get("settled"):
         st = val["settled"]
@@ -607,6 +609,46 @@ def decision_url(key: str) -> str:
     from urllib.parse import quote
 
     return f"{SETUP_METRICS}?panel=decisions&d={quote(key, safe='')}"
+
+
+def decision_chat(s: Session, x: dict[str, Any], *, editing: bool, model: bool) -> None:
+    """Chat 1.3: the shown decision's pick and the talk behind Suggest edits. A conflict's
+    Suggest edits opens the reply box (the conflict chat); a reply that settles on another choice
+    becomes the pick ("Changed"). A redrafted definition's Suggest edits opens its own chat. The
+    owner's Apply is the decision; nothing is saved before it."""
+    from othor.setup.models import ChatMessage, ChatThread
+
+    x["badge"], x["messages"] = "My suggestion", []
+    x["editing"], x["model"], x["not_available"] = editing, model, NOT_AVAILABLE
+    x["edit_url"] = (
+        decision_url(x["key"]) + "&edit=1"
+        if x.get("kind") == "conflict"
+        else chat_url(x["key"], "edit")
+    )
+    if x.get("kind") != "conflict" or not x.get("open"):
+        return
+    thread = s.scalars(
+        sa.select(ChatThread).where(
+            ChatThread.subject == f"metric:{x['key']}",
+            ChatThread.purpose == "conflict",
+            ChatThread.status == "open",
+        )
+    ).first()
+    if thread is None:
+        return
+    for m in s.scalars(
+        sa.select(ChatMessage)
+        .where(ChatMessage.thread_id == thread.id)
+        .order_by(ChatMessage.created_at)
+    ):
+        x["messages"].append({"role": m.role, "text": m.text})
+        ch = (m.proposal or {}).get("choice")
+        opt = next((o for o in x.get("options") or [] if o["id"] == ch), None)
+        if opt is not None:
+            x["pick"] = {**opt, "why": ""}
+            x["badge"] = "Changed"
+    if x["messages"]:
+        x["editing"] = True
 
 
 def decision_after(decisions: list[dict[str, Any]], key: str) -> str:

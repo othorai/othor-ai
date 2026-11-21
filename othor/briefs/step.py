@@ -58,7 +58,7 @@ def make(
             run_date=run_date,
             findings=[dict(f) for f in findings],
             watches=ws,
-            goals=forecast.get("goals") or [],
+            goals=forecast.get("goals_shown") or forecast.get("goals") or [],
             record=(context.get("forecasts") or {}).get("of_record") or [],
             points=points,
             sweep_counts=sweep.get("counts") or {},

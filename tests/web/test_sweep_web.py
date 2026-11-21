@@ -128,18 +128,24 @@ def test_the_overview_reads_one_run(night):
         rows = sv.detector_rows(rv, s)
     assert f"Findings · {sw['findings']}" in page and f"Watching · {sw['watching']}" in page
     assert f"Suppressed · {sw['suppressed']}" in page and f"Resolved · {sw['resolved']}" in page
-    # #97: the detectors as the first card: a ring, one segment per detector, "on/total" inside;
-    # couldn't run and suppressed (the tab's count) on their lines beside it
+    # #97, squares from 21 Nov 2026: the checks as the first card, one square per check four
+    # across, "on / total" beside; couldn't run and suppressed (the tab's count) on their lines
+    # always 12 (owner, 21 Nov 2026): Outside last, grey here (no External Signals in this test)
+    assert len(rows) == 12 and rows[-1]["key"] == "outside_moved" and rows[-1]["kind"] == "off"
     on = sum(1 for c in cov if c["status"] != "could_not_run")
-    off = len(cov) - on
-    assert f'<span class="det-ring-v"><b>{on}</b>/{len(cov)}</span>' in page
+    off = len(rows) - on
+    assert f'<span class="v">{on} / {len(rows)}</span>' in page
     assert f"{off} couldn’t run" in page and f"{sw['suppressed']} suppressed</span>" in page
-    segs = re.findall(r'<circle class="(on|partly|off)" cx="32"', page)
-    assert segs == [r["kind"] for r in rows] and len(segs) == len(cov)
-    # M15.7b: behind the ring, every detector's line: its name, status, and how it went
+    square = r'<span class="det-sq (on|partly|off)[^"]*" title="([^"]*)">([^<]*)</span>'
+    sqs = re.findall(square, page)
+    assert [k for k, _t, _s in sqs] == [r["kind"] for r in rows] and len(sqs) == 12
+    assert [s for _k, _t, s in sqs] == [r["short"][:3] for r in rows]
+    assert "Checks" in page and "det-ring" not in page.replace("det-ring-wrap", "")
+    assert sqs[-1][2] == "Ext" and "det-sq off ext" in page  # External Signals' check, last
+    # M15.7b: behind the squares, every check's line: its name, status, and how it went
     for r in rows:
         card = _det_card(page, r["key"])
-        assert f"<title>{html.escape(r['label'], quote=False)}: {r['status']}</title>" in page
+        assert f'title="{html.escape(r["label"])}: {r["status"]}"' in page
         assert html.escape(r["label"], quote=False) in card and r["status"] in card
         if r["kind"] == "on":
             assert f"Today: {html.escape(r['result'], quote=False)}" in card
@@ -156,7 +162,7 @@ def test_the_overview_reads_one_run(night):
     assert page.count("In Leadership brief") == 4  # the brief's items say where they are
     assert page.count("More info →") == 8
     # the detectors table, in plain words; nothing of the old layout
-    assert page.count("<tr class=") == len(cov) and 'id="detectors"' in page
+    assert page.count("<tr class=") == len(rows) == 12 and 'id="detectors"' in page
     for gone in ("Also in today’s briefs", "Checked, nothing found", "Coverage</p>"):
         assert gone not in page, gone
     # the last seven runs, and another run by its number
@@ -194,7 +200,7 @@ def test_a_check_waiting_on_the_owner_is_answered_in_place(night):
 def test_the_strips_info_says_what_answering_would_turn_on(night):
     env, h, _cid, _rid, _svc = night
     page = env.client.get(h + "/sweep").text
-    assert "Each detector is one way Sweep tests your numbers every night." in page
+    assert "Each check is one way Sweep tests your numbers every night." in page
     assert "Answer 1 question to turn on up to 1 more." in page
 
 
@@ -474,7 +480,7 @@ def test_how_is_this_calculated_for_net_hiding_gross(night):
     stat = Decimal(str(result["statistic"]))
     assert g["The parts offset each other"]["value"] == f"{stat:.1f}×"
     assert g["It is material"]["value"] == sweep_text.money(f["money"])
-    assert "your floor is ₹5.0 L" in g["It is material"]["why"]
+    assert "your floor is ₹5 L" in g["It is material"]["why"]
     assert f"all {result['params']['tests']} tests" in g["It isn’t chance"]["why"]
     assert body["stake"].startswith("= South’s fall, Sep ")
     assert body["moved"]["rows"][-1][0] == "Total"

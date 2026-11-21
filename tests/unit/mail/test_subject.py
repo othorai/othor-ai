@@ -71,6 +71,13 @@ def test_a_quiet_day_has_the_date_too() -> None:
     assert brief_subject(_mail([])) == "Quiet day · Leadership · Sat 14 Nov"
 
 
+def test_a_quiet_preheader_says_what_is_still_open() -> None:
+    """Owner, 21 Nov 2026: nothing new, items from before still open."""
+    assert brief_preheader(_mail([])) == "Nothing significant came up"
+    held = _mail([], still_open=[{"fingerprint": "a", "title": SOUTH, "days": 9}])
+    assert brief_preheader(held) == "Nothing new came up · 1 still open"
+
+
 def test_a_weekly_issue_leads_with_what_changed_in_its_week() -> None:
     # the issue's tags are already against its last issue (M15.7c); the subject reads them
     m = _mail(

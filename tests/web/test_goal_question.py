@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import datetime as dt
 import html
+import re
 
 import sqlalchemy as sa
 
@@ -83,7 +84,9 @@ def test_add_a_goal_then_suggest_a_goal_makes_one_without_a_model(night, monkeyp
         service.apply(s, gone, actor="owner", reason="test: no goals")
         s.commit()
     on = html.unescape(env.client.get(h + "/ontology").text)
-    assert on.count("Add a goal") == 1 and "Suggest a goal" not in on  # one button (owner)
+    # one button in Goals (owner); the level card's checklist names the same step on its own line
+    goals_part = re.sub(r'<section class="level-card".*?</section>', "", on, flags=re.S)
+    assert goals_part.count("Add a goal") == 1 and "Suggest a goal" not in on
     back = "/ontology?panel=othor&subject=ontology:goal"
     page = html.unescape(env.client.get(h + back).text)
     assert page.index("Suggest a goal") < page.index('id="oc-reply"')  # above the box

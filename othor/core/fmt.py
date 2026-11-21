@@ -250,6 +250,68 @@ def inr(
     return _signed(sym + body, v < 0 and not zero, zero, sign)
 
 
+def _sig3(scaled: Decimal) -> int:
+    """Decimals for three significant figures of a value already in its unit (≥ 1 but small
+    whole-unit amounts): 4.62, 45.3, 453, 4,530."""
+    return 2 if scaled < 10 else 1 if scaled < 100 else 0
+
+
+def money(value: Number, *, sign: bool = False) -> str:
+    """The one money rule (owner, 21 Nov 2026): three significant figures, the unit chosen by
+    size and moved up when rounding reaches the next one; INR in crore, lakh or whole rupees,
+    USD in billions, millions, thousands or whole dollars. Trailing zeros are dropped
+    ("₹9.8 L", "₹60 Cr", "$58K"), so a figure never reads with false precision or as ₹0 Cr."""
+    v = _dec(value)
+    mag = abs(v)
+    sym = SYMBOL[currency()]
+    if mag == 0:
+        return sym + "0"
+    if is_usd():
+        units = [(BILLION, "B"), (MILLION, "M"), (THOUSAND, "K")]
+    else:
+        units = [(CRORE, " Cr"), (LAKH, " L")]
+    div, suffix = Decimal(1), ""
+    for size, mark in units:
+        if mag >= size:
+            div, suffix = size, mark
+            break
+    scaled = mag / div
+    # whole rupees or dollars (a few cents keep two decimals); else three significant figures
+    d = (0 if mag >= 1 else 2) if div == 1 else _sig3(scaled)
+    r = _round(scaled, d)
+    # rounding reached the next unit up: 99.96 L is ₹1.00 Cr, $999.6K is $1.00M
+    up = {" L": (CRORE, " Cr"), "K": (MILLION, "M"), "M": (BILLION, "B")}.get(suffix)
+    nxt = (LAKH, " L") if (div == 1 and not is_usd()) else (THOUSAND, "K") if div == 1 else up
+    if nxt is not None and r * div >= nxt[0]:
+        div, suffix = nxt
+        scaled = mag / div
+        d = _sig3(scaled)
+        r = _round(scaled, d)
+    s = f"{r:f}"
+    if "." in s:  # no trailing zeros: ₹9.8 L, ₹60 Cr, $58K
+        s = s.rstrip("0").rstrip(".")
+    whole, _, frac = s.partition(".")
+    body = _group(whole) + (f".{frac}" if frac else "") + suffix
+    return _signed(sym + body, v < 0, False, sign)
+
+
+def money_like(value: Number, ref: Number) -> str:
+    """`value` in the unit `ref` is written in (a range's ends share one unit, 21 Nov 2026):
+    beside '₹1.24 Cr' the low end reads '₹0.81 Cr', not '₹80.8 L'."""
+    v, r = _dec(value), abs(_dec(ref))
+    if is_usd():
+        units = [(BILLION, "B"), (MILLION, "M"), (THOUSAND, "K")]
+    else:
+        units = [(CRORE, " Cr"), (LAKH, " L")]
+    div, suffix = next(((s, m) for s, m in units if r >= s), (Decimal(1), ""))
+    mag = abs(v)
+    if div == 1 or mag >= div:
+        return money(v)
+    scaled = mag / div
+    s = f"{_round(scaled, 2):f}".rstrip("0").rstrip(".")
+    return _signed(SYMBOL[currency()] + s + suffix, v < 0, mag == 0, False)
+
+
 def currency_symbol() -> str:
     """The company's currency sign: "₹" or "$" (M15.6), never written in a template."""
     return SYMBOL[currency()]
@@ -262,11 +324,7 @@ def _big() -> tuple[Decimal, str]:
 
 def inr_cr_rounded(value: Number) -> str:
     """A goal's figure with no false precision: '₹57.2 Cr', '₹60 Cr'; '$57.2M'."""
-    div, suffix = _big()
-    cr = (_dec(value) / div).quantize(Decimal("0.1"))
-    return (
-        f"{currency_symbol()}{num(cr, decimals=0 if cr == cr.to_integral_value() else 1)}{suffix}"
-    )
+    return money(value)  # the one money rule (21 Nov 2026)
 
 
 def inr_cr_band(lo: Number, hi: Number) -> str:
@@ -276,11 +334,16 @@ def inr_cr_band(lo: Number, hi: Number) -> str:
     return f"{currency_symbol()}{x}–{y}{suffix}"
 
 
-def inr_plain(value: Number, *, decimals: int = 1) -> str:
-    """A small rupee amount as is, e.g. a rate per metre: '₹52.9'; a negative one '−₹69.5'."""
+def inr_plain(value: Number, *, decimals: int | None = None) -> str:
+    """A small rupee amount as is, e.g. a rate per metre: '₹52.9', '₹42', '₹1,834'; a negative
+    one '−₹69.5'. Default (21 Nov 2026): one decimal below 100, whole from 100, no '.0'."""
     v = _dec(value)
-    text = f"{currency_symbol()}{num(abs(v), decimals=decimals)}"
-    return f"{MINUS}{text}" if v < 0 and _round(abs(v), decimals) != 0 else text
+    d = decimals if decimals is not None else (0 if abs(v) >= 100 else 1)
+    body = num(abs(v), decimals=d)
+    if decimals is None and body.endswith(".0"):
+        body = body[:-2]
+    text = f"{currency_symbol()}{body}"
+    return f"{MINUS}{text}" if v < 0 and _round(abs(v), d) != 0 else text
 
 
 def inr_plain_band(lo: Number, hi: Number, *, decimals: int = 1) -> str:

@@ -1,6 +1,6 @@
 [project]
 name = "othor"
-version = "0.30.0"
+version = "0.32.0"
 description = "Othor AI v0.1"
 requires-python = "==3.12.*"
 # Every dependency is pinned exactly (non-negotiable 2: same inputs, same numbers).

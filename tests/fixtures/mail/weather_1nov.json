@@ -53,7 +53,7 @@
    "scene": "overcast",
    "week": 1
   },
-  "ahead_line": "Net revenue this week could be ₹0.15 Cr short of plan (80% band ₹0.7–1.5 Cr against ₹1.25 Cr) · in 7 days.",
+  "ahead_line": "Net revenue this week could be ₹15.2 L short of plan (80% band ₹0.7–1.5 Cr against ₹1.25 Cr) · in 7 days.",
   "format": 1,
   "plans": {
    "dso": {
@@ -83,7 +83,7 @@
       "horizon": 2,
       "key": "net_revenue",
       "kind": "forecast",
-      "line": "Net revenue could be ₹0.15 Cr short of plan",
+      "line": "Net revenue could be ₹15.2 L short of plan",
       "lower": "7234742.786177",
       "metric": "net_revenue",
       "money": "1515765.826740",
@@ -116,7 +116,7 @@
      }
     ],
     "label": "Under watch",
-    "line": "Net revenue could be ₹0.15 Cr short of plan",
+    "line": "Net revenue could be ₹15.2 L short of plan",
     "name": "This week",
     "scene": "overcast",
     "start": "2026-11-02",

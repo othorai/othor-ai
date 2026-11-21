@@ -39,6 +39,7 @@ from othor.engine.forecast.changes import changes
 from othor.engine.forecast.confidence import track as track_of
 from othor.engine.forecast.ets import BAND_WEEKS, Fit, Forecast, _s, fit, masked, next_periods
 from othor.engine.forecast.goals_v2 import goals as goals_v2
+from othor.engine.forecast.goals_v2 import one_source
 from othor.engine.forecast.parts import drivers
 from othor.engine.forecast.record import carry
 from othor.engine.forecast.select import Selection, q, select
@@ -50,6 +51,7 @@ from othor.engine.store import Point
 ENGINE = 2
 
 AHEAD_WEEKS = 4  # the outlook (v0.12): weekly forecasts this many weeks ahead
+PAGE_AHEAD = 12  # Forecasts 1.0 (21 Nov 2026): every number this many periods ahead, `horizon`
 AHEAD_FORMAT = 1
 RECONSTRUCT = {"week": 16, "month": 4}  # fixture runs: earlier periods with a forecast of record
 BACKTEST = 12
@@ -179,6 +181,20 @@ def forecast_series(
     return Fit(sel.method, params, "", tuple(out)), sel
 
 
+def horizon_rows(got: Fit) -> list[dict[str, Any]]:
+    """Forecasts 1.0: a fit's periods ahead as stored rows (h, period, p10, p50, p90)."""
+    return [
+        {
+            "h": h,
+            "period": f.period.isoformat(),
+            "p10": f.lower,
+            "p50": f.point,
+            "p90": f.upper,
+        }
+        for h, f in enumerate(got.points, start=1)
+    ]
+
+
 def _days(d: dt.date, grain: str) -> int:
     return (next_periods(d, grain, 1)[0] - d).days
 
@@ -296,6 +312,7 @@ def tonight(
     definitions = _definitions(spec, run_date, prev, listed, reread)
     v2_points: dict[str, list[dict[str, Any]]] = {}
     complete: dict[str, dict[str, float]] = {}
+    horizon_doc: dict[str, list[dict[str, Any]]] = {}
     for metric in listed:
         m = spec.get("metrics", {}).get(metric) or {}
         if m.get("status") != "active":
@@ -318,15 +335,20 @@ def tonight(
             )
             n_ahead = max(horizon, AHEAD_WEEKS) if grain == "week" else horizon
             mask = _mask(spec, metric, periods, grain)
+            # Forecasts 1.0: one fit, PAGE_AHEAD periods; its first n_ahead are what every other
+            # reader uses (the same numbers: the method and band don't depend on the horizon)
             got2, sel = best_series(
                 periods,
                 values,
                 grain,
-                n_ahead,
+                max(n_ahead, PAGE_AHEAD),
                 mask=mask,
                 band=band,
                 flow=m.get("kind", "flow") == "flow",
             )
+            if got2 is not None:
+                horizon_doc[f"{metric}|{grain}"] = horizon_rows(got2)
+                got2 = Fit(got2.method, got2.params, got2.aicc, got2.points[:n_ahead])
             series_key = f"{metric}|{grain}"
             last_of[series_key] = periods[-1].isoformat()
             if got2 is not None:
@@ -406,7 +428,7 @@ def tonight(
                     quality[f"{metric}|{grain}"] = q
     rows.sort(key=lambda r: (r["series"], r["period"], r["as_of"]))
     ahead.sort(key=lambda r: (r["series"], r["horizon"]))
-    doc = {
+    doc: dict[str, Any] = {
         "rows": rows,
         "goals": goals(spec, index, rows),
         "quality": quality,
@@ -421,7 +443,12 @@ def tonight(
         "known_ahead": dict(sorted(known.items())),
         "definitions": definitions,
         "inputs": _inputs(spec, last_of),
+        # Forecasts 1.0 (21 Nov 2026): each number PAGE_AHEAD periods ahead, before known patterns
+        "horizon": dict(sorted(horizon_doc.items())),
     }
+    # the brief's goal row and tiles read one forecast (21 Nov 2026); Sweep's Forecast breach and
+    # Home's goal proposals keep the forecast of record in `goals` (owner, 15 Nov 2026)
+    doc["goals_shown"] = one_source(doc["goals"], doc["goals_v2"])
     doc["changes"] = changes(doc, prev)
     # v0.19 (M19.3): the real track record, carried forward, and how sure each forecast is
     record, pending = carry(prev, v2_points, complete, run_date)

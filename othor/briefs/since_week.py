@@ -19,6 +19,7 @@ from othor.core import fmt
 
 WINDOW_DAYS = 7  # a daily brief looks back a week
 CHART_NIGHTS = 30  # the chart's nights, tonight included
+CHART_MIN = 5  # fewer nights than this draw a flat line that says nothing (21 Nov 2026)
 UNCHANGED_DAYS = 7  # the suggestion: an item unchanged this long
 MOVED = Decimal("0.10")  # better or worse: as Sweep's tags (findings.MOVED)
 OPEN = "open"
@@ -244,7 +245,7 @@ def _chart(
             {fp for fp, f in now.items() if f.get("status") == OPEN and counted(fp)},
         )
     )
-    if len(days) < 2:
+    if len(days) < CHART_MIN:
         return None
     pts = tuple((d, float(len(s))) for d, s in days)
     marks = []

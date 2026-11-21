@@ -473,6 +473,27 @@ def suppressed_this_month(s: Session, today: dt.date) -> int:
     return len({r[0] for r in rows})
 
 
+def level_view(s: Session, settings: Settings, *, upto: int = 3) -> dict[str, Any]:
+    """Business Model 2.4: the level card (L1, code's counts), each missing item's ready drafts
+    found in the files and sources (L3, the chat's sets) and whether Othor AI can look (a model).
+    `upto`: the levels shown (onboarding's end shows 1 and 2, L5)."""
+    from othor.ai.gateway import model_status
+    from othor.chat import level_drafts
+    from othor.core.models import utcnow
+    from othor.ontology import levels
+
+    v = levels.check(s).view()
+    found = level_drafts.drafts(s)
+    for g in v["groups"]:
+        for row in g["rows"]:
+            row["drafts"] = [] if row["done"] else found.get(row["key"], [])
+    v["groups"] = [g for g in v["groups"] if g["level"] <= upto]
+    available, _ = model_status(settings, s, utcnow())
+    v["can_find"] = available and bool(v["left"])
+    v["has_drafts"] = any(row["drafts"] for g in v["groups"] for row in g["rows"])
+    return v
+
+
 def page(
     s: Session, settings: Settings, company: Company, today: dt.date, numbers_filter: str | None
 ) -> dict[str, Any]:
@@ -505,7 +526,9 @@ def page(
     names = name_lines(s)
     business = facts
     goals = goal_rows(s, rd, today)
+
     return {
+        "levels": level_view(s, settings),  # 2.4 L1, L3: the level card, its checklist, drafts
         "version": v.number if v else 0,
         "changed": v.created_at.date() if v else None,
         "home_line": (" · ".join(home) + " waiting on Home") if home else "",

@@ -13,20 +13,24 @@ the run's stored series (no source is read, no model is called); every chart is 
 - One breakdown value at a time ("region=South"); a number not split that way shows its total.
 - A row expands into the lead number's signed parts (the formula's terms) and the area's other
   numbers.
+- Summary 1.1 (owner, 21 Nov 2026): a change from a tiny start (under 5% of the later value, from
+  zero, or across zero) reads "from ₹5 K to ₹0.93 Cr", never a huge %; a line marks the weeks it
+  shifted (Sweep's passed tests, read by `summary_card`), its high and its low; numbers with no
+  data yet, and those still waiting for a source, fold into one line (`waiting`).
 """
 
 from __future__ import annotations
 
 import datetime as dt
 from collections.abc import Mapping
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from decimal import Decimal
 from typing import Any
 
 from othor.briefs import values
 from othor.briefs.tiles import NO_CHANGE, _when
 from othor.briefs.tiles import grain as own_grain
-from othor.charts.spec import ChartSpec, Period, Series, Unit, YAxis
+from othor.charts.spec import Annotation, ChartSpec, Period, Series, Unit, YAxis
 from othor.core import fmt
 from othor.engine.store import Point
 from othor.ontology import areas
@@ -49,6 +53,16 @@ SHOWS = {"actual": "Actual", "pct": "%", "abs": "ABS"}
 # owner, 14 Nov 2026: an extra view with every number as its own row, beside the area rows
 ROWS = {"areas": "By area", "numbers": "Every number"}
 SHOWN_FIRST = 8
+# Summary 1.1: an earlier value under 5% of the later one is a tiny start; the change reads
+# "from X to Y" instead of a percent in the thousands
+TINY_BASE = Decimal("0.05")
+# 21 Nov 2026 (the owner's "+1,757%"): over +100% reads "from X to Y" too; a percent of 10% or
+# more is shown whole; a period before outside the 10th–90th percentile of the number's last 13
+# periods is unusual, and a move back from it is a rebound, never the period's lead change
+BIG_JUMP = Decimal(1)
+WHOLE_FROM = Decimal("0.10")
+USUAL_PERIODS, USUAL_MIN = 13, 8
+WAITING_NOTE = {"no_data": "No data yet", "needs_source": "Needs a source"}
 GRAIN_WORD = {"day": "Daily", "week": "Weekly", "month": "Monthly"}
 
 Series_ = list[tuple[dt.date, Decimal]]
@@ -157,14 +171,68 @@ def compared(s: Series_, g: str, compare: str, at: int = -1) -> Decimal | None:
     return next((v for p, v in s if p == want), None)
 
 
+def tiny_base(comp: Decimal | None, value: Decimal) -> bool:
+    """A start too small for a percent to mean anything (Summary 1.1): zero, the other side of
+    zero, or under TINY_BASE of the later value. A fall to a small value is still a percent."""
+    if comp is None or value == 0:
+        return False
+    if comp == 0 or (comp < 0) != (value < 0):
+        return True
+    return abs(comp) < TINY_BASE * abs(value)
+
+
+def from_to(comp: Decimal | None, value: Decimal) -> bool:
+    """A change said as "from X to Y" (21 Nov 2026): a tiny start, or a rise of more than
+    BIG_JUMP (over +100%, where a percent misleads more than it tells)."""
+    if comp is None:
+        return False
+    if tiny_base(comp, value):
+        return True
+    return comp != 0 and (value - comp) / abs(comp) > BIG_JUMP
+
+
+def pct_text(r: Decimal) -> str:
+    """A signed change in percent: whole from 10% ("+38%"), one decimal below ("+7.6%")."""
+    return fmt.pct(r, decimals=0 if abs(r) >= WHOLE_FROM else 1, sign=True)
+
+
+def _percentile(xs: list[Decimal], q: Decimal) -> Decimal:
+    """Linear between the closest ranks (numpy's default), in Decimal: the same every time."""
+    ys = sorted(xs)
+    pos = q * (len(ys) - 1)
+    lo = int(pos)
+    hi = min(lo + 1, len(ys) - 1)
+    return ys[lo] + (ys[hi] - ys[lo]) * (pos - lo)
+
+
+def rebound(s: Series_) -> tuple[str, bool] | None:
+    """(side, near) when the latest period moves back from an unusual period before (Summary
+    1.1, owner 21 Nov 2026): that period is below the 10th ("low") or above the 90th ("high")
+    percentile of the USUAL_PERIODS periods ending at it, and the latest value moved back
+    towards their median. `near`: it landed near the usual level (closer to the median than
+    half the period before's distance); else it swung past it. None otherwise, and with fewer
+    than USUAL_MIN periods to judge by."""
+    if len(s) < USUAL_MIN + 1:
+        return None
+    window = [v for _p, v in s[-(USUAL_PERIODS + 1) : -1]]
+    before, now = window[-1], s[-1][1]
+    p10, p90 = _percentile(window, Decimal("0.1")), _percentile(window, Decimal("0.9"))
+    side = "low" if before < p10 else ("high" if before > p90 else None)
+    if side is None or (now <= before if side == "low" else now >= before):
+        return None
+    mid = _percentile(window, Decimal("0.5"))
+    return side, abs(now - mid) * 2 < abs(before - mid)
+
+
 def delta(unit: str | None, value: Decimal, comp: Decimal | None, show: str) -> Decimal | None:
     """The change the column and the chart both show: a ratio under % (Actual too), points for a
-    share under ABS, else the difference in the number's unit. None with nothing to compare."""
+    share under ABS, else the difference in the number's unit. None with nothing to compare, and
+    a ratio from a tiny start (left out of the % chart, Summary 1.1)."""
     if comp is None:
         return None
     d = value - comp
     if show != "abs":
-        return d / abs(comp) if comp != 0 else None
+        return d / abs(comp) if comp != 0 and not tiny_base(comp, value) else None
     return d * 100 if unit in ("percent", "ratio") else d
 
 
@@ -174,11 +242,18 @@ def change(unit: str | None, value: Decimal, comp: Decimal | None, show: str) ->
     if comp is None:
         return "", "none"
     delta = value - comp
-    if show in ("pct", "actual") and comp != 0:
+    share = unit in ("percent", "ratio")
+    if show in ("pct", "actual") and not share and from_to(comp, value):
+        # Summary 1.1: "from ₹5 K to ₹0.93 Cr", not +18,500% (a tiny start, or more than double)
+        return (
+            f"from {values.text(unit, comp)} to {values.text(unit, value)}",
+            "up" if value > comp else "down",
+        )
+    if show in ("pct", "actual") and comp != 0 and not (share and tiny_base(comp, value)):
         r = delta / abs(comp)
         if abs(r) < NO_CHANGE:
             return "no change", "flat"
-        return fmt.pct(r, decimals=1, sign=True), "up" if r > 0 else "down"
+        return pct_text(r), "up" if r > 0 else "down"
     if unit in ("percent", "ratio"):  # a share changes in points
         pts = delta * 100
         if abs(pts) < Decimal("0.05"):
@@ -299,6 +374,8 @@ class Ctx:
     points: Mapping[str, tuple[Point, ...]]
     view: View
     run_id: str = ""
+    # the weeks each number shifted (Sweep's passed tests, Summary 1.1): its line marks them
+    shifts: Mapping[str, tuple[dt.date, ...]] = field(default_factory=dict)
 
 
 def _grain(ctx: Ctx, metric: str) -> tuple[str, int, str]:
@@ -354,6 +431,9 @@ def figure(ctx: Ctx, metric: str) -> dict[str, Any]:
     period, value = s[-1]
     comp = compared(s, g, ctx.view.basis)
     text, direction = change(unit, value, comp, ctx.view.show)
+    # a rebound from an unusual period before (Summary 1.1, 21 Nov 2026): only against the
+    # period before, where that period is the series' own
+    back = rebound(s) if ctx.view.basis == "before" and comp is not None else None
     if comp is None:
         vs = (
             "No data for last year"
@@ -378,6 +458,8 @@ def figure(ctx: Ctx, metric: str) -> dict[str, Any]:
         "change_text": text,
         "direction": direction,
         "vs": vs,
+        "unusual": back[0] if back else None,
+        "back_near": bool(back and back[1]),
         "series": s,
         "pair": pair,
     }
@@ -424,6 +506,7 @@ def charts(ctx: Ctx, fig: dict[str, Any]) -> tuple[ChartSpec | None, ChartSpec |
     period = Period(g, now[0][0].isoformat(), now[-1][0].isoformat())  # type: ignore[arg-type]
     v = ctx.view
     cid = f"summary:{metric}:{g}:{now[-1][0].isoformat()}:{v.window}:{v.compare}:{split}"
+    notes = marks(ctx, metric, g, now, unit, small)
     sers = [Series("now", WINDOWS[ctx.view.window][2], "positive", pts, style="smooth")]
     if comp:  # the period in theme blue (calm, 19 Nov 2026), the comparison dotted grey
         sers.append(Series("compare", label, "muted", tuple(comp), style="dotted"))
@@ -435,6 +518,7 @@ def charts(ctx: Ctx, fig: dict[str, Any]) -> tuple[ChartSpec | None, ChartSpec |
         unit=values.chart_unit(unit, small),
         period=period,
         series=tuple(sers),
+        annotations=notes,
         provenance=prov,
     )
     spark = ChartSpec(
@@ -448,9 +532,51 @@ def charts(ctx: Ctx, fig: dict[str, Any]) -> tuple[ChartSpec | None, ChartSpec |
         # 0.28.4), the comparison dotted grey behind it
         series=(Series("now", name, "positive", pts, style="smooth"),)
         + ((Series("compare", label, "muted", tuple(comp), style="dotted"),) if comp else ()),
+        annotations=notes,
         provenance=prov,
     )
     return line, spark
+
+
+def _snap(g: str, d: dt.date) -> dt.date:
+    """The period a date falls in: its week's Monday, its month's first day, the day itself."""
+    if g == "week":
+        return d - dt.timedelta(days=d.weekday())
+    if g == "month":
+        return d.replace(day=1)
+    return d
+
+
+def marks(
+    ctx: Ctx, metric: str, g: str, now: Series_, unit: str | None, small: bool
+) -> tuple[Annotation, ...]:
+    """Summary 1.1: the line's turning points (the weeks Sweep found it shifted, dated), then its
+    high and its low in the period with their values. A flat line has neither; every label is a
+    stored value through the one formatter."""
+    if len(now) < 2:
+        return ()
+    first, last = now[0][0], now[-1][0]
+    out: list[Annotation] = []
+    for d in sorted(set(ctx.shifts.get(metric, ()))):
+        at = _snap(g, d)
+        if first < at <= last and any(p == at for p, _v in now):
+            out.append(Annotation("vline", at=at.isoformat(), label=fmt.day_month(d), role="muted"))
+    vals = [v for _p, v in now]
+    hi, lo = max(vals), min(vals)
+    if len(now) >= 3 and hi != lo:
+        # the first time it reached each, so the same series always marks the same point
+        for i, word in ((vals.index(hi), "High"), (vals.index(lo), "Low")):
+            p, v = now[i]
+            out.append(
+                Annotation(
+                    "mark",
+                    at=p.isoformat(),
+                    value=values.chart_value(unit, v, small),
+                    label=f"{word} {values.text(unit, v)}",
+                    role="positive",
+                )
+            )
+    return tuple(out)
 
 
 def change_charts(ctx: Ctx, fig: dict[str, Any]) -> tuple[ChartSpec | None, ChartSpec | None]:
@@ -569,11 +695,28 @@ def build(
     view: View | None = None,
     findings: list[dict[str, Any]] | None = None,
     run_id: str = "",
+    shifts: Mapping[str, tuple[dt.date, ...]] | None = None,
 ) -> dict[str, Any]:
-    """Every row of the page, the hidden areas, and the view."""
+    """Every row of the page, the hidden areas, the view, and the numbers waiting for data (one
+    folded line, Summary 1.1): a row with no data yet leaves the list for it, and the numbers
+    still waiting for a source join it."""
     lay = layout or {}
     view = view or View()
-    ctx = Ctx(spec, points, view, run_id)
+    ctx = Ctx(spec, points, view, run_id, dict(shifts or {}))
+    waiting: dict[str, dict[str, Any]] = {}
+
+    def wait(m: str, note: str) -> None:
+        e = spec.get("metrics", {}).get(m) or {}
+        waiting.setdefault(
+            m,
+            {
+                "metric": m,
+                "name": str(e.get("name") or m),
+                "area": areas.label(e.get("area")),
+                "note": WAITING_NOTE[note],
+            },
+        )
+
     groups = by_area(spec)
     order = area_order(list(groups), list(lay.get("order") or []))
     hidden = [a for a in order if a in set(lay.get("hidden") or [])]
@@ -584,6 +727,9 @@ def build(
         ms = groups[a]
         lead = lead_of(spec, a, ms, lay.get("leads") or {})
         fig = figure(ctx, lead)
+        if fig["value"] is None and view.rows != "numbers":
+            wait(lead, "no_data")
+            continue
         line, spark = charts(ctx, fig)
         fig.pop("series", None)
         rows.append(
@@ -610,6 +756,9 @@ def build(
                 if m in hidden_numbers:
                     continue
                 fig = figure(ctx, m)
+                if fig["value"] is None:
+                    wait(m, "no_data")
+                    continue
                 line, spark = charts(ctx, fig)
                 fig.pop("series", None)
                 nums.append(
@@ -625,6 +774,17 @@ def build(
                 )
             if nums:
                 out["groups"].append({"area": a, "count": len(groups[a]), "rows": nums})
+    known = list(spec.get("order") or [])
+    known += sorted(k for k in spec.get("metrics", {}) if k not in set(known))
+    for m in known:  # Ontology order, then any number the order doesn't list
+        e = spec.get("metrics", {}).get(m) or {}
+        if (
+            e.get("status") == "needs_source"
+            and e.get("listed") is not False
+            and areas.label(e.get("area")) not in hidden
+        ):
+            wait(m, "needs_source")
+    out["waiting"] = list(waiting.values())
     return out
 
 
@@ -641,6 +801,7 @@ def page(
 ) -> dict[str, Any]:
     """The page's dict; `expanded` adds each row's parts, other numbers and definition (M16.3)."""
     from othor.web import run_cache
+    from othor.web import summary_card as sc
     from othor.web import summary_layout as sl
     from othor.web import sweep_view as sv
     from othor.web.ontology_view import run_data
@@ -659,6 +820,10 @@ def page(
     view = View.parse(query, lay["view"], splits)
     runs = sv.detecting_runs(s)
     rv = sv.load(s, settings, runs[0], today) if runs else None
+    # Summary 1.1: the card and the lines' marks, from the run's stored Sweep results
+    results = list(rv.results) if rv else []
+    start, end = sc.window(view, rd.run.run_date)
+    shifted = sc.shifts(results, rd.spec, start=start, end=end, pair=view.pair)
     out = build(
         rd.spec,
         pts,
@@ -666,6 +831,17 @@ def page(
         view=view,
         findings=list(rv.shown) if rv else [],
         run_id=str(rd.run.id),
+        shifts=sc.shift_dates(shifted),
+    )
+    as_of = f"As of last night's run · {fmt.day_month(rd.run.run_date)}"
+    out["card"] = sc.card(
+        out["rows"],
+        view,
+        shifts=shifted,
+        pairs=[] if view.pair else sc.pairs(results, rd.spec),
+        alikes=sc.look_alikes(
+            rd.spec, [p for ps in pts.values() for p in ps], _duplicate_proposals(s)
+        ),
     )
     if expanded:
         ctx = Ctx(rd.spec, pts, view, str(rd.run.id))
@@ -682,8 +858,8 @@ def page(
     names = {k: str(b.get("name") or k) for k, b in (rd.spec.get("breakdowns") or {}).items()}
     return {
         **out,
-        "empty": "" if out["rows"] or out["hidden"] else "no_numbers",
-        "as_of": f"As of last night's run · {fmt.day_month(rd.run.run_date)}",
+        "empty": "" if out["rows"] or out["hidden"] or out["waiting"] else "no_numbers",
+        "as_of": as_of,
         "windows": [(k, w[2]) for k, w in WINDOWS.items()],
         "compares": list(COMPARES.items()),
         "shows": list(SHOWS.items()),
@@ -692,6 +868,20 @@ def page(
         + [(f"{k}={v}", f"{names.get(k, k)} · {v}") for k, vs in splits.items() for v in vs],
         "shown_first": SHOWN_FIRST,
     }
+
+
+def _duplicate_proposals(s: Any) -> dict[str, tuple[str, str]]:
+    """Home's same-number proposals by fingerprint: (id, status), for the card's merge drafts."""
+    import sqlalchemy as sa
+
+    from othor.engine.models import Proposal
+
+    rows = s.execute(
+        sa.select(Proposal.fingerprint, Proposal.id, Proposal.status).where(
+            Proposal.kind == "duplicate_metric"
+        )
+    ).all()
+    return {fp: (str(pid), status) for fp, pid, status in rows}
 
 
 def splits_of(s: Any, settings: Any) -> dict[str, list[str]]:

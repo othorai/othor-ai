@@ -58,3 +58,29 @@ def test_a_value_goal_at_most():
     assert g["text"] == "DSO · 45 d target by 31 Mar · tracking 41 d (80% band 38–44 d)"
     assert g["tone"] == "ok"
     assert not goal_lines(SPEC, [], [dso])  # a goal the brief doesn't watch
+
+
+def test_the_likelihood_sets_the_label_and_the_line_says_it():
+    """21 Nov 2026 (indigodemo): the tile, the goal row and What's ahead read one forecast; the
+    label comes from its likelihood (80% or more on track, 20% or less off track, else at risk),
+    not from whether the band touches the target."""
+    dso = _g(
+        key="dso_under_45",
+        metric="dso",
+        aggregate="value",
+        direction="at_most",
+        target="45",
+        projection="43.0",
+        lower="34.0",
+        upper="52.0",
+        probability=61,
+    )
+    (g,) = goal_lines(SPEC, ["dso_under_45"], [dso])
+    assert g["text"] == (
+        "DSO · 45 d target by 31 Mar · tracking 43 d (80% band 34–52 d) · 61% likely"
+    )
+    assert g["tone"] == "risk"
+    (ok,) = goal_lines(SPEC, ["dso_under_45"], [{**dso, "probability": 80}])
+    assert ok["tone"] == "ok"
+    (off,) = goal_lines(SPEC, ["dso_under_45"], [{**dso, "probability": 20}])
+    assert off["tone"] == "off"

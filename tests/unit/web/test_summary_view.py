@@ -235,7 +235,7 @@ def test_one_breakdown_value_and_not_split_by():
     out = sv.build(SPEC, POINTS, view=view)
     sales = _row(out, "Sales")
     assert sales["value"] == Decimal(60) and sales["comparison"] == Decimal(50)
-    assert sales["change_text"] == "+20.0%"
+    assert sales["change_text"] == "+20%"
     dso = _row(out, "Collections")
     assert dso["note"] == "Not split by Region" and dso["value"] == Decimal(40)
 

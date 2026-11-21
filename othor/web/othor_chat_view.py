@@ -201,7 +201,7 @@ def view(
     rest = [
         (k, v)
         for k, v in request.query_params.multi_items()
-        if k not in ("panel", "subject", "edit", "item")
+        if k not in ("panel", "subject", "edit", "item", "say")
     ]
     base = here + ("?" + urlencode(rest) if rest else "")
     sep = "&" if "?" in base else "?"
@@ -265,4 +265,6 @@ def view(
         else False,
         "more_url": open_url + "&item=" if t.subject == "questions" else "",
         "empty": t.subject == "questions" and current is None and not msgs,
+        # 2.4 L1: the level checklist's sentence, pre-filled in the box for the owner to edit
+        "prefill": str(request.query_params.get("say") or "")[:300] if is_change else "",
     }

@@ -37,7 +37,8 @@ AFTER_TONIGHT = "Values after tonight's run"
 NOT_AVAILABLE = "Not available right now"
 # a drafted change that the checks refused: said plainly, never the model's "This adds…" (#66)
 COULDNT = (
-    "I couldn’t turn that into a change. Try saying it another way, with the number and the date."
+    "I couldn’t turn that into a change I can check. Say which number and how it’s worked out "
+    "(from which table and column), or what changed in the business and when."
 )
 ALLOWED = {
     "business_fact",
@@ -49,14 +50,36 @@ ALLOWED = {
     "owner",
     "metric",
     "rule",
+    "breakdown",
+    "watch",  # 2.4 L2: not a record; started on Apply (othor.engine.watches), no version
 }
 METRIC_FIELDS = {"name", "description", "breakdowns", "area"}
+# Business Model 2.4 (L2): a number's headline flag; a derived number's formula over other numbers
+CHANGE_FIELDS = METRIC_FIELDS | {"headline", "formula"}
+# a new number: one table and one measure (a part), or a formula over numbers (built from parts)
+NEW_METRIC_FIELDS = CHANGE_FIELDS | {
+    "grain",
+    "unit",
+    "kind",
+    "table",
+    "measure",
+    "date",
+    "filters",
+    "listed",
+    "family",
+    "variant",
+}
+RULE_KINDS = ("pair", "reconcile", "filter", "unit_conversion")
+WATCH_DIRECTIONS = ("above", "below")
+MODEL_TABLES = 8  # tables named by the owner, sent by name with their columns (never rows)
 SECTION = {
     "business_fact": "THE BUSINESS",
     "goal": "THE BUSINESS",
     "metric": "NUMBERS",
     "rule": "NUMBERS",
     "known_pattern": "KNOWN PATTERNS",
+    "breakdown": "NUMBERS",
+    "watch": "WATCHES",
 }
 SCALES = (Decimal(1), Decimal(1000), Decimal(100000), Decimal(1000000), Decimal(10000000))
 
@@ -111,8 +134,45 @@ def model_inputs(s: Session, line: str, subject: str, today: dt.date) -> dict[st
         "subject": subject,
         "records": recs,
         "breakdowns": sorted({r.key for r in service.active(s, ["breakdown"])}),
+        "tables": tables_named(s, line, subject),
         "calendar": calendar_inputs(today),
     }
+
+
+def _words(text: str) -> set[str]:
+    return set(re.findall(r"[a-z0-9_]+", text.lower()))
+
+
+def tables_named(s: Session, line: str, subject: str) -> list[dict[str, Any]]:
+    """The tables a new number may read (2.4 L2): those the owner names (by table name, or
+    source.table), and the subject number's own table, by name with their non-personal columns
+    and date columns. Names only, never rows (rule 3); personal columns are left out."""
+    from othor.ontology.compiler.catalog import load_catalog
+
+    cat = load_catalog(s)
+    said = _words(line)
+    own: set[tuple[str, str, str]] = set()
+    if subject.startswith("metric:"):
+        key = subject.removeprefix("metric:")
+        rec = next((r for r in service.active(s, ["metric"]) if r.key == key), None)
+        tb = (rec.body.get("table") if rec else None) or {}
+        if tb:
+            own.add((tb.get("source", ""), tb.get("schema", ""), tb.get("table", "")))
+    out = []
+    for (src, schema, name), info in sorted(cat.tables.items()):
+        if (src, schema, name) not in own and name.lower() not in said:
+            continue
+        cols = [c for c in info.columns.values() if not c.personal]
+        out.append(
+            {
+                "source": src,
+                "schema": schema,
+                "table": name,
+                "columns": [c.name for c in cols][:80],
+                "dates": [c.name for c in cols if c.kind in ("date", "timestamp")][:20],
+            }
+        )
+    return out[:MODEL_TABLES]
 
 
 # --- the draft, checked -------------------------------------------------------------------------
@@ -143,7 +203,16 @@ def _numbers_ok(change: dict[str, Any], inputs: dict[str, Any], said: str) -> bo
     return True
 
 
-def check(s: Session, out: Any, inputs: dict[str, Any], said: str, today: dt.date) -> Draft:
+def check(
+    s: Session,
+    out: Any,
+    inputs: dict[str, Any],
+    said: str,
+    today: dt.date,
+    known: set[str] | frozenset[str] = frozenset(),
+) -> Draft:
+    """One drafted change, checked by code. `known`: the keys of new numbers drafted in the same
+    message (2.4 L2), so a formula may use a number added beside it ("minus rebates")."""
     if not isinstance(out, dict):
         return Draft(None, NOT_AVAILABLE, "no draft")
     reply = str(out.get("reply") or "")[:300]
@@ -159,6 +228,8 @@ def check(s: Session, out: Any, inputs: dict[str, Any], said: str, today: dt.dat
         return Draft(None, COULDNT, "not allowed")
     if not re.fullmatch(r"[a-z][a-z0-9_]{1,80}", key):
         return Draft(None, COULDNT, "bad key")
+    if type_ == "watch":
+        return _watch(s, ch, key, op, inputs, said, reply)
     current = next((r for r in service.active(s, [type_]) if r.key == key), None)
     if op == "retire":
         if current is None or type_ == "metric":
@@ -169,12 +240,30 @@ def check(s: Session, out: Any, inputs: dict[str, Any], said: str, today: dt.dat
     body = record_body(ch)
     if "value_list" in body:
         body["values"] = [v.strip() for v in str(body.pop("value_list")).split(",") if v.strip()]
+    said_body = dict(body)  # what the model wrote: its numbers must be the owner's
     if type_ == "metric":
-        if current is None or set(body) - METRIC_FIELDS:
-            return Draft(None, COULDNT, "metric fields")
-        body = {**current.body, **body}
-    if type_ == "rule" and body.get("kind") != "pair":
-        return Draft(None, COULDNT, "rule kind")
+        if current is None:  # 2.4 L2: a new number, a part or built from parts
+            if set(body) - NEW_METRIC_FIELDS:
+                return Draft(None, COULDNT, "metric fields")
+            body = {"status": "active", **body}
+        else:
+            if set(body) - CHANGE_FIELDS:
+                return Draft(None, COULDNT, "metric fields")
+            if "formula" in body and not current.body.get("formula"):
+                return Draft(None, COULDNT, "a formula on a part")
+            body = {**current.body, **body}
+        why = _metric_ok(s, body, known)
+        if why:
+            return Draft(None, COULDNT, why)
+    if type_ == "rule":
+        why = "rule kind" if body.get("kind") not in RULE_KINDS else _rule_ok(s, body, known)
+        if why:
+            return Draft(None, COULDNT, why)
+    if type_ == "breakdown":
+        col = str(body.get("column") or "")
+        why = _columns_ok(s, None, [col]) if col else "breakdown fields"
+        if why or body.get("expr") is not None or body.get("entity") is not None:
+            return Draft(None, COULDNT, why or "breakdown fields")
     if type_ == "known_pattern":
         from othor.home.answers import _name_grounded
 
@@ -187,7 +276,7 @@ def check(s: Session, out: Any, inputs: dict[str, Any], said: str, today: dt.dat
     ):
         # the model may write the owner's target as a number (#66): kept as written, as text
         body["target"] = _plain(body["target"])
-    if not _numbers_ok(body, inputs, said):
+    if not _numbers_ok(said_body if type_ == "metric" else body, inputs, said):
         return Draft(None, COULDNT, "ungrounded number")
     try:
         body = validate_body(type_, body)
@@ -198,6 +287,110 @@ def check(s: Session, out: Any, inputs: dict[str, Any], said: str, today: dt.dat
     return Draft({"op": "put", "type": type_, "key": key, "body": body}, reply)
 
 
+def _cols(node: Any) -> list[str]:
+    """Every column an expression reads."""
+    from othor.ontology.types import walk
+
+    return [str(n["col"]) for n in walk(node) if "col" in n] if node else []
+
+
+def _metric_refs(node: Any) -> list[str]:
+    from othor.ontology.types import walk
+
+    return [str(n["metric"]) for n in walk(node) if "metric" in n] if node else []
+
+
+def _columns_ok(s: Session, table: dict[str, Any] | None, cols: list[str]) -> str:
+    """ "" when every column is in the table (any scanned table when None) and none is personal;
+    else why (rule 3: a personal column is never read, not even in a draft)."""
+    from othor.ontology.compiler.catalog import load_catalog
+
+    cat = load_catalog(s)
+    if table is not None:
+        info = cat.table(
+            str(table.get("source", "")), str(table.get("schema", "")), str(table.get("table", ""))
+        )
+        if info is None:
+            return "no such table"
+        tables = [info]
+    else:
+        tables = list(cat.tables.values())
+    for c in cols:
+        if "." in c and table is not None:
+            continue  # a joined table's column (invoices.invoice_date): the compiler checks it
+        name = c.lower()
+        hits = [t.columns[name] for t in tables if name in t.columns]
+        if not hits:
+            return "no such column"
+        if any(h.personal for h in hits):
+            return "a personal column"
+    return ""
+
+
+def _metric_ok(s: Session, body: dict[str, Any], known: set[str] | frozenset[str]) -> str:
+    """A number's table, columns and parts exist (2.4 L2); "" when it holds."""
+    live = {r.key for r in service.active(s, ["metric"])} | set(known)
+    refs = _metric_refs(body.get("formula"))
+    for f in (body.get("breakdown_formulas") or {}).values():
+        refs += _metric_refs(f)
+    if any(k not in live for k in refs):
+        return "a part that isn't a number"
+    if body.get("table"):
+        cols = _cols(body.get("measure", {}).get("expr"))
+        cols += [c for f in body.get("filters") or [] for c in _cols(f)]
+        if body.get("date"):
+            cols.append(str(body["date"]))
+        return _columns_ok(s, body["table"], cols)
+    return ""
+
+
+def _rule_ok(s: Session, body: dict[str, Any], known: set[str] | frozenset[str]) -> str:
+    """A pair or cross-source check over two numbers; a filter or unit rule on one table."""
+    live = {r.key for r in service.active(s, ["metric"])} | set(known)
+    if body.get("kind") in ("pair", "reconcile"):
+        if body.get("table") or body.get("to") or len(body.get("over") or []) != 2:
+            return "rule fields"
+        return "" if all(k in live for k in body["over"]) else "a pair of unknown numbers"
+    cols = _cols(body.get("expr")) + _cols(body.get("when"))
+    if body.get("column"):
+        cols.append(str(body["column"]))
+    return _columns_ok(s, body.get("table") or {}, cols)
+
+
+def _watch(
+    s: Session,
+    ch: dict[str, Any],
+    key: str,
+    op: Any,
+    inputs: dict[str, Any],
+    said: str,
+    reply: str,
+) -> Draft:
+    """A watch (2.4 L2): a number, a limit in the owner's own words, above or below. Started on
+    Apply (othor.engine.watches.create), not a Business Model version."""
+    from othor.home.answers import record_body
+
+    body = record_body(ch)
+    metric = str(body.get("metric") or "")
+    rec = next((r for r in service.active(s, ["metric"]) if r.key == metric), None)
+    try:
+        threshold = Decimal(str(body.get("threshold")))
+    except (InvalidOperation, ValueError):
+        return Draft(None, COULDNT, "watch threshold")
+    if op != "put" or rec is None or body.get("direction") not in WATCH_DIRECTIONS:
+        return Draft(None, COULDNT, "watch fields")
+    clean = {
+        "metric": metric,
+        "threshold": format(threshold.normalize(), "f"),
+        "direction": str(body["direction"]),
+        "label": str(body.get("label") or rec.body.get("name") or metric)[:120],
+        "owner": str(body.get("owner") or "")[:120],
+    }
+    if not _numbers_ok({"threshold": clean["threshold"]}, inputs, said):
+        return Draft(None, COULDNT, "ungrounded number")
+    return Draft({"op": "put", "type": "watch", "key": key, "body": clean}, reply)
+
+
 def _plain(x: int | float) -> str:
     """200 → "200", 2.5 → "2.5": a number as the owner wrote it, never "200.0" or "2e2"."""
     from decimal import Decimal
@@ -206,12 +399,26 @@ def _plain(x: int | float) -> str:
     return str(d.quantize(Decimal(1))) if d == d.to_integral_value() else format(d.normalize(), "f")
 
 
+def watch_line(s: Session, body: dict[str, Any]) -> str:
+    """A drafted watch in a line: the owner's own limit, shown in the number's unit."""
+    from othor.briefs import values
+
+    rec = next((r for r in service.active(s, ["metric"]) if r.key == body.get("metric")), None)
+    unit = (rec.body.get("unit") if rec else None) or "inr"
+    name = str((rec.body.get("name") if rec else None) or body.get("metric"))
+    limit = values.text(unit, Decimal(str(body["threshold"])))
+    verb = "falls below" if body.get("direction") == "below" else "goes above"
+    return f"{body.get('label') or name}: tell me when {name.lower()} {verb} {limit}"
+
+
 def card_line(s: Session, change: dict[str, Any]) -> tuple[str, str, str]:
     """(section label, the line as it reads now, the line after) for the draft card."""
     from types import SimpleNamespace
 
     from othor.web.ontology_view import line
 
+    if change["type"] == "watch":
+        return SECTION["watch"], "", watch_line(s, change["body"])
     cur = next((r for r in service.active(s, [change["type"]]) if r.key == change["key"]), None)
     before = line(cur) if cur is not None else ""
     after = (
@@ -238,7 +445,12 @@ def effect(
     *,
     preview: Any | None = None,
     today: dt.date | None = None,
+    also: list[dict[str, Any]] | None = None,
 ) -> Effect:
+    """What the change does, compiled in memory (nothing written). `also`: the changes of the
+    same set it needs (2.4 L2: a formula with the new number drafted beside it)."""
+    if change["type"] == "watch":  # not a record: nothing compiles, no number changes meaning
+        return Effect()
     from othor.ontology.compiler.api import company_settings, compile_version
     from othor.ontology.compiler.build import compile_records
     from othor.ontology.compiler.catalog import load_catalog
@@ -247,10 +459,13 @@ def effect(
 
     live = {(r.type, r.key): r.body for r in service.active(s)}
     cand = dict(live)
-    if change["body"] is None:
-        cand.pop((change["type"], change["key"]), None)
-    else:
-        cand[(change["type"], change["key"])] = change["body"]
+    for c in [*(also or []), change]:
+        if c["type"] == "watch":
+            continue
+        if c["body"] is None:
+            cand.pop((c["type"], c["key"]), None)
+        else:
+            cand[(c["type"], c["key"])] = c["body"]
     cur = compile_version(s, company).compiled
     try:
         new = compile_records(cand, load_catalog(s), company_settings(company), 0)

@@ -89,9 +89,9 @@ def test_a_quiet_day_says_nothing_needs_you_and_asks_nothing():
     }
     got = _issue([revenue])  # a finding outside this brief's scope (net revenue)
     assert got["quiet"] and not got["items"] and got["ask"] is None
-    assert got["title"] == "DSO is on plan; nothing needs you today."
+    assert got["title"] == "DSO is on plan; nothing significant came up."
     assert got["line"] == (
-        "The headline number is on plan. 212 tests found nothing above the ₹5.0 L floor in "
+        "The headline number is on plan. 212 tests found nothing above the ₹5 L floor in "
         "this brief’s scope."
     )
     assert got["more_in_sweep"] == 1  # the finding is in Sweep, outside this brief
@@ -239,6 +239,22 @@ def test_an_item_unchanged_for_a_week_steps_out_to_still_open():
         tests=212,
     )
     assert [i["fingerprint"] for i in again["items"]] == ["old"] and again["still_open"] == []
+
+
+def test_a_quiet_day_with_items_still_open_says_so_the_largest_first():
+    """Owner, 21 Nov 2026: nothing new or changing tonight, but items from before are still
+    open: the key message says so; "Nothing significant came up" only when nothing is open."""
+    one = _issue([_dso("old", "900000", days=13)])
+    assert one["quiet"] and not one["items"]
+    assert (
+        one["title"] == "Nothing new came up. 1 item from last week is still open: DSO old, day 13."
+    )
+    three = _issue([_dso("a", "500000"), _dso("b", "900000", days=12), _dso("c", "700000")])
+    assert three["quiet"]
+    assert three["title"] == (
+        "Nothing new came up. 3 items from last week are still open; the largest: DSO b, day 12."
+    )
+    assert _issue([])["title"] == "DSO is on plan; nothing significant came up."
 
 
 def test_whom_to_ask_without_a_team():

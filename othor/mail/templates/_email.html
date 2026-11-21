@@ -130,6 +130,14 @@
 {% endfor %}</table>
 {%- endmacro %}
 
+{# Morning Brief 2.4: a quiet day's updates from the brief's own numbers, computed by code #}
+{% macro updates(o) -%}
+<p style="margin:0 0 6px;font-family:{{ FONT }};font-size:15px;line-height:1.4;font-weight:600;color:{{ INK }}">{{ o.intro }}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+{% for x in o.lines %}<tr><td valign="top" width="16" style="width:16px;padding:6px 0;font-family:{{ FONT }};font-size:14px;line-height:1.45;color:#0B7AA6">&#8226;</td><td valign="top" style="padding:6px 0;font-family:{{ FONT }};font-size:14px;line-height:1.45;color:{{ INK }}">{{ x.text }}</td></tr>
+{% endfor %}</table>
+{%- endmacro %}
+
 {% macro watching(rows) -%}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid {{ RULE }};border-bottom:1px solid {{ RULE }}"><tr>
 <td valign="top" width="12" style="padding:12px 0;font-size:14px;line-height:1.4;color:{{ NEG }}">&#9679;</td>

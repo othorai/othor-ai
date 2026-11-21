@@ -18,6 +18,7 @@ SIZES = {
     "sparkline_on_track": (120, 36),
     "bars_contribution": (380, 110),
     "bars_share": (300, 90),
+    "sparkline_marks": (1000, 76),
 }
 
 

@@ -132,7 +132,13 @@ def apply(
             s.commit()
             return RedirectResponse(_back(back, subject), 303)
         if changes.is_subject(t.subject):
-            changes.apply(s, o.company, t, actor=str(o.viewer.id))
+            changes.apply(
+                s,
+                o.company,
+                t,
+                actor=str(o.viewer.id),
+                today=local_date(o.company, svc.clock()),
+            )
             s.commit()
             return RedirectResponse(_back(back, subject), 303)
         from othor.web import home_view as hv
@@ -271,7 +277,12 @@ def _change_values(request: Request, o: Owner, subject: str, item: str) -> Respo
             s, svc.key, o.company.id, svc.settings.analytics_path(o.company.id)
         )
         eff = hc.effect(
-            s, o.company, it["change"], preview=runner, today=local_date(o.company, svc.clock())
+            s,
+            o.company,
+            it["change"],
+            preview=runner,
+            today=local_date(o.company, svc.clock()),
+            also=changes.needed(m.proposal["items"] if m else [], it),
         )
         s.commit()  # the preview's query log
     return templates.TemplateResponse(

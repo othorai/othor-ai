@@ -194,7 +194,7 @@ def test_a_negative_small_rupee_amount_puts_the_minus_first():
 
     assert fmt.inr_plain(52.9) == "₹52.9"
     assert fmt.inr_plain(-69.5) == "−₹69.5"
-    assert fmt.inr_plain(-0.01) == "₹0.0"
+    assert fmt.inr_plain(-0.01) == "₹0"
 
 
 def test_a_chat_reply_says_when_it_was_written() -> None:

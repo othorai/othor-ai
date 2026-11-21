@@ -10,11 +10,12 @@ version is a 404.
 from __future__ import annotations
 
 import datetime as dt
+from pathlib import Path
 from typing import Any
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
 from othor.core.localtime import local_date
@@ -83,6 +84,8 @@ def ontology(
             **shell_ctx(o, "ontology"),
             **ov.page(s, svc.settings, o.company, today, numbers),
         }
+        if request.query_params.get("level") == "open" and ctx.get("levels"):
+            ctx["levels"]["open"] = True  # 2.4 L3: back from Look in my files, the list open
         if metric:
             mp = ov.metric_panel(s, svc.settings, o.company, metric, today)
             if mp is None:
@@ -113,6 +116,48 @@ def ontology(
             ctx["note"] = service.ceiling_text()
         s.expunge_all()
     return page(request, "ontology/ontology.html", ctx)
+
+
+@router.post("/ontology/level/find", dependencies=CSRF)
+def level_find(
+    request: Request, back: str = Form("/ontology"), o: Owner = Depends(signed_in)
+) -> Response:
+    """2.4 L3: Othor AI looks in the files and sources for the checklist's missing items and
+    drafts what it finds (each a set to apply; nothing written). Without a model, nothing."""
+    from othor.ai.gateway import ModelGateway
+    from othor.chat import level_drafts
+    from othor.web.context import local_path
+
+    svc = services(request)
+    gw = ModelGateway(
+        svc.sf,
+        provider_for(svc.settings),
+        clock=svc.clock,
+        monthly_tokens=svc.settings.ai_monthly_tokens,
+    )
+    with svc.sf() as s, tenant_scope(o.company.id):
+        if service.confirmed(s):
+            level_drafts.find(s, gw, o.company, actor=str(o.viewer.id), today=_today(request, o))
+            s.commit()
+    url = local_path(back, "/ontology")
+    return RedirectResponse(url + ("&" if "?" in url else "?") + "level=open", 303)
+
+
+EXAMPLE_PDF = (
+    Path(__file__).resolve().parents[1] / "static" / "docs" / "complete-business-model.pdf"
+)
+
+
+@router.get("/ontology/example.pdf")
+def example_pdf(o: Owner = Depends(signed_in)) -> Response:
+    """2.4 L4: "See a complete Business Model": the sample company's, definitions only, built by
+    scripts/build_example_business_model.py from the sample's hand-built Business Model."""
+    return FileResponse(
+        EXAMPLE_PDF,
+        media_type="application/pdf",
+        filename="Othor AI · a complete Business Model.pdf",
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
 
 
 # --- 6a3 · Change with Othor AI: the one Othor AI chat since 0.26 (othor.chat.changes) ------

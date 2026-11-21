@@ -246,8 +246,22 @@ def line(tiles: list[dict[str, Any]], names: dict[str, str]) -> str:
 def quiet_title(tiles: list[dict[str, Any]], names: dict[str, str]) -> str:
     ok = _sentence(_on_plan(tiles, names))
     if ok and len(ok) == len(tiles):
-        return f"{_and(ok)} {'is' if len(ok) == 1 else 'are'} on plan; nothing needs you today."
-    return "Nothing needs you today."
+        verb = "is" if len(ok) == 1 else "are"
+        return f"{_and(ok)} {verb} on plan; nothing significant came up."
+    # Morning Brief 2.4 (owner, 20 Nov 2026): said plainly; the updates from the numbers follow
+    return "Nothing significant came up."
+
+
+def still_open_title(rows: list[dict[str, Any]]) -> str:
+    """A quiet day with items still open from before (owner, 21 Nov 2026): nothing new came up,
+    and how many are still open, the largest first. `rows`: {title, day} by money, largest
+    first; `day` is how long the item has been open."""
+    top = rows[0]
+    what = f"{str(top['title']).rstrip('.')}, day {fmt.num(int(top['day']))}"
+    if len(rows) == 1:
+        return f"Nothing new came up. 1 item from last week is still open: {what}."
+    n = fmt.num(len(rows))
+    return f"Nothing new came up. {n} items from last week are still open; the largest: {what}."
 
 
 def drill_sentence(d: dict[str, Any]) -> str:

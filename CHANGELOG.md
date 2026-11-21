@@ -6,6 +6,86 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-11-21
+
+### Added
+- Summary 1.1: a dark summary card at the top (the period's lead change, numbers that moved
+  together and which leads which, from Sweep's stored pair and lead/lag results, the week a line
+  shifted, and look-alike numbers with a one-click merge draft in the Business Model). Lines mark
+  their high and low with values and hover values; a tiny starting value reads "from X to Y"
+  instead of a huge %; rebounds and big jumps worded honestly; "No data yet" rows fold into one
+  line. Template words without a model; every figure inserted by code.
+- Business Model 2.4, the levels: the level card and checklist on the Business Model page (Must
+  have, Good to have, Full potential), each missing item with what it unlocks and its sentence
+  pre-filled in the chat; drafts found in the files and sources, each one Apply; onboarding ends on
+  the level card; the sample company's complete Business Model as an example PDF.
+- Chat 1.3: setup decisions open with Othor AI's suggested answer and why, with Apply and Suggest
+  edits; no pick without a model. A definition that needs a new number (net revenue less rebates
+  from a ledger account) proposes the number and the formula together, one Apply.
+
+### Changed
+- Morning Brief 2.4: a day with no finding says so plainly, then the ordinary picture from the
+  brief's numbers (against the week or month before, the usual range, the largest and smallest
+  part, goal progress), never worded as a finding; a quiet day with items still open says how many.
+  On the page, the card, the PDF and the email.
+- Weekly Digest 1.1: every issue carries stories from the ordinary numbers, busy week or quiet.
+- Money: one rule everywhere (brief, goal lines, Sweep, email, PDF): three significant figures,
+  the unit by size, no trailing zeros (₹9.8 L, ₹60,000, $46.2M), a range's ends in one unit.
+- Pricing: each plan says who it is for; Hosted lists its modules one by one with their icons,
+  the Free card the open core's; On-premise starts from Everything in Hosted, with custom AI
+  models; the Hosted button reads "14-day trial".
+- Privacy policy: the contributor licence agreement line (CLA Assistant records the GitHub
+  username and signing time).
+
+## [0.31.0] - 2026-11-21
+
+### Added
+- Forecasts (Enterprise Edition): a page of its own after Summary. What's ahead in plain words,
+  each goal's chance of being met with its range, the next 4 weeks, any number's line with where
+  it stops being safe to plan on (the company's existing ±35% setting), every number's next
+  period, range, how far ahead it can be called and its track record, and what the forecasts
+  assume. The nightly forecast step now stores each number 12 periods ahead (`horizon` in the
+  run's forecasts.json) from the same fit, so every other reader keeps its numbers. Othor AI words
+  the band and goal lines once per run after the run seals (prompt `forecasts@v1`, every figure
+  checked); templates otherwise. The chosen window stays in the address. Licence feature
+  `forecasts`.
+- The line chart's `horizon` annotation ("can see to here", the range past it lighter).
+- /llms.txt and /llm-info are live.
+
+### Changed
+- One forecast for every goal: the brief's tiles, goal lines, What's ahead, Discover and Forecasts
+  read the v2 forecast, and one rule labels a goal (80% or more on track, 20% or less off track,
+  at risk between).
+- Sweep's checks as squares, always 12; External Signals' check ("Ext") is the 12th, grey where
+  it isn't on.
+- Since last week: "Also still open" for the open items not in today's brief; its chart from 5
+  nights.
+- Home: a brief whose top item already leads another card shows its own next item.
+
+## [0.30.2] - 2026-11-21
+
+### Changed
+- Sweep: the checks are a block of squares, four across, with each check's short name, instead of
+  the ring; always 12, External Signals' Outside last (grey where it isn't on, with how to turn it
+  on). The card reads "Checks · 10 / 12".
+- Number cards are back in light bordered cards with plain labels on Sweep, AI usage, the Archive
+  and Big Picture.
+
+### Fixed
+- Home: after Run again now, a brief whose rerun made no issue shows that day's 06:00 issue instead
+  of "No issue yet".
+
+## [0.30.1] - 2026-11-21
+
+### Changed
+- Plain Facts is named **Weekly Digest** on screen, in the email subject and the PDF, and has its
+  own side-menu item below Discover (Enterprise Edition); its pages move to `/weekly-digest`. The
+  Home button is gone; Morning Brief's link and the Settings › Delivery switch stay.
+
+### Fixed
+- The licence signer now accepts `plain_facts`, so a licence can name the Weekly Digest; a test
+  checks that every enterprise feature can be signed.
+
 ## [0.30.0] - 2026-11-20
 
 ### Added

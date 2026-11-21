@@ -59,7 +59,7 @@ def test_a_goal_at_risk_is_proposed_once_with_computed_figures(world):
         (p,) = proposals.goal(s, RUN, spec, [_goal_result(), {"slots": {}, "reason": None}])
         assert p.kind == "goal" and p.fingerprint == "goal:fy27_net_revenue:FY27"
         assert p.text == "Net revenue FY27 target ₹60 Cr → tracking ₹57.2 Cr"
-        assert p.evidence["line"].startswith("Mark as at risk · short by ₹2.8 Cr · 80% band ₹55.9")
+        assert p.evidence["line"].startswith("Mark as at risk · short by ₹2.81 Cr · 80% band ₹55.9")
         assert p.evidence["confidence"] == "high"  # the whole band is under the target
         assert proposals.goal(s, RUN, spec, [_goal_result()]) == []  # never proposed twice
         inside = _goal_result(goal="other", upper="610000000.00")

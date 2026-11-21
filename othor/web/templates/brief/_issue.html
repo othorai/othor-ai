@@ -8,7 +8,7 @@
 {% from "components/blocks.html" import banner, empty_state, watching, ask_today, goal_line %}
 {% from "components/buttons.html" import button, link, info_list %}
 {% from "components/tags.html" import state_tag, change_tag %}
-{% from "components/brief.html" import brief_tile, brief_item, brief_extra, still_open, since_week %}
+{% from "components/brief.html" import brief_tile, brief_item, brief_extra, still_open, since_week, quiet_updates %}
 {% from "components/weather.html" import weather_banner %}
 {% from "components/ahead.html" import whats_ahead %}
 {# M15.7c: a Weekly or Monthly issue speaks for its period ("Since last week") #}
@@ -64,7 +64,7 @@
 
   {% if b.quiet %}
     {% call el("div", "quiet-card") %}
-      {% call el("p", "t") %}Nothing needs you today.{% endcall %}
+      {% if b.get("ordinary") %}{{ quiet_updates(b["ordinary"]) }}{% else %}{% call el("p", "t") %}Nothing significant came up.{% endcall %}{% endif %}
       <p>{{ fmt.num(b.tests) }} tests{% if detectors %} · {{ fmt.num(detectors) }} detectors{% endif %} · nothing new in this brief’s scope.{% if bv.more_in_sweep %} Sweep has {% if readonly %}{{ fmt.num(bv.more_in_sweep) }} finding{{ "s" if bv.more_in_sweep != 1 else "" }}{% else %}{% call el("a", "link-u", attrs={"href": "/sweep"}) %}{{ fmt.num(bv.more_in_sweep) }} finding{{ "s" if bv.more_in_sweep != 1 else "" }}{% endcall %}{% endif %} outside this brief.{% endif %}</p>
       {# a brief with picked numbers, nothing new on them tonight (Option A, owner 20 Nov 2026) #}
       {% if b.focus_note %}<p>{{ b.focus_note }}</p>{% endif %}

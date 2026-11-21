@@ -37,13 +37,47 @@ def weather_1nov() -> dict[str, Any]:
 
 def quiet_from(body: dict[str, Any]) -> dict[str, Any]:
     """The 1 Nov issue as a quiet day (4d0/10q): no items, no Ask today; the run's own words for
-    a quiet issue (othor.briefs.assemble)."""
+    a quiet issue (othor.briefs.assemble), with the updates from its numbers (Morning Brief 2.4)
+    as othor.briefs.ordinary writes them, on the 1 Nov tiles' own figures."""
     q = copy.deepcopy(body)
     q.update(
         quiet=True,
         items=[],
         ask=None,
-        title="Nothing needs you today.",
+        title="Nothing significant came up.",
+        ordinary={
+            "intro": "Here are some updates from your numbers",
+            "lines": [
+                {
+                    "kind": "mover",
+                    "metric": "gross_margin_per_metre",
+                    "text": "Gross margin per metre ₹52.9 in the week of 19 Oct, up 2% on the "
+                    "week before, within its usual range, near the top.",
+                    "window": ["2026-10-12", "2026-10-19"],
+                },
+                {
+                    "kind": "parts",
+                    "metric": "gross_margin_per_metre",
+                    "text": "Gross margin per metre by region: West up ₹1.2 and North down ₹0.4 "
+                    "on the week before.",
+                    "window": ["2026-10-12", "2026-10-19"],
+                },
+                {
+                    "kind": "mover",
+                    "metric": "dso",
+                    "text": "DSO 46 d in Oct, about the same as Sep, within its usual range, "
+                    "near the middle.",
+                    "window": ["2026-09-01", "2026-10-01"],
+                },
+                {
+                    "kind": "goal",
+                    "metric": "dso",
+                    "text": "DSO: heading for 44 d against the 45 d goal by 31 Mar, 61% likely "
+                    "to reach it.",
+                    "window": ["2027-03-31"],
+                },
+            ],
+        },
         line=f"{body['tests']} tests found nothing above the ₹5.0 L floor in this brief’s scope.",
         situation="",
         since={"new": 0, "worse": 0, "better": 0, "open": 0, "resolved": 0},

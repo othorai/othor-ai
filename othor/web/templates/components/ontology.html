@@ -106,3 +106,47 @@
   </details>
 </div>
 {%- endmacro %}
+
+{# Business Model 2.4 · L1 (owner, 20 Nov 2026): the level card at the top of the Business Model
+   page: "Level 2 of 3 · 4 things left to reach full potential", three segments, and the checklist
+   folded under it (opens in place). Each missing item says what it unlocks in one line and the one
+   sentence to say in the chat (pre-filled in the chat box); counts are code's (levels.check). Ready
+   drafts Othor AI found in the files and sources (L3) show under their item with one Apply. #}
+{% macro level_card(lv, csrf="", example=None, back="/ontology") -%}
+{% from "components/buttons.html" import button %}
+{% from "components/panels.html" import draft_note %}
+<section class="level-card" aria-label="Business Model level">
+  <details class="level"{% if lv.open %} open{% endif %}>
+    <summary class="level-head">
+      <span class="level-t"><span class="level-title"><b>{{ lv.title }}</b><span class="level-line">{{ lv.line }}</span></span>
+      <span class="level-bar" role="img" aria-label="{{ lv.title }}">{% for on in lv.segs %}<i class="{{ 'on' if on else '' }}"></i>{% endfor %}</span></span>
+      <span class="level-open link">{{ "See the checklist" if lv.left else "See what each level gives" }}</span>
+    </summary>
+    <div class="level-body">
+      {% for g in lv.groups %}
+      <div class="level-group{{ ' done' if g.done else '' }}">
+        <p class="level-g"><b>{{ g.level }} · {{ g.name }}</b><span class="level-gives">{{ g.gives }}</span><span class="level-c">{{ g.count }}</span></p>
+        <ul class="level-items">
+          {% for i in g.rows %}
+          <li class="level-item{{ ' done' if i.done else '' }}">
+            <span class="level-tick" aria-hidden="true">{% if i.done %}✓{% endif %}</span>
+            <div class="level-text">
+              <p class="level-label">{{ i.label }}{% if i.have %}<span class="level-have"> · {{ i.have }}</span>{% endif %}{% if i.done %}<span class="sr-only"> · done</span>{% endif %}</p>
+              {% if not i.done %}<p class="level-unlocks">{{ i.unlocks }}</p>
+              {% if i.say %}<p class="level-say">“{{ i.say }}”</p>{% endif %}
+              {% for d in i.drafts %}<div class="level-draft"><p><span class="oc-badge pick">Found</span> {{ d.text }}</p>{% if d.why %}<p class="level-unlocks">{{ d.why }}</p>{% endif %}<span class="flex items-center gap-8"><form method="post" action="/othor/apply" data-inplace><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="subject" value="{{ d.subject }}"><input type="hidden" name="back" value="{{ back }}">{{ button("Apply", "primary", size="sm", type="submit", attrs={"data-busy": "Applying…"}) }}</form>{{ button("See it", size="sm", href="/ontology?panel=othor&subject=" ~ d.subject, attrs={"data-panel": true}) }}</span></div>{% endfor %}
+              {% endif %}
+            </div>
+            {% if not i.done %}{{ button(i.action, size="sm", href=i.url, attrs=({} if i.href else {"data-panel": true})) }}{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+      {% if lv.can_find %}<form class="level-find" method="post" action="/ontology/level/find" data-inplace><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="{{ back }}">{{ button("Look in my files and sources", size="sm", type="submit", attrs={"data-busy": "Looking…"}) }}</form>{% endif %}
+      {% if lv.can_find or lv.has_drafts %}{{ draft_note("level-draft-note") }}{% endif %}
+      {% if example %}<p class="level-foot"><a class="link" href="{{ example }}" download>See a complete Business Model</a><span class="level-unlocks"> · a sample company’s, as a PDF</span></p>{% endif %}
+    </div>
+  </details>
+</section>
+{%- endmacro %}

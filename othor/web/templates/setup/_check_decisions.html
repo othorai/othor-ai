@@ -6,11 +6,13 @@
 {% from "components/home.html" import qp_steps, qp_pick, qp_nav %}
 {% from "components/brief.html" import nb_busy %}
 {% from "components/ontology.html" import record_card %}
+{% from "components/othor_chat.html" import oc_ai, oc_user, oc_list, oc_one, oc_actions, oc_composer %}
 {# Check 2 of 3 · Decisions (#32): one decision per screen, in the questions panel's style
    (docs/plans/questions-panel.md): "Decision 2 of 6 · 1 decided" and its segments, Back · Next
    (Next only moves; Done on the last closes the panel). Each answer is saved as it's made, in
    place, and the panel moves on to the next one still open; set-aside ones count as decided.
-   No option is preselected (owner, 8 Nov); the values are computed. #}
+   Without Othor AI's suggestion no option is preselected (owner, 8 Nov); with one (Chat 1.3) it
+   is chosen, with why, Apply and Suggest edits. The values are computed. #}
 {% set p = panel.view %}
 {% set here = "/setup/metrics?panel=decisions&d=" ~ (p.x.key if not p.empty else "") %}
 {% set back_next = "/setup/metrics?panel=decisions" %}
@@ -35,6 +37,36 @@
     {% call record_card(None, "", x.done, [x.note] if x.note else [], kicker="Set aside" if x.kind == "set_aside" else "You decided", title=None) %}
       {% if x.change %}{% call action_form("/setup/metrics/" ~ x.key ~ "/reopen", csrf_token) %}{{ button(x.change, size="sm", type="submit") }}{% endcall %}{% endif %}
     {% endcall %}
+  {% elif x.kind in ("conflict", "changed") and x.pick and not drafting %}
+  {# Chat 1.3 (owner, 20 Nov 2026): Othor AI's suggested answer already chosen, why in one line,
+     Apply and Suggest edits as in the one chat. The values are computed; the owner's Apply is the
+     decision (theirs, so no draft note). #}
+  {% if x.kind == "conflict" %}
+  {% call el("div", layout="grid grid-cols-1 md:grid-cols-2 gap-8") %}
+    {% for o in x.options if o.value %}{% call el("div", "option") %}{% call el("p", "hint") %}{{ o.label }}{% endcall %}{% call el("p", "option-v") %}{{ o.value }}{% endcall %}{% call el("p", "hint") %}{{ o.sub }}{% endcall %}{% endcall %}{% endfor %}
+  {% endcall %}
+  {% endif %}
+  {% call oc_list() %}{% call oc_one(1, "", x.badge, "pick" if x.badge == "My suggestion" else "changed") %}
+    {% call el("p", "strong") %}{{ x.pick.label }}{% if x.pick.value %} · {{ x.pick.value }}{% endif %}{% endcall %}
+    {% if x.kind == "changed" and x.pick.where %}{% call el("p", "hint") %}{{ x.pick.where }}{% endcall %}{% endif %}
+    {% if x.pick.why %}{% call el("p", "oc-note") %}{{ x.pick.why }}{% endcall %}{% endif %}
+  {% endcall %}{% endcall %}
+  {% for m in x.messages %}
+    {% if m.role == "user" %}{{ oc_user(m.text) }}
+    {% elif m.role == "ai" %}{% call oc_ai() %}{% call el("p") %}{{ m.text }}{% endcall %}{% endcall %}
+    {% else %}{% call el("p", "hint") %}{{ m.text }}{% endcall %}{% endif %}
+  {% endfor %}
+  {% call oc_actions() %}
+    {% call action_form("/setup/metrics/decide", csrf_token, kind="contents") %}
+      <input type="hidden" name="d" value="{{ x.key }}">
+      <input type="hidden" name="{{ ('choice:' if x.kind == 'conflict' else 'changed:') ~ x.key }}" value="{{ x.pick.id }}">
+      {{ button("Apply", "primary", type="submit", attrs={"data-busy": "Applying…"}) }}
+    {% endcall %}
+    {% if not x.editing %}{{ button("Suggest edits", href=x.edit_url) }}{% endif %}
+  {% endcall %}
+  {% if x.editing and x.kind == "conflict" %}
+    {{ oc_composer("/setup/metrics/" ~ x.key ~ "/chat", csrf_token, hidden=[("back", here)], placeholder="Tell me which one, or ask about the two", enabled=x.model, off=x.not_available) }}
+  {% endif %}
   {% elif x.kind in ("conflict", "changed") %}
   {% call action_form("/setup/metrics/decide", csrf_token, "qp-form", "flex flex-col gap-16") %}
     <input type="hidden" name="d" value="{{ x.key }}">

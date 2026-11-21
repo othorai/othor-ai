@@ -101,7 +101,7 @@
 {% call action_form("/othor/reply", csrf, kind=("composer in-thread" if inline else "composer")) %}
     <input type="hidden" name="subject" value="{{ p.subject }}"><input type="hidden" name="back" value="{{ p.here }}">
     <label class="sr-only" for="oc-reply">Reply to Othor AI</label>
-    <textarea class="input" id="oc-reply" name="text" rows="2" autofocus placeholder="{% if p.placeholder and not p.has_set %}{{ p.placeholder }}{% elif p.is_proposal %}Ask about this proposal{% elif p.is_change %}{{ 'Tell me what to change' if p.has_set else 'What changed in the business?' }}{% elif p.applied_once %}Reply to change any answer…{% elif p.has_set %}Tell me what to change{% else %}Ask about your numbers{% endif %}"></textarea>
+    <textarea class="input" id="oc-reply" name="text" rows="2" autofocus placeholder="{% if p.placeholder and not p.has_set %}{{ p.placeholder }}{% elif p.is_proposal %}Ask about this proposal{% elif p.is_change %}{{ 'Tell me what to change' if p.has_set else 'What changed in the business?' }}{% elif p.applied_once %}Reply to change any answer…{% elif p.has_set %}Tell me what to change{% else %}Ask about your numbers{% endif %}">{{ p.prefill or "" }}</textarea>
     <div class="flex items-center justify-end gap-8">{{ button("Send", "primary", type="submit", attrs={"data-busy": "Thinking…"}) }}</div>
 {% endcall %}
 {%- endmacro %}

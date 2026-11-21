@@ -1,5 +1,6 @@
 {#- SPDX-License-Identifier: Apache-2.0 -#}
-{#- 10q · a quiet day: one line, the headline numbers, Watching and Sweep in one line. -#}
+{#- 10q · a quiet day: one line, the headline numbers, the updates from the numbers (Morning
+    Brief 2.4), Watching and Sweep in one line. -#}
 {% import "_email.html" as e with context %}
 {% call e.page(subject, preheader, company_name, logo_cid) %}{% if wx %}
 {{ e.weather(wx) }}{% endif %}
@@ -14,7 +15,8 @@
 {% endfor %}{% if pair | length == 1 %}<td width="50%" style="width:50%;border-top:1px solid #E3E6EA">&nbsp;</td>{% endif %}</tr>{% endfor %}
 </table>{% endcall %}{% endif %}
 {% if words.line %}{% call e.row("16px 24px 0") %}{{ e.para(words.line, size=14) }}{% endcall %}{% endif %}{% if b.get("focus_note") %}
-{% call e.row("8px 24px 0") %}{{ e.para(b["focus_note"], size=14) }}{% endcall %}{% endif %}
+{% call e.row("8px 24px 0") %}{{ e.para(b["focus_note"], size=14) }}{% endcall %}{% endif %}{% if b.get("ordinary") %}
+{% call e.row("18px 24px 0") %}{{ e.updates(b["ordinary"]) }}{% endcall %}{% endif %}
 {% for sec in b.get("sections") or [] %}{% call e.row("18px 24px 0") %}{{ e.extra(sec) }}{% endcall %}{% endfor %}{% if ahead %}{% call e.row("18px 24px 0") %}{{ e.ahead(ahead, ahead_note) }}{% endcall %}{% endif %}
 {% if b.watching %}{% call e.row("12px 24px 0") %}{{ e.watching(b.watching) }}{% endcall %}{% endif %}
 {% if b.ask %}{% call e.row("16px 24px 0") %}{{ e.ask(b.ask) }}{% endcall %}{% endif %}

@@ -45,7 +45,7 @@ def _fill(out: dict, lang: str = "en") -> bp.Report:
 
 def test_the_model_sees_the_computed_figures_and_its_writing_passes():
     inp = bp.model_input(_facts().inputs, "en")
-    assert "−₹0.19 Cr" in inp["briefs"][0]["situation"]
+    assert "−₹19 L" in inp["briefs"][0]["situation"]
     assert inp["stakes"][0] == {"fact": "b1i1", "money": "₹1.4 Cr"}
     r = _fill(_out())
     assert r.guard == "passed"
@@ -69,7 +69,7 @@ def test_the_tiles_stakes_and_forecasts_are_computed_not_written():
         ("₹1.4 Cr", ""),
         ("₹4.59 Cr", "at risk"),
         ("₹3.6 Cr", ""),
-        ("₹5.8 L", "/ month"),
+        ("₹5.84 L", "/ month"),
     ]
     goal = b["forecasts"][0]
     assert (goal["expected"], goal["low"], goal["high"], goal["target"]) == (
@@ -109,7 +109,7 @@ def test_rounded_spelled_or_converted_figures_drop_too():
         assert _fill(out).body["summary"] == [], s
     out["summary"] = [
         "West grew by ₹1.21 Cr.",  # computed as +₹1.21 Cr
-        "The total moved by -₹0.19 Cr.",  # a hyphen-minus for −
+        "The total moved by -₹19 L.",  # a hyphen-minus for −
         "Most likely between ₹54.1 Cr and ₹59.2 Cr.",  # the ends of ₹54.1–59.2 Cr
     ]
     assert len(_fill(out).body["summary"]) == 3

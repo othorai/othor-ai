@@ -82,7 +82,7 @@ def _rows(*weeks: tuple[str, str | None, str | None], metric: str = "net_revenue
 
 STEADY = _rows(
     ("60000000", "55000000", "65000000"),  # likely ₹1 Cr short
-    ("66000000", "58000000", "74000000"),  # could be ₹0.4 Cr short
+    ("66000000", "58000000", "74000000"),  # could be ₹40 L short
     ("75000000", "69000000", "81000000"),  # on plan
     ("70000000", "40000000", "100000000"),  # ±43%: too wide to call
 )
@@ -132,7 +132,7 @@ def test_likely_could_on_plan_and_limited_view() -> None:
     assert _scenes(w) == ["light_rain", "overcast", "clear", "fog"]
     lines = [x["line"] for x in w["outlook"]["weeks"]]
     assert lines[0] == "Net revenue likely ₹1 Cr short of plan"
-    assert lines[1] == "Net revenue could be ₹0.4 Cr short of plan"
+    assert lines[1] == "Net revenue could be ₹40 L short of plan"
     assert lines[2] == "Net revenue on plan: ₹7.5 Cr against ₹7 Cr"
     assert lines[3] == "Too uncertain to call · bands too wide this far out"
     assert [x["label"] for x in w["outlook"]["weeks"]][3] == "Limited view"
@@ -153,7 +153,7 @@ def test_a_large_shortfall_is_money_at_stake() -> None:
 def test_could_reads_the_band_against_the_plan() -> None:
     w = make(ahead=_rows(("66000000", "58000000", "74000000")))
     assert w["outlook"]["ahead_line"] == (
-        "Net revenue this week could be ₹0.4 Cr short of plan "
+        "Net revenue this week could be ₹40 L short of plan "
         "(80% band ₹5.8–7.4 Cr against ₹7 Cr) · in 2 days."
     )
 

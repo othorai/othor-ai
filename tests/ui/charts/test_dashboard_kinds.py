@@ -56,3 +56,48 @@ def test_small_multiples_colour_only_the_one_to_look_at() -> None:
 def test_the_forecast_band_reaches_past_the_last_actual() -> None:
     svg = render_svg(S["line_ahead"], (760, 260))
     assert ">Jan<" in svg  # the axis runs to the band's end, three months ahead
+
+
+# Forecasts 1.0 (F3): the line's horizon option ------------------------------------------------
+
+
+def test_horizon_round_trips_and_draws_png() -> None:
+    spec = S["line_horizon"]
+    again = ChartSpec.from_json(spec.to_json())
+    assert again == spec and render_svg(again) == render_svg(spec)
+    assert render_png(spec)[:4] == b"\x89PNG"
+
+
+def test_horizon_marks_where_it_can_see_and_runs_the_axis_to_its_end() -> None:
+    svg = render_svg(S["line_horizon"], (760, 260))
+    assert ">can see to here · Nov<" in svg and ">today<" in svg
+    assert ">Mar<" in svg  # the axis runs past the band to the horizon's end (the year end)
+    assert ">Assumption<" in svg  # the zone past the stored periods, shaded and named
+    # the range past where it can see is drawn lighter than the likely range before it
+    fills = re.findall(rf'fill="{ROLE["positive"]}" fill-opacity="([\d.]+)"', svg)
+    assert fills[:2] == ["0.22", "0.1"]
+
+
+def test_horizon_needs_its_date() -> None:
+    from othor.charts.spec import Annotation, SpecError
+
+    with pytest.raises(SpecError):
+        ChartSpec(
+            id="x",
+            kind="line",
+            title="x",
+            alt_text="x",
+            annotations=(Annotation("horizon", label="can see to here"),),
+        )
+
+
+def test_a_line_without_a_horizon_is_drawn_as_before() -> None:
+    import dataclasses
+
+    plain = dataclasses.replace(
+        S["line_horizon"],
+        annotations=tuple(a for a in S["line_horizon"].annotations if a.type != "horizon"),
+    )
+    svg = render_svg(plain, (760, 260))
+    assert "can see to here" not in svg
+    assert re.findall(rf'fill="{ROLE["positive"]}" fill-opacity="([\d.]+)"', svg)[:1] == ["0.22"]

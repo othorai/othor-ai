@@ -93,9 +93,27 @@ def nav_items(
     out: list[tuple[str, str, str, str, str | None, int]] = [
         (k, label, href, k, None, 0) for k, label, href in core
     ]
-    for n in plugins.nav(group):
-        at = next((i + 1 for i, x in enumerate(out) if x[0] == n.after), len(out))
-        out.insert(at, (n.key, n.label, n.href, n.icon, n.tag, _badge(ctx, n)))
+    # Forecasts 1.0 (21 Nov 2026): an item may follow another plug-in's item (Discover after Look
+    # back), so items wait until what they follow is placed; two after the same item keep the
+    # plug-ins' order (Forecasts, then Look back, after Summary). What never appears goes last.
+    anchor: dict[str, str | None] = {}
+    pending = list(plugins.nav(group))
+    while pending:
+        placed = False
+        for n in list(pending):
+            keys = [x[0] for x in out]
+            if n.after is not None and n.after not in keys:
+                continue
+            at = keys.index(n.after) + 1 if n.after is not None else len(out)
+            while at < len(out) and n.after is not None and anchor.get(out[at][0]) == n.after:
+                at += 1
+            out.insert(at, (n.key, n.label, n.href, n.icon, n.tag, _badge(ctx, n)))
+            anchor[n.key] = n.after
+            pending.remove(n)
+            placed = True
+        if not placed:
+            out += [(n.key, n.label, n.href, n.icon, n.tag, _badge(ctx, n)) for n in pending]
+            break
     return out
 
 

@@ -15,7 +15,7 @@ from othor.ai.gateway import ProviderReply
 EN = {
     "one_line": "October looked flat, but South lost ₹1.4 Cr while West quietly made most of it back.",
     "summary": [
-        "The total moved by only −₹0.19 Cr, which is why the fall in South is easy to miss. Three accounts carry 72% of it, and none of them has invoiced since 9 Oct.",
+        "The total moved by only −₹19 L, which is why the fall in South is easy to miss. Three accounts carry 72% of it, and none of them has invoiced since 9 Oct.",
         "Underneath, dispatch at Coimbatore is getting less predictable, and 14 customers you still count as active have gone quiet.",
         "If nothing changes, net revenue ends the year near ₹56.7 Cr, short of the ₹60 Cr goal.",
     ],
@@ -66,7 +66,7 @@ EN = {
 HI = {
     "one_line": "अक्टूबर सपाट दिखा, पर दक्षिण में ₹1.4 Cr की गिरावट आई और पश्चिम ने चुपचाप उसकी ज़्यादातर भरपाई कर दी।",
     "summary": [
-        "कुल आंकड़ा सिर्फ़ −₹0.19 Cr बदला, इसीलिए दक्षिण की गिरावट आसानी से छूट जाती है। तीन खाते इसका 72% हिस्सा हैं, और 9 Oct के बाद उनमें से किसी ने बिल नहीं किया।",
+        "कुल आंकड़ा सिर्फ़ −₹19 L बदला, इसीलिए दक्षिण की गिरावट आसानी से छूट जाती है। तीन खाते इसका 72% हिस्सा हैं, और 9 Oct के बाद उनमें से किसी ने बिल नहीं किया।",
         "नीचे दो चीज़ें बढ़ रही हैं: कोयंबटूर में डिस्पैच का समय अनिश्चित हो रहा है, और 14 ग्राहक जिन्हें आप सक्रिय मानते हैं, चुप हो गए हैं।",
         "अगर कुछ नहीं बदला तो साल ₹56.7 Cr के आसपास ख़त्म होगा, ₹60 Cr के लक्ष्य से कम।",
     ],

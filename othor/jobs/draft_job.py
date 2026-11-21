@@ -84,6 +84,13 @@ def run(ctx: WorkerContext, job: Job) -> None:
             _discover(s, inp, creds, log, source_ids, today)
         _values(ctx, s, cid, inp, creds, log, source_ids, company_settings(company), today)
         _conflicts(ctx, s, cid)
+        s.commit()
+    # Chat 1.3: Othor AI's suggested answer to each open decision (none without a model)
+    if available and ctx.gateway is not None:
+        from othor.setup import decision_suggest
+
+        decision_suggest.suggest_all(ctx.sf, ctx.gateway, cid)
+    with ctx.sf() as s, tenant_scope(cid):
         meta = _meta(s, state="done")
         record_event(
             s,

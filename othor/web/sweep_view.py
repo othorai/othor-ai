@@ -451,7 +451,11 @@ def detector_rows(rv: RunView, s: Session | None = None) -> list[dict[str, Any]]
     early = first_days(rv, s) if s is not None else None
     full_from = early["full_from"] if early else None
     out = []
-    for name in shipped():
+    core_names = shipped()
+    # a plug-in's check (External Signals' Outside) joins the list on a night it ran (owner,
+    # 21 Nov 2026: "make it 12 including external signals")
+    names = core_names + sorted(n for n in cov if n not in core_names)
+    for name in names:
         c = cov.get(name)
         if c is None:
             continue
@@ -483,17 +487,43 @@ def detector_rows(rv: RunView, s: Session | None = None) -> list[dict[str, Any]]
             {
                 "key": name,
                 "label": sweep_text.LABELS.get(name, name),
-                "short": sweep_text.SHORT.get(name, sweep_text.LABELS.get(name, name)),
-                "catches": sweep_text.CATCHES.get(name, ""),
+                "short": sweep_text.short_of(name),
+                "catches": sweep_text.CATCHES.get(name)
+                or (sweep_text.OUTSIDE_WORDS["catches"] if name == sweep_text.OUTSIDE else ""),
                 "status": status,
                 "kind": STATUS_KIND[c["status"]],
                 "covers": covers,
                 "missing": missing,
                 "action": action,
                 "result": sweep_text.checked(c, _new(rv, name)),
+                "plugin": name not in core_names,
             }
         )
+    if sweep_text.OUTSIDE not in names:  # always 12: Outside grey where it isn't on (21 Nov)
+        out.append(_outside_off())
     return out
+
+
+def _outside_off() -> dict[str, Any]:
+    """External Signals' check on a night it didn't run: with the feature, it waits for a link;
+    without it, it says where it comes from."""
+    on = sweep_text.has_words(sweep_text.OUTSIDE)
+    name = sweep_text.OUTSIDE
+    return {
+        "key": name,
+        "label": sweep_text.LABELS.get(name) or sweep_text.OUTSIDE_WORDS["label"],
+        "short": sweep_text.short_of(name) if on else sweep_text.OUTSIDE_WORDS["short"],
+        "catches": sweep_text.OUTSIDE_WORDS["catches"],
+        "status": "Not on",
+        "kind": "off",
+        "covers": "",
+        "missing": "Needs an outside number linked to one of yours"
+        if on
+        else "Comes with External Signals (Enterprise Edition)",
+        "action": ("Link one →", "/signals") if on else None,
+        "result": "",
+        "plugin": True,
+    }
 
 
 def strip(rv: RunView, s: Session) -> dict[str, Any]:
@@ -502,7 +532,7 @@ def strip(rv: RunView, s: Session) -> dict[str, Any]:
     suppressed is the Suppressed tab's count."""
     rows = detector_rows(rv, s)
     asked = open_needs(s)
-    unlock = sum(1 for r in rows if r["action"])
+    unlock = sum(1 for r in rows if r["action"] and not r.get("plugin"))
     return {
         "total": len(rows),
         "active": sum(1 for r in rows if r["kind"] != "off"),
@@ -515,9 +545,9 @@ def strip(rv: RunView, s: Session) -> dict[str, Any]:
 
 
 def strip_info(st: dict[str, Any]) -> str:
-    """The strip's (i): what a detector is, what inactive means, and what answering would do."""
+    """The checks' (i): what a check is, what couldn't run means, and what answering would do."""
     text = (
-        "Each detector is one way Sweep tests your numbers every night. Inactive means it could "
+        "Each check is one way Sweep tests your numbers every night. Couldn’t run means it could "
         "not run tonight: it needs something from you (a customer list, two numbers that move "
         "together, an approval limit) or more history. Suppressed findings matched a pattern "
         "you told Othor AI about, or you snoozed or muted them."

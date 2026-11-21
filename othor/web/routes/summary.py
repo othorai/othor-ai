@@ -36,13 +36,20 @@ def summary(
     compare: str | None = None,
     show: str | None = None,
     split: str | None = None,
+    rows: str | None = None,
     all: str | None = None,
     o: Owner = Depends(signed_in),
 ) -> Response:
     svc = services(request)
     query = {
         k: v
-        for k, v in (("window", window), ("compare", compare), ("show", show), ("split", split))
+        for k, v in (
+            ("window", window),
+            ("compare", compare),
+            ("show", show),
+            ("split", split),
+            ("rows", rows),
+        )
         if v is not None
     }
     with svc.sf() as s, tenant_scope(o.company.id):
@@ -130,6 +137,44 @@ def show_area(
             sl.show(s, area, actor=str(o.viewer.id))
         s.commit()
     return _back(all_)
+
+
+@router.post("/summary/merge", dependencies=CSRF)
+def merge(
+    request: Request,
+    keep: str = Form(""),
+    drop: str = Form(""),
+    o: Owner = Depends(signed_in),
+) -> Response:
+    """Summary 1.1: two numbers that give the same values, drafted as Home's same-number
+    proposal when the night hasn't drafted it yet, then opened in the Othor AI panel. A draft
+    only: Apply there keeps one (non-negotiable 6)."""
+    import sqlalchemy as sa
+
+    from othor.engine import proposals
+    from othor.engine.models import Proposal
+    from othor.engine.store import read_points
+    from othor.web.ontology_view import run_data
+
+    svc = services(request)
+    fp = "duplicate:" + ":".join(sorted((keep, drop)))
+    with svc.sf() as s, tenant_scope(o.company.id):
+        found = s.scalars(sa.select(Proposal).where(Proposal.fingerprint == fp)).first()
+        if found is None:
+            rd = run_data(s, svc.settings)
+            if rd.run is None or rd.files is None or not rd.files.series.exists():
+                return toast(request, "Summary has no run to read yet.", 400)
+            pts = read_points(rd.files.series)
+            pairs = proposals.same_numbers(rd.spec, pts)
+            if not any({k, d} == {keep, drop} for k, d, _n, _g in pairs):
+                return toast(request, "These two numbers no longer give the same values.", 400)
+            proposals.duplicate(s, rd.run, rd.spec, pts)
+            found = s.scalars(sa.select(Proposal).where(Proposal.fingerprint == fp)).first()
+            s.commit()
+        if found is None or found.status != "open":
+            return toast(request, "This one is already decided on Home.", 400)
+        pid = found.id
+    return RedirectResponse(f"/summary?panel=othor&subject=proposal:{pid}", 303)
 
 
 @router.post("/summary/lead", dependencies=CSRF)

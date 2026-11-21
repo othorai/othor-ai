@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from othor.briefs import service
 from othor.briefs.models import Brief, BriefIssue
+from othor.briefs.words import card_title
 from othor.briefs.words import shown as shown_words
 from othor.charts.spec import ChartSpec
 from othor.core import fmt
@@ -66,7 +67,8 @@ def card_issue(
     s: Session, brief: Brief, body: dict[str, Any], run: Run | None
 ) -> BriefIssue | None:
     """The issue a brief's card shows: tonight's, or for a Weekly or Monthly brief on a night it
-    isn't made, its latest (M15.7c)."""
+    isn't made, its latest (M15.7c). A rerun with no issue of its own for the brief shows that
+    day's latest issue (21 Nov 2026: the card said "No issue yet" beside the 06:00 issue)."""
     from othor.briefs.schedule import PERIODIC, kind
 
     if run is None:
@@ -74,6 +76,13 @@ def card_issue(
     got = s.scalars(
         sa.select(BriefIssue).where(BriefIssue.brief_id == brief.id, BriefIssue.run_id == run.id)
     ).first()
+    if got is None and run.kind == "rerun":
+        got = s.scalars(
+            sa.select(BriefIssue)
+            .where(BriefIssue.brief_id == brief.id, BriefIssue.date == run.run_date)
+            .order_by(BriefIssue.created_at.desc())
+            .limit(1)
+        ).first()
     if got is None and kind(body) in PERIODIC:
         got = s.scalars(
             sa.select(BriefIssue)
@@ -369,7 +378,7 @@ def listing(s: Session, settings: Settings) -> dict[str, Any]:
                 "id": b.id,
                 "name": b.name,
                 "default": b.is_default,
-                "title": issue.title if issue else "",
+                "title": card_title(issue.body, issue.title) if issue else "",
                 "item_count": len(issue.body.get("items") or []) if issue else 0,
                 "quiet": bool(issue and issue.quiet),
                 "scope": scope_text(compiled, body),
@@ -716,7 +725,8 @@ def edit_view(
     body = edit.clean(draft if draft is not None else saved, spec, options)
     context = read_json(files.inputs / "context.json") or {}
     record = (context.get("forecasts") or {}).get("of_record") or []
-    goals_now = (read_json(files.outputs / "forecasts.json") or {}).get("goals") or []
+    fc = read_json(files.outputs / "forecasts.json") or {}
+    goals_now = fc.get("goals_shown") or fc.get("goals") or []  # as the brief reads them
     rows = []
     for m in body["headline"]:
         t = tile(spec, m, list(by_metric.get(m, ())), record, goals_now, run.run_date)

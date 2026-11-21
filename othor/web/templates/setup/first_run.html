@@ -3,6 +3,7 @@
 {% from "components/ui.html" import el %}
 {% from "components/blocks.html" import empty_state %}
 {% from "components/buttons.html" import button %}
+{% from "components/ontology.html" import level_card %}
 {# Step 6 · First run (M11c, owner's O3, 8 Nov): one card with the run's five stages, Run details
    folded, "Open the brief" when the brief is written. No preview. #}
 {% block title %}First run · Set up {{ company.name }}{% endblock %}
@@ -10,6 +11,8 @@
 {% block main %}
 {% if view %}
 {% include "setup/_first_run.html" %}
+{# 2.4 L5: onboarding ends on the Business Model's level, the next items offered #}
+{% if levels %}{% call el("div", layout="mt-32") %}{{ level_card(levels, csrf_token, back="/setup/first-run") }}{% endcall %}{% endif %}
 {% else %}
 <h1>Your Business Model is confirmed.</h1>
 {% call el("div", "card dashed", layout="mt-24") %}{{ empty_state(None, "Your first run is tonight", "It runs at " ~ fmt.clock(company.run_time) ~ ".") }}{% endcall %}

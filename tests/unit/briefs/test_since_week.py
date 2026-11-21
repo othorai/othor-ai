@@ -155,7 +155,8 @@ def test_scope_leaves_out_other_metrics() -> None:
     assert got is not None and got["counts"]["open"] == 1 and got["longest"]["fingerprint"] == "d"
 
 
-def test_the_chart_counts_open_items_and_marks_fixes() -> None:
+def test_the_chart_counts_open_items_and_marks_fixes(monkeypatch) -> None:
+    monkeypatch.setattr(sw, "CHART_MIN", 2)  # three nights here; the real minimum is below
     hist = {
         "nights": [
             night(
@@ -178,6 +179,9 @@ def test_the_chart_counts_open_items_and_marks_fixes() -> None:
     assert [v for _, v in spec.series[0].points] == [2.0, 1.0, 1.0]
     assert [(a.at, a.label) for a in spec.annotations] == [("2026-11-24", "1 fixed")]
     assert got["fixed"][0]["how"] == "Back to normal on 24 Nov"
+    # 21 Nov 2026: fewer than 5 nights draw a flat line that says nothing; no chart then
+    monkeypatch.setattr(sw, "CHART_MIN", 5)
+    assert "chart" not in sw.build(SPEC, BRIEF, D, [f("a")], hist, [])
 
 
 def test_the_chart_is_dated_a_week_apart() -> None:

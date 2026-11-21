@@ -137,7 +137,7 @@ def test_the_line_names_what_is_on_plan():
     }
     assert title.line(tiles, names) == "Gross margin per metre and DSO are on plan."
     assert title.quiet_title(tiles[1:], names) == (
-        "Gross margin per metre and DSO are on plan; nothing needs you today."
+        "Gross margin per metre and DSO are on plan; nothing significant came up."
     )
 
 

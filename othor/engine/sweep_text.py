@@ -65,21 +65,8 @@ CATCHES = {
 
 
 def money(v: Any) -> str:
-    """₹ in crore with up to 2 decimals (₹3.6 Cr, ₹0.21 Cr), in lakh below ₹10 L (₹5.8 L); in a
-    USD company, $ in millions with up to 2 decimals ($3.6M, $0.21M), thousands below $1M ($45K),
-    billions from $1B (M15.6: the company's currency, from fmt)."""
-    d = Decimal(str(v))
-    if fmt.is_usd():
-        if abs(d) >= fmt.BILLION:
-            return _tidy(fmt.inr(d, unit="b", decimals=2))
-        if abs(d) < fmt.THOUSAND:
-            return fmt.inr(d, unit="plain", decimals=0)
-        if abs(d) < fmt.MILLION:
-            return _tidy(fmt.inr(d, unit="k", decimals=1))
-        return _tidy(fmt.inr(d, unit="m", decimals=2))
-    if abs(d) < Decimal("1000000"):
-        return fmt.inr(d, unit="l", decimals=1)
-    return _cr(d)
+    """The one money rule (fmt.money, 21 Nov 2026): '₹3.6 Cr', '₹45.3 L', '$1.25M', '$58K'."""
+    return fmt.money(Decimal(str(v)))
 
 
 def _tidy(s: str) -> str:
@@ -609,14 +596,38 @@ _BY = {
 }
 _CORE = frozenset(_BY) | frozenset(LABELS)
 
+# Sweep always shows 12 checks (owner, 21 Nov 2026: "keep it always out of 12… if not activated
+# show it as grey"): External Signals' check has its place even where it isn't on. Its words live
+# here, apart from the core's LABELS, SHORT and CATCHES, which the website lists as the core checks.
+OUTSIDE = "outside_moved"
+OUTSIDE_WORDS = {
+    "label": "Outside signal moved",
+    "short": "External",  # "Ext" on its square (owner, 21 Nov 2026)
+    "catches": "An outside number you linked moving beyond its usual range, and what it meant "
+    "for yours",
+}
+PLUGIN_SHORT: dict[str, str] = {}  # a plug-in check's name on its square (register_words)
 
-def register_words(detector: str, label: str, fn: Any) -> None:
+
+def short_of(detector: str) -> str:
+    """A check's name on Sweep's squares: the owner's short name, a plug-in's own, or its label."""
+    return SHORT.get(detector) or PLUGIN_SHORT.get(detector) or LABELS.get(detector, detector)
+
+
+def has_words(detector: str) -> bool:
+    """Whether a plug-in registered this detector's words (its feature is installed)."""
+    return detector in _BY
+
+
+def register_words(detector: str, label: str, fn: Any, short: str | None = None) -> None:
     """A plug-in detector's words (Advanced Intelligence, External Signals): its label in Sweep
     and a function (finding, spec) -> {title, line, consequence, why_unseen, question}, filled
     from the finding's computed slots only (non-negotiable 1). A core detector can't be taken."""
     if detector in _CORE:
         raise ValueError(f"detector {detector!r} is the core's")
     LABELS[detector] = label
+    if short:  # its name on Sweep's check squares (owner, 21 Nov 2026)
+        PLUGIN_SHORT[detector] = short
     _BY[detector] = fn
 
 

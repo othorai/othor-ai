@@ -60,7 +60,8 @@
     <div class="sum-parts">
       <div class="sum-part head"><span class="sign"></span><span class="sum-sub">Also in {{ r.area }}</span><span class="sum-sub num">Now</span><span class="sum-sub">Change</span></div>
       {% for o in ex.others if o.value_text != "No data yet" %}<div class="sum-part"><span class="sign"></span><span>{{ o.name }}{% if o.note %}<span class="sum-note">{{ o.note }}</span>{% endif %}</span><span class="sum-value">{{ o.value_text }}</span>{{ _change(o) }}</div>{% endfor %}
-      {% for o in ex.others if o.value_text == "No data yet" %}<div class="sum-part"><span class="sign"></span><span>{{ o.name }}{% if o.note %}<span class="sum-note">{{ o.note }}</span>{% endif %}</span><span class="sum-value is-wait">{{ o.value_text }}</span><span></span></div>{% endfor %}
+      {% set empty = ex.others | selectattr("value", "none") | list %}
+      {% if empty %}{{ summary_waiting(empty, inner=True) }}{% endif %}
     </div>
     {% endif %}
     <div class="sum-foot">
@@ -77,6 +78,34 @@
 </details>
 {%- endmacro %}
 
+{# Summary 1.1 (owner, 21 Nov 2026): the summary card, the dashboards' night band (.db-summary).
+   c = summary_card.card(…): kicker, lead, text, cols [{label, lines, info, alikes}], foot. Every
+   sentence is computed; the technical words are behind each column's (i). A look-alike pair opens
+   its draft (Home's same-number proposal) in the Othor AI panel, in place. #}
+{% macro summary_card(c, csrf) -%}
+<section class="db-summary sum-card" aria-label="{{ c.kicker }}">
+  <div class="db-summary-top"><p class="db-summary-k">{{ c.kicker }}</p></div>
+  <p class="db-lead">{{ c.lead }}</p>
+  {% if c.text %}<p class="db-text">{{ c.text }}</p>{% endif %}
+  {% if c.cols %}<div class="db-next">{% for col in c.cols %}<div><p class="sum-card-h"><b>{{ col.label }}</b>{% if col.info %}{{ info(text=col.info, id="sum-card-" ~ loop.index, label="About " ~ col.label | lower) }}{% endif %}</p>
+    {% for line in col.lines %}<p class="sum-card-line">{{ line }}</p>{% endfor %}
+    {% for a in col.alikes or [] %}<p class="sum-card-line">{{ a.text }}</p>
+      {% if a.proposal %}<a class="btn sm db-quiet" href="/summary?panel=othor&amp;subject=proposal:{{ a.proposal }}" data-panel>Merge in the Business Model</a>
+      {% else %}{% call action_form("/summary/merge", csrf, kind="contents") %}<input type="hidden" name="keep" value="{{ a.keep }}"><input type="hidden" name="drop" value="{{ a.drop }}"><button class="btn sm db-quiet" type="submit" data-busy="Drafting…">Merge in the Business Model</button>{% endcall %}{% endif %}
+    {% endfor %}</div>{% endfor %}</div>{% endif %}
+  {% if c.foot %}<p class="db-foot">{% for f in c.foot %}<span>{{ f }}</span>{% endfor %}</p>{% endif %}
+</section>
+{%- endmacro %}
+
+{# Summary 1.1: the numbers with no data yet (and those waiting for a source) folded into one
+   line that opens in place. items: [{name, metric or lead, note}] #}
+{% macro summary_waiting(items, inner=False) -%}
+<details class="sum-wait{{ ' is-inner' if inner else '' }}">
+  <summary class="sum-wait-line"><span>{{ items | length }} number{{ "s" if items | length != 1 else "" }} waiting for data</span><span class="sum-caret" aria-hidden="true"></span></summary>
+  <ul class="sum-wait-list">{% for w in items %}<li><a class="link" href="/ontology?metric={{ w.metric }}">{{ w.name }}</a><span>{{ w.note if w.note and w.note.startswith("Needs") else "No data yet" }}</span></li>{% endfor %}</ul>
+</details>
+{%- endmacro %}
+
 {% macro loop_id(text) -%}{{ text | lower | replace(" ", "-") | replace("&", "and") }}{%- endmacro %}
 
 {% macro summary_body(sm, csrf) -%}
@@ -86,6 +115,7 @@
 {% elif sm.empty == "no_numbers" %}
   <div class="card board">{{ empty_state(None, "No numbers to summarise yet", "Confirm your metrics in the Business Model; they show here after the next nightly run.", "Open the Business Model", "/ontology") }}</div>
 {% else %}
+  {% if sm.card %}{{ summary_card(sm.card, csrf) }}{% endif %}
   {% if sm.proposal_open %}<p class="sum-hint">Othor AI has drafted areas for your numbers. <a class="link" href="/home#proposals">Review them on Home</a></p>{% endif %}
   {% if sm.view.rows == "numbers" %}
   {# Every number (owner, 14 Nov 2026): a row per number under its area's heading, all shown #}
@@ -105,6 +135,7 @@
   {% if sm.view.rows != "numbers" and not sm.all and sm.rows | length > sm.shown_first %}
   <a class="sum-more" href="/summary?all=1" hx-get="/summary?all=1" hx-target="#summary-body" hx-select="#summary-body" hx-swap="outerHTML" hx-push-url="true">Show all · {{ sm.rows | length - sm.shown_first }} more</a>
   {% endif %}
+  {% if sm.waiting %}{{ summary_waiting(sm.waiting) }}{% endif %}
   {% set hn = sm.hidden_numbers if sm.view.rows == "numbers" else [] %}
   {% if sm.hidden or hn %}
   <div class="sum-hidden"><span>Hidden · {{ (sm.hidden | length) + (hn | length) }}</span>

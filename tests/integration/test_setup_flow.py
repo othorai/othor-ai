@@ -169,7 +169,7 @@ def test_model_drafts_are_computed_and_checked(
         calls = s.scalars(sa.select(ModelCall)).all()
         assert [c.prompt_id for c in calls] == ["draft_metrics"] or {
             c.prompt_id for c in calls
-        } <= {"draft_metrics", "read_upload"}
+        } <= {"draft_metrics", "read_upload", "decision_suggest"}  # Chat 1.3: a pick to apply
 
 
 def test_redraft_leaves_confirmed_metrics_byte_identical(

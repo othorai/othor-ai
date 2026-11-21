@@ -181,7 +181,7 @@ def test_a_bounce_marks_the_recipient_and_skips_them_after(world):
     [
         ("simple", False, "What needs"),  # 8b
         ("full", False, "Needs attention · 4"),  # 8b1
-        ("full", True, "Nothing needs you today."),  # 10q whatever the format
+        ("full", True, "Here are some updates from your numbers"),  # 10q whatever the format
     ],
 )
 def test_the_format_picks_the_email(world, fmt, quiet, marker):

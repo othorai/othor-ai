@@ -1,0 +1,34 @@
+{
+  "type": "object",
+  "properties": {
+    "drafts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "item": {"type": "string"},
+          "text": {"type": "string"},
+          "why": {"type": "string"},
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "op": {"type": "string"},
+                "type": {"type": "string"},
+                "key": {"type": "string"},
+                "body_json": {"type": "string"}
+              },
+              "required": ["op", "type", "key", "body_json"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["item", "text", "why", "changes"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["drafts"],
+  "additionalProperties": false
+}

@@ -858,7 +858,10 @@ async function inplaceSubmit(form, submitter) {
   if (doc.title) document.title = doc.title;
   // another page of the same area (a new brief's edit page, a replay): its address goes in the
   // history; the same page keeps its address (a refresh shows it without the one-off note)
-  if (landed.pathname !== location.pathname) {
+  // a form marked data-push-url (Forecasts' chips, 21 Nov 2026) keeps its view in the address
+  // too, so a refresh or Back shows the same choice
+  const push = form.hasAttribute("data-push-url") && landed.search !== location.search;
+  if (landed.pathname !== location.pathname || push) {
     history.pushState({ othorPanel: true }, "", landed.pathname + landed.search);
   }
   window.scrollTo(0, y);

@@ -210,16 +210,70 @@ def _band(svg: _Svg, spec: ChartSpec, xs: _Scale, ys: _Scale, *, legend: bool = 
         # What's ahead (owner, 16 Nov 2026): the likely range in the range bar's cyan
         "positive": (ROLE["positive"], "0.22"),
     }.get(b.role, (ROLE["muted"], "0.18"))
-    up = [(xs(_ord(d)), ys(v)) for d, v in b.upper]
-    low = [(xs(_ord(d)), ys(v)) for d, v in reversed(b.lower)]
-    if fmt.charts().smooth and len(up) >= 3 and len(low) >= 3:  # its edges curve as the line does
-        d = _smooth(up) + " L" + _smooth(low)[1:] + " Z"
-        svg.add(f'<path d="{d}" fill="{colour}" fill-opacity="{opacity}"/>')
+    hz = _horizon(spec)
+    if hz is not None and hz.at:
+        # Forecasts 1.0 (F3): the likely range to where it can see, then lighter (an estimate)
+        k = max((i for i, (d, _) in enumerate(b.upper) if d <= hz.at), default=0)
+        parts = [(b.upper[: k + 1], b.lower[: k + 1], opacity), (b.upper[k:], b.lower[k:], "0.1")]
     else:
-        svg.add(f'<polygon points="{_poly(up + low)}" fill="{colour}" fill-opacity="{opacity}"/>')
-    if b.label and spec.kind != "sparkline" and not legend:
+        parts = [(b.upper, b.lower, opacity)]
+    up: list[tuple[float, float]] = []
+    for upper, lower, op in parts:
+        if len(upper) < 2:
+            continue
+        up = [(xs(_ord(d)), ys(v)) for d, v in upper]
+        low = [(xs(_ord(d)), ys(v)) for d, v in reversed(lower)]
+        if fmt.charts().smooth and len(up) >= 3 and len(low) >= 3:  # edges curve as the line does
+            d = _smooth(up) + " L" + _smooth(low)[1:] + " Z"
+            svg.add(f'<path d="{d}" fill="{colour}" fill-opacity="{op}"/>')
+        else:
+            svg.add(f'<polygon points="{_poly(up + low)}" fill="{colour}" fill-opacity="{op}"/>')
+    if b.label and spec.kind != "sparkline" and not legend and up:
         x, y = up[-1]
         svg.label(x - 2, y - 5, b.label, fill=colour, anchor="end")
+
+
+def _horizon(spec: ChartSpec) -> Annotation | None:
+    """Forecasts 1.0 (F3): the line's horizon, if it has one."""
+    return next((a for a in spec.annotations if a.type == "horizon" and a.at), None)
+
+
+def _horizon_dates(spec: ChartSpec, allpts: list[Point]) -> list[Point]:
+    """A horizon's `to` runs the x axis on past the last point: the month ends between and the
+    end itself, so the month row names every month of the assumption zone. Dates only (0.0 is
+    never drawn: the y range is the spec's values)."""
+    hz = _horizon(spec)
+    if hz is None or not hz.to or not allpts:
+        return []
+    last = max(dt.date.fromisoformat(d) for d, _ in allpts)
+    end = dt.date.fromisoformat(hz.to)
+
+    def month_end(d: dt.date) -> dt.date:
+        return (d.replace(day=1) + dt.timedelta(days=32)).replace(day=1) - dt.timedelta(days=1)
+
+    out: list[Point] = []
+    m = month_end(last)
+    while m < end:
+        if m > last:
+            out.append((m.isoformat(), 0.0))
+        m = month_end(m + dt.timedelta(days=1))
+    if end > last:
+        out.append((end.isoformat(), 0.0))
+    return out
+
+
+def _horizon_mark(svg: _Svg, spec: ChartSpec, xs: _Scale, h: int) -> None:
+    """The dashed grey marker where the forecast can see to, labelled under the vlines' row."""
+    hz = _horizon(spec)
+    if hz is None or not hz.at:
+        return
+    x = xs(_ord(hz.at))
+    svg.add(
+        f'<line x1="{_f(x)}" x2="{_f(x)}" y1="10" y2="{h - 20}" stroke="{AXIS_TXT}"'
+        ' stroke-width="1" stroke-dasharray="3 4"/>'
+    )
+    if hz.label:
+        svg.label(x + 4, 26, hz.label, fill=AXIS_TXT)
 
 
 def _spark_bars(spec: ChartSpec, w: int, h: int) -> str:
@@ -330,8 +384,12 @@ def _sparkline(spec: ChartSpec, w: int, h: int) -> str:
     svg = _Svg(w, h, spec)
     pts = list(spec.series[0].points)
     lo, hi = _bounds(spec)
+    # Summary 1.1: a sparkline with marks or turning points keeps room above and below for
+    # their labels; one without them is drawn as before (the same bytes)
+    marked = any(a.type in ("mark", "vline") and a.at for a in spec.annotations)
+    pad = 14 if marked else 3
     xs = _Scale(_ord(pts[0][0]), _ord(pts[-1][0]), 3, w - 4)
-    ys = _Scale(lo, hi, h - 3, 3)
+    ys = _Scale(lo, hi, h - pad, pad)
     _band(svg, spec, xs, ys)
     if spec.y.zero_line:
         _zero(svg, ys(0.0), 0, w)
@@ -342,7 +400,12 @@ def _sparkline(spec: ChartSpec, w: int, h: int) -> str:
             _trace(svg, oxy, ROLE["muted"], _smooth_on(other), "1.5", other.style == "dotted")
     colour = ROLE[spec.series[0].role]
     xy = [(xs(_ord(d)), ys(v)) for d, v in pts]
+    if marked:
+        svg.reserve_line(_sampled(xy) if _smooth_on(spec.series[0]) else xy)
+        _spark_vlines(svg, spec, xs, h)
     _trace(svg, xy, colour, _smooth_on(spec.series[0]), "2")
+    if marked:
+        _marks(svg, spec, xs, ys)
     _hover(svg, spec, spec.series[0], xy, r=4)
     x, y = xy[-1]
     if spec.series[0].role == "edge":
@@ -352,6 +415,20 @@ def _sparkline(spec: ChartSpec, w: int, h: int) -> str:
         )
     svg.add(f'<circle cx="{_f(x)}" cy="{_f(y)}" r="2.5" fill="{colour}"/>')
     return svg.done()
+
+
+def _spark_vlines(svg: _Svg, spec: ChartSpec, xs: _Scale, h: int) -> None:
+    """A sparkline's turning points (Summary 1.1): a thin dashed line and its date at the top."""
+    for a in spec.annotations:
+        if a.type == "vline" and a.at:
+            x = xs(_ord(a.at))
+            c = ROLE[a.role or "muted"]
+            svg.add(
+                f'<line x1="{_f(x)}" x2="{_f(x)}" y1="2" y2="{h - 2}" stroke="{c}"'
+                f' stroke-width="1" stroke-dasharray="3 3"/>'
+            )
+            if a.label:
+                svg.label(x + 4, 10, a.label, size=9, fill=AXIS_TXT, drop=True)
 
 
 def _month_ticks(points: list[Point]) -> list[tuple[int, str]]:
@@ -398,6 +475,7 @@ def _frame(
     allpts = [p for s in spec.series for p in s.points]
     if spec.band:  # 0.29: a forecast band reaches past the last actual (what's ahead)
         allpts += [p for p in spec.band.upper if _ord(p[0]) > max(_ord(d) for d, _ in allpts)]
+    allpts += _horizon_dates(spec, allpts)
     xs = _Scale(min(_ord(d) for d, _ in allpts), max(_ord(d) for d, _ in allpts), left, w - right)
     lo, hi = _bounds(spec)
     ys = _Scale(lo, hi, h - bottom, top)
@@ -489,6 +567,34 @@ def _points(svg: _Svg, spec: ChartSpec, xs: _Scale, ys: _Scale) -> None:
             )
 
 
+def _marks(svg: _Svg, spec: ChartSpec, xs: _Scale, ys: _Scale) -> None:
+    """Summary 1.1: a dot on the line and its label ("High ₹70.2 L"), above the dot in the upper
+    half of the chart, else below it; a label with no free place is left out."""
+    ms = [a for a in spec.annotations if a.type == "mark" and a.at and a.value is not None]
+    if not ms:
+        return
+    lo, hi = _bounds(spec)
+    mid = (lo + hi) / 2
+    for a in ms:
+        x, y = xs(_ord(a.at or "")), ys(float(a.value or 0))
+        svg.add(f'<circle cx="{_f(x)}" cy="{_f(y)}" r="3" fill="{ROLE[a.role or "positive"]}"/>')
+    for a in ms:
+        if not a.label:
+            continue
+        x, y = xs(_ord(a.at or "")), ys(float(a.value or 0))
+        above = float(a.value or 0) >= mid
+        svg.label(
+            x,
+            y - 7 if above else y + 14,
+            a.label,
+            size=10,
+            fill=INK,
+            anchor="middle",
+            weight=500,
+            drop=True,
+        )
+
+
 def _vlines(svg: _Svg, spec: ChartSpec, xs: _Scale, h: int) -> None:
     for a in spec.annotations:
         if a.type == "vline" and a.at:
@@ -530,12 +636,13 @@ def _line(spec: ChartSpec, w: int, h: int, *, step: bool = False, legend: bool =
         lines.append((sr, xy))
         svg.reserve_line(_sampled(xy) if not step and _smooth_on(sr) else xy)
     for a in spec.annotations:  # the marked points keep their space: no label on a breach
-        if a.type == "point" and a.at and a.value is not None:
+        if a.type in ("point", "mark") and a.at and a.value is not None:
             cx, cy = xs(_ord(a.at)), ys(a.value)
             svg.reserve((cx - 5, cy - 5, cx + 5, cy + 5))
     _band(svg, spec, xs, ys, legend=legend)
     _thresholds(svg, spec, ys, w)
     _vlines(svg, spec, xs, h)
+    _horizon_mark(svg, spec, xs, h)
     _region_labels(svg, spec, xs)
     for sr, xy in lines:
         c = ROLE[sr.role]
@@ -568,6 +675,7 @@ def _line(spec: ChartSpec, w: int, h: int, *, step: bool = False, legend: bool =
         if spec.y.zero_line and xy:  # a chart of changes marks where it ends (#65)
             svg.add(f'<circle cx="{_f(xy[-1][0])}" cy="{_f(xy[-1][1])}" r="3" fill="{c}"/>')
     _points(svg, spec, xs, ys)
+    _marks(svg, spec, xs, ys)
     if not step:
         _key_values(svg, spec, lines, h)
         for sr, xy in lines:
@@ -590,6 +698,7 @@ def _key_values(svg: _Svg, spec: ChartSpec, lines: list[tuple[Series, list[XY]]]
     if fmt.charts().values != "key":
         return
     marked = {a.at for a in spec.annotations if a.type == "point" and a.at}
+    labelled = {a.at for a in spec.annotations if a.type == "mark" and a.at}
     if h < 120:  # a small chart: the last value only, with the line's name
         return
     shown = 0
@@ -609,7 +718,12 @@ def _key_values(svg: _Svg, spec: ChartSpec, lines: list[tuple[Series, list[XY]]]
         last_text = _value(vals[last], spec.unit)
         for i in order:
             # the last rides with the name; a high or low that reads the same is left out
-            if i not in picked and i != last and _value(vals[i], spec.unit) != last_text:
+            if (
+                i not in picked
+                and i != last
+                and _value(vals[i], spec.unit) != last_text
+                and pts[i][0] not in labelled  # a mark says it already (Summary 1.1)
+            ):
                 picked.append(i)
         for i in picked[: KEY_PER_LINE - 1]:
             if shown >= KEY_PER_CHART:

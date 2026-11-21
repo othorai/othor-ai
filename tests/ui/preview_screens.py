@@ -100,6 +100,13 @@ def test_preview(night) -> None:  # noqa: F811
             "new-brief": app + "/brief/new",
             "new-brief-review": app + "/brief/new",
             "sweep-ring": app + "/sweep",
+            "usage": app + "/usage",
+            "archive": app + "/brief/archive",
+            # Summary 1.1: every number's line (the week Receivables over 60 days shifted,
+            # marked), and a look-alike pair's merge draft open in the panel
+            "summary-numbers": app + "/summary?rows=numbers",
+            "summary-merge": app
+            + f"/summary?panel=othor&subject=proposal:{_merge_draft(svc, cid)}",
         }
         shots = [(n, u) for n, u in shots if n in only] + [
             (n, extra[n]) for n in only if n in extra
@@ -130,7 +137,7 @@ def test_preview(night) -> None:  # noqa: F811
                     pg.evaluate("document.activeElement && document.activeElement.blur()")
                     pg.wait_for_timeout(300)
                 if name == "sweep-ring":  # #97: the detectors' list, open
-                    pg.click(".det-ring-btn")
+                    pg.click(".det-sq-btn")
                     pg.wait_for_timeout(300)
                 if name == "summary-open":
                     pg.click(".sum-row summary")
@@ -176,3 +183,16 @@ def _ask_sample(env, svc, cid) -> None:  # type: ignore[no-untyped-def]
             "The bigger story is cash: what's still owed is well above what came in."
         )
         s.commit()
+
+
+def _merge_draft(svc, cid) -> str:  # type: ignore[no-untyped-def]
+    """The night's same-number proposal Summary's card opens (Summary 1.1)."""
+    from othor.engine.models import Proposal
+
+    with svc.sf() as s, tenant_scope(cid):
+        pid = s.scalars(
+            sa.select(Proposal.id)
+            .where(Proposal.kind == "duplicate_metric")
+            .order_by(Proposal.fingerprint)
+        ).first()
+    return str(pid or "")

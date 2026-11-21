@@ -99,3 +99,33 @@ def goals(
             }
         )
     return out
+
+
+ON_TRACK = 80  # % likely or more: on track; OFF_TRACK or less: off track; between: at risk
+OFF_TRACK = 20
+
+
+def one_source(v1: list[dict[str, Any]], v2: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The run's goal entries with the v2 forecast's projection, range and likelihood (21 Nov
+    2026: the tile, the goal row and What's ahead said three things from two forecasts). A goal
+    v2 can't call (too wide, too little history) keeps its entry as it was."""
+    by_key = {g["key"]: g for g in v2 if g.get("probability") is not None}
+    out = []
+    for g in v1:
+        n = by_key.get(g["key"])
+        if n is None:
+            out.append(g)
+            continue
+        out.append(
+            {
+                **g,
+                "projection": n["projection"],
+                "lower": n["p10"],
+                "upper": n["p90"],
+                "to_date": n.get("to_date", g.get("to_date")),
+                "short_by": n["short_by"],
+                "probability": n["probability"],
+                "on_track": n["probability"] >= ON_TRACK,
+            }
+        )
+    return out

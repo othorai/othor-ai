@@ -34,6 +34,7 @@ HIDDEN = {
 }
 TEMPLATES = [
     ROOT / "othor" / "web" / "templates" / "components" / "dashboard.html",
+    ROOT / "othor" / "web" / "templates" / "components" / "summary.html",  # Summary 1.1
     ROOT / "othor_ee" / "discover" / "templates" / "discover" / "group.html",
 ]
 

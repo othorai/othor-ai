@@ -234,6 +234,7 @@ def brief_cards(
     from othor.mail.models import Delivery
 
     out = []
+    leads: dict[str, str] = {}  # a lead item's fingerprint -> the first card it leads
     for b in briefs.active(s):
         v = briefs.current(s, b)
         body = v.body if v else {}
@@ -277,7 +278,8 @@ def brief_cards(
             k = sent or n
             to = f"to {fmt.num(k)} recipient{'s' if k != 1 else ''}"
             meta = f"{head} · {'sent' if sent else 'goes out at'} {fmt.clock(time)} {to}"
-            if run is not None and issue.run_id != run.id:  # a Weekly or Monthly brief's last
+            # a Weekly or Monthly brief's last (a same-day issue after a rerun keeps "sent")
+            if run is not None and issue.run_id != run.id and issue.date != run.run_date:
                 meta = f"{head} · {next_line(body, run)}"
             if issue.status == "rerun" and run is not None:  # Run again now (v0.11)
                 from othor.web.again_view import updated_line
@@ -285,12 +287,25 @@ def brief_cards(
                 meta = f"{head} · {updated_line(s, issue, run)}"
                 if sent:
                     meta += f" · sent {to}"
-            title = issue.title
+            from othor.briefs.words import card_title
+
+            title = card_title(issue.body, issue.title)
         # amber dot: a stale tile or a breached watch in this brief's scope
         flag = bool(issue and (issue.body.get("stale") or issue.body.get("watching")))
         from othor.web.brief_view import lead_chart
 
-        chart = lead_chart(issue.body, quiet=issue.quiet) if issue else None
+        body_shown = issue.body if issue else None
+        # Same lead as another card (owner, 21 Nov 2026): a brief whose top item already leads an
+        # earlier card says so and shows its own next item; the brief itself keeps its order
+        items = (issue.body.get("items") or []) if issue else []
+        lead_fp = items[0].get("fingerprint") if items and not issue.quiet else None
+        if lead_fp and lead_fp in leads and len(items) > 1:
+            body_shown = {**issue.body, "items": items[1:]}
+            title = str(items[1].get("title") or title)
+            meta = f"Same lead as {leads[lead_fp]} · {meta}"
+        elif lead_fp:
+            leads.setdefault(lead_fp, b.name)
+        chart = lead_chart(body_shown, quiet=issue.quiet) if issue else None
         # for the morning checklist: due tonight (a Weekly or Monthly brief between its issues
         # isn't), made, sent, or not yet due
         here = issue is not None and run is not None and issue.run_id == run.id

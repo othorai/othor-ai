@@ -16,7 +16,7 @@ from collections.abc import Callable
 from decimal import Decimal
 from typing import Any
 
-from othor.briefs import ahead, consequence, rank, scope, tiles, title, values
+from othor.briefs import ahead, consequence, ordinary, rank, scope, tiles, title, values
 from othor.core import fmt
 from othor.engine.store import Point
 from othor.engine.sweep_text import money, money_tag
@@ -205,6 +205,12 @@ def goal_lines(
             tone = "off" if miss else ("risk" if lo <= t <= hi else "ok")
         elif not g.get("on_track"):
             tone = "off"
+        if g.get("probability") is not None:  # one forecast, one rule (21 Nov 2026)
+            from othor.engine.forecast.goals_v2 import OFF_TRACK, ON_TRACK
+
+            p = int(g["probability"])
+            text += f" · {p}% likely"
+            tone = "ok" if p >= ON_TRACK else ("off" if p <= OFF_TRACK else "risk")
         out.append(
             {"key": g["key"], "text": text, "tone": tone, "on_track": bool(g.get("on_track"))}
         )
@@ -473,8 +479,14 @@ def assemble(
     shown_tiles = ts or _first_metrics(spec, sc, points, record, goals, run_date, stale_as_of)
     quiet = not items
     ask = None
+    pic: dict[str, Any] = {"lines": []}
     if quiet:
         head = title.quiet_title(ts, names)
+        if still_open:  # owner, 21 Nov 2026: say what is still open, the largest first
+            days = {f["fingerprint"]: int(f.get("days_open") or 1) for f in found}
+            head = title.still_open_title(
+                [{"title": r["title"], "day": days.get(r["fingerprint"], 1)} for r in still_open]
+            )
         floor = money(spec.get("detectors", {}).get("materiality_inr", "500000"))
         on_plan = bool(ts) and all(t["comparison"]["text"].startswith(title.ON_PLAN) for t in ts)
         lead = ""
@@ -486,6 +498,17 @@ def assemble(
             )
         sub = lead + (
             f"{fmt.num(tests)} tests found nothing above the {floor} floor in this brief’s scope."
+        )
+        # Morning Brief 2.4 (owner, 20 Nov 2026): the ordinary picture of the brief's own numbers,
+        # picked and computed by code from the run's points; updates, never findings
+        watched = set(version.get("goals") or [])
+        pic = ordinary.picture(
+            spec,
+            [str(t["metric"]) for t in shown_tiles if t.get("metric")],
+            points,
+            record=record,
+            goals=[g for g in goals if g.get("key") in watched],
+            stale=stale,
         )
     else:
         head = title.lead_headline(ranked)
@@ -552,6 +575,8 @@ def assemble(
         "tests": tests,
         "prose": {"source": "template"},
     }
+    if quiet and pic["lines"]:  # only then, so every other issue keeps its bytes
+        issue["ordinary"] = {"intro": ordinary.INTRO, "lines": pic["lines"]}
     if period:  # only then, so a daily issue keeps its bytes
         issue["period"] = {"from": period["from"], "word": period["word"]}
     if shown_tiles and not ts:

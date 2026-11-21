@@ -211,7 +211,10 @@ def _card(
     return {
         "label": _cap(label),
         "expected": _one(unit, mid),
-        "low": _one(unit, lo),
+        # a range's ends in one unit (21 Nov 2026): '₹0.81 Cr – ₹1.24 Cr', never '₹80.8 L'
+        "low": fmt.money_like(lo, max(abs(Decimal(str(lo))), abs(Decimal(str(hi)))))
+        if unit == "inr"
+        else _one(unit, lo),
         "high": _one(unit, hi),
         "target": values.rounded(unit, target) if target is not None else None,
         "at": {

@@ -3,7 +3,7 @@
 {% from "components/ui.html" import el %}
 {% from "components/buttons.html" import button, link %}
 {% from "components/blocks.html" import toast, callout, page_title %}
-{% from "components/ontology.html" import ont_section, ont_cols, ont_row, ont_sub, ont_term, ont_act, ont_waiting, tell_line, metric_link, ont_decided %}
+{% from "components/ontology.html" import ont_section, ont_cols, ont_row, ont_sub, ont_term, ont_act, ont_waiting, tell_line, metric_link, ont_decided, level_card %}
 {% from "components/buttons.html" import top_menu, menu_link %}
 {% block title %}Business Model · {{ company.name }}{% endblock %}
 {% block crumb %}Business Model{% endblock %}
@@ -22,6 +22,8 @@
   {% call toast("Business Model v" ~ done.number ~ " · applies from tonight’s run", sub=done.reason) %}{% call el("form", attrs={"data-inplace": true, "method": "post", "action": "/ontology/versions/" ~ done.number ~ "/undo"}) %}<input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="back" value="/ontology">{{ button("Undo", type="submit") }}{% endcall %}{% endcall %}
   {% endif %}
 
+  {# Business Model 2.4 (L1): how complete it is, and the checklist to reach full potential #}
+  {% if levels and not expanded %}{{ level_card(levels, csrf_token, example="/ontology/example.pdf") }}{% endif %}
   {# the Tell Othor AI line went: "Chat to update" by the title opens the one chat (owner, 18 Nov 2026) #}
 
   {# Let Othor AI decide (v0.12): its decisions, listed to confirm or fix #}

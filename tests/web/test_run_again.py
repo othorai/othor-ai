@@ -215,3 +215,24 @@ def env_ctx(svc, env):  # type: ignore[no-untyped-def]
     from othor.engine.context import EngineContext
 
     return EngineContext(svc.settings, svc.sf, svc.key, clock=lambda: env.clock.t)
+
+
+def test_home_card_keeps_the_days_issue_when_a_rerun_made_none(night):  # noqa: F811
+    """21 Nov 2026 (indigodemof): a rerun with no issue of its own for a brief (its issues removed,
+    or the brief failed in it) left Home's card on "No issue yet" while that day's 06:00 issue was
+    there. The card falls back to the latest issue of the same day."""
+    env, h, cid, rid, svc = night
+    env.clock.t = AT_1540
+    assert _press(env, h, "/home").status_code == 303
+    _work(env, svc)
+    with svc.sf() as s, tenant_scope(cid):
+        rerun = s.scalars(sa.select(Run).where(Run.kind == "rerun")).one()
+        nightly = s.scalars(sa.select(BriefIssue).where(BriefIssue.run_id == rid)).all()
+        s.execute(sa.delete(BriefIssue).where(BriefIssue.run_id == rerun.id))
+        s.commit()
+        titles = [i.title for i in nightly if i.title]
+    assert titles
+    page = env.client.get(h + "/home").text
+    assert "No issue yet" not in page
+    assert any(t[:40] in page for t in titles)
+    assert "sent 6:00 AM" in page or "goes out at 6:00 AM" in page  # the 06:00 line, not a schedule

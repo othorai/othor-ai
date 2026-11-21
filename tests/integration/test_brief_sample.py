@@ -58,8 +58,13 @@ def test_the_leadership_brief_of_1_nov(night):  # noqa: F811
     (rev,) = [t for t in body["tiles"] if t["metric"] == "net_revenue"]
     assert rev["value"] == "₹4.62 Cr" and rev["comparison"]["kind"] == "band"
     (fy,) = [g for g in body["goals"] if g["key"] == "fy27_net_revenue"]
-    assert fy["text"].startswith("Net revenue FY27 · ₹60 Cr target · tracking ₹57.2 Cr (80% band ₹")
-    assert fy["tone"] in ("off", "risk")
+    # one forecast for every goal (21 Nov 2026): the goal row reads What's ahead's numbers
+    assert fy["text"] == (
+        "Net revenue FY27 · ₹60 Cr target · tracking ₹56.7 Cr (80% band ₹54.1–59.2 Cr) · 5% likely"
+    )
+    assert fy["tone"] == "off"  # 5% likely: 20% or less is off track
+    ahead = [a for a in body["ahead"] if a.get("metric") == "net_revenue"]
+    assert ahead and "₹56.7 Cr" in str(ahead[0]) and "95% likely to miss" in str(ahead[0])
     # counts agree: the items shown plus "N more in Sweep" are Sweep's findings
     sweep = read_json(RunFiles(ctx.settings.runs_dir(cid), rid).outputs_json)["sweep"]
     assert body["more_in_sweep"] + len(items) == sweep["counts"]["findings"]

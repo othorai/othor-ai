@@ -24,8 +24,42 @@ def index(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "components_demo/index.html",
-        {"specs": demo_specs(), "demo_user": demo_user, "demo_date": datetime.date(2026, 11, 1)},
+        {
+            "specs": demo_specs(),
+            "demo_user": demo_user,
+            "demo_date": datetime.date(2026, 11, 1),
+            "level_demo": level_demo(),
+        },
     )
+
+
+def level_demo() -> dict[str, object]:
+    """Business Model 2.4: the level card as on a Business Model with no owners, open."""
+    from othor.ontology.levels import ITEMS, Item, Levels
+
+    done = {"sources", "numbers", "rules", "goal", "breakdowns", "parts", "headline"}
+    items = [
+        Item(
+            k,
+            lv,
+            label,
+            unlocks,
+            k in done,
+            "3 rules" if k == "rules" else "",
+            say="The Head of Sales owns Net revenue and Orders" if k == "owners" else "",
+        )
+        for k, lv, label, unlocks in ITEMS
+    ]
+    v = Levels(0, items).view()
+    v["groups"][0]["rows"][4]["drafts"] = [
+        {
+            "subject": "ontology:level:owners",
+            "text": "Add the Head of Sales and the Head of Finance as owners",
+            "why": "Named in your business message",
+            "n": 2,
+        }
+    ]
+    return {**v, "open": True, "can_find": True, "has_drafts": True}
 
 
 @router.get("/{board}", response_class=HTMLResponse)

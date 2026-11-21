@@ -66,16 +66,16 @@
 </article>
 {%- endmacro %}
 
-{# #97 (owner, 20 Nov 2026): the detectors as the first of four cards: a ring of one segment per
-   detector (cyan ran, amber ran partly, grey couldn't run), "9/11" inside; hover, tap or focus
-   opens every detector's line (what it finds, how it went), as the strip's cards did. #}
+{# #97 (owner, 20 Nov 2026), squares from 21 Nov 2026 (owner: "make it 12 including external
+   signals… 4x3"): Sweep's checks as the first of four cards, one square per check in rows of four
+   (cyan ran, amber ran partly, grey couldn't run; a plug-in's check, External Signals' Outside, in
+   the green-to-cyan of the EE features), its short name inside, "10 / 12" beside; hover, tap or
+   focus opens every check's line (what it finds, how it went), as the ring's list did. #}
 {% macro detectors_ring(st, text, when="today") -%}
-{% set circ = 163.363 %}{% set n = st.segments | length %}{% set seg = circ / (n or 1) %}
 <div class="sweep-kpi det-kpi">
   <div class="det-ring-wrap" x-data="popover" data-pop-hover>
-    <button class="det-ring-btn" type="button" aria-controls="det-list" aria-expanded="false" aria-label="{{ fmt.num(st.active) }} of {{ fmt.num(st.total) }} detectors ran {{ when }}">
-      <svg class="det-ring" viewBox="0 0 64 64" aria-hidden="true">{% for r in st.segments %}<circle class="{{ r.kind }}" cx="32" cy="32" r="26" stroke-dasharray="{{ '%.2f' | format(seg - 2.4) }} {{ '%.2f' | format(circ) }}" stroke-dashoffset="{{ '%.2f' | format(-seg * loop.index0) }}" transform="rotate(-90 32 32)"><title>{{ r.label }}: {{ r.status }}</title></circle>{% endfor %}</svg>
-      <span class="det-ring-v"><b>{{ fmt.num(st.active) }}</b>/{{ fmt.num(st.total) }}</span>
+    <button class="det-sq-btn" type="button" aria-controls="det-list" aria-expanded="false" aria-label="{{ fmt.num(st.active) }} of {{ fmt.num(st.total) }} checks ran {{ when }}">
+      {% for r in st.segments %}<span class="det-sq {{ r.kind }}{{ ' ext' if r.plugin else '' }}" title="{{ r.label }}: {{ r.status }}">{{ r.short[:3] }}</span>{% endfor %}
     </button>
     <div class="det-list-card" role="tooltip" id="det-list"><ul>{% for r in st.segments %}<li class="det-row {{ r.kind }}" id="det-{{ r.key }}" data-key="{{ r.key }}"><p class="det-card-head"><b><i class="det-dot {{ r.kind }}"></i>{{ r.label }}</b><span class="det-status {{ r.kind }}">{{ r.status }}</span></p>
       {% if r.kind == "on" %}<p class="det-card-line">{{ when | capitalize }}: {{ r.result }}</p>{% elif r.kind == "partly" %}<p class="det-card-line">{{ when | capitalize }}: {{ r.covers }}</p>{% endif %}
@@ -83,7 +83,8 @@
       {% if r.action %}<a class="link" href="{{ r.action[1] }}">{{ r.action[0] }}</a>{% endif %}</li>{% endfor %}</ul></div>
   </div>
   <div class="det-kpi-text">
-    <span class="l">Detectors {{ info(text=text, id="strip-info", label="What these are") }}</span>
+    <span class="l">Checks {{ info(text=text, id="strip-info", label="What these are") }}</span>
+    <span class="v">{{ fmt.num(st.active) }} / {{ fmt.num(st.total) }}</span>
     <span class="s">{% if st.inactive %}{{ fmt.num(st.inactive) }} couldn’t run{% else %}All ran{% endif %}</span>
     {% if st.suppressed %}<span class="s">{{ fmt.num(st.suppressed) }} suppressed</span>{% endif %}
   </div>

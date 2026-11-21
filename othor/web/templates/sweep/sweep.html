@@ -15,7 +15,7 @@
 {{ page_title("Sweep", aside=fmt.date_short(summary.date) ~ " " ~ summary.date.year) }}
 <div class="flex flex-col gap-24">
 
-<div class="grid grid-cols-2 md:grid-cols-4 gap-24">
+<div class="grid grid-cols-2 md:grid-cols-9 gap-24">
   {{ detectors_ring(strip, strip_info, when) }}
   {{ kpi_stat("Metrics with enough history", fmt.num(history.ok) ~ " / " ~ fmt.num(history.all)) }}
   {{ kpi_stat("Tests " ~ when, fmt.num(summary.tests), ("at most 1 in " ~ summary.chance ~ " could be chance") if summary.chance else None, tip="False discovery rate " ~ summary.fdr ~ " (Benjamini–Hochberg), across every test of the night.", tip_id="sweep-chance") }}

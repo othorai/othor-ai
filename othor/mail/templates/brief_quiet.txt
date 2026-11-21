@@ -9,7 +9,10 @@
 {{ t.label }}: {{ t.value }} · {{ t.comparison.text }}{% if t.stale %} · {{ t.stale }}{% endif %}{% endfor %}
 {% if words.line %}
 {{ words.line }}
-{% endif %}{% for sec in b.get("sections") or [] %}
+{% endif %}{% if b.get("ordinary") %}
+{{ b["ordinary"].intro }}
+{% for x in b["ordinary"].lines %}- {{ x.text }}
+{% endfor %}{% endif %}{% for sec in b.get("sections") or [] %}
 {{ sec.title }}
 {% for i in sec["items"] %}{{ i.text }}{% if i.get("line") %}
    {{ i.line }}{% endif %}

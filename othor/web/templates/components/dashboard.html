@@ -18,9 +18,10 @@
 </div>
 {%- endmacro %}
 
-{# chips: each {name, value, label, on}; one in-place post per chip, the page redraws in place #}
-{% macro db_chips(chips, action, csrf) -%}
-{% if chips %}<div class="db-chips" role="group" aria-label="Show">{% for c in chips %}{% call action_form(action, csrf, kind="contents", attrs={"data-keep-focus": true}) %}<input type="hidden" name="name" value="{{ c.name }}"><button class="db-chip{{ ' is-on' if c.on else '' }}" type="submit" name="value" value="{{ c.value }}" aria-pressed="{{ 'true' if c.on else 'false' }}">{{ c.label }}</button>{% endcall %}{% endfor %}</div>{% endif %}
+{# chips: each {name, value, label, on}; one in-place post per chip, the page redraws in place.
+   `push`: the view the post lands on goes in the address (a view that isn't saved, Forecasts) #}
+{% macro db_chips(chips, action, csrf, push=False) -%}
+{% if chips %}<div class="db-chips" role="group" aria-label="Show">{% for c in chips %}{% call action_form(action, csrf, kind="contents", attrs={"data-keep-focus": true, "data-push-url": push}) %}<input type="hidden" name="name" value="{{ c.name }}"><button class="db-chip{{ ' is-on' if c.on else '' }}" type="submit" name="value" value="{{ c.value }}" aria-pressed="{{ 'true' if c.on else 'false' }}">{{ c.label }}</button>{% endcall %}{% endfor %}</div>{% endif %}
 {%- endmacro %}
 
 {# the night band: sm = {kicker, lead (text), text (a second paragraph, or None), next: [(label, text)], foot: [text], button:

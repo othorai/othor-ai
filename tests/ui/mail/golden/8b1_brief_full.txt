@@ -19,7 +19,7 @@ Needs attention · 4
 3. 14 customers still marked active haven’t invoiced in 90+ days · ₹3.6 Cr
    Measured · New
 
-4. Freight expense tracked metres dispatched for 20 weeks, then decoupled on 14 Sep · ₹5.8 L / month
+4. Freight expense tracked metres dispatched for 20 weeks, then decoupled on 14 Sep · ₹5.84 L / month
    Assessed · Medium · New
 
 Since yesterday, across every finding this brief covers: 8 new.

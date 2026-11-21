@@ -71,7 +71,7 @@
   <p class="week-line">{{ w.line }}</p>
   {% if w.get("chart") %}<div class="week-chart">{{ stored_chart(w["chart"], 560, 150) }}</div>{% endif %}
   {% if w.fixed %}<div class="week-group"><p class="week-k">Fixed · {{ fmt.num(w.fixed | length) }}</p><ul class="week-list">{% for r in w.fixed %}<li><span class="t">{{ r.title }}</span><span class="d">{{ r.how }}</span></li>{% endfor %}</ul></div>{% endif %}
-  {% if w.open %}<div class="week-group"><p class="week-k">Still open · {{ fmt.num(w.open | length) }}</p><ul class="week-list">{% for r in w.open %}<li><span class="t">{{ r.title }}</span><span class="d">day {{ fmt.num(r.days) }} · {{ r.trend }}</span></li>{% endfor %}</ul></div>{% endif %}
+  {% if w.open %}<div class="week-group"><p class="week-k">{{ "Also still open" if (w.get("counts") or {}).get("in_items") else "Still open" }} · {{ fmt.num(w.open | length) }}</p><ul class="week-list">{% for r in w.open %}<li><span class="t">{{ r.title }}</span><span class="d">day {{ fmt.num(r.days) }} · {{ r.trend }}</span></li>{% endfor %}</ul></div>{% endif %}
   {% if w.get("suggest") and actions %}{% set run, bid, tok = actions %}{% set done = (held or {}).get(w.suggest.fingerprint) %}
   <div class="week-tip"><span class="who">{{ logo() }}<span>Othor AI suggests</span></span><p>{{ w.suggest.text }}</p>
     {% if done %}<span class="held">{{ done }}</span>{{ _hold_btn("undo", w.suggest.fingerprint, run, bid, tok, "Undo") }}{% else %}{{ _hold_btn("snooze", w.suggest.fingerprint, run, bid, tok, "Snooze 7 days") }}{% endif %}
@@ -292,5 +292,11 @@
   {% if error %}<p class="field-error" id="e-{{ name }}">{{ error }}</p>{% endif %}
   <div class="ai-compose-go">{{ caller() }}</div>
 </div>
+{%- endmacro %}
+
+{# Morning Brief 2.4 (owner, 20 Nov 2026): a quiet day's updates from the brief's own numbers,
+   each line picked and computed by code (othor.briefs.ordinary); plain lines, never tagged #}
+{% macro quiet_updates(o) -%}
+<div class="quiet-updates"><p class="lead">{{ o.intro }}</p><ul>{% for x in o.lines %}<li>{{ x.text }}</li>{% endfor %}</ul></div>
 {%- endmacro %}
 

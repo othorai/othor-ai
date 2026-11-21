@@ -354,6 +354,11 @@ def metrics_page(request: Request, o: Owner = Depends(signed_in)) -> Response:
         panel = _panel(s, request, o, q.get("panel"), q.get("key"), q.get("choice"))
         if panel is not None and panel["kind"] == "decisions":  # #32: one decision per screen
             panel["view"] = v.decisions_panel(ctx["checks"]["decisions"]["rows"], q.get("d"))
+            if not panel["view"]["empty"]:  # Chat 1.3: the pick, and the chat behind Suggest edits
+                available, _ = model_status(svc.settings, s, svc.clock())
+                v.decision_chat(
+                    s, panel["view"]["x"], editing=q.get("edit") == "1", model=available
+                )
     return page(
         request,
         "setup/metrics.html",
@@ -643,11 +648,18 @@ def metric_choose(
 
 @router.post("/setup/metrics/{key}/chat", dependencies=CSRF)
 def metric_chat(
-    request: Request, key: str, text: str = Form(""), o: Owner = Depends(signed_in)
+    request: Request,
+    key: str,
+    text: str = Form(""),
+    back: str = Form(""),
+    o: Owner = Depends(signed_in),
 ) -> Response:
-    """The conflict chat with Claude. Without the model the composer is off; Choose still works."""
+    """The conflict chat with Claude. Without the model the composer is off; Choose still works.
+    Chat 1.3: from the Decisions panel's Suggest edits it lands back on that decision."""
     svc = services(request)
     url = f"/setup/metrics?panel=choose&key={key}"
+    if back.startswith("/setup/metrics?panel=decisions&") and "//" not in back:
+        url = back
     with svc.sf() as s, tenant_scope(o.company.id):
         row = _row(s, key)
         c = (row.value or {}).get("conflict") if row else None
@@ -1222,7 +1234,24 @@ def _first_run_view(request: Request, o: Owner) -> Any:
 def first_run(request: Request, o: Owner = Depends(signed_in)) -> Response:
     if (r := _step(request, o, "first-run")) is not None:
         return r
-    return page(request, "setup/first_run.html", _ctx(o, 6, view=_first_run_view(request, o)))
+    return page(
+        request,
+        "setup/first_run.html",
+        _ctx(o, 6, view=_first_run_view(request, o), levels=_levels(request, o)),
+    )
+
+
+def _levels(request: Request, o: Owner) -> dict[str, Any] | None:
+    """2.4 L5: onboarding ends on the Business Model's level, the next items offered (the level 1
+    items still missing first, then level 2), each one sentence in the chat."""
+    from othor.web.ontology_view import level_view
+
+    svc = services(request)
+    with svc.sf() as s, tenant_scope(o.company.id):
+        if not ontology_service.confirmed(s):
+            return None
+        view = level_view(s, svc.settings, upto=2)  # level 3 waits for the app
+    return {**view, "open": bool(view["left"])}
 
 
 @router.get("/setup/first-run/progress", response_class=HTMLResponse)

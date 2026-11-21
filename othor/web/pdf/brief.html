@@ -34,6 +34,9 @@ p { margin: 0 0 6px; }
 .muted { color: #5B6B7B; }
 .small { font-size: 8.5pt; }
 .tiles { display: flex; flex-wrap: wrap; gap: 8px; }
+.updates { margin: 0; padding-left: 14px; }
+.updates li { margin: 0 0 5px; line-height: 1.45; }
+.updates li::marker { color: #0B7AA6; }
 .tile { flex: 1 1 30%; border: 1px solid #E3E6EA; border-radius: 6px; padding: 8px 10px; break-inside: avoid; }
 .tile .l { font-size: 8pt; color: #5B6B7B; }
 .tile .v { font-size: 14pt; font-weight: 600; }
@@ -83,6 +86,9 @@ td.fc-line svg, .fc-range svg { width: 100%; height: auto; display: block; }
 
 {% if tiles %}<p class="caps">Headline numbers</p>
 <div class="tiles">{% for t in tiles %}<div class="tile"><div class="l">{{ t.label }}</div><div class="v">{{ t.value }}</div><div class="c {{ t.role }}">{{ t.comparison.text }}</div></div>{% endfor %}</div>{% endif %}
+
+{% if b.get("quiet") and b.get("ordinary") %}<p class="caps">{{ b["ordinary"].intro }}</p>
+<ul class="updates">{% for x in b["ordinary"].lines %}<li>{{ x.text }}</li>{% endfor %}</ul>{% endif %}
 
 {% if items %}<p class="caps">Needs attention · {{ fmt.num(items | length) }}</p>
 <table>{% for i in items %}<tr><td style="width:22px" class="muted">{{ i.rank }}</td><td>{{ i.title }}<br><span class="tag">{{ state_text(i.state, i.confidence) }}</span>{% if i.change %}<span class="tag soft">{{ i.change }}</span>{% endif %}{% if i.consequence and i.consequence.text %}<span class="small muted">{{ i.consequence.text }}</span>{% endif %}</td><td class="num"><b>{{ i.money }}</b></td></tr>{% endfor %}</table>

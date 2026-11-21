@@ -437,7 +437,74 @@ def _dashboard_demos() -> dict[str, ChartSpec]:
             ),
             alt_text="Monthly collections over the last 12 months and the expected range for the next three, against a goal of ₹4.5 Cr.",
         ),
+        # Forecasts 1.0 (F3): today, the likely range to where it can see, the wider range past
+        # it (lighter), and the assumption zone to the year end
+        "line_horizon": ChartSpec(
+            id="demo:horizon",
+            kind="line",
+            title="Collections, actual and ahead",
+            unit=CR,
+            period=Period("month", MONTH_ENDS[0], "2027-03-31"),
+            series=(
+                Series("actual", "Actual", "neutral", tuple(zip(MONTH_ENDS, actual, strict=True))),
+                Series(
+                    "expected",
+                    "Expected",
+                    "muted",
+                    tuple(zip(ahead, [4.1, 4.05, 4.25, 4.3], strict=True)),
+                    style="dotted",
+                ),
+            ),
+            band=Band(
+                "expected",
+                0.8,
+                tuple(zip(ahead, [4.1, 3.8, 3.4, 2.9], strict=True)),
+                tuple(zip(ahead, [4.1, 4.3, 5.1, 5.7], strict=True)),
+                role="positive",
+            ),
+            annotations=(
+                Annotation("vline", at="2026-10-31", label="today", role="neutral", style="solid"),
+                Annotation(
+                    "horizon", at="2026-11-30", to="2027-03-31", label="can see to here · Nov"
+                ),
+                Annotation("region", from_="2027-01-31", to="2027-03-31", label="Assumption"),
+            ),
+            alt_text="Monthly collections over the last 12 months, the likely range to November, a wider range to January, then an assumption to March.",
+        ),
+        # Summary 1.1: a line that explains itself, its turning point dated, its high and low
+        "line_marks": ChartSpec(
+            id="demo:summary:marks",
+            kind="line",
+            title="Receivables over 60 days · 1 Quarter",
+            unit=Unit(type="currency", code="INR", scale="l", decimals=1),
+            period=Period("week", "2026-07-27", "2026-10-19"),
+            series=(Series("now", "1 Quarter", "positive", _weeks("2026-07-27", R60), "smooth"),),
+            annotations=(
+                Annotation("vline", at="2026-08-10", label="10 Aug", role="muted"),
+                Annotation("mark", at="2026-09-21", value=95.2, label="High ₹95.2 L"),
+                Annotation("mark", at="2026-07-27", value=61.8, label="Low ₹61.8 L"),
+            ),
+            alt_text="Receivables over 60 days, 13 weeks to the week of 19 Oct: ₹79.8 L; up from the week of 10 Aug.",
+        ),
+        "sparkline_marks": ChartSpec(
+            id="demo:summary:marks:spark",
+            kind="sparkline",
+            title="Receivables over 60 days · 1 Quarter",
+            unit=Unit(type="currency", code="INR", scale="l", decimals=1),
+            period=Period("week", "2026-07-27", "2026-10-19"),
+            series=(Series("now", "Receivables", "positive", _weeks("2026-07-27", R60), "smooth"),),
+            annotations=(
+                Annotation("vline", at="2026-08-10", label="10 Aug", role="muted"),
+                Annotation("mark", at="2026-09-21", value=95.2, label="High ₹95.2 L"),
+                Annotation("mark", at="2026-07-27", value=61.8, label="Low ₹61.8 L"),
+            ),
+            alt_text="Receivables over 60 days, 13 weeks to the week of 19 Oct: ₹79.8 L; up from the week of 10 Aug.",
+        ),
     }
+
+
+# Summary 1.1's demo line: a level that steps up in the week of 10 Aug (illustrative)
+R60 = [61.8, 63.0, 88.4, 90.1, 91.3, 89.7, 93.0, 92.2, 95.2, 90.4, 86.1, 82.5, 79.8]
 
 
 # --- /_components/stress (M11a): the components under real-data stress ---------------------

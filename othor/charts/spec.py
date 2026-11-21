@@ -127,7 +127,13 @@ class Band:
 
 @dataclass(frozen=True)
 class Annotation:
-    type: Literal["vline", "region", "threshold", "point"]
+    # horizon (Forecasts 1.0, F3; `line` only): `at` the last period the forecast can see to (a
+    # dashed marker, `label`); its range past `at` is drawn lighter; `to` runs the x axis on to
+    # that date (the assumption zone past the stored periods, shaded by a `region`)
+    # mark (Summary 1.1; `line` and `sparkline`): a dot on the line at `at`/`value` with its
+    # `label` beside it ("High ₹70.2 L"), above it in the upper half of the chart, else below;
+    # a `vline` on a sparkline is drawn thin with its label at the top (a line's turning point)
+    type: Literal["vline", "region", "threshold", "point", "horizon", "mark"]
     at: str | None = None
     from_: str | None = None
     to: str | None = None
@@ -180,6 +186,13 @@ class ChartSpec:
             raise SpecError(f"unknown role(s): {bad}")
         if self.band and self.band.series_id not in {s.id for s in self.series}:
             raise SpecError("band refers to a series that isn't in the spec")
+        for a in self.annotations:
+            if a.type == "horizon" and (not a.at or self.kind != "line"):
+                raise SpecError("a horizon needs its date (`at`) and a line chart")
+            if a.type == "mark" and (
+                not a.at or a.value is None or self.kind not in ("line", "sparkline")
+            ):
+                raise SpecError("a mark needs its date, its value and a line or sparkline")
         if self.kind == "dumbbell":
             keys = [[k for k, _ in s.points] for s in self.series]
             if len(keys) != 2 or keys[0] != keys[1] or not keys[0]:
