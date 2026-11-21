@@ -11,7 +11,7 @@
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue)](pyproject.toml)
 [![Self-hostable](https://img.shields.io/badge/self--hostable-one%20image-0A7FA8)](docs/self-host.md)
 
-![Othor AI: the Morning Brief on the sample company, with what changed, the headline numbers and the findings](docs/images/brief-tour.webp)
+![Othor AI: the Morning Brief on the sample company, scrolled top to bottom: what changed, the headline numbers, the findings and what is ahead](docs/images/brief-tour.webp)
 
 [What is Othor AI](#what-is-othor-ai-in-1-minute) · [Quick start](#quick-start) · [Architecture](#architecture) · [Self-hosting](docs/self-host.md) · [Contributing](CONTRIBUTING.md)
 
