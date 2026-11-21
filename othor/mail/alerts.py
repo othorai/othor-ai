@@ -192,56 +192,6 @@ def ontology_waiting(
     )
 
 
-def weekly_digest(
-    settings: Settings,
-    company: Company,
-    *,
-    to: str,
-    first: dt.date,
-    last: dt.date,
-    stats: dict[str, int],
-    open_items: list[tuple[str, str]],
-    not_in_brief: list[tuple[str, str]],
-) -> Message:
-    tests, fired, in_brief = stats["tests"], stats["fired"], stats["in_brief"]
-    return owner_email(
-        "weekly_digest",
-        to=to,
-        subject=(
-            f"This week in Sweep: {fmt.num(tests)} tests run, {fmt.num(fired)} findings, "
-            f"{fmt.num(in_brief)} reached a brief"
-        ),
-        preheader=(
-            f"Plus {fmt.num(len(not_in_brief))} finding{'s' if len(not_in_brief) != 1 else ''} "
-            "that didn’t reach a brief."
-            if not_in_brief
-            else "Every finding this week reached a brief."
-        ),
-        company_name=company.name,
-        slug=company.slug,
-        settings=settings,
-        week=fmt.day_range(first, last),
-        stats=[
-            ("Tests run", fmt.num(tests)),
-            ("Findings", fmt.num(fired)),
-            ("In a brief", fmt.num(in_brief)),
-            ("Still open, all findings", fmt.num(stats["open"])),
-        ],
-        sections=[("Open in a brief", open_items), ("Fired but not in a brief", not_in_brief)],
-        sweep_url=settings.instance_url(company.slug, "/sweep"),
-    )
-
-
-def digest_rows(findings: list[Any]) -> list[tuple[str, str]]:
-    """(title, owner · day N) for open items in the briefs."""
-    out = []
-    for f in findings:
-        title = ((f.body or {}).get("text") or {}).get("title") or f.metric
-        days = f"day {fmt.num(f.days_open)}" if f.days_open else "new"
-        out.append((title, f"{f.owner_name} · {days}" if f.owner_name else days))
-    return out
-
-
 def export_ready(
     settings: Settings, company: Company, job_id: Any, until: dt.datetime, *, to: str
 ) -> Message:

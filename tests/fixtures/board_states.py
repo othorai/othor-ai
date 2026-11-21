@@ -272,7 +272,6 @@ STATES: dict[str, BoardState] = {
         _S("8b1", "mail", "8b1_brief_full.html", width=640),
         _S("8c", "mail", "8c_run_failed.html", width=640, note="also 8c_source_stale, 8c_run_late"),
         _S("8d", "mail", "8d_ontology_waiting.html", width=640),
-        _S("8e", "mail", "8e_weekly_digest.html", width=640),
         _S("10q", "mail", "10q_brief_quiet.html", width=640),
         # rules boards: several states on one sheet, held by tests rather than one capture
         _S(

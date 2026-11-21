@@ -235,7 +235,24 @@ def _business_ctx(s: Session, request: Request, o: Owner) -> dict[str, Any]:
     else:
         box = "nodraft"
     read_names = [f["name"] for f in ups["files"] if not f["reading"]]
+    # owner, 20 Nov 2026: a ticking timer while files are read and the message is drafted, so the
+    # box never looks stuck (the box polls itself every second); a calm note past 90 seconds
+    elapsed, slow = "", False
+    if box == "waiting":
+        since = s.scalar(
+            sa.select(sa.func.min(Job.created_at)).where(
+                Job.kind.in_(("upload", "business")), Job.status.in_(("queued", "running"))
+            )
+        )
+        if since is not None:
+            now = svc.clock()
+            if since.tzinfo is None:
+                since = since.replace(tzinfo=dt.UTC)
+            secs = max(int((now - since).total_seconds()), 0)
+            elapsed, slow = f"{secs // 60}:{secs % 60:02d}", secs > 90
     return {
+        "elapsed": elapsed,
+        "slow": slow,
         "text": msg.text or (msg.draft_text or ""),
         "draft": msg.draft_text,
         "not_covered": msg.not_covered if msg.draft_text else None,

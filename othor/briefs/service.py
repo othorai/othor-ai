@@ -148,26 +148,42 @@ def snapshot(
             continue
         if day is not None and not sch.made_on(v.body, day):
             continue
-        q = sa.select(BriefIssue).where(BriefIssue.brief_id == b.id)
-        if before is not None:
-            q = q.where(BriefIssue.date < before)
-        last = s.scalars(
-            q.order_by(BriefIssue.date.desc(), BriefIssue.created_at.desc()).limit(1)
-        ).first()
-        # 0.28.5: each item's day of its last change goes with it, so an item that changed three
-        # days ago isn't counted from the day Sweep first saw it (assemble._changed_on)
-        previous = [
-            {"fingerprint": i["fingerprint"], "rank": i["rank"], "score": i.get("score")}
-            | ({"since": i["since"]} if i.get("since") else {})
-            for i in ((last.body.get("items") or []) if last else [])
-        ]
-        row = {"id": str(b.id), "number": v.number, "name": b.name, **v.body, "previous": previous}
-        if b.is_default:  # it keeps the whole company even with picked numbers (scope.focus)
-            row["default"] = True
-        if day is not None and (p := sch.period(v.body, day, last.date if last else None)):
-            row["period"] = {"from": p[0].isoformat(), "word": p[1], "open": _open_at(s, last)}
-        out.append(row)
+        out.append(version_row(s, b, v, before=before, day=day))
     return out
+
+
+def version_row(
+    s: Session,
+    b: Brief,
+    v: BriefVersion,
+    *,
+    before: dt.date | None = None,
+    day: dt.date | None = None,
+) -> dict[str, Any]:
+    """One brief's current version as the run reads it (`snapshot`'s row): its body, the items
+    of its latest issue and, on a Weekly or Monthly brief's day, its period. The issue made at
+    creation (0.29.4) reads the same row, so it is what the night would make."""
+    from othor.briefs import schedule as sch
+
+    q = sa.select(BriefIssue).where(BriefIssue.brief_id == b.id)
+    if before is not None:
+        q = q.where(BriefIssue.date < before)
+    last = s.scalars(
+        q.order_by(BriefIssue.date.desc(), BriefIssue.created_at.desc()).limit(1)
+    ).first()
+    # 0.28.5: each item's day of its last change goes with it, so an item that changed three
+    # days ago isn't counted from the day Sweep first saw it (assemble._changed_on)
+    previous = [
+        {"fingerprint": i["fingerprint"], "rank": i["rank"], "score": i.get("score")}
+        | ({"since": i["since"]} if i.get("since") else {})
+        for i in ((last.body.get("items") or []) if last else [])
+    ]
+    row = {"id": str(b.id), "number": v.number, "name": b.name, **v.body, "previous": previous}
+    if b.is_default:  # it keeps the whole company even with picked numbers (scope.focus)
+        row["default"] = True
+    if day is not None and (p := sch.period(v.body, day, last.date if last else None)):
+        row["period"] = {"from": p[0].isoformat(), "word": p[1], "open": _open_at(s, last)}
+    return row
 
 
 def _open_at(s: Session, issue: BriefIssue | None) -> dict[str, dict[str, Any]]:

@@ -778,6 +778,10 @@ async def create_brief(request: Request, o: Owner = Depends(signed_in)) -> Respo
         if not body["question"] or not body["headline"]:
             return RedirectResponse("/brief/new", status_code=303)
         b = service.create(s, body, actor=o.viewer.email, reason="New brief")
+        # 0.29.4: its first issue at once, from last night's results (no run, no model)
+        from othor.briefs import first_issue
+
+        first_issue.at_creation(s, svc.settings, b, actor=o.viewer.email, now=svc.clock())
         sug = _uuid(str(form.get("suggestion") or ""))
         if sug:
             row = s.scalars(sa.select(SuggestedBrief).where(SuggestedBrief.id == sug)).first()
@@ -1031,6 +1035,13 @@ def brief(
             again_view.send_offer(s, o.company, bv.issue, bv.latest_of_day)
             if not date and not issue
             else None
+        )
+        # 0.29.4: a new brief's first issue, made at creation from last night's results
+        from othor.briefs import first_issue, service
+
+        cur = service.current(s, bv.brief)
+        ctx["made_now"] = first_issue.note(
+            bv.issue, cur.body if cur else {}, bv.latest_of_day and not date and not issue
         )
         s.expunge_all()
     return page(request, "brief/brief.html", ctx)

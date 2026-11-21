@@ -208,6 +208,7 @@ through the same plug-in entry-point group (`othor.plugins`) this repository exp
 | Sources: PostgreSQL, MySQL, Google Sheets (read-only) | ✓ | ✓ |
 | Look back: why a closed period went the way it did | | ✓ |
 | Discover: groups of numbers your business isn't watching yet | | ✓ |
+| Plain Facts: your week as a plain write-up, every Monday (page, email, PDF) | | ✓ |
 | External signals: exchange rates, cotton, rainfall, tested against your numbers | | ✓ |
 | Othor MCP: ask from Claude, ChatGPT or your own AI | | ✓ |
 | Companies per install | One | Several |

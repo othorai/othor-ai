@@ -242,7 +242,7 @@ def worker_loop(ctx: WorkerContext, poll_s: float = 1.0) -> None:  # pragma: no 
         heartbeat.beat(ctx.sf, ctx.clock())  # "Nightly runs are paused" when this goes quiet
         heartbeat.tick_ping(ctx.settings)  # the outside check-in, if configured
         tick(ctx.sf, ctx.clock())  # the 02:00 runs
-        delivery_tick(ctx.sf, ctx.clock())  # 06:00 briefs, 8d, the Sunday digest
+        delivery_tick(ctx.sf, ctx.clock())  # 06:00 briefs, 8d
         prune(ctx.sf, ctx.clock())  # rate-limit windows older than a day (M11a)
         ops_alerts.check(ctx.sf, ctx.settings, ctx.mail(), ctx.clock())  # failed or late nights
         exporting.prune(ctx.settings, ctx.clock())  # built exports older than 48 h (M18.1)

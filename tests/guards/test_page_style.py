@@ -13,6 +13,8 @@ TEMPLATES = ROOT / "othor" / "web" / "templates"
 # enterprise features' pages too (17 Nov 2026: Look back's first version came in boxed)
 EE = sorted(p for p in (ROOT / "othor_ee").glob("*/templates") if p.is_dir())
 FRAME_ONLY = {"brief/brief.html"}
+# a dashboard's header (0.29, docs/design-targets) or a report's masthead is its title row
+TITLE_ROWS = ("page_title(", "db_header(", "masthead")
 
 
 def _pages(root: Path) -> list[Path]:
@@ -29,7 +31,8 @@ def test_every_app_page_has_the_title_row() -> None:
     missing = [
         str(p.relative_to(root))
         for root, p in pages
-        if str(p.relative_to(root)) not in FRAME_ONLY and "page_title(" not in p.read_text()
+        if str(p.relative_to(root)) not in FRAME_ONLY
+        and not any(t in p.read_text() for t in TITLE_ROWS)
     ]
     assert missing == [], missing
 

@@ -12,7 +12,8 @@
   {% call el('div', 'card flush biz-wait', attrs='role="status" aria-live="polite"') %}
     {% call el('div', 'box-head plain') %}{% call el('span', 'hint') %}Drafting from your files{% endcall %}{% endcall %}
     {% call el('div', 'biz-wait-body') %}
-      {% call el('p', 'biz-wait-t') %}{{ icon("loading") }}Drafting your message. You can edit it when it’s ready.{% endcall %}
+      {% call el('p', 'biz-wait-t') %}{{ icon("loading") }}Drafting your message. You can edit it when it’s ready.{% if elapsed %}{% call el('span', 'hint') %} · {{ elapsed }}{% endcall %}{% endif %}{% endcall %}
+      {% if slow %}{% call el('p', 'hint') %}Still working: several files take a little longer.{% endcall %}{% endif %}
       {% call el('ul', 'biz-wait-files') %}{% for f in uploads %}{% call el('li') %}{% call el('span', 'dot ' ~ ('muted' if f.reading else 'ok')) %}{% endcall %}{{ f.name }} · {{ "being read" if f.reading else "read" }}{% endcall %}{% endfor %}{% endcall %}
       {% call el('div', 'biz-wait-lines') %}{% for w in ["", "mid", "", "mid", "short"] %}{% call el('div', 'skeleton line' ~ (' ' ~ w if w else '')) %}{% endcall %}{% endfor %}{% endcall %}
     {% endcall %}

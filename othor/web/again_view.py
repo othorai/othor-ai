@@ -111,6 +111,10 @@ class SendOffer:
     recipients: int
     issue_id: uuid.UUID
     sent: int = 0
+    kind: str = "update"  # update (Run again now's issue) · created (made at creation, 0.29.4)
+
+
+SENDABLE = ("rerun", "created")
 
 
 def send_key(issue_id: uuid.UUID) -> str:
@@ -119,12 +123,14 @@ def send_key(issue_id: uuid.UUID) -> str:
 
 def send_offer(s: Session, company: Company, issue: Any, latest: bool) -> SendOffer | None:
     """After Run again now: "Send the updated brief to N recipients?" Not re-sent by default;
-    offered on the day's newest issue while email is on and the brief has recipients."""
+    offered on the day's newest issue while email is on and the brief has recipients. A new
+    brief's issue made at creation (0.29.4) has the same offer as a quiet Send now."""
     from othor.briefs.models import Recipient
     from othor.mail.models import Delivery
 
-    if issue is None or issue.status != "rerun" or not latest or not company.email_delivery:
+    if issue is None or issue.status not in SENDABLE or not latest or not company.email_delivery:
         return None
+    kind = "created" if issue.status == "created" else "update"
     n = int(
         s.scalar(
             sa.select(sa.func.count(Recipient.id)).where(
@@ -136,7 +142,7 @@ def send_offer(s: Session, company: Company, issue: Any, latest: bool) -> SendOf
     job = s.scalars(sa.select(Job).where(Job.dedupe_key == send_key(issue.id))).first()
     if job is not None:
         if job.status in ("queued", "running"):
-            return SendOffer("sending", n, issue.id)
+            return SendOffer("sending", n, issue.id, kind=kind)
         sent = int(
             s.scalar(
                 sa.select(sa.func.count(Delivery.id)).where(
@@ -145,7 +151,7 @@ def send_offer(s: Session, company: Company, issue: Any, latest: bool) -> SendOf
             )
             or 0
         )
-        return SendOffer("sent", n, issue.id, sent=sent)
+        return SendOffer("sent", n, issue.id, sent=sent, kind=kind)
     kept = s.scalars(
         sa.select(Event.id).where(
             Event.action == "brief.update_kept", Event.object_id == str(issue.id)
@@ -153,4 +159,4 @@ def send_offer(s: Session, company: Company, issue: Any, latest: bool) -> SendOf
     ).first()
     if kept is not None or n == 0:
         return None
-    return SendOffer("offer", n, issue.id)
+    return SendOffer("offer", n, issue.id, kind=kind)

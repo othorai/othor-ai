@@ -120,6 +120,8 @@
   --text-figure: 22px;  /* figures in tiles and cards */
   --text-lead: 26px;    /* a report's lead line */
   --text-big: 28px;     /* the largest figures */
+  --text-headline: 36px; /* a newspaper-style page's headline (Plain Facts, 0.30) */
+  --text-callout: 44px;  /* a big-number callout between a page's sections (0.30) */
   --text-15: 15px;  /* sign-up and company sign-in only: subtitle, inputs, button (owner, 10 Nov 2026; guard) */
   --text-24: 24px;  /* sign-up and company sign-in card title only (owner, 10 Nov 2026; guard) */
   --text-40: 40px;  /* the public website's headline only (othor.ai, M11a) */

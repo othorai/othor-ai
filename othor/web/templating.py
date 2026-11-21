@@ -134,8 +134,61 @@ def slot(ctx: Any, name: str) -> Markup:
     return Markup("".join(parts))  # noqa: S704 - our templates, autoescaped
 
 
+CARDS_MAX = 3  # Home's Suggested by Othor AI: one row of the brief-card grid
+
+
+@pass_context
+def slot_cards(ctx: Any, name: str, limit: int = CARDS_MAX) -> dict[str, Any] | None:
+    """A slot that plug-ins fill with cards (Home's Suggested by Othor AI, 20 Nov 2026). Each
+    fragment's context gives `items` (newest first), `total` and `more` ({label, short, href}),
+    and may give a `toast` ({text, action, label}: what an action just did, with its Undo); its
+    template draws one card from `item`. The cards are interleaved across plug-ins, in load order,
+    up to `limit`; a plug-in with more than it got shows its `more` link. None when nothing is
+    offered and nothing was just done (the section is hidden); the core knows no plug-in."""
+    from othor.core import plugins
+
+    groups: list[tuple[Any, dict[str, Any]]] = []
+    for f in plugins.fragments(name):
+        try:
+            extra = f.context(ctx) if f.context is not None else None
+        except Exception:  # a plug-in's suggestions never break the page
+            import logging
+
+            logging.getLogger("othor.plugins").exception("cards for %s failed", name)
+            extra = None
+        if extra:
+            groups.append((f, extra))
+    picked: list[list[Any]] = [[] for _ in groups]
+    cards: list[Markup] = []
+    depth = 0
+    while len(cards) < limit and any(depth < len(g.get("items") or []) for _, g in groups):
+        for i, (f, g) in enumerate(groups):
+            items = g.get("items") or []
+            if depth < len(items) and len(cards) < limit:
+                picked[i].append(items[depth])
+                cards.append(
+                    Markup(  # noqa: S704 - our templates, autoescaped
+                        templates.env.get_template(f.template).render(
+                            {**ctx.get_all(), **g, "item": items[depth]}
+                        )
+                    )
+                )
+        depth += 1
+    more = [
+        g["more"]
+        for i, (_, g) in enumerate(groups)
+        if g.get("more") and int(g.get("total") or 0) > len(picked[i])
+    ]
+    toasts = [g["toast"] for _, g in groups if g.get("toast")]
+    count = sum(int(g.get("total") or 0) for _, g in groups)
+    if not cards and not toasts:
+        return None
+    return {"cards": cards, "count": count, "more": more, "toasts": toasts}
+
+
 templates.env.globals["nav_items"] = nav_items
 templates.env.globals["slot"] = slot
+templates.env.globals["slot_cards"] = slot_cards
 
 MANIFEST = HERE / "static" / "css" / "manifest.json"
 _manifest: dict[str, object] = {"mtime": None, "map": {}}

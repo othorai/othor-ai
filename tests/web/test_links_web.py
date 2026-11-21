@@ -257,17 +257,11 @@ def test_postmark_bounce_and_complaint(sent, monkeypatch):
     }
 
 
-def test_settings_turn_the_weekly_digest_on(env: Env):
+def test_settings_have_no_weekly_digest(env: Env):
+    """0.30: the weekly digest is retired; its switch is gone from Settings."""
     signup(env)
     h = env.host("indigothread")
-    page = env.client.get(h + "/settings").text
-    assert "Weekly digest" in page and "Sundays 6:00 AM IST · to you only" in page
-    r = env.post(h + "/settings", {"field": "weekly_digest", "value": "on"})
-    # a switch shows its own state, so no "saved · Undo" toast (7d69715)
-    assert r.status_code == 204
-    svc = env.app.state.services  # type: ignore[attr-defined]
-    with svc.sf() as s, system_scope("test"):
-        assert s.scalars(sa.select(Company.weekly_digest)).first() is True
+    assert "Weekly digest" not in env.client.get(h + "/settings").text
 
 
 # --- helpers -------------------------------------------------------------------------------------

@@ -6,7 +6,7 @@ beside `othor.engine.scheduler.tick` (the 02:00 runs). For each company that isn
   one `deliver` job per brief and local day (`deliver:<brief>:<date>`), only with email on;
 - 8d: setup left at Metrics with drafts unconfirmed for over 24 hours, once
   (`alert:ontology_waiting`);
-- 8e: the weekly digest on Sundays at the brief time, when the owner turned it on (`digest:<date>`).
+- 8e, the weekly digest, is retired (0.30): no weekly email in the open core.
 
 It lives in othor.jobs, not the engine: 8d reads setup drafts, which the engine never imports.
 Jobs are deduped per company, so a second tick, a second worker or a restart never queues one
@@ -119,10 +119,6 @@ def tick(sf: sessionmaker[Session], now: dt.datetime) -> list[tuple[uuid.UUID, s
                     key = f"replay:{night}"
                     if _queue(s, "replay", {"run_id": str(night)}, key):
                         queued.append((c.id, key))
-            if c.weekly_digest and today.weekday() == 6 and _reached(local, c.brief_time):
-                key = f"digest:{today.isoformat()}"
-                if _queue(s, "alert", {"kind": "digest", "date": today.isoformat()}, key):
-                    queued.append((c.id, key))
     for cid, key in queued:
         log.info("queued %s", key, extra={"company": str(cid)})
     return queued

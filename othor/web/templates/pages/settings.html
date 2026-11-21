@@ -40,8 +40,7 @@
     {% call el("div", "section-head") %}Delivery{% endcall %}
     {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}Email{% endcall %}{% call el('p', 'sub') %}Full brief as a page · from {{ sender }} · recipients set per brief{% endcall %}</div>
       {{ toggle("value", company.email_delivery, label="Email delivery", attrs='hx-post="/settings" hx-vals=\'{"field": "email_delivery"}\'') }}{% endcall %}
-    {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}Weekly digest{% endcall %}{% call el('p', 'sub') %}Sundays {{ fmt.clock(company.brief_time) }} · to you only · what Sweep found this week and what reached a brief{% endcall %}</div>
-      {{ toggle("value", company.weekly_digest, label="Weekly digest", attrs='hx-post="/settings" hx-vals=\'{"field": "weekly_digest"}\'') }}{% endcall %}
+    {# a plug-in's own delivery rows (0.30) #}{{ slot("settings.delivery") }}
   {% endcall %}
   {# v0.18 (M18.1): everything Othor AI computed and the owner wrote, as one zip #}
   {% call el('section', 'section lines') %}

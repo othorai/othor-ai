@@ -1071,8 +1071,10 @@ function timeToasts(root) {
 }
 function dropToastParam() {
   const u = new URL(location.href);
-  if (!u.searchParams.has("created")) return;
-  u.searchParams.delete("created");
+  // "?created=" (a new brief) and Home's "?suggested=" (a suggestion just dismissed, 20 Nov 2026)
+  const once = ["created", "suggested"].filter((k) => u.searchParams.has(k));
+  if (!once.length) return;
+  once.forEach((k) => u.searchParams.delete(k));
   history.replaceState(history.state, "", u.pathname + (u.search || "") + u.hash);
 }
 document.addEventListener("DOMContentLoaded", () => { timeToasts(document); dropToastParam(); });

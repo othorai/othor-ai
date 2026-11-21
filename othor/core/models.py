@@ -88,7 +88,8 @@ class Company(IdMixin, Base):
     brief_time: Mapped[str] = mapped_column(sa.String(5), default="06:00")
     paused: Mapped[bool] = mapped_column(default=False)
     email_delivery: Mapped[bool] = mapped_column(default=True)
-    weekly_digest: Mapped[bool] = mapped_column(default=False)  # 8e, Sundays, owner only (M9)
+    # 8e, the weekly digest (M9): retired in 0.30; the column stays, unread
+    weekly_digest: Mapped[bool] = mapped_column(default=False)
     # Big Picture's language (v0.19, M19.5): en · hi (a try)
     report_language: Mapped[str] = mapped_column(sa.String(8), default="en")
     # Settings › Charts (v0.25 M25.1): smooth lines; values on lines ("key" points or "off")

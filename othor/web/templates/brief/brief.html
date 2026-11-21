@@ -37,8 +37,20 @@
 {% call tabs_row(tabs, bv.brief.name) %}{% if not readonly %}{{ button("New brief", href="/brief/new", kind="primary") }}{% endif %}{% endcall %}
 {% if saved %}{{ banner("ok", "<b>Saved as v" ~ saved ~ "</b> · applies from tomorrow’s run", "Edit again", base ~ "/edit") }}{% endif %}
 {% include "partials/run_again.html" %}
+{# 0.29.4: a new brief's first issue, made at creation from last night's results; emailed only
+   by Send now, through the same delivery as the morning email #}
+{% if made_now %}
+  {% call el("div", layout="flex items-center gap-8 flex-wrap") %}
+    {% call el("p", "hint", layout="flex-1 min-w-0") %}{{ made_now }}{% endcall %}
+    {% if send and send.kind == "created" %}{% set who = fmt.num(send.recipients) ~ " recipient" ~ ("s" if send.recipients != 1 else "") %}
+      {% if send.state == "offer" %}{% call action_form(base ~ "/issues/" ~ send.issue_id ~ "/send", csrf_token) %}{{ button("Send now", kind="quiet", size="sm", type="submit", attrs={"data-busy": "Sending…", "title": "Emails this issue to " ~ who}) }}{% endcall %}
+      {% elif send.state == "sending" %}{% call el("span", "hint", attrs={"hx-get": base, "hx-trigger": "every 2s", "hx-select": "#main", "hx-select-oob": "#app-actions", "hx-target": "#main", "hx-swap": "outerHTML"}) %}Sending to {{ who }}…{% endcall %}
+      {% else %}{% call el("span", "hint") %}Sent to {{ fmt.num(send.sent) }} of {{ who }}{% endcall %}{% endif %}
+    {% endif %}
+  {% endcall %}
+{% endif %}
 {# Run again now's brief isn't emailed unless the owner sends it (v0.11) #}
-{% if send %}
+{% if send and send.kind == "update" %}
   {% set who = fmt.num(send.recipients) ~ " recipient" ~ ("s" if send.recipients != 1 else "") %}
   {% if send.state == "offer" %}
   {% call el("div", layout="flex items-center gap-8 flex-wrap") %}

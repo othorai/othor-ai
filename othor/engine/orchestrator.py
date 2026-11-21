@@ -1110,7 +1110,10 @@ def _brief_rows(s: Session, run: Run, info: RunInfo) -> None:
     doc = read_json(info.files.outputs / BRIEFS)
     if doc is None:
         return
-    s.execute(sa.delete(BriefIssue).where(BriefIssue.run_id == run.id))
+    # a brief's issue made at its creation from this run's files (0.29.4) isn't the run's own
+    s.execute(
+        sa.delete(BriefIssue).where(BriefIssue.run_id == run.id, BriefIssue.status != "created")
+    )
     for i in doc["issues"]:
         body = i["issue"]
         s.add(

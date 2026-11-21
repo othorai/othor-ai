@@ -45,6 +45,16 @@ def test_waiting_shows_the_files_and_polls_until_the_draft_lands() -> None:
     assert "Continue opens when the draft is ready" in html and "disabled" in html  # oob footer
 
 
+def test_waiting_shows_how_long_it_has_been_drafting() -> None:
+    """Owner, 20 Nov 2026: a timer so the box never looks stuck; a calm note past 90 seconds."""
+    html = _box(box="waiting", uploads=[{"name": "MIS.xlsx", "reading": False}], elapsed="0:42")
+    assert "Drafting your message. You can edit it when it’s ready." in html and "· 0:42" in html
+    assert "Still working" not in html
+    slow = _box(box="waiting", uploads=[], elapsed="1:35", slow=True)
+    assert "· 1:35" in slow and "Still working: several files take a little longer." in slow
+    assert "· " not in _box(box="waiting", uploads=[]).split("Drafting your message")[1][:60]
+
+
 def test_a_drafted_box_is_filled_and_carries_the_draft_note() -> None:
     html = _box(
         box="drafted", text="We make technical textiles.", drafted_from=["MIS.xlsx", "r.sql"]

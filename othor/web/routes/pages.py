@@ -386,14 +386,14 @@ def settings_post(
         if value not in {o[0] for o in SETTINGS_FIELDS[field]}:
             return HTMLResponse("Not a valid choice.", status_code=400)
         parsed: Any = int(value) if field == "fiscal_year_start_month" else value
-    elif field in ("email_delivery", "weekly_digest", "chart_smooth"):
+    elif field in ("email_delivery", "chart_smooth"):
         parsed = value in ("on", "true", "1")
     else:
         return _plugin_setting(request, o, field, value)
     ev = _apply(request, o, {field: parsed}, "settings.changed")
     if ev is not None and field in SPEC_FIELDS:
         _settings_version(request, o, field, parsed)
-    if field in ("email_delivery", "weekly_digest", "chart_smooth"):
+    if field in ("email_delivery", "chart_smooth"):
         # a switch shows its own state; flipping it back undoes it, so no "saved · Undo" toast
         # (#17). The change is an event all the same.
         return Response(status_code=204)
@@ -404,7 +404,6 @@ def settings_post(
         "report_language": "Big Picture language",
         "chart_values": "Values on lines",
         "email_delivery": "Email delivery",
-        "weekly_digest": "Weekly digest",
     }[field]
     return page(request, "partials/toast_saved.html", {"text": f"{label} saved", "event_id": ev})
 

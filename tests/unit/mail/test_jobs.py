@@ -2,7 +2,7 @@
 """The morning scheduler and the delivery and alert jobs (docs/02, docs/09): 06:00 per brief in
 the company's time, weekdays, deduped; email off queues nothing; delivery waits for the run and
 gives up at 10:00 with 8c; a failed run sends 8c once and no brief; 8d after 24 hours at
-Metrics; the Sunday digest only when the owner turned it on."""
+Metrics; no weekly digest (retired in 0.30)."""
 
 from __future__ import annotations
 
@@ -254,26 +254,13 @@ def test_8d_after_24_hours_at_metrics_once(session_factory, two_companies):
     assert "https://indigothread.othor.ai/setup/metrics" in m.text
 
 
-def test_the_digest_only_on_sundays_when_turned_on(world):
+def test_no_weekly_digest_in_the_open_core(world):
+    """0.30: the weekly digest (8e) is retired; the open core queues no weekly email."""
     sunday = dt.datetime(2026, 11, 1, 0, 30, tzinfo=UTC)
+    with world.sf() as s, tenant_scope(world.cid):
+        world.company(s).weekly_digest = True  # the old switch, no longer read
+        s.commit()
     assert all(k.startswith("deliver:") for _, k in tick(world.sf, sunday))
-    with world.sf() as s, tenant_scope(world.cid):
-        world.company(s).weekly_digest = True
-        s.commit()
-    assert [k for _, k in tick(world.sf, sunday)] == ["digest:2026-11-01"]
-    assert [k for _, k in tick(world.sf, AT)] == [f"deliver:{world.brief_id}:2026-11-02"]
-    world.night(dt.date(2026, 10, 31))
-    world.night(dt.date(2026, 11, 1))
-    relay = MemoryRelay()
-    ctx = _ctx(world, Clock(sunday), relay)
-    with world.sf() as s, tenant_scope(world.cid):
-        for j in s.scalars(sa.select(Job).where(Job.kind == "deliver")):
-            j.status = "done"  # only the digest here
-        s.commit()
-    run_pending(ctx)
-    (m,) = relay.outbox
-    assert m.subject.startswith("This week in Sweep: 724 tests run")
-    assert "Weekly digest · 26 Oct – 1 Nov" in m.text
 
 
 def test_paused_and_deleted_companies_get_nothing(world):

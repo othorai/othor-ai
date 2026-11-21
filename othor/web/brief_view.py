@@ -378,6 +378,8 @@ def listing(s: Session, settings: Settings) -> dict[str, Any]:
                 or (body.get("ask_owner") if body.get("ask_owner") != "top_item" else ""),
                 "time": body.get("time", "06:00"),
                 "ready": issue is not None,
+                # 0.29.4: made at creation from last night's results, not yet a scheduled issue
+                "made_now": bool(issue is not None and issue.status == "created"),
                 "chart": lead_chart(issue.body, quiet=issue.quiet) if issue else None,
             }
         )

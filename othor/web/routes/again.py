@@ -6,6 +6,7 @@ Sources after metrics are added; and the offer to send the remade brief.
   it, come back to the page with the reason (`?again=<code>`). Either way an event.
 - `POST /brief/<id>/issues/<issue>/send`: the updated issue to its recipients, through the same
   delivery as the 06:00 email (a `deliver` job). Nothing is sent unless the owner presses it.
+  A new brief's issue made at creation (0.29.4) is sent the same way, by its Send now.
 - `POST /brief/<id>/issues/<issue>/keep`: "Not now" (an event; the offer goes away).
 """
 
@@ -87,7 +88,11 @@ def send_update(request: Request, bid: str, iid: str, o: Owner = Depends(signed_
             record_event(
                 s,
                 actor=o.viewer.id,
-                action="brief.update_send_requested",
+                action=(
+                    "brief.send_now_requested"
+                    if offer.kind == "created"
+                    else "brief.update_send_requested"
+                ),
                 object_type="brief_issue",
                 object_id=issue.id,
                 after={"job": str(job.id), "recipients": offer.recipients},

@@ -255,7 +255,12 @@ def deliver_brief(
     if run.status == "failed":
         return Outcome("failed_run", run=run)
     issue = s.scalars(
-        sa.select(BriefIssue).where(BriefIssue.brief_id == brief.id, BriefIssue.run_id == run.id)
+        sa.select(BriefIssue).where(
+            BriefIssue.brief_id == brief.id,
+            BriefIssue.run_id == run.id,
+            # 0.29.4: an issue made at creation is sent only by the owner's Send now
+            BriefIssue.status != "created",
+        )
     ).one_or_none()
     if issue is None:  # the brief was made after the run
         return Outcome("no_issue", run=run)

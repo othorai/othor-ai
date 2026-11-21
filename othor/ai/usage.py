@@ -56,6 +56,8 @@ LABEL = {
     "look_back_write": "Write a Look back report",
     # Discover 2.0 (Enterprise Edition, 0.29): a group's dashboard write-up
     "discover_summary": "Write a Discover group's summary",
+    # Plain Facts (Enterprise Edition, 0.30): the weekly write-up's words
+    "plain_facts": "Plain Facts, the weekly write-up",
 }
 
 

@@ -10,7 +10,7 @@
 {% from "components/ontology.html" import tell_line %}
 {% block title %}Morning Brief · {{ company.name }}{% endblock %}
 {% block crumb %}Morning Brief{% endblock %}
-{% block actions %}{{ button("Archive", href="/brief/archive") }}{% endblock %}
+{% block actions %}{% call el("div", layout="flex items-center gap-8") %}{{ slot("brief.actions") }}{{ button("Archive", href="/brief/archive") }}{% endcall %}{% endblock %}
 {% block main %}
 {# the page style (owner, 13 Nov 2026): New brief beside the title, Archive in the top bar #}
 {% set lede %}{% if first %}{{ fmt.num(cards | length) }} brief{{ "s" if cards | length != 1 else "" }} · first run #{{ "%04d" | format(run.number) }} · done{% else %}Same run, same numbers. Each brief is a view for one audience.{% endif %}{% endset %}

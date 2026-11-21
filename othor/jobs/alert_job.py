@@ -13,18 +13,16 @@ from __future__ import annotations
 
 import datetime as dt
 import uuid
-from datetime import timedelta
 from typing import Any
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from othor.briefs.models import BriefIssue
 from othor.connectors.models import Source
 from othor.core.events import SYSTEM_ACTOR, record_event
 from othor.core.localtime import local_date
 from othor.core.models import Company
-from othor.engine.models import Finding, Run, RunStep
+from othor.engine.models import Run, RunStep
 from othor.jobs.models import Job
 from othor.jobs.runner import WorkerContext
 from othor.mail import alerts
@@ -132,68 +130,11 @@ def _ontology_waiting(
     )
 
 
-def _digest(
-    s: Session, ctx: WorkerContext, c: Company, p: dict[str, Any], to: str
-) -> Message | None:
-    last = dt.date.fromisoformat(p["date"])
-    first = last - timedelta(days=6)
-    runs = list(
-        s.scalars(
-            sa.select(Run)
-            .where(
-                Run.kind == "nightly",
-                Run.status.in_(("done", "partial")),
-                Run.run_date >= first,
-                Run.run_date <= last,
-            )
-            .order_by(Run.number)
-        )
-    )
-    if not runs:
-        return None
-    ids = [r.id for r in runs]
-    tests = sum(int(((r.summary or {}).get("sweep") or {}).get("tests") or 0) for r in runs)
-    found = list(s.scalars(sa.select(Finding).where(Finding.run_id.in_(ids))))
-    fired = {f.fingerprint for f in found}
-    in_brief: set[str] = set()
-    for i in s.scalars(sa.select(BriefIssue).where(BriefIssue.run_id.in_(ids))):
-        in_brief |= {x["fingerprint"] for x in i.body.get("items") or []}
-    latest = [f for f in found if f.run_id == runs[-1].id and f.status == "open"]
-    open_items = [f for f in latest if f.fingerprint in in_brief]
-    newest: dict[str, Finding] = {}
-    for f in found:  # the latest row of each finding that never reached a brief
-        if f.fingerprint not in in_brief:
-            newest[f.fingerprint] = f
-    outside = [
-        (
-            ((f.body or {}).get("text") or {}).get("title") or f.metric,
-            ((f.body or {}).get("text") or {}).get("money") or f.detector.replace("_", " "),
-        )
-        for f in newest.values()
-    ]
-    return alerts.weekly_digest(
-        ctx.settings,
-        c,
-        to=to,
-        first=first,
-        last=last,
-        stats={
-            "tests": tests,
-            "fired": len(fired),
-            "in_brief": len(fired & in_brief),
-            "open": len(latest),
-        },
-        open_items=alerts.digest_rows(open_items[:6]),
-        not_in_brief=outside[:6],
-    )
-
-
 BUILD = {
     "run_failed": _run_failed,
     "source_stale": _source_stale,
     "run_late": _run_late,
     "ontology_waiting": _ontology_waiting,
-    "digest": _digest,
 }
 
 
@@ -215,7 +156,7 @@ def run(ctx: WorkerContext, job: Job) -> None:
             return
         row = s.scalars(sa.select(Delivery).where(Delivery.ref == ref)).first()
         if row is None:
-            row = Delivery(kind="digest" if kind == "digest" else "alert", ref=ref, created_at=now)
+            row = Delivery(kind="alert", ref=ref, created_at=now)
             s.add(row)
         row.status = "queued"
         s.commit()

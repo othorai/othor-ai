@@ -5,7 +5,7 @@
 {% from "components/blocks.html" import banner, toast, empty_state, page_title %}
 {% from "components/panels.html" import DRAFT_NOTE, draft_note %}
 {% from "components/forms.html" import action_form, text_area %}
-{% from "components/home.html" import home_card, question_row, qp_steps, qp_why, qp_pick, qp_nav, qp_found, qp_decided, confidence_pill, checks_strip, section_label, brief_more, sweep_box, sweep_card, sources_table, health_button, lights_panel, trial_chip, intel_button %}
+{% from "components/home.html" import home_card, question_row, qp_steps, qp_why, qp_pick, qp_nav, qp_found, qp_decided, confidence_pill, checks_strip, section_label, suggested_section, brief_more, sweep_box, sweep_card, sources_table, health_button, lights_panel, trial_chip, intel_button %}
 {% from "components/brief.html" import nb_head, nb_ai_tag, nb_busy %}
 {% from "components/ontology.html" import record_card %}
 {% from "components/weather.html" import weather_banner, weather_outlook, forecast_panel, picked_panel %}
@@ -29,7 +29,7 @@
   {# #61 (owner, 14 Nov 2026): the company's name as the title; the crumb still says Home #}
   {# v0.19 (M19.5): Big Picture where "Updated" was; the time moved to the top bar (owner, 15 Nov 2026) #}
   {% call page_title(company.name) %}{% call el("div", layout="flex items-center gap-12 flex-wrap") %}{{ slot("home.title_actions") }}{% if trial %}{{ trial_chip(trial) }}{% endif %}{# #86 (owner, 18 Nov 2026): Ask Othor AI sits left of Big Picture on Home (not in the top bar
-   here); Big Picture has its own icon #}{{ ai_button("Ask Othor AI", state="quiet", href="/home?panel=othor&subject=ask", attrs={"data-panel": true}) }}{% if big_picture is defined %}{{ ai_button("Big Picture Report" if big_picture else "Big Picture · not available right now", href="/home?panel=big-picture", disabled=not big_picture, ic="summary") }}{% endif %}{% endcall %}{% endcall %}
+   here); Big Picture has its own icon #}{{ ai_button("Ask Othor AI", state="quiet", href="/home?panel=othor&subject=ask", attrs={"data-panel": true}) }}{% if big_picture is defined %}{{ ai_button("Big Picture Report" if big_picture else "Big Picture · not available right now", href="/home?panel=big-picture", disabled=not big_picture, ic="summary") }}{% endif %}{# a plug-in's buttons after Big Picture (0.30) #}{{ slot("home.title_end") }}{% endcall %}{% endcall %}
 
   {% include "partials/run_again.html" %}
 
@@ -49,6 +49,11 @@
     {% endcall %}
   {% endcall %}
   {% endif %}
+
+  {# Suggested by Othor AI (owner, 20 Nov 2026): cards the plug-ins offer (Discover's groups,
+     Look back's reports), after the briefs; hidden when none is offered #}
+  {% set sg = slot_cards("home.suggested") %}
+  {% if sg %}{{ suggested_section(sg, csrf_token) }}{% endif %}
 
   {% if weather and outlook %}
   {% call el("section", attrs={"aria-label": "Next 4 weeks"}) %}
@@ -97,5 +102,6 @@
 {% if wpanel %}{{ picked_panel(wpanel, "/home") }}{% endif %}
 {% if bpanel %}{{ bp_panel(bpanel, csrf_token) }}{% endif %}
 {% if lpanel %}{{ lights_panel(lpanel) }}{% endif %}
+{{ slot("home.overlay") }}
 
 {% endblock %}

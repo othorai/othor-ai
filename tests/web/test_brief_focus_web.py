@@ -110,7 +110,9 @@ def test_add_goal_drafts_it_and_create_opens_it(night, monkeypatch):  # noqa: F8
     text = _text(panel)
     # only the owner's own figure: "30 days" isn't in the question
     assert "Add goal: DSO under 45 days" in text and "30 days" not in text
-    assert 'formaction="/brief/new/goal"' in panel and 'class="btn ai"' in panel
+    assert (
+        'formaction="/brief/new/goal"' in panel and 'class="btn soft"' in panel
+    )  # owner, 20 Nov: soft, beside Create brief
     assert "Not watched yet" not in text
     form = _form(page)
     with svc.sf() as s, tenant_scope(cid):

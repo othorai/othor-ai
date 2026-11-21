@@ -106,7 +106,7 @@
   {# #29: nothing to chart (a quiet day, or no issue yet): the faint Othor AI mark and a short line, as Home's cards (#21) #}
   <div class="visual">{% if c.chart %}{{ chart(c.chart, 360, 152) }}{% else %}<span class="quiet"><span class="mark" aria-hidden="true">{{ logo() }}</span><span>{{ "Quiet day" if c.quiet else ("First issue at " ~ fmt.clock(c.time) if not c.ready else "Nothing to chart") }}</span></span>{% endif %}{% if n > 1 %}<span class="stack-count">1 of {{ fmt.num(n) }}</span>{% endif %}</div>
   <div class="body">
-    <div class="head"><span class="brief-tag">{{ c.name }}</span>{% if new %}<span class="change new">New</span>{% endif %}{% if c.default %}<span class="chip soft">Default</span>{% endif %}<span class="status"><span class="dot {{ 'accent' if c.ready else 'muted' }}"></span>{{ ("Ready · " ~ fmt.clock(c.time)) if c.ready else "No issue yet" }}</span></div>
+    <div class="head"><span class="brief-tag">{{ c.name }}</span>{% if new %}<span class="change new">New</span>{% endif %}{% if c.default %}<span class="chip soft">Default</span>{% endif %}<span class="status"><span class="dot {{ 'accent' if c.ready else 'muted' }}"></span>{{ "From last night" if c.made_now else (("Ready · " ~ fmt.clock(c.time)) if c.ready else "No issue yet") }}</span></div>
     {% if c.title %}<p class="headline">{{ c.title }}</p>{% endif %}
     <p class="meta">{% if c.ready and not c.quiet %}<span>{{ fmt.num(n) }} finding{{ "s" if n != 1 else "" }}</span>{% endif %}<span>{{ c.scope }}</span><span>{{ fmt.num(c.recipients) }} recipient{{ "s" if c.recipients != 1 else "" }}</span>{% if c.ask %}<span>Question for: {{ c.ask }}</span>{% endif %}</p>
     <span class="open">Open brief →</span>
@@ -249,7 +249,7 @@
 {% macro nb_watch(n) -%}
 {% if n.missing or n.targets or n.goal %}<div class="flex flex-col gap-8">
 {% if n.missing %}<p class="hint">Not watched yet: {{ n.missing | join(", ") }}{% if n.discover %} · <a class="link" href="/discover">Find it in Discover</a>{% endif %}</p>{% endif %}
-{% if n.targets %}<div class="flex flex-wrap gap-8">{% for t in n.targets %}{{ ai_button("Add goal: " ~ t, type="submit", attrs={"formaction": "/brief/new/goal", "name": "target", "value": t, "data-busy": "Drafting the goal…", "data-busy-say": "Othor AI is drafting the goal…"}) }}{% endfor %}</div>{% endif %}
+{% if n.targets %}<div class="flex flex-wrap gap-8">{% for t in n.targets %}{{ button("Add goal: " ~ t, "soft", type="submit", attrs={"formaction": "/brief/new/goal", "name": "target", "value": t, "data-busy": "Drafting the goal…", "data-busy-say": "Othor AI is drafting the goal…"}) }}{% endfor %}</div>{% endif %}
 {% if n.goal %}<p class="hint">Goal drafted: {{ n.goal }} · ready to apply after Create</p>{% endif %}
 </div>{% endif %}
 {%- endmacro %}

@@ -171,16 +171,6 @@ def emails() -> dict[str, Message]:
             total=3,
             drafted_on=dt.date(2026, 10, 21),
         ),
-        "8e_weekly_digest": alerts.weekly_digest(
-            ST,
-            CO,
-            to="uk@indigothread.example",
-            first=dt.date(2026, 10, 26),
-            last=DAY,
-            stats={"tests": 1484, "fired": 12, "in_brief": 4, "open": 8},
-            open_items=[("South fell ₹1.4 Cr; West’s rise hid it", "Priya Menon · day 1")],
-            not_in_brief=[("Gross margin by plant · Kochi", "₹0.9 Cr")],
-        ),
     }
 
 

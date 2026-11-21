@@ -6,6 +6,51 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-11-20
+
+### Added
+- Plain Facts (Enterprise Edition): the week's business as a newspaper's data page, every Monday
+  at the brief time, by email with the same page attached as a PDF, and in the app with an archive.
+  Code picks the theme (a goal at risk, or the biggest move it can explain) and builds 3 to 5
+  sections with a chart each, big-number callouts and the round-up (what Sweep found, what reached
+  a brief, goals at risk, what's ahead). Othor AI writes the words in one call per issue, every
+  figure checked; without a model the issue goes out in template words. On for every licensed
+  company; Settings › Delivery switches it off. New tables `plain_facts_issue` and
+  `plain_facts_choice` (migration `e0009_plain_facts`), in the export.
+- Setup: the "Drafting from your files" box shows how long it has been working, and a calm note
+  past 90 seconds.
+
+### Removed
+- The weekly digest email: Plain Facts carries its counts and lists in the round-up.
+
+## [0.29.4] - 2026-11-20
+
+### Added
+- A new brief shows its first issue at once, made from last night's results ("From last night's
+  results · first scheduled issue tomorrow"); nothing is emailed until Send now. The night's own
+  issues and replay are unchanged.
+- Switching on a Discover group computes its numbers right away: the group page says "Computing
+  your collection · about a minute" and fills in without a reload; Try again if the run fails.
+- Home: "Suggested by Othor AI", up to three cards from Discover and Look back, each with Review
+  or Make this report and Not now; the rest a link away.
+
+### Changed
+- Switch on opens the group's page (from Discover or Home); what was just done shows in the dark
+  toast with an outlined Undo.
+
+## [0.29.3] - 2026-11-20
+
+### Changed
+- Look back (Enterprise Edition): a made report reads like a Discover group's page: the answer
+  first in one band (look at next, biggest driver, what it means), headline numbers, a card per
+  section with its chart, what Othor AI would have caught, a sortable table of the biggest moves
+  behind the change, and how it was made. Reading, planned, running and failed share the same
+  header; the PDF and the email follow the new order. Nothing new is computed and no new model
+  call is made: the page shows what the report already holds.
+- The green-to-cyan button is now for Big Picture only: Look back's Make this report and Make
+  the plan, and Discover's Switch on, are the blue button; New brief's Add goal is the soft blue
+  one; Ask about this group is the quiet outlined button, like the top bar's Ask Othor AI.
+
 ## [0.29.2] - 2026-11-20
 
 ### Changed

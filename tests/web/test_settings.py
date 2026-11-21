@@ -69,14 +69,14 @@ def test_a_switch_saves_without_a_toast(env: Env) -> None:
     signup(env)
     c, host = env.client, env.host("indigothread")
     tok = env.csrf(f"{host}/settings")
-    for field in ("email_delivery", "weekly_digest"):
+    for field in ("email_delivery", "chart_smooth"):
         r = c.post(
             f"{host}/settings",
-            data={"field": field, "value": "on" if field == "weekly_digest" else "off"},
+            data={"field": field, "value": "off"},
             headers={"X-CSRF-Token": tok, "HX-Request": "true"},
         )
         assert r.status_code == 204 and r.text == "", field
     assert [e.after for e in env.events("settings.changed")][-2:] == [
         {"email_delivery": False},
-        {"weekly_digest": True},
+        {"chart_smooth": False},
     ]

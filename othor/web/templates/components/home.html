@@ -99,6 +99,21 @@
 <h2 class="home-label">{{ text }}</h2>
 {%- endmacro %}
 
+{# Suggested by Othor AI (owner, 20 Nov 2026): the cards plug-ins offer (sg = slot_cards(…)),
+   in the brief-card grid, with a link per source that has more; what an action just did shows
+   as the calm toast with its Undo. The cards are rows: a dismissed one fades out in place. #}
+{% macro suggested_section(sg, csrf) -%}
+{% from "components/blocks.html" import toast %}
+{% from "components/buttons.html" import button, link %}
+{% from "components/forms.html" import action_form %}
+{% if sg.cards %}<section class="flex flex-col gap-16" aria-label="Suggested by Othor AI" id="suggested">
+  <div class="flex flex-wrap items-baseline justify-between gap-12"><h2 class="caps-title">Suggested by Othor AI · {{ fmt.num(sg.count) }}</h2><span class="hint">From last night’s results · nothing changes until you choose</span></div>
+  <div class="brief-cards" data-rows>{% for c in sg.cards %}{{ c }}{% endfor %}</div>
+  {% if sg.more %}<div class="flex flex-wrap items-center gap-16">{% for m in sg.more %}{{ link(m.label if loop.first else (m.short or m.label), m.href) }}{% endfor %}</div>{% endif %}
+</section>{% endif %}
+{% if sg.toasts %}<div class="toast-dock">{% for t in sg.toasts %}{% call toast(t.text) %}{% if t.action %}{% call action_form(t.action, csrf) %}{{ button(t.label or "Undo", kind="quiet", type="submit") }}{% endcall %}{% endif %}{% endcall %}{% endfor %}</div>{% endif %}
+{%- endmacro %}
+
 {# Home's Data sources (#57, owner 14 Nov 2026): each source, whether it had rows for yesterday
    (from the run's stored weather facts), its newest data and when it was last read.
    rows = home_view.source_rows() #}

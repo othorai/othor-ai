@@ -339,10 +339,11 @@ def test_a_new_brief_from_one_question_then_undo(night):  # noqa: F811
     assert "created · first brief tomorrow 6:00 AM" in listing and "Undo" in listing
     with svc.sf() as s, tenant_scope(cid):
         new = s.scalars(sa.select(B).where(B.is_default.is_(False))).one()
-    # #96: the new brief opens before its first issue (no 500), and says when the first one comes
+    # 0.29.4: the new brief opens with its first issue from last night's results (the empty
+    # state of #96 stays for a brief made before any run: test_brief_instant)
     first = env.client.get(h + f"/brief/{new.id}")
     assert first.status_code == 200, first.status_code
-    assert "No issue yet The first one arrives tomorrow at 6:00 AM IST" in _text(first.text)
+    assert "From last night’s results · first scheduled issue tomorrow" in _text(first.text)
     r = env.client.post(
         h + f"/brief/{new.id}/undo-create", data={"csrf": tok}, follow_redirects=False
     )

@@ -91,6 +91,10 @@ TABLES: dict[str, Rule] = {
     "postmark_event": Rule(),
     # Othor AI's Big Picture reports (v0.19): the report as shown, numbers filled by code
     "big_picture": Rule(drop={"input_hash": "an internal cache key"}),
+    # Plain Facts (Enterprise Edition, 0.30, named here only): each weekly issue as built, the
+    # words around its computed figures, and whether the owner turned it off
+    "plain_facts_issue": Rule(drop={"body_hash": "an internal replay check"}),
+    "plain_facts_choice": Rule(),
     # Look back's reports (an Enterprise Edition table, named here only; the core never imports
     # it): the question, plan, results and words are the owner's; the upload is not exported
     # Discover's groups (Enterprise Edition, named here only): what was offered and decided
