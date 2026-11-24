@@ -13,7 +13,7 @@
     <div class="nav-links">
     <p class="group">{{ company.name }}</p>
     {# plug-in items join their group after the core item they name (M20.1) #}
-    {% for key, label, href, ic, tag, badge in nav_items("company", [("home", "Home", "/home"), ("brief", "Morning Brief", "/brief"), ("sweep", "Sweep", "/sweep"), ("summary", "Summary", "/summary")]) %}
+    {% for key, label, href, ic, tag, badge in nav_items("company", [("home", "Home", "/home"), ("action-plan", "Action plan", "/action-plan"), ("brief", "Morning Brief", "/brief"), ("sweep", "Sweep", "/sweep"), ("summary", "Summary", "/summary")]) %}
     <a class="nav-item{{ ' is-on' if nav == key else '' }}" href="{{ href }}"{% if nav == key %} aria-current="page"{% endif %}>{{ icon(ic) }}{{ label }}{% if badge %}<span class="nav-badge" aria-label="{{ fmt.num(badge) }} new">{{ fmt.num(badge) }}</span>{% endif %}{% if tag == "ee" %}{{ ee_tag(short=True) }}{% endif %}</a>{% endfor %}
     <p class="group">Setup</p>
     {# owner, 18 Nov 2026 (0.26): AI usage is a plain menu item above Settings, this month's

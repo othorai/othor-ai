@@ -24,6 +24,18 @@ def card_title(issue_body: dict[str, Any], title: str) -> str:
     return f"{title} {lines[0]}" if lines and title else title
 
 
+def actions(issue_body: dict[str, Any], prose: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """What to do (#110): the issue's stored actions, each with the sentence to show: the model's
+    when its numbers passed (rewrite.py checks each one), else the template's."""
+    stored = list(issue_body.get("actions") or [])
+    said: list[str] = []
+    if prose and prose.get("source") == "model":
+        said = [str(x) for x in (prose.get("model") or {}).get("actions") or []]
+    if len(said) != len(stored):
+        said = [str(a.get("text") or "") for a in stored]
+    return [{**a, "said": s} for a, s in zip(stored, said, strict=True)]
+
+
 def shown(issue_body: dict[str, Any], prose: dict[str, Any] | None) -> dict[str, str]:
     if prose and prose.get("source") == "model":
         return {k: str(prose["model"].get(k) or issue_body.get(k, "")) for k in FIELDS}

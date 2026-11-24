@@ -21,8 +21,12 @@ FACTS = {
 def test_each_source_says_whether_it_was_updated_yesterday() -> None:
     assert source_status("sales_dw", FACTS) == ("Updated", "ok", "12 Nov")
     assert source_status("Sales sheet", FACTS) == ("Not updated since 11 Nov", "warn", "11 Nov")
-    # a source that only gets rows on its own days: the same words, without the warning
-    assert source_status("Weekly sheet", FACTS) == ("Not updated since 9 Nov", "warn", "9 Nov")
+    # a source that only gets rows on its own days (a weekly sheet; a sales warehouse with no
+    # Sunday rows, 23 Nov 2026): yesterday's gap is usual, so no warning
+    assert source_status("Weekly sheet", FACTS) == ("Up to date", "ok", "9 Nov")
+    # a run stored before `late` was kept can't tell a usual gap from a real one: it warns
+    old = {"sources_fresh": {"Old sheet": {"newest": "2026-11-09", "updated": False}}}
+    assert source_status("Old sheet", old) == ("Not updated since 9 Nov", "warn", "9 Nov")
     assert source_status("Targets", FACTS) == ("No daily numbers", "muted", "–")
 
 

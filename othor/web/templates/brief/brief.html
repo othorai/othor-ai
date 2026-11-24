@@ -151,6 +151,7 @@
 <form id="add-recipient" method="post" action="/brief/{{ e.brief.id }}/recipients" class="hidden" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}"></form>
 {% endcall %}
 {% elif fpanel %}{{ forecast_panel(fpanel, wx_close) }}
+{% elif watch is defined %}{% include "sweep/_watch.html" %}
 {% elif panel %}
 {% set close = base ~ "?" ~ q %}
 {% set fbase = base ~ "/finding/" %}{% set fq = q %}

@@ -179,7 +179,7 @@ def contact_view(request: Request, company: Any, user: Any) -> dict[str, Any] | 
     rest = [(k, v) for k, v in q.multi_items() if k not in ("panel", "topic", "sent")]
     here = request.url.path
     return {
-        "line": dict(contact.TOPICS)[topic],
+        "line": dict(contact.TOPICS).get(topic) or contact.NO_TOPIC_LINE,
         "form": {"topic": topic},
         "sent": q.get("sent") == "1",
         "close": here + ("?" + urlencode(rest) if rest else ""),

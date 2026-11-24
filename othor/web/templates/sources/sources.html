@@ -18,7 +18,7 @@
 {# owner, 13 Nov 2026: the Settings style, sections with rows; no tabs ("All connectors" is Add a
    source); Suggested shows only while a source is waiting #}
 {# owner, 13 Nov 2026: "Data sources", with Add a source beside the heading #}
-{% call page_title("Data sources") %}{{ button("Add a source", "primary", href="/sources?panel=add") }}{% endcall %}
+{% call page_title("Data sources", lede=page_ledes.sources) %}{{ button("Add a source", "primary", href="/sources?panel=add") }}{% endcall %}
 <div class="flex flex-col gap-56">
   {# owner, 13 Nov 2026: tabular, column names in the table-header style #}
   <div class="flex flex-col gap-12">
@@ -34,7 +34,7 @@
         {# owner, 19 Nov 2026: Status is the connection's health with when it was last read, in one
            chip; Last updated is whether new data arrived, in the same chip style with its dot #}
         <td>{{ chip(c.status[0] ~ (" · Last read " ~ c.last_read if c.src.last_read_at else ""), dot=c.status[1]) }}</td>
-        <td>{% if nw %}{{ chip((nw[0] ~ " · " ~ nw[2]) if nw[0] == "Updated" and nw[2] != "–" else (nw[3] or nw[0]), dot=(nw[1] if nw[1] in ("ok", "warn", "neg") else "muted")) }}{% else %}–{% endif %}</td>
+        <td>{% if nw %}{{ chip((nw[0] ~ " · " ~ nw[2]) if nw[0] in ("Updated", "Up to date") and nw[2] != "–" else (nw[3] or nw[0]), dot=(nw[1] if nw[1] in ("ok", "warn", "neg") else "muted")) }}{% else %}–{% endif %}</td>
         <td>{% if c.feeds %}{{ fmt.num(c.feeds | length) }} metric{{ "s" if c.feeds | length != 1 else "" }}{% else %}–{% endif %}</td>
         <td>{% if c.src.health and c.src.health.last_read %}{{ fmt.num(c.src.health.last_read.rows) }}{% else %}–{% endif %}</td>
         {% call el('td', 'num') %}<div class="flex items-center justify-end gap-6">{{ button("Tables", "", "sm", href="/sources?panel=tables&s=" ~ c.src.id) }}{% if c.src.kind == "postgres" %}{{ button("Schemas", "", "sm", href="/sources?panel=schemas&s=" ~ c.src.id) }}{% endif %}{{ button("Manage", "soft", "sm", href="/sources?panel=manage&s=" ~ c.src.id) }}</div>{% endcall %}

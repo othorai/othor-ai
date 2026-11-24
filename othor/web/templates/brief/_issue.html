@@ -81,7 +81,7 @@
       {% call el("p", "hint") %}Every finding this brief covers: the items above and the rest in Sweep{% endcall %}
       {% call el("div", "brief-since") %}{% for k, v in [("New", b.since.new), ("Worse", b.since.worse), ("Open", b.since.open), ("Resolved", b.since.resolved)] %}<div>{% call el("p", "k") %}{{ k }}{% endcall %}{% call el("p", "v") %}{{ fmt.num(v) }}{% endcall %}</div>{% endfor %}{% endcall %}
     {% else %}
-      {% call el("div", "brief-items") %}{% for i in items %}{{ brief_item(i, base ~ "/finding/" ~ i.fingerprint ~ "?" ~ q, base ~ "/finding/" ~ i.fingerprint ~ "?" ~ q ~ ("" if i.link == "reasons" else "&tab=test"), None if readonly or not bv.run else (bv.run.number, bv.brief.id, csrf_token), (held or {}).get(i.fingerprint) if held is defined else None) }}{% endfor %}{% endcall %}
+      {% call el("div", "brief-items") %}{% for i in items %}{{ brief_item(i, base ~ "/finding/" ~ i.fingerprint ~ "?" ~ q, base ~ "/finding/" ~ i.fingerprint ~ "?" ~ q ~ ("" if i.link == "reasons" else "&tab=test"), None if readonly or not bv.run else (bv.run.number, bv.brief.id, csrf_token), (held or {}).get(i.fingerprint) if held is defined else None, (card_watch or {}).get(i.fingerprint) if card_watch is defined else None) }}{% endfor %}{% endcall %}
     {% endif %}
     {% endcall %}
   {% endif %}
@@ -100,6 +100,9 @@
   {% if b.ask %}{{ ask_today([b.ask.to, b.ask.role] | select | join(" · "), b.ask.text, ("Settles item 01. " ~ items[0].line) if items and items[0].line and not b.quiet else None) }}{% endif %}
 
   {% if bv.more_in_sweep and not b.quiet %}{% call el("div", "more-line") %}<span>{{ fmt.num(bv.more_in_sweep) }} more found last night, not in this brief</span>{% if not readonly %}{% call el("a", "link", attrs={"href": "/sweep"}) %}See them in Sweep →{% endcall %}{% endif %}{% endcall %}{% endif %}
+
+  {# Action plan (Morning Brief 2.5, #110; owner, 22 Nov 2026): last, just above Since last week #}
+  {% if todo is defined and todo %}{% from "components/todo.html" import todo_section %}{{ todo_section(todo, None if readonly else csrf_token) }}{% endif %}
 
   {# 0.28.5 (owner, 20 Nov 2026): "Since last week" last, after everything else in the issue #}
   {% if b.get("week") %}{% call el("div", layout="mt-16") %}{{ since_week(b["week"], None if readonly or not bv.run else (bv.run.number, bv.brief.id, csrf_token), held if held is defined else None, None if readonly else "/sweep") }}{% endcall %}{% endif %}

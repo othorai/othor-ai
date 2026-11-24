@@ -74,7 +74,7 @@ def test_waiting_with_nothing_to_answer_points_to_the_ontology() -> None:
     s = home_view.checks_strip(_rv(st), questions=0)
     assert s["action"] == ("Update the Business Model", "/ontology") and s["state"] == "partial"
     s = home_view.checks_strip(_rv(st), questions=0, proposals=2)
-    assert s["action"] == ("Review proposals", "/home#proposals") and "2 proposals" in s["tail"]
+    assert s["action"] == ("Review proposals", "/ontology#proposals") and "2 proposals" in s["tail"]
     s = home_view.checks_strip(_rv(st), questions=3, proposals=2)
     assert s["action"] == ("Answer 3 questions", "/home?panel=othor&subject=questions")
 
@@ -105,7 +105,7 @@ def test_an_open_split_proposal_leads_the_strip() -> None:
     s = home_view.checks_strip(
         _rv(st), questions=3, proposals=1, splits="Split your numbers by Region and Customer"
     )
-    assert s["action"] == ("Review the split", "/home#proposals")
+    assert s["action"] == ("Review the split", "/ontology#proposals")
     assert s["tail"] == "Split your numbers by Region and Customer so more checks can run."
     s = home_view.checks_strip(_rv(_all()), questions=0, splits="Split your numbers by Region")
     assert s["action"] == ("Open brief", "/brief")  # every check ran: the split isn't pushed

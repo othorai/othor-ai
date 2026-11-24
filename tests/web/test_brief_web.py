@@ -54,6 +54,11 @@ def test_the_brief_opens_with_p1_first(night):  # noqa: F811
         "Archive",
     ):
         assert text in briefs, text
+    # the top bar's ⋯ menu on every page (owner, 15 Nov 2026; 23 Nov 2026): Archive is in it
+    more = briefs[briefs.index('class="use top-more"') :]
+    more = more[: more.index("</details>")]
+    assert 'role="menuitem" href="/brief/archive">Archive<' in more
+    assert briefs.count('class="use top-more"') == 1
     # #44: the New brief card is the icon and "New brief" only, no description or link line
     card = briefs[briefs.index('class="brief-card new"') :][:600]
     card = card[: card.index("</a>")]
@@ -88,7 +93,9 @@ def test_the_brief_opens_with_p1_first(night):  # noqa: F811
     assert "Every number is computed" not in page
     # cards numbered 01–04, Snooze and Mute returning to this brief
     assert re.findall(r'<span class="n">(\d\d)</span>', page)[:4] == ["01", "02", "03", "04"]
-    assert page.count(f"&amp;back=brief-{bid}") == 8 and 'id="item-1"' in page
+    # (the cards' own: What to do's rows after them have theirs, test_what_to_do_web)
+    cards = page.split('aria-label="Action plan"', 1)[0]
+    assert cards.count(f"&amp;back=brief-{bid}") == 8 and 'id="item-1"' in page
     titles = re.findall(r'<a class="title" href="[^"]+">([^<]+)<', page)
     assert titles[0] == "South fell ₹1.4 Cr; West’s rise hid it" and len(titles) == 4
     assert "<svg" in page  # tiles and item charts from ChartSpec
@@ -604,7 +611,12 @@ def test_the_brief_pages_description_is_behind_an_info_icon(night):  # noqa: F81
     row = row[: row.index("</div>")]
     pop = row[row.index('class="pop-body"') :]
     assert "first run #" in pop and "Made by nightly run #" in pop and "replayable" in pop
-    assert 'class="page-lede"' not in page[page.index("<main") : page.index("brief-cards")]
+    head = page[page.index("<main") : page.index("brief-cards")]
+    # #108 (owner, 21 Nov 2026): one plain line under the title; "Sent …" is behind the (i)
+    assert (
+        '<p class="page-lede">The few things that matter each morning, how sure Othor AI is,'
+        " and who to ask.</p></div>" in head
+    )
 
 
 def test_snooze_from_a_brief_returns_to_it(night):  # noqa: F811

@@ -6,6 +6,6 @@
 {% block title %}{{ title }} · {{ company.name }}{% endblock %}
 {% block crumb %}{{ title }}{% endblock %}
 {% block main %}
-{% if trial %}{% call page_title(title) %}{{ trial_chip(trial) }}{% endcall %}{% else %}{{ page_title(title) }}{% endif %}
+{% if trial %}{% call page_title(title, lede=page_ledes.get(nav)) %}{{ trial_chip(trial) }}{% endcall %}{% else %}{{ page_title(title, lede=page_ledes.get(nav)) }}{% endif %}
 {% call el("div", "card board") %}{{ empty_state(None, empty, text, "Continue setup" if resume else None, resume or "#", primary=True) }}{% endcall %}
 {% endblock %}

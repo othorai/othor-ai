@@ -40,6 +40,7 @@ RESERVED = {
     "root",
     "dev",
     "staging",
+    "blog",  # blog.othor.ai: the old blog's address, redirected by the website (23 Nov 2026)
 }
 
 

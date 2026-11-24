@@ -872,6 +872,12 @@ def _shared(
         ctx["pdf"] = pdf_ctx(bv)
         ctx["shared_by"] = o.viewer.name or o.viewer.email
         ctx["viewer_line"] = "Preview · as recipients see it"
+        # What to do (#110): as recipients see it, without buttons
+        from othor.web import todo_view
+
+        ctx["todo"] = todo_view.for_issue(
+            s, bv.issue, bv.run, today, base=ctx["base"], q="", back="", readonly=True
+        )
         # the owner's way back to the brief (#23); a recipient's own link has none
         day = f"?date={bv.issue.date.isoformat()}" if date else ""
         ctx["back"] = f"/brief/{bv.brief.id}{day}"
@@ -1011,6 +1017,25 @@ def brief(
         ctx["pdf"] = pdf_ctx(bv)
         ctx["saved"] = saved
         ctx["held"] = bvw.held(s, _today(request, o))  # Snooze and Mute from a card (M15.3)
+        # What to do (Morning Brief 2.5, #110): this issue's next steps, after its items
+        from othor.web import todo_view
+
+        ctx["todo"] = todo_view.for_issue(
+            s,
+            bv.issue,
+            bv.run,
+            _today(request, o),
+            base=ctx["base"],
+            q=ctx["q"],
+            back=f"brief-{bv.brief.id}",
+        )
+        # Watch on the item cards, in place (0.33.1)
+        ctx["card_watch"] = todo_view.card_watch(
+            s,
+            bv.run,
+            [str(i["fingerprint"]) for i in bv.body.get("items") or []],
+            f"brief-{bv.brief.id}",
+        )
         # #38: a headline tile opens its number's panel (the Ontology's), in place
         keep = [
             (k, v) for k, v in request.query_params.multi_items() if k not in ("panel", "metric")
@@ -1022,6 +1047,13 @@ def brief(
             if mp is None:
                 return not_found(request, o.site, f"There’s no number called {metric}", GONE[1])
             ctx["metric"], ctx["metric_close"] = mp, here
+        # Watch this in place over the brief (0.33.1): from a card or a What to do row
+        if panel == "watch":
+            from othor.web.routes.sweep import watch_panel
+
+            wp = watch_panel(request, s, o, f"brief-{bv.brief.id}")
+            if wp is not None:
+                ctx.update(wp)
         # business weather (v0.12 part 1c): the brief's own forecast panel, in place
         if panel == "forecast" and bv.issue is not None:
             ctx["fpanel"] = weather_view.forecast_panel(

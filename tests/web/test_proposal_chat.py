@@ -56,8 +56,9 @@ def test_a_proposal_is_discussed_and_applied_in_the_chat(night, monkeypatch):  #
 
     env, h, cid, rid, svc = night
     pid = _proposal(svc, cid, rid)
-    home = env.client.get(h + "/home").text
-    assert f"/home?panel=othor&amp;subject=proposal:{pid}" in home
+    # Suggest edits on the Business Model page opens this chat (owner, 23 Nov 2026)
+    bm = env.client.get(h + "/ontology").text
+    assert f"/ontology?panel=othor&amp;subject=proposal:{pid}" in bm
     subject = f"proposal:{pid}"
     back = f"/home?panel=othor&subject={subject}"
     page = env.client.get(h + back).text.split('id="othor-chat"', 1)[1]

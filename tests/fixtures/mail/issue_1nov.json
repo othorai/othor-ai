@@ -1,4 +1,85 @@
 {
+ "actions": [
+  {
+   "by": "By 31 Mar",
+   "fingerprints": [],
+   "key": "goal:fy27_net_revenue",
+   "kind": "goal",
+   "metric": "net_revenue",
+   "money": "₹3.3 Cr",
+   "money_note": "short of the goal",
+   "status": "Off track",
+   "text": "Find ₹3.3 Cr more net revenue by 31 Mar: at today’s pace it ends at ₹56.7 Cr against the ₹60 Cr goal.",
+   "who": null,
+   "why": [
+    {
+     "goal": "fy27_net_revenue",
+     "title": "Net revenue FY27 · ₹60 Cr target · tracking ₹56.7 Cr (80% band ₹54.1–59.2 Cr) · 5% likely"
+    }
+   ]
+  },
+  {
+   "by": "November close in 29 days",
+   "detector": "net_hiding_gross",
+   "fingerprints": [
+    "2b7b32c5f8a79322b25382aa"
+   ],
+   "key": "finding:2b7b32c5f8a79322b25382aa",
+   "kind": "finding",
+   "metric": "net_revenue",
+   "money": "₹1.4 Cr",
+   "money_note": null,
+   "status": "New",
+   "text": "Call Tessora EU and Ravira Exports: they carry most of South’s ₹1.4 Cr fall, which West’s rise hid (Skarfab is on a known pause).",
+   "watch": {
+    "breakdown_value": null,
+    "can": false,
+    "entities": [
+     "South",
+     "West"
+    ]
+   },
+   "who": {
+    "name": "Priya Menon",
+    "role": "Head of Sales"
+   },
+   "why": [
+    {
+     "fingerprint": "2b7b32c5f8a79322b25382aa",
+     "title": "South fell ₹1.4 Cr; West’s rise hid it"
+    }
+   ]
+  },
+  {
+   "by": null,
+   "detector": "rising_variance",
+   "fingerprints": [
+    "83f4e966442fc01cd415cf2c"
+   ],
+   "key": "finding:83f4e966442fc01cd415cf2c",
+   "kind": "finding",
+   "metric": "dispatch_time",
+   "money": "₹4.59 Cr at risk",
+   "money_note": null,
+   "status": "New",
+   "text": "Ask what changed at Coimbatore from 7 Sep: the spread of dispatch time tripled while the average held at 4.3 days.",
+   "watch": {
+    "breakdown_value": "Coimbatore",
+    "can": true,
+    "entities": []
+   },
+   "who": {
+    "name": "Aditya Naik",
+    "role": "Operations"
+   },
+   "why": [
+    {
+     "fingerprint": "83f4e966442fc01cd415cf2c",
+     "title": "Dispatch time spread at Coimbatore tripled from 7 Sep while the average held at 4.3 days"
+    }
+   ]
+  }
+ ],
  "ahead": [
   {
    "card": {
@@ -413,17 +494,17 @@
  "title": "South fell ₹1.4 Cr while West’s growth hid it; three accounts carry 72% of the drop and none has invoiced since 9 Oct; one is Skarfab’s known pause to 1 Dec.",
  "watching": [
   {
-   "id": "7bbf3707-28dd-48ae-ae45-843017d624e6",
+   "id": "be9d30d7-3511-4038-8b5c-cf5fd4c853b3",
    "label": "Active customers silent 90+ days",
    "text": "Active customers silent 90+ days · 14 · alert above 8 · owner Priya Menon"
   },
   {
-   "id": "635bcf64-2da2-4849-a8ce-d9a4d018c530",
+   "id": "558cf79b-3793-4b65-83be-ee6a4a74a124",
    "label": "Dispatch time spread, Coimbatore · 7 days",
    "text": "Dispatch time spread, Coimbatore · 7 days · 2.2 · alert above 1.6 · owner Aditya Naik"
   },
   {
-   "id": "7da52b8f-bbaf-4b58-9ebe-a5c56d0435a1",
+   "id": "4e8a785d-465b-462a-b1bf-79bffc3e2a47",
    "label": "Freight per metre vs 6-month average",
    "text": "Freight per metre vs 6-month average · +13% · alert above +10% · owner Leela Tandon"
   }

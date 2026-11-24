@@ -43,17 +43,45 @@ def test_usd_reaches_the_next_nights_spec(night):  # noqa: F811
     assert "$" in page and "USD ($), thousands/millions" in page
 
 
-def test_the_owner_sets_the_floor(night):  # noqa: F811
+def _floor(env, h, value):
+    tok = env.csrf(h + "/ontology")
+    return env.client.post(
+        h + "/ontology/floor",
+        data={"value": value},
+        headers={"X-CSRF-Token": tok, "HX-Request": "true"},
+    )
+
+
+def test_the_owner_sets_the_floor_on_the_business_model(night):  # noqa: F811
+    """#107 (owner, 21 Nov 2026): the floor moved from Settings to The business, typed and shown
+    as money, saved in place as the same `materiality` record (the night's spec unchanged in
+    kind), with an event of who changed it from what to what."""
+    from othor.core.models import Event
+
     env, h, cid, _rid, svc = night
-    page = env.client.get(h + "/settings").text
-    assert "Tell me about problems worth more than" in page and "₹5 L" in page
-    r = _set(env, h, "materiality", "200000")
-    assert r.status_code == 200 and "Floor saved" in r.text
+    assert "worth more than" not in env.client.get(h + "/settings").text
+    page = env.client.get(h + "/ontology").text
+    assert "Problems worth reporting · over ₹5 L" in page and "The default" in page
+    assert 'id="floor-row"' in page and 'value="₹5 L"' in page
+    r = _floor(env, h, "2 lakh")
+    assert r.status_code == 200
+    assert "Problems worth reporting · over ₹2 L" in r.text and "You · " in r.text
+    assert 'id="floor-row"' in r.text and "applies from tonight" in r.text and "Undo" in r.text
     spec, _ = _spec(svc, cid)
     assert spec["detectors"]["materiality_inr"] == "200000"
-    assert "₹2 L" in env.client.get(h + "/settings").text
-    assert _set(env, h, "materiality", "-3").status_code == 400
-    assert _set(env, h, "materiality", "abc").status_code == 400
+    with svc.sf() as s, tenant_scope(cid):
+        (ev,) = s.scalars(sa.select(Event).where(Event.action == "ontology.floor_changed")).all()
+        assert ev.before == {"floor": "500000", "owner": False}
+        assert ev.after == {"floor": "200000", "owner": True} and ev.actor
+    assert "over ₹2 L" in env.client.get(h + "/ontology").text
+    for typed in ("₹3.5 L", "350000", "3,50,000"):
+        assert _floor(env, h, typed).status_code == 200
+        spec, _ = _spec(svc, cid)
+        assert spec["detectors"]["materiality_inr"] == "350000", typed
+    for bad in ("-3", "abc", "0", ""):
+        assert _floor(env, h, bad).status_code == 400, bad
+    # the old Settings field is gone
+    assert _set(env, h, "materiality", "200000").status_code == 400
 
 
 def test_the_us_zones_are_offered(night):  # noqa: F811

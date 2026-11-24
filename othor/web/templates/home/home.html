@@ -28,7 +28,7 @@
 
   {# #61 (owner, 14 Nov 2026): the company's name as the title; the crumb still says Home #}
   {# v0.19 (M19.5): Big Picture where "Updated" was; the time moved to the top bar (owner, 15 Nov 2026) #}
-  {% call page_title(company.name) %}{% call el("div", layout="flex items-center gap-12 flex-wrap") %}{{ slot("home.title_actions") }}{% if trial %}{{ trial_chip(trial) }}{% endif %}{# #86 (owner, 18 Nov 2026): Ask Othor AI sits left of Big Picture on Home (not in the top bar
+  {% call page_title(company.name, lede=page_ledes.home) %}{% call el("div", layout="flex items-center gap-12 flex-wrap") %}{{ slot("home.title_actions") }}{% if trial %}{{ trial_chip(trial) }}{% endif %}{# #86 (owner, 18 Nov 2026): Ask Othor AI sits left of Big Picture on Home (not in the top bar
    here); Big Picture has its own icon #}{{ ai_button("Ask Othor AI", state="quiet", href="/home?panel=othor&subject=ask", attrs={"data-panel": true}) }}{% if big_picture is defined %}{{ ai_button("Big Picture Report" if big_picture else "Big Picture · not available right now", href="/home?panel=big-picture", disabled=not big_picture, ic="summary") }}{% endif %}{# a plug-in's buttons after Big Picture (0.30) #}{{ slot("home.title_end") }}{% endcall %}{% endcall %}
 
   {% include "partials/run_again.html" %}
@@ -50,6 +50,10 @@
   {% endcall %}
   {% endif %}
 
+  {# Today's action plan (Morning Brief 2.5, #110): below the briefs, above Suggested by Othor AI
+     (owner, 22 Nov 2026) #}
+  {% if todo is defined and todo.all %}{% from "components/todo.html" import todo_card %}{{ todo_card(todo, csrf_token) }}{% endif %}
+
   {# Suggested by Othor AI (owner, 20 Nov 2026): cards the plug-ins offer (Discover's groups,
      Look back's reports), after the briefs; hidden when none is offered #}
   {% set sg = slot_cards("home.suggested") %}
@@ -66,31 +70,12 @@
 
   {% if sources %}{{ sources_table(sources) }}{% endif %}
 
-  {% if proposals %}
-  {% call el("section", "card lines", attrs={"aria-label": "Proposals", "id": "proposals"}) %}
-    {% call el("div", "section-head") %}{% call el("p", "card-title") %}Proposals for the Business Model{% endcall %}{% call el("p", "hint") %}Accepted items change the spec from tomorrow’s run{% endcall %}{% endcall %}
-    {% call el("div", "table-wrap") %}{% call el("table", "table flush stack") %}<thead><tr><th>Kind</th><th>Proposal</th><th>From</th><th>Confidence</th><th></th></tr></thead><tbody data-rows>
-    {% for p in proposals %}{% if p.decided %}{% call el("tr", "is-decided", attrs={"data-row": p.id}) %}
-      {% call el("td", attrs={"colspan": "5"}) %}{% call toast(p.decided, sub=p.text) %}{% call action_form("/home/proposals/" ~ p.id ~ "/undo", csrf_token) %}{{ button("Undo", type="submit") }}{% endcall %}{% endcall %}{% endcall %}
-    {% endcall %}{% else %}<tr data-row="{{ p.id }}">
-      <td>{% call el("span", "chip soft") %}{{ p.kind }}{% endcall %}</td>
-      {% call el("td", "wrap") %}{% call el("p", "strong") %}{{ p.text }}{% endcall %}{% if p.line %}{% call el("p", "hint") %}{{ p.line }}{% endcall %}{% endif %}{% endcall %}
-      {% call el("td", "wrap") %}{{ p.from }}{% endcall %}
-      <td>{{ confidence_pill(p.confidence) }}</td>
-      <td>{% call el("div", layout="flex items-center gap-6 justify-end") %}
-        {% call action_form("/home/proposals/" ~ p.id ~ "/accept", csrf_token) %}{{ button("Accept", kind="soft", type="submit") }}{% endcall %}
-        {% call action_form("/home/proposals/" ~ p.id ~ "/decline", csrf_token) %}{{ button("Decline", type="submit") }}{% endcall %}
-        {{ link("Chat about this", "/home?panel=othor&subject=proposal:" ~ p.id) }}
-      {% endcall %}</td>
-    </tr>{% endif %}{% endfor %}
-    </tbody>{% endcall %}{% endcall %}
-  {% endcall %}
-  {% endif %}
+  {# the proposals moved to the Business Model page (owner, 23 Nov 2026) #}
 
   {# #85 (owner, 18 Nov 2026): the questions live in the Othor AI chat (Intelligence in the top
      bar opens them); Home no longer lists them #}
-  {% if not proposals and not question_count %}
-  {% call el("div", "card board") %}{{ empty_state(None, "All caught up", "New proposals and questions arrive after the nightly run.", "Open the Business Model", "/ontology") }}{% endcall %}
+  {% if not question_count %}
+  {% call el("div", "card board") %}{{ empty_state(None, "All caught up", "New questions arrive after the nightly run.", "Open the Business Model", "/ontology") }}{% endcall %}
   {# #92 (owner, 19 Nov 2026): no "Recently accepted" on Home; the Business Model's history keeps them #}
   {% endif %}
   {{ slot("home.end") }}
@@ -102,6 +87,7 @@
 {% if wpanel %}{{ picked_panel(wpanel, "/home") }}{% endif %}
 {% if bpanel %}{{ bp_panel(bpanel, csrf_token) }}{% endif %}
 {% if lpanel %}{{ lights_panel(lpanel) }}{% endif %}
+{% if watch is defined %}{% include "sweep/_watch.html" %}{% endif %}
 {{ slot("home.overlay") }}
 
 {% endblock %}

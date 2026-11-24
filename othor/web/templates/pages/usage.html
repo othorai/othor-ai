@@ -5,7 +5,7 @@
 {% block title %}AI usage · {{ company.name }}{% endblock %}
 {% block crumb %}AI usage{% endblock %}
 {% block main %}
-{% call page_title("AI usage") %}{{ usage_filters(u) }}{% endcall %}
+{% call page_title("AI usage", lede=page_ledes.usage) %}{{ usage_filters(u) }}{% endcall %}
 {{ usage_body(u) }}
 {{ slot("usage.end") }}
 {% endblock %}

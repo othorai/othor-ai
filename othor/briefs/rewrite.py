@@ -23,7 +23,8 @@ from othor.ai.models import ModelCall
 from othor.briefs.models import BriefIssue
 from othor.briefs.words import FIELDS, shown
 
-PROMPT, VERSION = "brief_rewrite", "v1"
+# v2 (0.33, What to do #110): the actions' sentences too, each checked on its own
+PROMPT, VERSION = "brief_rewrite", "v2"
 __all__ = ["FIELDS", "rewrite_run", "shown"]
 
 
@@ -37,7 +38,26 @@ def inputs_of(body: dict[str, Any]) -> dict[str, Any]:
             {"title": i.get("title", ""), "consequence": (i.get("consequence") or {}).get("text")}
             for i in body.get("items") or []
         ],
+        "actions": [str(a.get("text") or "") for a in body.get("actions") or []],
     }
+
+
+def _actions(got: Any, templates: list[str]) -> tuple[list[str], str]:
+    """The model's action sentences, each kept only when every number in it is one its own
+    template has (rule 1); a dropped one keeps its template. Returns (sentences, guard)."""
+    if not templates:
+        return [], "passed"
+    if not isinstance(got, list) or len(got) != len(templates):
+        return list(templates), f"dropped:{len(templates)}"
+    out, dropped = [], 0
+    for said, template in zip(got, templates, strict=True):
+        said = str(said or "").strip()
+        if said and numbers_grounded(said, {"template": template}):
+            out.append(said)
+        else:
+            out.append(template)
+            dropped += 1
+    return out, "passed" if not dropped else f"dropped:{dropped}"
 
 
 def rewrite(gateway: ModelGateway, company_id: uuid.UUID, body: dict[str, Any]) -> dict[str, Any]:
@@ -48,17 +68,22 @@ def rewrite(gateway: ModelGateway, company_id: uuid.UUID, body: dict[str, Any]) 
     got = gateway.complete(company_id, PROMPT, VERSION, inputs)
     if not got.ok or not isinstance(got.output, dict):
         return {"source": "template", "template": template, "guard": got.guard}
-    out = {k: str(got.output.get(k) or template[k]) for k in FIELDS}
+    out: dict[str, Any] = {k: str(got.output.get(k) or template[k]) for k in FIELDS}
     if not all(numbers_grounded(out[k], inputs) for k in FIELDS):
         _mark(gateway, company_id, inputs, "failed:numbers")
         return {"source": "template", "template": template, "guard": "failed:numbers"}
-    return {
+    prose: dict[str, Any] = {
         "source": "model",
         "template": template,
         "model": out,
         "prompt": f"{PROMPT}@{VERSION}",
         "guard": "passed",
     }
+    if inputs["actions"]:  # only then, so a brief without actions keeps its prose bytes
+        out["actions"], prose["actions_guard"] = _actions(
+            got.output.get("actions"), inputs["actions"]
+        )
+    return prose
 
 
 def _mark(gateway: ModelGateway, company_id: uuid.UUID, inputs: dict[str, Any], guard: str) -> None:

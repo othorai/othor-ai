@@ -1,0 +1,44 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# Watch this (0.33.1): the panel any page shows in place (Sweep, a brief, Home, What to do) when
+   its address says ?panel=watch&fp=…&run=…; set `watch` (sweep_view.watch_draft or None),
+   `watch_from`, `run`, and `watch_back` / `watch_back_key` (sweep.back_to's page and key) or
+   `watch_close`. Close and Start watching stay on the page it was opened from. #}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import empty_state %}
+{% from "components/buttons.html" import button, link %}
+{% from "components/forms.html" import text_input, select %}
+{% from "components/panels.html" import pane, pane_title %}
+{% from "components/sweep.html" import overlay %}
+{% set w = watch %}
+{% set close = watch_back or watch_close or ("/sweep?run=" ~ run) %}
+{% call overlay("Watch this", close) %}
+{% if w %}
+<form method="post" action="/sweep/watch/{{ w.fp }}/start?run={{ run }}{% if watch_back_key %}&amp;back={{ watch_back_key }}{% endif %}" class="contents" data-inplace>
+<input type="hidden" name="csrf" value="{{ csrf_token }}">
+{% call(part) pane() %}
+{% if part == "head" %}
+  {# 0.33 (plan § E): the finding it came from, by its title #}
+  {{ pane_title("Watch this", ("From: " ~ w.source) if w.source else None, close) }}
+{% elif part == "body" %}
+<div class="flex flex-col gap-16">
+  <div class="flex flex-col gap-6">{% call el("div", "field-head") %}<span>Indicator</span>{% call el("span", "hint") %}Othor AI picked this from the finding{% endcall %}{% endcall %}{{ text_input("label", value=w.label, disabled=True) }}</div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+    <div class="flex flex-col gap-6">{% call el("div", "field-head") %}<span>{{ w.alert_label }}</span>{% call el("span", "hint") %}{{ w.hint }}{% endcall %}{% endcall %}{{ text_input("threshold", value=w.threshold_text or w.threshold) }}</div>
+    <div class="flex flex-col gap-6">{% call el("div", "field-head") %}<span>Owner</span>{% call el("span", "hint") %}{{ w.owner_note }}{% endcall %}{% endcall %}{{ select("owner", w.owner_options, w.owner) }}</div>
+  </div>
+  {% if w.today is not none %}
+  {% call el("div", "breach-box" if w.breached else "breach-box ok") %}{% call el("span", "t") %}Today {{ w.today_text }}{{ (" · already " ~ w.direction ~ " the limit") if w.breached else " · inside the limit" }}{% endcall %}{% if w.breached %}A new watch starts {{ w.direction }} its limit. It turns green once the fix works.{% endif %}{% endcall %}
+  {% endif %}
+  {% call el("p", "label-caps") %}When it goes {{ w.direction }}{% endcall %}{% call el("p", "finding-line") %}{{ w.when }}{% endcall %}
+  {% if w.chart %}{% call el("p", "label-caps") %}The last 90 days, against this limit{% endcall %}{% call el("div", "chart") %}{{ chart(w.chart, 620, 170) }}{% endcall %}
+  {% call el("p", "footnote") %}{% if w.first_breach %}It would first have gone {{ w.direction }} on {{ fmt.day_month(w.first_breach) }}, {{ fmt.num(w.days_ago) }} days ago.{% else %}It wouldn’t have gone {{ w.direction }} in the last 90 days.{% endif %}{% endcall %}{% endif %}
+</div>
+{% else %}
+{% call el("div", layout="flex items-center justify-between gap-12 w-full") %}{% call el("p", "prov-foot") %}Checked every night · change or stop any time{% endcall %}<div class="flex items-center gap-8">{{ button("Cancel", href=close) }}{{ button("Start watching", kind="primary", type="submit") }}</div>{% endcall %}
+{% endif %}
+{% endcall %}
+</form>
+{% else %}
+{% call(part) pane() %}{% if part == "head" %}{{ pane_title("Watch this", None, close) }}{% elif part == "body" %}{{ empty_state(None, "Nothing to watch for this finding", "Its check has no number that changes each night.") }}{% else %}{{ button("Close", href=close) }}{% endif %}{% endcall %}
+{% endif %}
+{% endcall %}

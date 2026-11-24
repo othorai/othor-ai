@@ -108,6 +108,15 @@ def test_the_texts_read_like_the_boards():
     assert rv["money"].endswith(" at risk") and "Coimbatore" in rv["title"]
 
 
+def test_a_step_says_since_when_it_held():
+    """0.33.1: a changepoint card's note read "It has held since" with no date."""
+    steps = [f for f in FIX["findings"] if f["detector"] == "changepoint"]
+    assert steps
+    for f in steps:
+        c = sweep_text.words(f, SPEC)["consequence"]
+        assert re.fullmatch(r"it has held since the week of \d{1,2} \w{3}", c), c
+
+
 def test_the_same_finding_gives_the_same_text():
     for f in FIX["findings"]:
         assert sweep_text.words(f, SPEC) == sweep_text.words(json.loads(json.dumps(f)), SPEC)

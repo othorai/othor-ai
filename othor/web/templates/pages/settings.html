@@ -2,24 +2,30 @@
 {% extends "shells/app.html" %}
 {% from "components/ui.html" import el %}
 {% from "components/forms.html" import select, listbox, toggle %}
-{% from "components/blocks.html" import page_title %}
+{% from "components/blocks.html" import page_title, pane_tabs, tab_pane %}
 {% from "components/forms.html" import dialog %}
 {% from "components/buttons.html" import link %}
 {% from "partials/settings_close.html" import close_step %}
 {% block title %}Settings · {{ company.name }}{% endblock %}
 {% block crumb %}Settings{% endblock %}
 {% block main %}
-{{ page_title("Settings") }}
-<div class="flex flex-col gap-56" hx-target="#toast-dock" hx-swap="innerHTML">
-  {% call el('section', 'section lines') %}
+{{ page_title("Settings", lede=page_ledes.settings) }}
+{# #106 (owner, 21 Nov 2026): tabs across the top, Company first and MCP second, then the rest in
+   their order; one pane at a time, switched in place, the address keeping ?tab= #}
+{% set mcp_html = slot("settings.end") %}
+{% set tab_items = [("company", "Company")] + ([("mcp", "MCP")] if mcp_html | trim else []) + [("charts", "Charts"), ("delivery", "Delivery"), ("data", "Your data")] + ([("licence", "Licence")] if licence else []) %}
+{% set keys = tab_items | map("first") | list %}
+{% set current = tab if tab in keys else "company" %}
+<div class="flex flex-col gap-24" hx-target="#toast-dock" hx-swap="innerHTML">
+  {{ pane_tabs(tab_items, current, "Settings") }}
+  {% call tab_pane("company", current) %}
+  {% call el('section', 'section lines', attrs={"aria-label": "Company"}) %}
     {% call el("div", "section-head") %}Company{% endcall %}
     {% call el('div', 'section-row') %}{% call el("p", "title") %}Fiscal year starts{% endcall %}
       {{ listbox("value", fy_months, company.fiscal_year_start_month | string, id="fy", small=True, attrs='hx-post="/settings" hx-vals=\'{"field": "fiscal_year_start_month"}\' hx-include="this" aria-label="Fiscal year starts"') }}{% endcall %}
     {% call el('div', 'section-row') %}{% call el("p", "title") %}Currency{% endcall %}
       {{ select("value", currencies, company.currency, id="currency", small=True, attrs='hx-post="/settings" hx-vals=\'{"field": "currency"}\' hx-include="this" aria-label="Currency"') }}{% endcall %}
-    {# M15.6: the floor the owner sets; saved as an Ontology version, from tonight #}
-    {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}Tell me about problems worth more than{% endcall %}{% call el('p', 'sub') %}{{ fmt.inr(floor.amount) }}{{ " · your setting" if floor.owner else " · the default" }}{% if floor.suggest %} · 1% of a typical month’s revenue is {{ fmt.inr(floor.suggest) }}{% endif %}{% endcall %}</div>
-      {% call el("form", layout="flex items-center gap-8", attrs={"hx-post": "/settings", "hx-vals": '{"field": "materiality"}'}) %}{% call el("input", "input sm", attrs={"name": "value", "inputmode": "decimal", "value": floor.amount | string, "aria-label": "The floor, in your currency"}) %}{% endcall %}{% call el("button", "btn sm", attrs={"type": "submit"}) %}Save{% endcall %}{% endcall %}{% endcall %}
+    {# the floor moved to the Business Model, a line of The business (#107, owner 21 Nov 2026) #}
     {% include "partials/settings_logo.html" %}
     {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}Time zone{% endcall %}{% call el('p', 'sub') %}Nightly run {{ fmt.clock(company.run_time) }} · brief {{ fmt.clock(company.brief_time) }}{% endcall %}</div>
       {{ listbox("value", timezones, company.timezone, id="tz", note=tz_note, small=True, attrs='hx-post="/settings" hx-vals=\'{"field": "timezone"}\' hx-include="this" aria-label="Time zone"') }}{% endcall %}
@@ -28,6 +34,9 @@
       {{ select("value", report_languages, company.report_language, id="report-language", small=True, attrs='hx-post="/settings" hx-vals=\'{"field": "report_language"}\' hx-include="this" aria-label="Big Picture language"') }}{% endcall %}
     {{ slot("settings.company.advanced") }}
   {% endcall %}
+  {% endcall %}
+  {% if mcp_html | trim %}{% call tab_pane("mcp", current) %}{{ mcp_html }}{% endcall %}{% endif %}
+  {% call tab_pane("charts", current) %}
   {# v0.25 (M25.1, owner 18 Nov 2026): how every chart is drawn, on pages, in emails and PDFs #}
   {% call el('section', 'section lines', attrs={"aria-label": "Charts"}) %}
     {% call el("div", "section-head") %}Charts{% endcall %}
@@ -36,25 +45,30 @@
     {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}Values on lines{% endcall %}{% call el('p', 'sub') %}Key points: the last value, the highest, the lowest and what Othor AI found · hover any point for its value{% endcall %}</div>
       {{ select("value", chart_values, company.chart_values, id="chart-values", small=True, attrs='hx-post="/settings" hx-vals=\'{"field": "chart_values"}\' hx-include="this" aria-label="Values on lines"') }}{% endcall %}
   {% endcall %}
-  {% call el('section', 'section lines') %}
+  {% endcall %}
+  {% call tab_pane("delivery", current) %}
+  {% call el('section', 'section lines', attrs={"aria-label": "Delivery"}) %}
     {% call el("div", "section-head") %}Delivery{% endcall %}
     {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}Email{% endcall %}{% call el('p', 'sub') %}Full brief as a page · from {{ sender }} · recipients set per brief{% endcall %}</div>
       {{ toggle("value", company.email_delivery, label="Email delivery", attrs='hx-post="/settings" hx-vals=\'{"field": "email_delivery"}\'') }}{% endcall %}
     {# a plug-in's own delivery rows (0.30) #}{{ slot("settings.delivery") }}
   {% endcall %}
+  {% endcall %}
+  {# Your data: the export, and deleting the company under it ("download everything first") #}
+  {% call tab_pane("data", current) %}
   {# v0.18 (M18.1): everything Othor AI computed and the owner wrote, as one zip #}
-  {% call el('section', 'section lines') %}
+  {% call el('section', 'section lines', attrs={"aria-label": "Your data"}) %}
     {% call el("div", "section-head") %}Your data{% endcall %}
     {% include "partials/settings_export.html" %}
   {% endcall %}
-  {% if licence %}{% include "partials/settings_licence.html" %}{% endif %}
-  {{ slot("settings.end") }}
   {# v0.18 (M18.2): delete the company: the name, an emailed code, then Delete; the headline red (owner, 15 Nov 2026) #}
   {% call el('section', 'section lines') %}
     {% call el("div", "section-head danger") %}Delete company{% endcall %}
     {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}Delete {{ company.name }}{% endcall %}{% call el('p', 'sub') %}Stops runs, briefs and sign-in at once · your data is removed for good 30 days later · {{ link("download everything first", "#export-row") }}{% endcall %}</div>
       {% call el("button", "btn sm danger", attrs={"type": "button", "data-dialog-open": "close-dlg"}) %}Delete the company…{% endcall %}{% endcall %}
   {% endcall %}
+  {% endcall %}
+  {% if licence %}{% call tab_pane("licence", current) %}{% include "partials/settings_licence.html" %}{% endcall %}{% endif %}
 </div>
 {% call dialog("close-dlg", "Delete " ~ company.name, foot="This deletes the company for everyone in it") -%}{{ close_step(close, company, csrf_token) }}{%- endcall %}
 {% call el('div', 'toast-dock', attrs='id="toast-dock"  aria-live="polite"') %}{% endcall %}

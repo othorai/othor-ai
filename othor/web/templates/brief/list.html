@@ -1,7 +1,7 @@
 {#- SPDX-License-Identifier: Apache-2.0 -#}
 {% extends "shells/app.html" %}
 {% from "components/ui.html" import el %}
-{% from "components/buttons.html" import button, link %}
+{% from "components/buttons.html" import button, link, top_menu, menu_link %}
 {% from "components/brief.html" import brief_card, new_brief_card, suggested_card, nb_steps, nb_head, nb_ai_tag, nb_card, nb_busy, nb_name, draft_table, mini_brief, nb_note, ai_box, ai_ask, nb_watch %}
 {% from "components/blocks.html" import toast, page_title %}
 {% from "components/sweep.html" import overlay %}
@@ -10,14 +10,17 @@
 {% from "components/ontology.html" import tell_line %}
 {% block title %}Morning Brief · {{ company.name }}{% endblock %}
 {% block crumb %}Morning Brief{% endblock %}
-{% block actions %}{% call el("div", layout="flex items-center gap-8") %}{{ slot("brief.actions") }}{{ button("Archive", href="/brief/archive") }}{% endcall %}{% endblock %}
+{# the top bar's ⋯ menu (owner, 15 Nov 2026; every page 23 Nov 2026): Archive and a plug-in's own
+   links (Weekly Digest) in it, as on Home #}
+{% block actions %}{% call top_menu() %}{{ menu_link("Archive", "/brief/archive") }}{{ slot("brief.actions") }}{% endcall %}{% endblock %}
 {% block main %}
 {# the page style (owner, 13 Nov 2026): New brief beside the title, Archive in the top bar #}
 {% set lede %}{% if first %}{{ fmt.num(cards | length) }} brief{{ "s" if cards | length != 1 else "" }} · first run #{{ "%04d" | format(run.number) }} · done{% else %}Same run, same numbers. Each brief is a view for one audience.{% endif %}{% endset %}
 {# #45: the description behind an info icon beside the title #}
 {% set about = (lede | trim | trim(".")) ~ (". Made by nightly run #" ~ ("%04d" | format(run.number)) ~ " · " ~ fmt.num(tests) ~ " tests · replayable." if run else "") %}
 {% set sent = ("Sent " ~ ("today " if fmt.local(sent_at).date() == today else fmt.day_month(fmt.local(sent_at).date()) ~ " ") ~ fmt.clock(sent_at)) if sent_at else None %}
-{% call page_title("Morning Brief", info=about, note=sent) %}{{ button("New brief", href="/brief/new", kind="primary") }}{% endcall %}
+{# #108 (owner, 21 Nov 2026): one description line under the title; "Sent …" moved behind the (i) #}
+{% call page_title("Morning Brief", lede=page_ledes.brief, info=about ~ (" " ~ sent ~ "." if sent else "")) %}{{ button("New brief", href="/brief/new", kind="primary") }}{% endcall %}
 <div class="flex flex-col gap-56">
 
   <div class="flex flex-col gap-16">

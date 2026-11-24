@@ -31,6 +31,10 @@ def _free_port() -> int:
 def live(tmp_path_factory: pytest.TempPathFactory) -> Iterator[tuple[int, str]]:
     tmp = tmp_path_factory.mktemp("live")
     url = f"sqlite:///{tmp / 'live.db'}"
+    from othor.core import plugins
+
+    if not plugins.loaded():  # as the CLI does: the installed plug-ins' branches are migrated
+        plugins.load(Settings(_env_file=None, env="test"))  # type: ignore[call-arg]
     upgrade(url)
     relay = MemoryRelay()
     app = create_app(

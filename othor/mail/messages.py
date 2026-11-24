@@ -101,6 +101,8 @@ class BriefMail:
     weather: dict[str, Any] | None = None
     currency: str = "INR"  # the run's (its spec's company settings), so the email matches the brief
     logo: bytes | None = None  # the company's logo (M15.7): the PNG we re-encoded, attached inline
+    # What to do (Morning Brief 2.5, #110): the issue's actions, each with the sentence shown
+    actions: list[dict[str, Any]] = field(default_factory=list)
 
 
 def weather_ctx(w: dict[str, Any] | None, imgs: list[InlineImage]) -> dict[str, Any] | None:
@@ -299,6 +301,7 @@ def brief_email(
         "b": b,
         "words": m.words,
         "items": items,
+        "actions": m.actions,
         "ahead": ahead,
         "ahead_note": b.get("ahead_note"),
         "tiles": tiles,

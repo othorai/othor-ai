@@ -53,6 +53,16 @@
 </div>
 {%- endmacro %}
 
+{# #107 (owner, 21 Nov 2026): the floor as a line of The business, changed in place: Change opens
+   the amount, typed as money; Save swaps the line back (routes/ontology.py set_floor) #}
+{% macro ont_floor(f, csrf) -%}
+<div class="ont-row" id="floor-row" x-data="inlineEdit">
+  <span><span x-show="shown">{{ f.text }}</span><form class="ont-edit" x-show="editing" x-cloak hx-post="/ontology/floor" hx-target="#floor-row" hx-swap="outerHTML" @keydown.escape="close"><input type="hidden" name="csrf" value="{{ csrf }}"><label for="floor-amount">Problems worth reporting · over</label><input class="input sm" id="floor-amount" name="value" value="{{ f.value }}" inputmode="decimal" autocomplete="off" aria-describedby="floor-hint"><button class="btn sm primary" type="submit">Save</button><button class="btn sm quiet" type="button" @click="close">Cancel</button><span class="hint" id="floor-hint">{{ f.hint or "Like ₹5 L, 5 lakh or 500000" }}</span></form></span>
+  <span class="src">{{ f.source }}</span>
+  <span><button class="link ont-act" type="button" x-show="shown" @click="open">Change</button></span>
+</div>
+{%- endmacro %}
+
 {# A section's column header row, like the Numbers table's (#51): labels for text, source #}
 {% macro ont_cols(labels) -%}
 <div class="ont-row ont-cols">{% for l in labels %}<span class="h">{{ l }}</span>{% endfor %}<span></span></div>
@@ -112,15 +122,16 @@
    folded under it (opens in place). Each missing item says what it unlocks in one line and the one
    sentence to say in the chat (pre-filled in the chat box); counts are code's (levels.check). Ready
    drafts Othor AI found in the files and sources (L3) show under their item with one Apply. #}
-{% macro level_card(lv, csrf="", example=None, back="/ontology") -%}
+{% macro level_card(lv, csrf="", example=None, back="/ontology", fixed=False) -%}
 {% from "components/buttons.html" import button %}
 {% from "components/panels.html" import draft_note %}
 <section class="level-card" aria-label="Business Model level">
-  <details class="level"{% if lv.open %} open{% endif %}>
+  {# fixed (owner, 23 Nov 2026): on its own tab the checklist is always open, with no toggle #}
+  <details class="level{{ ' is-fixed' if fixed else '' }}"{% if lv.open or fixed %} open{% endif %}>
     <summary class="level-head">
       <span class="level-t"><span class="level-title"><b>{{ lv.title }}</b><span class="level-line">{{ lv.line }}</span></span>
-      <span class="level-bar" role="img" aria-label="{{ lv.title }}">{% for on in lv.segs %}<i class="{{ 'on' if on else '' }}"></i>{% endfor %}</span></span>
-      <span class="level-open link">{{ "See the checklist" if lv.left else "See what each level gives" }}</span>
+      <span class="level-bar" role="img" aria-label="{{ lv.title }}">{% for seg in lv.segs %}<i>{% for on in seg %}<b class="{{ 'on' if on else '' }}"></b>{% endfor %}</i>{% endfor %}</span></span>
+      {% if not fixed %}<span class="level-open link">{{ "See the checklist" if lv.left else "See what each level gives" }}</span>{% endif %}
     </summary>
     <div class="level-body">
       {% for g in lv.groups %}
@@ -149,4 +160,33 @@
     </div>
   </details>
 </section>
+{%- endmacro %}
+
+{# Proposals for the Business Model (owner, 23 Nov 2026: moved from Home to the top of this page):
+   each with Accept and Suggest edits (owner, 23 Nov 2026: the same two buttons as setup's
+   decisions): Suggest edits opens the one chat on it, where it can be asked about, applied or
+   skipped (declined); Accept is decided in place, the decided row keeps its Undo #}
+{% macro proposals_card(proposals, csrf_token) -%}
+{% from "components/ui.html" import el %}
+{% from "components/buttons.html" import button, link %}
+{% from "components/blocks.html" import toast %}
+{% from "components/forms.html" import action_form %}
+{% from "components/home.html" import confidence_pill %}
+  {% call el("section", "card lines", attrs={"aria-label": "Proposals", "id": "proposals"}) %}
+    {% call el("div", "section-head") %}{% call el("p", "card-title") %}Proposals for the Business Model{% endcall %}{% call el("p", "hint") %}Accepted items apply from tonight’s run{% endcall %}{% endcall %}
+    {% call el("div", "table-wrap") %}{% call el("table", "table flush stack") %}<thead><tr><th>Kind</th><th>Proposal</th><th>From</th><th>Confidence</th><th></th></tr></thead><tbody data-rows>
+    {% for p in proposals %}{% if p.decided %}{% call el("tr", "is-decided", attrs={"data-row": p.id}) %}
+      {% call el("td", attrs={"colspan": "5"}) %}{% call toast(p.decided, sub=p.text) %}{% call action_form("/home/proposals/" ~ p.id ~ "/undo?back=ontology", csrf_token) %}{{ button("Undo", type="submit") }}{% endcall %}{% endcall %}{% endcall %}
+    {% endcall %}{% else %}<tr data-row="{{ p.id }}">
+      <td>{% call el("span", "chip soft") %}{{ p.kind }}{% endcall %}</td>
+      {% call el("td", "wrap") %}{% call el("p", "strong") %}{{ p.text }}{% endcall %}{% if p.line %}{% call el("p", "hint") %}{{ p.line }}{% endcall %}{% endif %}{% endcall %}
+      {% call el("td", "wrap") %}{{ p.from }}{% endcall %}
+      <td>{{ confidence_pill(p.confidence) }}</td>
+      <td>{% call el("div", layout="flex items-center gap-6 justify-end") %}
+        {% call action_form("/home/proposals/" ~ p.id ~ "/accept?back=ontology", csrf_token) %}{{ button("Accept", kind="soft", size="sm", type="submit") }}{% endcall %}
+        {{ button("Suggest edits", size="sm", href="/ontology?panel=othor&subject=proposal:" ~ p.id, attrs={"data-panel": true}) }}
+      {% endcall %}</td>
+    </tr>{% endif %}{% endfor %}
+    </tbody>{% endcall %}{% endcall %}
+  {% endcall %}
 {%- endmacro %}

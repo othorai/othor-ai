@@ -20,15 +20,16 @@
   {% if u.cap and u.cap.capped %}{% call el("p", "callout warn") %}AI drafting is paused until {{ fmt.day_month(u.cap.resumes) }}: this month's allowance of {{ fmt.count_short(u.cap.limit) }} tokens is used. Every number, run and brief carries on; only drafting and wording wait.{% if u.form %} <a class="link-u" href="?panel=contact&amp;topic=ai" data-panel>Ask us to raise it</a>.{% elif u.support %} To raise it, write to <a class="link-u" href="mailto:{{ u.support }}">{{ u.support }}</a>.{% endif %}{% endcall %}{% endif %}
   {# owner, 14 Nov 2026: the first section, tokens a day for the last 30 days, in grey #}
   <section class="use-trend" aria-label="Tokens per day, last 30 days">
-    <div class="use-trend-head"><p class="caps-title">Last 30 days</p><span>{{ fmt.num(u.trend_total) }} tokens</span></div>
+    <div class="use-trend-head"><p class="caps-title">Last 30 days</p><span>{{ fmt.count_short(u.trend_total) }} tokens</span></div>
     <div class="use-trend-chart" role="img" aria-label="{{ u.trend.alt_text }}">{{ chart(u.trend, 1040, 120) }}</div>
     <div class="use-trend-axis"><span>{{ fmt.day_month(u.trend_from) }}</span><span>{{ fmt.day_month(u.trend_to) }}</span></div>
   </section>
   <div class="use-stats">
     {# calm UI (owner, 19 Nov 2026): numbers for information, the label above, the figure below #}
-    {{ kpi_stat("Tokens", fmt.num(t.tokens), fmt.num(t.tokens_in) ~ " in · " ~ fmt.num(t.tokens_out) ~ " out") }}
+    {# #105: token counts in short (256k), as the side menu and the allowance; the table keeps exact counts #}
+    {{ kpi_stat("Tokens", fmt.count_short(t.tokens), fmt.count_short(t.tokens_in) ~ " in · " ~ fmt.count_short(t.tokens_out) ~ " out") }}
     {{ kpi_stat("Calls" if t.calls != 1 else "Call", fmt.num(t.calls)) }}
-    {% if u.cap %}{{ kpi_stat("Tokens this month", fmt.num(u.cap.used) ~ " of " ~ fmt.count_short(u.cap.limit), "your plan's AI allowance") }}{% endif %}
+    {% if u.cap %}{{ kpi_stat("Tokens this month", fmt.count_short(u.cap.used) ~ " of " ~ fmt.count_short(u.cap.limit), "your plan's AI allowance") }}{% endif %}
     {{ kpi_stat("Nightly runs" if u.nights != 1 else "Nightly run", fmt.num(u.nights), "none uses a model") }}
   </div>
   <p class="use-note">Numbers in your briefs never come from a model. Only setup drafting and optional brief wording use one.</p>

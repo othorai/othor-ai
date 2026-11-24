@@ -552,6 +552,20 @@ document.addEventListener("alpine:init", () => {
     get label() { return this.more ? "Show less" : "Read more"; },
     toggle() { this.more = !this.more; },
   }));
+  // #107: a line changed in place (the floor on The business): Change opens its form, the amount
+  // selected; Cancel or Escape closes it
+  Alpine.data("inlineEdit", () => ({
+    editing: false,
+    get shown() { return !this.editing; },
+    open() {
+      this.editing = true;
+      this.$nextTick(() => {
+        const i = this.$root.querySelector("input:not([type=hidden])");
+        if (i) { i.focus(); i.select(); }
+      });
+    },
+    close() { this.editing = false; },
+  }));
   Alpine.data("popover", () => ({
     init() {
       const btn = this.$el.querySelector("button");
@@ -658,11 +672,14 @@ async function panelGo(url, push) {
   const newFold = doc.getElementById("fold");
   if (fold && newFold) fold.replaceWith(newFold);
   if (doc.title) document.title = doc.title;
-  if (push) history.pushState({ othorPanel: true }, "", landed.pathname + landed.search + landed.hash);
+  // the same page keeps its own #state (What to do's tab) when a panel opens or closes over it
+  const hash = landed.hash || (landed.pathname === location.pathname ? location.hash : "");
+  if (push) history.pushState({ othorPanel: true }, "", landed.pathname + landed.search + hash);
   window.scrollTo(0, y);
   if (window.htmx) { htmx.process(main); if (newOv) htmx.process(newOv); }
   timeToasts(document);
   dropToastParam();
+  document.dispatchEvent(new CustomEvent("othor:swapped"));
   const panel = document.querySelector(OPEN_PANEL);
   if (panel && !before) {
     finish(panel, "is-entering");
@@ -868,6 +885,8 @@ async function inplaceSubmit(form, submitter) {
   if (window.htmx) { htmx.process(main); if (newOv) htmx.process(newOv); }
   restorePicks(picks);
   focusSpot(spot, form);
+  // 0.33.1: a page's own state that lives in the address (What to do's tab) comes back after a swap
+  document.dispatchEvent(new CustomEvent("othor:swapped"));
   // #99: a toast the new page brings (Create brief's "created · Undo") goes on its own, and its
   // "?created=" leaves the address, as after a full load or an htmx swap
   timeToasts(document);
@@ -1137,6 +1156,80 @@ document.querySelectorAll("[data-site-video]").forEach((box) => {
   });
 });
 
+// a blog post's video (owner, 23 Nov 2026): our card until the reader presses play, then the
+// YouTube player (no-cookie address) in its place, playing; nothing loads from YouTube before that
+document.querySelectorAll("[data-yt]").forEach((box) => {
+  const play = box.querySelector("button");
+  if (!play) return;
+  play.addEventListener("click", () => {
+    const f = document.createElement("iframe");
+    f.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(box.dataset.yt) + "?autoplay=1&rel=0";
+    f.title = box.dataset.ytTitle || "Video";
+    f.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+    f.allowFullscreen = true;
+    f.referrerPolicy = "strict-origin-when-cross-origin";
+    box.replaceChildren(f);
+    box.classList.add("is-playing");
+  });
+});
+
+// othor.ai/demo (owner, 21 Nov 2026): the side menu shows one video's panel in place, a playing
+// video stops when another is picked, and the address keeps the choice (#id) without a reload.
+(function () {
+  const box = document.querySelector("[data-site-demo]");
+  if (!box) return;
+  const panels = [...box.querySelectorAll("[data-demo-panel]")];
+  const picks = [...box.querySelectorAll("[data-demo-pick]")];
+  if (!panels.length) return;
+  function show(id, push) {
+    if (!panels.some((p) => p.id === id)) id = panels[0].id;
+    panels.forEach((p) => {
+      const on = p.id === id;
+      if (!on) p.querySelectorAll("video").forEach((v) => v.pause());
+      p.hidden = !on;
+    });
+    picks.forEach((a) => (a.dataset.demoPick === id ? a.setAttribute("aria-current", "true") : a.removeAttribute("aria-current")));
+    if (push) history.replaceState(null, "", "#" + id);
+  }
+  box.querySelectorAll("[data-demo-go]").forEach((a) => a.addEventListener("click", (e) => {
+    e.preventDefault();
+    show(a.dataset.demoGo, true);
+    box.querySelector(".site-demo-main").scrollTop = 0;
+  }));
+  picks.forEach((a) => a.addEventListener("click", (e) => {
+    e.preventDefault();
+    show(a.dataset.demoPick, true);
+    if (window.matchMedia("(max-width: 900px)").matches) box.querySelector(".site-demo-main").scrollIntoView({ behavior: "smooth", block: "start" });
+  }));
+  show(location.hash.slice(1), false);
+})();
+
+// othor.ai/history (owner, 23 Nov 2026): a chip shows one history's lane in place (the page's
+// data-show), and the address keeps the choice; each chip is a link to ?track= without the script.
+// A history named in the first fold jumps to its lane, showing all lanes again first.
+(function () {
+  const box = document.querySelector("[data-site-hist]");
+  if (!box) return;
+  const picks = [...box.querySelectorAll("[data-hist-pick]")];
+  function show(key) {
+    if (key) box.dataset.show = key;
+    else delete box.dataset.show;
+    picks.forEach((a) => (a.dataset.histPick === key ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
+  }
+  picks.forEach((a) => a.addEventListener("click", (e) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+    e.preventDefault();
+    show(a.dataset.histPick);
+    history.replaceState(null, "", a.getAttribute("href"));
+  }));
+  document.querySelectorAll("[data-hist-jump]").forEach((a) => a.addEventListener("click", () => {
+    if (box.dataset.show) {
+      show("");
+      history.replaceState(null, "", "/history" + a.getAttribute("href"));
+    }
+  }));
+})();
+
 // The website's part links (owner's design, 11 Nov 2026): "On this page" on the legal pages and
 // the numbered tabs on /product and /use-cases mark the part in view. Without JavaScript the
 // links still jump; only the mark is missing.
@@ -1211,4 +1304,119 @@ document.addEventListener("submit", (e) => {
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
   else start();
+})();
+
+// 0.32.1 (#106, owner 21 Nov 2026): tabs over panes of one page (Settings). A click shows its pane
+// in place and the address keeps ?tab=, so a refresh, a save's reload or a shared link opens the
+// same tab; a link to something inside a hidden pane (/settings#licence) opens that pane.
+(function () {
+  const show = (bar, key, keep) => {
+    const tabs = [...bar.querySelectorAll("[data-tab]")];
+    if (!tabs.some((t) => t.dataset.tab === key)) return;
+    tabs.forEach((t) => {
+      const on = t.dataset.tab === key;
+      t.classList.toggle("is-on", on);
+      if (on) t.setAttribute("aria-current", "page");
+      else t.removeAttribute("aria-current");
+    });
+    document.querySelectorAll("[data-pane]").forEach((p) => { p.hidden = p.dataset.pane !== key; });
+    if (keep) {
+      const u = new URL(location.href);
+      u.searchParams.set("tab", key);
+      history.replaceState(history.state, "", u.pathname + u.search);
+    }
+  };
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest && e.target.closest("[data-pane-tabs] [data-tab]");
+    if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    show(a.closest("[data-pane-tabs]"), a.dataset.tab, true);
+  });
+  const fromHash = () => {
+    const bar = document.querySelector("[data-pane-tabs]");
+    if (!bar || location.hash.length < 2) return;
+    const el = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    const pane = el && el.closest("[data-pane]");
+    if (pane && pane.hidden) {
+      show(bar, pane.dataset.pane, false);
+      el.scrollIntoView();
+    }
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", fromHash);
+  else fromHash();
+  window.addEventListener("hashchange", fromHash);
+})();
+
+// What to do (Morning Brief 2.5, #110): the brief tabs filter the rows in place; the numbers follow
+// what is shown, a section with nothing left hides, the address keeps the choice (#Leadership).
+// Delegated, so it works after an in-place swap; without JavaScript every row shows.
+(function () {
+  function show(bar, key) {
+    const page = bar.closest("main") || document;
+    bar.querySelectorAll("[data-wtd-tab]").forEach((t) => {
+      const on = t.dataset.wtdTab === key;
+      t.classList.toggle("is-on", on);
+      if (on) t.setAttribute("aria-current", "page"); else t.removeAttribute("aria-current");
+    });
+    let n = 0;
+    page.querySelectorAll("[data-wtd-sec] [data-briefs]").forEach((r) => {
+      const on = key === "all" || r.dataset.briefs.split("|").includes(key);
+      r.hidden = !on;
+      const num = r.querySelector(".db-n");
+      if (on && num) num.textContent = ++n;
+    });
+    page.querySelectorAll("[data-wtd-sec]").forEach((sec) => { sec.hidden = !sec.querySelector("[data-briefs]:not([hidden])"); });
+  }
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest("[data-wtd-tab]");
+    if (!t) return;
+    e.preventDefault();
+    show(t.closest("[data-wtd-tabs]"), t.dataset.wtdTab);
+    history.replaceState(null, "", t.dataset.wtdTab === "all" ? location.pathname : "#" + encodeURIComponent(t.dataset.wtdTab));
+  });
+  // the chosen tab, from the address; again after an in-place swap (a hold, the Watch panel), which
+  // redraws every row (0.33.1: the page came back on "All")
+  function fromHash() {
+    const bar = document.querySelector("[data-wtd-tabs]");
+    const key = decodeURIComponent(location.hash.slice(1));
+    if (bar && key && bar.querySelector(`[data-wtd-tab="${CSS.escape(key)}"]`)) show(bar, key);
+  }
+  fromHash();
+  document.addEventListener("othor:swapped", fromHash);
+})();
+
+// Tab bars wider than the page (owner, 23 Nov 2026): scroll sideways with the wheel or a swipe, a
+// fade on the side that has more, the chosen tab in view. Every .tabs bar; again after a swap.
+(function () {
+  function fit(root) {
+    root.querySelectorAll(".tabs").forEach((bar) => {
+      if (bar.dataset.fit) return;
+      bar.dataset.fit = "1";
+      const more = () => {
+        const max = bar.scrollWidth - bar.clientWidth;
+        bar.classList.toggle("more-l", max > 1 && bar.scrollLeft > 1);
+        bar.classList.toggle("more-r", max > 1 && bar.scrollLeft < max - 1);
+      };
+      bar.addEventListener("scroll", more, { passive: true });
+      if (window.ResizeObserver) new ResizeObserver(more).observe(bar);
+      bar.addEventListener("wheel", (e) => {
+        const max = bar.scrollWidth - bar.clientWidth;
+        if (max <= 1 || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
+        if ((e.deltaY > 0 && bar.scrollLeft < max - 1) || (e.deltaY < 0 && bar.scrollLeft > 1)) {
+          e.preventDefault();
+          bar.scrollBy({ left: e.deltaY, behavior: "auto" });
+        }
+      }, { passive: false });
+      bar.addEventListener("click", (e) => {
+        const t = e.target.closest(".tab");
+        if (t) t.scrollIntoView({ block: "nearest", inline: "nearest" });
+      });
+      const on = bar.querySelector(".tab.is-on");
+      if (on && on.offsetLeft + on.offsetWidth > bar.clientWidth) bar.scrollLeft = on.offsetLeft - 32;
+      more();
+    });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => fit(document));
+  else fit(document);
+  document.addEventListener("htmx:afterSettle", () => fit(document));
 })();

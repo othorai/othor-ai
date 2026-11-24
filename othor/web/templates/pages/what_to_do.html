@@ -1,0 +1,24 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# What to do (Morning Brief 2.5, #110): today's actions across the briefs, the most important
+   first; each opens what it comes from; Snooze, Mute and Watch in place. #}
+{% extends "shells/app.html" %}
+{% from "components/blocks.html" import page_title, empty_state %}
+{% from "components/todo.html" import todo_page, todo_nothing, todo_held_line, todo_resolved %}
+{% block title %}Action plan · {{ company.name }}{% endblock %}
+{% block crumb %}Action plan{% endblock %}
+{% block main %}
+{% call page_title("Action plan", lede=page_ledes["action-plan"], aside=when) %}{% endcall %}
+{% if p.all %}
+{{ todo_page(p, csrf_token) }}
+{% elif p.date %}
+<div class="flex flex-col gap-32">
+{{ empty_state(None, "Nothing needs you today", "None of this morning’s briefs has a next step. They are on Home and in Morning Brief as usual.") }}
+{{ todo_nothing(p.nothing) }}
+</div>
+{% else %}
+{{ empty_state(None, "Nothing to do yet", "Your next steps appear here after the first briefs come out.") }}
+{% endif %}
+{% if p.date %}{{ todo_resolved(p.resolved) }}{% endif %}
+{{ todo_held_line(p.held_line) }}
+{% if watch is defined %}{% include "sweep/_watch.html" %}{% endif %}
+{% endblock %}

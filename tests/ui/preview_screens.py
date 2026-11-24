@@ -102,6 +102,11 @@ def test_preview(night) -> None:  # noqa: F811
             "sweep-ring": app + "/sweep",
             "usage": app + "/usage",
             "archive": app + "/brief/archive",
+            # 0.32.1: Settings in tabs (#106), the floor on The business (#107), /contact's
+            # plain top
+            "settings-data": app + "/settings?tab=data",
+            "business-model-floor": app + "/ontology",
+            "site-contact": site + "/contact?topic=sales",
             # Summary 1.1: every number's line (the week Receivables over 60 days shifted,
             # marked), and a look-alike pair's merge draft open in the panel
             "summary-numbers": app + "/summary?rows=numbers",
@@ -138,6 +143,9 @@ def test_preview(night) -> None:  # noqa: F811
                     pg.wait_for_timeout(300)
                 if name == "sweep-ring":  # #97: the detectors' list, open
                     pg.click(".det-sq-btn")
+                    pg.wait_for_timeout(300)
+                if name == "business-model-floor":  # #107: the floor's line open to change
+                    pg.click("#floor-row button:has-text('Change')")
                     pg.wait_for_timeout(300)
                 if name == "summary-open":
                     pg.click(".sum-row summary")

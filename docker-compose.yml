@@ -84,6 +84,7 @@ services:
       - ./othor_site:/app/othor_site  # the website plug-in, live like the app (17 Nov 2026)
       - app-data:/data
       - ./data/sample:/data/sample:ro  # the Sheets stand-in written by `make seed`
+      - ./tests:/app/tests:ro  # the sample company for `make demo` (dev only, not in the image)
     depends_on:
       meta-db: {condition: service_healthy}
       mailpit: {condition: service_started}
@@ -97,6 +98,8 @@ services:
   worker:
     build: .
     command: ["worker"]
+    # the image's check calls the web port, which the worker doesn't serve; prod turns it off too
+    healthcheck: {disable: true}
     # it waits out a database restart itself (#16); this brings it back if it stops anyway
     restart: unless-stopped
     environment:
@@ -127,6 +130,7 @@ services:
   css:
     build: .
     entrypoint: ["python", "scripts/build_css.py", "--watch"]
+    healthcheck: {disable: true}  # a file watcher, no web port to check
     working_dir: /app
     user: root  # writes the cache volume and the mounted static/css
     environment:

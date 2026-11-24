@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
+from othor.core import fmt
 from othor.core.localtime import local_date
 from othor.core.tenancy import tenant_scope
 from othor.ontology import service
@@ -70,6 +71,7 @@ def ontology(
     compare: str | None = None,
     restore: int | None = None,
     done: int | None = None,
+    decided: str | None = None,
     note: str | None = None,
     text: str | None = None,
     o: Owner = Depends(signed_in),
@@ -84,6 +86,22 @@ def ontology(
             **shell_ctx(o, "ontology"),
             **ov.page(s, svc.settings, o.company, today, numbers),
         }
+        # Proposals for the Business Model, at the top of this page (owner, 23 Nov 2026)
+        from othor.web import home_view as hv
+        from othor.web.routes.home import _proposal, _with_decided
+
+        ctx["proposals"] = hv.proposal_rows(s)
+        if decided and (row := _proposal(s, decided)) is not None and row.status != "open":
+            ctx["proposals"] = _with_decided(s, ctx["proposals"], row)
+        # the tabs (owner, 23 Nov 2026): the full Numbers list opens on its tab
+        tabs = {"business", "numbers", "patterns"} | ({"level"} if ctx.get("levels") else set())
+        want = request.query_params.get("tab") or ""
+        if request.query_params.get("level") == "open":
+            want = "level"
+        on_numbers = ctx.get("expanded") or metric  # a number's panel opens over its own tab
+        ctx["tab"] = want if want in tabs else ("numbers" if on_numbers else "business")
+        if ctx.get("levels"):
+            ctx["levels"]["open"] = True  # the level's own tab shows its checklist open; Hide shuts
         if request.query_params.get("level") == "open" and ctx.get("levels"):
             ctx["levels"]["open"] = True  # 2.4 L3: back from Look in my files, the list open
         if metric:
@@ -219,6 +237,51 @@ def restore(request: Request, n: int, o: Owner = Depends(signed_in)) -> Response
         s.commit()
         m = nv.number
     return RedirectResponse(f"/ontology?panel=history&done={m}", 303)
+
+
+@router.post("/ontology/floor", dependencies=CSRF)
+def set_floor(request: Request, value: str = Form(""), o: Owner = Depends(signed_in)) -> Response:
+    """#107 (owner, 21 Nov 2026): the floor, changed in place on The business. Typed as money
+    ("₹5 L", "5 lakh", "500000"); saved as the same `materiality` record Settings wrote (M15.6),
+    so the night compiles it as before: one version, applied from tonight, and an event with
+    who changed it from what to what. The line comes back in place with a toast and Undo."""
+    from othor.core.events import record_event
+    from othor.ontology.types import validate_body
+    from othor.web.errors import toast
+
+    try:
+        amount = ov.parse_floor(value)
+    except ValueError:
+        return toast(request, "Enter an amount above zero, like ₹5 L or 500000", 400)
+    svc = services(request)
+    with svc.sf() as s, tenant_scope(o.company.id):
+        if not service.confirmed(s):
+            return not_found(request, o.site, *GONE)
+        before = ov.floor_line(s, svc.settings, o.company)
+        body = validate_body("materiality", {"amount": f"{amount:f}", "source": "owner"})
+        v = service.apply(
+            s,
+            [service.put("materiality", "company", body)],
+            actor=str(o.viewer.id),
+            reason=f"{ov.FLOOR_LEAD}: over {fmt.money(amount)}",
+        )
+        done = None
+        if v is not None:
+            record_event(
+                s,
+                actor=o.viewer.id,
+                action="ontology.floor_changed",
+                object_type="ontology_version",
+                object_id=v.id,
+                before={"floor": f"{before['amount']:f}", "owner": before["owner"]},
+                after={"floor": f"{amount:f}", "owner": True},
+            )
+            compile_version(s, o.company, actor=str(o.viewer.id))
+            done = v.number
+        s.commit()
+        floor = ov.floor_line(s, svc.settings, o.company)
+        s.expunge_all()
+    return page(request, "ontology/_floor_row.html", {"floor": floor, "done": done})
 
 
 @router.post("/ontology/metric/{key}/area", dependencies=CSRF)

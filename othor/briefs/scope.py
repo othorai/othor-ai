@@ -111,5 +111,19 @@ def watch_in(spec: dict[str, Any], scope: dict[str, Any], w: dict[str, Any]) -> 
     return metric_in(spec, scope, (w.get("indicator") or {}).get("metric"))
 
 
+def watch_in_brief(spec: dict[str, Any], version: dict[str, Any], w: dict[str, Any]) -> bool:
+    """A watch for this brief's What to do (0.33.1): in its scope, and, for a focused brief,
+    on one of its numbers, the same rule as its items (`in_brief`). The live Dispatch brief
+    offered the receivables and customer watches before; the Watching line keeps `watch_in`."""
+    ind = w.get("indicator") or {}
+    f = {
+        "metric": ind.get("metric"),
+        "breakdown": ind.get("breakdown"),
+        "breakdown_value": ind.get("breakdown_value"),
+        "entities": [ind["breakdown_value"]] if ind.get("breakdown_value") else [],
+    }
+    return watch_in(spec, version.get("scope") or {}, w) and in_brief(spec, version)(f)
+
+
 def goal_in(spec: dict[str, Any], scope: dict[str, Any], g: dict[str, Any]) -> bool:
     return metric_in(spec, scope, g.get("metric"))

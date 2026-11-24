@@ -36,8 +36,12 @@ TEAM_SIZES = [
 
 
 def topic(value: str | None) -> str:
-    """A known topic, or "other"."""
-    return value if value in dict(TOPICS) else "other"
+    """A known topic, or "" when none was named: the form then asks (owner, 22 Nov 2026: Something
+    else is never the default choice or the headline)."""
+    return value if value in dict(TOPICS) else ""
+
+
+NO_TOPIC_LINE = "How can we help?"  # the headline when no topic was named
 
 
 def errors(

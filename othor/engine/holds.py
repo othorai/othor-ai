@@ -23,7 +23,9 @@ def _label(f: dict[str, Any]) -> str:
     return str(f.get("title") or f.get("metric") or "")[:300]
 
 
-def snooze(s: Any, f: dict[str, Any], *, actor: str, today: dt.date) -> Snooze:
+def snooze(
+    s: Any, f: dict[str, Any], *, actor: str, today: dt.date, origin: str | None = None
+) -> Snooze:
     until = today + dt.timedelta(days=SNOOZE_DAYS)
     row = Snooze(fingerprint=f["fingerprint"], until=until, label=_label(f), actor=actor)
     s.add(row)
@@ -34,12 +36,12 @@ def snooze(s: Any, f: dict[str, Any], *, actor: str, today: dt.date) -> Snooze:
         action="finding.snoozed",
         object_type="finding",
         object_id=row.id,
-        after={"fingerprint": f["fingerprint"], "until": until.isoformat()},
+        after={"fingerprint": f["fingerprint"], "until": until.isoformat(), **_from(origin)},
     )
     return row
 
 
-def mute(s: Any, f: dict[str, Any], *, actor: str) -> Mute:
+def mute(s: Any, f: dict[str, Any], *, actor: str, origin: str | None = None) -> Mute:
     row = Mute(pattern=pattern_of(f), fingerprint=f["fingerprint"], label=_label(f), actor=actor)
     s.add(row)
     s.flush()
@@ -49,9 +51,30 @@ def mute(s: Any, f: dict[str, Any], *, actor: str) -> Mute:
         action="finding.muted",
         object_type="finding",
         object_id=row.id,
-        after={"fingerprint": f["fingerprint"], "pattern": row.pattern},
+        after={"fingerprint": f["fingerprint"], "pattern": row.pattern, **_from(origin)},
     )
     return row
+
+
+def _from(origin: str | None) -> dict[str, str]:
+    """Where the hold was made (0.33): "sweep", "action-plan" (0.33: "what-to-do") or
+    "brief-<uuid>"; Sweep's Suppressed tab says it ("from the action plan")."""
+    return {"from": origin} if origin else {}
+
+
+def origins(s: Any, ids: list[Any]) -> dict[str, str]:
+    """Each hold row's origin from its event, where one was recorded (rows before 0.33: none)."""
+    from othor.core.models import Event
+
+    if not ids:
+        return {}
+    rows = s.execute(
+        sa.select(Event.object_id, Event.after).where(
+            Event.action.in_(("finding.snoozed", "finding.muted")),
+            Event.object_id.in_([str(i) for i in ids]),
+        )
+    ).all()
+    return {str(oid): str(a["from"]) for oid, a in rows if (a or {}).get("from")}
 
 
 def undo(s: Any, fingerprint: str, *, actor: str, now: datetime) -> int:

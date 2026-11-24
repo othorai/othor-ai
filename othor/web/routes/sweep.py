@@ -12,7 +12,6 @@ from __future__ import annotations
 import datetime as dt
 import json
 import uuid
-from decimal import Decimal, InvalidOperation
 from typing import Any
 
 import sqlalchemy as sa
@@ -278,17 +277,28 @@ def _hold(request: Request, o: Owner, fp: str, run: int | None, action: str) -> 
         if rv is None or f is None:
             return not_found(request, o.site, *GONE)
         actor = str(o.viewer.id)
-        if action == "snooze":
-            holds.snooze(
-                s,
-                {**f, "title": (f.get("text") or {}).get("title")},
-                actor=actor,
-                today=_today(request, o),
-            )
-        elif action == "mute":
-            holds.mute(s, {**f, "title": (f.get("text") or {}).get("title")}, actor=actor)
-        else:
-            holds.undo(s, fp, actor=actor, now=svc.clock())
+        raw = request.query_params.get("back")
+        origin = raw if back_to(raw) else "sweep"
+        # What to do (#110): an action that holds several findings holds them in one click
+        also = [x for x in (request.query_params.get("also") or "").split(",") if x and x != fp]
+        for one in [f, *(g for x in also if (g := sv.finding(rv, x)) is not None)]:
+            if action == "snooze":
+                holds.snooze(
+                    s,
+                    {**one, "title": (one.get("text") or {}).get("title")},
+                    actor=actor,
+                    today=_today(request, o),
+                    origin=origin,
+                )
+            elif action == "mute":
+                holds.mute(
+                    s,
+                    {**one, "title": (one.get("text") or {}).get("title")},
+                    actor=actor,
+                    origin=origin,
+                )
+            else:
+                holds.undo(s, one["fingerprint"], actor=actor, now=svc.clock())
         s.commit()
         number = rv.run.number
     back = back_to(request.query_params.get("back"))
@@ -299,14 +309,19 @@ def _hold(request: Request, o: Owner, fp: str, run: int | None, action: str) -> 
 
 
 def back_to(value: str | None) -> str | None:
-    """Where a hold returns when it came from a brief: "brief-<uuid>" only, so `back` can never
-    send the owner anywhere else (M15.3)."""
+    """Where a hold or a watch returns when it came from elsewhere: "brief-<uuid>" (M15.3),
+    "action-plan" (or 0.33's "what-to-do") or "home" (#110) only, so `back` can never send the
+    owner anywhere else."""
     import re
 
     if value and re.fullmatch(
         r"brief-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", value
     ):
         return f"/brief/{value[6:]}"
+    if value in ("action-plan", "what-to-do"):  # the Action plan (#110), its 0.33 name too
+        return "/action-plan"
+    if value == "home":  # Home's action plan card
+        return "/home"
     return None
 
 
@@ -389,25 +404,47 @@ def watch_new(
         f = sv.finding(rv, fp) if rv else None
         if rv is None or f is None:
             return not_found(request, o.site, *GONE)
-        thr = _decimal(threshold)
-        draft = sv.watch_draft(rv, f, thr)
         ctx = _page_ctx(request, s, o, rv, "findings")
-        ctx["watch"] = draft
-        ctx["watch_from"] = {
-            "number": next((c["number"] for c in ctx["findings"] if c["fp"] == fp), ""),
-            "label": (f.get("text") or {}).get("label", f["detector"]),
-        }
+        ctx.update(_watch_ctx(rv, f, threshold, request.query_params.get("back")))
+        ctx["watch_from"]["number"] = next(
+            (c["number"] for c in ctx["findings"] if c["fp"] == fp), ""
+        )
         s.expunge_all()
     return page(request, "sweep/sweep.html", ctx)
 
 
-def _decimal(v: str | None) -> str | None:
-    if v is None or not v.strip():
+def _watch_ctx(
+    rv: sv.RunView, f: dict[str, Any], threshold: str | None, back: str | None
+) -> dict[str, Any]:
+    """What sweep/_watch.html needs: the draft, the finding it came from, and where Close and
+    Start watching go (#110: the brief, What to do or Home it was opened from)."""
+    thr = sv.watch_threshold(rv, f, threshold) if threshold else None
+    to = back_to(back)
+    return {
+        "watch": sv.watch_draft(rv, f, thr),
+        "watch_from": {"number": "", "label": (f.get("text") or {}).get("label", f["detector"])},
+        "watch_back": to,
+        "watch_back_key": back if to else None,
+        "run": rv.run.number,
+    }
+
+
+def watch_panel(request: Request, s: Session, o: Owner, back: str) -> dict[str, Any] | None:
+    """Watch this in place on another page (0.33.1, owner's approved design): a brief, Home or
+    What to do shows the panel when its address says ?panel=watch&fp=…&run=…, and Close and
+    Start watching stay there. None when the address doesn't ask for it or the finding is gone."""
+    q = request.query_params
+    if q.get("panel") != "watch" or not q.get("fp"):
         return None
     try:
-        return str(Decimal(v.strip()))
-    except InvalidOperation:
+        number = int(q.get("run") or "")
+    except ValueError:
+        number = None
+    rv = _view(request, s, o, number)
+    f = sv.finding(rv, str(q["fp"])) if rv else None
+    if rv is None or f is None:
         return None
+    return _watch_ctx(rv, f, q.get("threshold"), back)
 
 
 @router.post("/sweep/watch/{fp}/start", dependencies=CSRF)
@@ -423,7 +460,7 @@ def watch_start(
     with svc.sf() as s, tenant_scope(o.company.id):
         rv = _view(request, s, o, run)
         f = sv.finding(rv, fp) if rv else None
-        thr = _decimal(threshold)
+        thr = sv.watch_threshold(rv, f, threshold) if rv is not None and f is not None else None
         if rv is None or f is None:
             return not_found(request, o.site, *GONE)
         draft = sv.watch_draft(rv, f, thr)
@@ -444,6 +481,9 @@ def watch_start(
         )
         s.commit()
         number = rv.run.number
+    back = back_to(request.query_params.get("back"))
+    if back:  # started from a brief, What to do or Home (#110): back there, where it now says so
+        return RedirectResponse(back, 303)
     return RedirectResponse(f"/sweep?run={number}&tab=watching", 303)
 
 

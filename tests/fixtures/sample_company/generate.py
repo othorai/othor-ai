@@ -143,7 +143,12 @@ def with_events(seed: int) -> Timeline:
 
 
 def generate(seed: int = 20261101, as_of: dt.date = dt.date(2026, 11, 4)) -> SampleCompany:
-    t = with_events(seed)
+    return render(with_events(seed), seed, as_of)
+
+
+def render(t: Timeline, seed: int, as_of: dt.date) -> SampleCompany:
+    """The sources as of `as_of` from a finished timeline (the shared stream's, or the live demo
+    company's: demo_stream.py)."""
     cut = b.d64(as_of)
     erp = render_erp(t, cut, seed)
     dw = render_dw(t, cut, seed)

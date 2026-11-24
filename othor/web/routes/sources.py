@@ -165,10 +165,38 @@ def _toast(s: Session, toast: str | None) -> dict[str, str] | None:
     t = Repo(s).get(SourceTable, uuid.UUID(str(ev.object_id)))
     if t is None:
         return None
-    return {
-        "text": f"{t.schema}.{t.name} · {sv.use_chip(t)['label']}",
-        "undo": f"/sources/tables/{t.id}/undo/{ev.id}",
-    }
+    text = f"{t.schema}.{t.name} · {sv.use_chip(t)['label']}"
+    if t.use == "ignored":
+        names = numbers_reading(s, t)
+        if names:  # ts-test-001 (23 Nov 2026): say which numbers stop, not only at night
+            one = len(names) == 1
+            text += (
+                f". {_and(names)} {'reads it and pauses' if one else 'read it and pause'}"
+                f" until {'it reads' if one else 'they read'} another table"
+            )
+    return {"text": text, "undo": f"/sources/tables/{t.id}/undo/{ev.id}"}
+
+
+def numbers_reading(s: Session, t: SourceTable) -> list[str]:
+    """The live numbers whose table is `t` (by source name, schema, table), by name."""
+    from othor.ontology import service as onto
+
+    src = Repo(s).get(Source, t.source_id)
+    if src is None:
+        return []
+    ref = {"source": src.name, "schema": t.schema, "table": t.name}
+    out = []
+    for r in onto.current(s, ["metric"]):
+        b = r.body or {}
+        if b.get("status", "active") == "active" and b.get("table") == ref:
+            out.append(str(b.get("name") or r.key))
+    return sorted(out)
+
+
+def _and(names: list[str]) -> str:
+    if len(names) <= 3:
+        return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+    return f"{', '.join(names[:2])} and {len(names) - 2} more"
 
 
 def _list_url(base: str, **params: Any) -> str:

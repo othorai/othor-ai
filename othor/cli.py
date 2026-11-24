@@ -184,6 +184,47 @@ def run(
 
 
 @app.command()
+def demo(
+    date: Annotated[str, typer.Option(help="The night to run (sees data up to the day before)")] = (
+        "2026-11-01"
+    ),
+) -> None:
+    """Dev and demo only (`make demo`): the Indigo Thread sample company set up in this app, its
+    sample databases connected read-only and its Business Model confirmed; then one night run.
+    Needs `make dev && make seed`. An existing indigothread is left as it is."""
+    try:
+        from tests.fixtures.sample_company import app_demo
+    except ImportError:
+        typer.echo("demo is dev-only: tests/fixtures is not in this image", err=True)
+        raise typer.Exit(2) from None
+    from othor.core.tenancy import tenant_scope
+    from othor.ontology import service as ontology_service
+
+    ctx, _ = _engine_ctx(None)
+    got = app_demo.install(ctx)
+    with ctx.sf() as s, tenant_scope(got.company_id):
+        if not ontology_service.confirmed(s):
+            typer.echo(
+                f"This app already has a company {app_demo.SLUG!r} that make demo didn't set up. "
+                "Start from empty databases (make down, then docker compose down -v) and run "
+                "make demo again.",
+                err=True,
+            )
+            raise typer.Exit(1)
+    typer.echo(
+        "Indigo Thread Co. set up: sample databases connected read-only, Business Model confirmed"
+        if got.created
+        else "Indigo Thread Co. is already set up; running the night again"
+    )
+    run(company=app_demo.SLUG, date=date, kind="nightly" if got.created else "manual")
+    link = get_settings().instance_url(app_demo.SLUG, "/login")
+    typer.echo(
+        f"\nOpen {link} and sign in as {app_demo.EMAIL}.\n"
+        "The six-digit code arrives in Mailpit: http://localhost:8026"
+    )
+
+
+@app.command()
 def resume(run_id: str) -> None:
     """Resume a run that stopped (a killed process): the steps already done are skipped."""
     import uuid

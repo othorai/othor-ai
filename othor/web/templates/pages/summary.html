@@ -5,6 +5,8 @@
 {% block title %}Summary · {{ company.name }}{% endblock %}
 {% block crumb %}Summary{% endblock %}
 {% block main %}
-{% call page_title("Summary", aside=sm.as_of) %}{{ summary_controls(sm, csrf_token) }}{% endcall %}
+{{ page_title("Summary", lede=page_ledes.summary, aside=sm.as_of) }}
+{# owner, 21 Nov 2026 (#108): the title, its line, then the controls under them #}
+{{ summary_controls(sm, csrf_token) }}
 {{ summary_body(sm, csrf_token) }}
 {% endblock %}

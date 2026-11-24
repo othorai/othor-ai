@@ -300,21 +300,38 @@ def test_unknown_column_and_ignored_table(world):
                 },
             ),
         )
-    with pytest.raises(CompileError, match="ignored"):
-        _try(
-            world,
-            service.retire("metric", "bad_metric"),
-            service.put(
-                "metric",
-                "bad2",
-                {
-                    "name": "x",
-                    "table": T("sales_dw", "public", "etl_log"),
-                    "measure": {"agg": "count"},
-                    "date": "started_at",
-                },
-            ),
+
+
+def test_a_number_on_an_ignored_table_is_left_out_not_the_night(world):
+    """ts-test-001 (23 Nov 2026): a confirmed number reading a table set to ignored failed every
+    night of the company. Now only that number is left out, marked as needing a source, with why;
+    a number built from it waits on it; the rest compile."""
+    with world.sf() as s, tenant_scope(world.cid):
+        service.apply(
+            s,
+            [
+                service.put(
+                    "metric",
+                    "bad2",
+                    {
+                        "name": "x",
+                        "table": T("sales_dw", "public", "etl_log"),
+                        "measure": {"agg": "count"},
+                        "date": "started_at",
+                    },
+                )
+            ],
+            actor=OWNER,
+            reason="test",
         )
+        spec = compile_version(s, world.company(s))
+        s.commit()
+        m = spec.compiled["metrics"]
+        assert m["bad2"]["status"] == "needs_source"
+        assert m["bad2"]["needs"] == "public.etl_log is set to ignored"
+        assert m["bad2"]["unread"] == {"table": "public.etl_log", "use": "ignored"}
+        assert "queries" not in m["bad2"] and "sql" not in m["bad2"]
+        assert sum(1 for e in m.values() if e.get("status") == "active") > 5
 
 
 # --- what the spec says ----------------------------------------------------------------------
@@ -675,3 +692,38 @@ def test_rules_without_text_are_said_from_the_rule(world):
     ]
     assert joins and any("(MySQL) on " in r["text"] for r in joins)
     assert all(r["applies_to"] is not None for r in rules.values())
+
+
+def test_ignoring_a_table_says_which_numbers_pause(world):
+    """Sources' toast after a use change (23 Nov 2026): set to ignored, the numbers reading the
+    table are named, so the owner learns it then, not from a failed night."""
+    from othor.connectors.models import Source, SourceTable
+    from othor.core.models import Event
+    from othor.web.routes.sources import _toast, numbers_reading
+
+    with world.sf() as s, tenant_scope(world.cid):
+        src = s.scalars(sa.select(Source).where(Source.name == "erp_db")).one()
+        t = s.scalars(
+            sa.select(SourceTable).where(
+                SourceTable.source_id == src.id, SourceTable.name == "invoices"
+            )
+        ).one()
+        names = numbers_reading(s, t)
+        assert names, "the sample's invoice numbers read erp_db.invoices"
+        t.use, t.use_reason = "ignored", "test_old"
+        ev = Event(
+            company_id=world.cid,
+            workspace_id=world.cid,
+            actor="owner",
+            action="table_use.changed",
+            object_type="source_table",
+            object_id=str(t.id),
+            before={"use": "metric_source"},
+            after={"use": "ignored"},
+        )
+        s.add(ev)
+        s.flush()
+        text = _toast(s, str(ev.id))["text"]
+        s.rollback()
+    assert "pause" in text and "until" in text
+    assert names[0] in text

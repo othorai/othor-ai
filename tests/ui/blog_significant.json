@@ -1,0 +1,42 @@
+{
+  "results": 363,
+  "by_stage": {
+    "below materiality": 15,
+    "finding": 8,
+    "goal": 1,
+    "held or repeated": 9,
+    "known pattern": 4,
+    "no signal": 318,
+    "not eligible": 1,
+    "not significant after correction": 7
+  },
+  "below_materiality_with_no_money": 14,
+  "below_materiality_no_money_by_test": {
+    "bimodal_average": 1,
+    "changepoint": 3,
+    "forecast_breach": 9,
+    "process_artefact": 1
+  },
+  "no_money_metrics": [
+    "bimodal_average:average_order_value",
+    "changepoint:active_customers",
+    "changepoint:dispatch_time",
+    "forecast_breach:dso",
+    "forecast_breach:gross_margin_per_metre",
+    "process_artefact:approval_limit"
+  ],
+  "below_floor_with_money": [
+    "changepoint:cash_balance:416873.16"
+  ],
+  "findings": [
+    "broken_relationship:freight:7013637.19",
+    "changepoint:receivables_over_60:2764377.41",
+    "concentration:order_book:9149238.61",
+    "cross_source:dispatch_invoice:19000000.00",
+    "missing_records:invoiced_value:35999999.99",
+    "missing_records:invoiced_value:3618545.32",
+    "net_hiding_gross:net_revenue:14000001.60",
+    "rising_variance:dispatch_time:45889285.77"
+  ],
+  "tests_in_correction": 360
+}

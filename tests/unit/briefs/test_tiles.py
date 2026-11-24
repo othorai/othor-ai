@@ -59,6 +59,29 @@ def test_band_first_measured_from_the_nearest_edge():
     assert chart.kind == "sparkline" and len(chart.series[0].points) == 12 and chart.band
 
 
+def test_a_miss_that_rounds_to_zero_is_in_band_never_minus_zero():
+    """0.33.1 (the 100-night run, 38 nights): "−0% vs band"."""
+    pts = _months("net_revenue", [45e6] * 11 + [46_200_000])
+    just_under = [_rec("net_revenue", "2026-10-01", 46_210_000, 49_000_000)]
+    t = tiles.tile(SPEC, "net_revenue", pts, just_under, [], RUN)
+    assert t["comparison"] == {"kind": "band", "text": "in band"}
+    assert t["role"] == "neutral"
+    just_over = [_rec("net_revenue", "2026-10-01", 40_000_000, 46_190_000)]
+    assert tiles.tile(SPEC, "net_revenue", pts, just_over, [], RUN)["comparison"]["text"] == (
+        "in band"
+    )
+
+
+def test_a_month_close_tomorrow_is_one_day():
+    """0.33.1 (the 100-night run, 29 Sep): "September close in 1 days"."""
+    from othor.briefs import consequence
+
+    f = {"detector": "net_hiding_gross", "metric": "net_revenue", "slots": {}, "text": {}}
+    assert consequence.of(f, SPEC, dt.date(2026, 9, 29))["text"] == "September close in 1 day"
+    assert consequence.of(f, SPEC, dt.date(2026, 9, 30))["text"] == "September close today"
+    assert consequence.of(f, SPEC, dt.date(2026, 9, 2))["text"] == "September close in 28 days"
+
+
 def test_then_the_goal_then_the_last_period():
     pts = _months("dso", [50] * 11 + [46])
     goal = [{"metric": "dso", "target": "45", "on_track": True, "aggregate": "value"}]

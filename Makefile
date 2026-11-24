@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-.PHONY: dev down seed migrate test test-fast css-check lint fmt type contracts spdx licences css css-watch ci
+.PHONY: dev demo down seed migrate test test-fast css-check lint fmt type contracts spdx licences css css-watch ci
 
 UV ?= uv
 
@@ -7,6 +7,11 @@ dev:  ## app + metadata Postgres + sample MySQL/Postgres + Mailpit
 	@test -f .env || cp .env.example .env
 	docker compose up -d --build --wait
 	@echo "app http://localhost:8000/healthz · mail http://localhost:8026"
+
+demo:  ## the whole thing in one go: dev stack, sample data, Indigo Thread set up, one night run, how to sign in
+	$(MAKE) dev
+	$(MAKE) seed
+	docker compose exec -T app othor demo
 
 down:
 	docker compose down

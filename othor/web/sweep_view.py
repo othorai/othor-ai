@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import re
 import uuid
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -376,10 +377,12 @@ def coverage(rv: RunView) -> dict[str, list[dict[str, Any]]]:
         g["metrics"].setdefault(r["metric"], []).append(_period_label(r, cov))
     for why, g in groups.items():
         parts = []
+        rows = []
         for metric, periods in g["metrics"].items():
             name = (spec["metrics"].get(metric, {}).get("name") or metric).lower()
             uniq = list(dict.fromkeys(p for p in periods if p))
             parts.append(f"{name} ({', '.join(uniq)})" if uniq else name)
+            rows.append((name[:1].upper() + name[1:], ", ".join(uniq)))
         when = g["cov"].get("answered_on")
         tail = "known pattern" + (
             f", confirmed {fmt.day_month(dt.date.fromisoformat(when))}" if when else ""
@@ -404,6 +407,9 @@ def coverage(rv: RunView) -> dict[str, list[dict[str, Any]]]:
                 "text": " · ".join([", ".join(parts), tail, *dict.fromkeys(history)]),
                 "tail": " · ".join([tail, *dict.fromkeys(history)]),
                 "metrics": parts,
+                # 0.33: how many findings the pattern kept out, and each number with its dates
+                "count": sum(len(p) for p in g["metrics"].values()),
+                "rows": rows,
             }
         )
     return {"clean": clean, "could_not_run": cnr, "suppressed": supp}
@@ -677,6 +683,7 @@ def watching(rv: RunView, s: Session) -> list[dict[str, Any]]:
                 "alert": f"{_sign(w['direction'])} {_ind_value(w['threshold'], unit)}",
                 "today": _ind_value(w["value"], unit) if w["value"] is not None else "—",
                 "status": w["status"],
+                "direction": w["direction"],
                 "owner": w["owner_name"],
                 "since": dt.date.fromisoformat(w["since"]),
             }
@@ -695,27 +702,105 @@ def _ind_value(v: Any, kind: str | None) -> str:
     return indicator_text(v, kind)
 
 
-def suppressed(rv: RunView, s: Session) -> dict[str, list[dict[str, Any]]]:
-    held = [
-        {
-            "fp": f["fingerprint"],
-            "title": (f.get("text") or {}).get("title", f["metric"]),
-            "how": (
-                f"Snoozed until {fmt.day_month(dt.date.fromisoformat(f['snoozed_until']))}"
-                if f["status"] == "snoozed"
-                else "Muted"
-            ),
+SHOW_FIRST = 5  # Suppressed: each section shows five, then "Show all N" in place (0.33)
+
+
+def suppressed(rv: RunView, s: Session) -> dict[str, Any]:
+    """Sweep › Suppressed (0.33, owner's previews of 22 Nov 2026): your snoozes and mutes
+    (snoozed first, the soonest back on top; then muted, the newest first), each with when, where
+    it was done and Undo; the findings your Business Model's known patterns kept out, one group
+    per pattern with its count; Othor AI's proposed patterns, each to review on Home."""
+    from othor.engine.models import Mute, Snooze
+
+    found = [f for f in rv.shown if f["status"] in fnd.HELD]
+    fps = [f["fingerprint"] for f in found]
+    snz: dict[str, Any] = {}
+    mut: dict[str, Any] = {}
+    if fps:
+        snz = {
+            r.fingerprint: r
+            for r in s.scalars(
+                sa.select(Snooze).where(Snooze.fingerprint.in_(fps), Snooze.ended_at.is_(None))
+            )
         }
-        for f in rv.shown
-        if f["status"] in fnd.HELD
-    ]
+        mut = {
+            r.fingerprint: r
+            for r in s.scalars(
+                sa.select(Mute).where(Mute.fingerprint.in_(fps), Mute.ended_at.is_(None))
+            )
+        }
+    origin = holds.origins(s, [r.id for r in (*snz.values(), *mut.values())])
+    briefs = _brief_names(s, list(origin.values()))
+    held = []
+    for f in found:
+        fp = f["fingerprint"]
+        snoozed = f["status"] == "snoozed"
+        row = snz.get(fp) if snoozed else mut.get(fp)
+        if snoozed:
+            until = dt.date.fromisoformat(f["snoozed_until"])
+            how, order = f"Snoozed until {fmt.day_month(until)}", (0, until.toordinal())
+        else:
+            on = fmt.local(row.created_at).date() if row is not None else None
+            how = f"Muted on {fmt.day_month(on)}" if on else "Muted"
+            order = (1, -(on.toordinal() if on else 0))
+        held.append(
+            {
+                "fp": fp,
+                "title": (f.get("text") or {}).get("title", f["metric"]),
+                "kind": "snooze" if snoozed else "mute",
+                "how": how,
+                "where": _where(origin.get(str(row.id)) if row is not None else None, briefs),
+                "order": order,
+            }
+        )
+    held.sort(key=lambda h: h["order"])
     props = [
-        {"text": p.text}
+        {"text": p.text, "href": "/ontology#proposals"}
         for p in s.scalars(
-            sa.select(Proposal).where(Proposal.kind == "suppression", Proposal.status == "open")
+            sa.select(Proposal)
+            .where(Proposal.kind == "suppression", Proposal.status == "open")
+            .order_by(Proposal.created_at)
         )
     ]
-    return {"by_ontology": coverage(rv)["suppressed"], "held": held, "proposals": props}
+    groups = coverage(rv)["suppressed"]
+    return {
+        "by_ontology": groups,
+        "held": held,
+        "proposals": props,
+        "snoozed": sum(h["kind"] == "snooze" for h in held),
+        "muted": sum(h["kind"] == "mute" for h in held),
+        "hidden": sum(g.get("count", 0) for g in groups),
+        "first": SHOW_FIRST,
+    }
+
+
+def _brief_names(s: Session, origins: list[str]) -> dict[str, str]:
+    ids = []
+    for o in origins:
+        if o.startswith("brief-"):
+            try:
+                ids.append(uuid.UUID(o[6:]))
+            except ValueError:
+                continue
+    if not ids:
+        return {}
+    from othor.briefs.models import Brief
+
+    return {f"brief-{b.id}": b.name for b in s.scalars(sa.select(Brief).where(Brief.id.in_(ids)))}
+
+
+def _where(origin: str | None, briefs: dict[str, str]) -> str:
+    """Where a hold was made, in plain words; nothing for a hold made before 0.33."""
+    if not origin:
+        return ""
+    if origin in ("action-plan", "what-to-do"):
+        return "from the action plan"
+    if origin == "sweep":
+        return "from Sweep"
+    name = briefs.get(origin)
+    if not name:
+        return "from a brief"
+    return f"from the {name}" if name.lower().endswith("brief") else f"from the {name} brief"
 
 
 def resolved(rv: RunView) -> list[dict[str, Any]]:
@@ -768,6 +853,13 @@ def panel(
         ),
         "status": f["status"],
         "footer": footer(rv, s),
+        # 0.33: the foot's run line in plain words; its details behind the (i)
+        "run_number": rv.run.number,
+        "run_word": run_word(rv, s),
+        "run_detail": run_detail(rv, s),
+        # already watched (matched by what is watched, not only the finding it came from): the
+        # foot says so instead of offering Watch (0.33)
+        "watching": watching_text(s, f) if s is not None else "",
     }
     if base["tab"] == "finding":
         base["body"] = {
@@ -778,7 +870,7 @@ def panel(
             "reasons": w.get("reasons", []),
             "measured": w.get("measured", []),
             "settle": w.get("settle", []),
-            "question": w.get("question"),
+            "question": ask_for(rv, f),
             "home_note": _home_note(f, w),
             "nd": f["state"] == "not_determinable",
             "nc": f["state"] == "needs_confirmation",
@@ -1511,6 +1603,50 @@ def footer(rv: RunView, s: Session) -> str:
     return " · ".join(parts)
 
 
+def ask_for(rv: RunView, f: dict[str, Any]) -> dict[str, Any] | None:
+    """The question to ask about this finding, from the same rule the brief uses (0.33: the panel
+    asked Leela "What changed for South customers in October?" while the Leadership brief asked
+    Priya about Tessora EU and Ravira Exports). Shaped as the finding's own question."""
+    from othor.briefs.title import ask_today
+
+    own = (f.get("text") or {}).get("question")
+    got = ask_today([f], rv.compiled.get("owners") or [], rv.compiled)
+    if not got or not got.get("text"):
+        return own
+    to = [{"name": got["to"], "role": got.get("role", "")}] if got.get("to") else []
+    if not to and own:
+        to = own.get("to") or []
+    return {**(own or {}), "text": got["text"], "to": to}
+
+
+def watching_text(s: Session, f: dict[str, Any]) -> str:
+    """ "alert above 8 · Priya Menon" when an active watch covers this finding (0.33). Uses
+    `watches.covering` / `watches.label` (built with the brief side of 0.33)."""
+    w = watches.covering(s, f)
+    return watches.label(w) if w is not None else ""
+
+
+def run_word(rv: RunView, s: Session) -> str:
+    """The run line's plain promise (0.33): every run replays; a replay that differed says so."""
+    rep = last_replay(s, rv.run.id) if s is not None else None
+    return "same numbers on replay" if rep is None or rep.get("ok") else "the replay differed"
+
+
+def run_detail(rv: RunView, s: Session | None = None) -> str:
+    """What the run line's (i) holds (rule 5): the run, its fingerprint, the Business Model
+    version, the app, and what the last replay showed."""
+    r = rv.run
+    h = r.run_hash or ""
+    rep = last_replay(s, r.id) if s is not None else None
+    replay = (
+        "replayable" if rep is None else ("replay identical" if rep.get("ok") else "replay differs")
+    )
+    return (
+        f"Run #{r.number:04d} · fingerprint {h[:4]}…{h[-2:]} · Business Model version "
+        f"{rv.spec.ontology_version} · Othor AI {r.image_version} · {replay}"
+    )
+
+
 def run_log(rv: RunView, s: Session) -> dict[str, Any]:
     r = rv.run
     steps = s.scalars(sa.select(RunStep).where(RunStep.run_id == r.id).order_by(RunStep.ordinal))
@@ -1558,6 +1694,11 @@ class WatchDraft:
     unit: str = ""
     owners: list[str] = field(default_factory=list)
     today_text: str = ""
+    # 0.33 (plan § E): the limit as the owner reads it (₹64 L, 2.4 days, 10%), the field's name
+    # by direction, and the finding it was drafted from, by its title
+    threshold_text: str = ""
+    alert_label: str = ""
+    source: str = ""
 
     @property
     def owner_options(self) -> list[tuple[str, str]]:
@@ -1591,34 +1732,40 @@ def watch_draft(rv: RunView, f: dict[str, Any], threshold: str | None = None) ->
     if h["kind"] == "halfway":
         before = fmt.day_month(dt.date.fromisoformat(h["before"]))
         hint = (
-            f"Halfway between its usual high ({fmt.num(h['value'], decimals=1)}, before {before})"
-            f" and today ({fmt.num(h['today'], decimals=1)}). Edit if you want a different line."
+            f"Halfway between its usual high ({_unit_value(h['value'], unit)}, before {before})"
+            f" and today ({_unit_value(h['today'], unit)}). Change it if you want a different line."
         )
     elif h["kind"] == "never_passed":
         before = fmt.day_month(dt.date.fromisoformat(h["before"]))
-        hint = f"Before {before} it never passed {_unit_value(h['value'], unit)}"
+        hint = f"Before {before} it never went past {_unit_value(h['value'], unit)}"
     elif h["kind"] == "level_before":
-        hint = f"The level before the step: {_unit_value(h['value'], unit)}"
+        hint = f"Where it was before the step: {_unit_value(h['value'], unit)}"
     elif h["kind"] == "today":
         hint = f"Today {_unit_value(h['value'], unit)}"
-    area = f.get("breakdown_value") or ""
-    metric = spec["metrics"].get(f["metric"], {}).get("name") or f["metric"]
     first_name = owner.split(" ")[0] if owner else ""
-    covers = f"{metric.lower()} at {area}" if area else metric.lower()
-    briefs = f", and in every brief that covers {covers}" if features.BRIEFS else ""
-    when = f"Shows on Home{briefs}, the next morning. No alert while it stays inside."
-    if first_name:
-        when += f" {first_name} is named as owner."
+    covers = _covers(spec, f)
+    briefs = (
+        (
+            f" and in every brief that covers {covers}"
+            if covers
+            else " and in the briefs that carry it"
+        )
+        if features.BRIEFS
+        else ""
+    )
+    naming = f", naming {first_name}" if first_name else ""
+    stays = "below" if d["direction"] == "above" else "above"
+    when = f"It shows on Home{briefs}, the next morning{naming}. Nothing while it stays {stays}."
     chart = _replay_chart(f, d, rep, thr, unit)
     return WatchDraft(
         fp=f["fingerprint"],
         number="",
-        label=d["label"],
+        label=plain_label(d["label"]),
         indicator=d["indicator"],
         threshold=thr,
         direction=d["direction"],
         owner=owner,
-        owner_note=_owner_note(spec, owner),
+        owner_note=_owner_note(spec, owner, f),
         hint=hint,
         today=today,
         breached=breached,
@@ -1629,16 +1776,55 @@ def watch_draft(rv: RunView, f: dict[str, Any], threshold: str | None = None) ->
         unit=unit,
         owners=sorted(o["name"] for o in spec.get("owners", [])),
         today_text=_unit_value(today, unit) if today is not None else "",
+        threshold_text=threshold_text(thr, unit),
+        alert_label=f"Tell me when it goes {d['direction']}",
+        source=str(w.get("title") or ""),
     )
 
 
-def _owner_note(spec: dict[str, Any], owner: str) -> str:
-    areas = sorted(
-        {a for o in spec.get("owners", []) if o["name"] == owner for a in o.get("areas", [])}
-    )
+def plain_label(label: str) -> str:
+    """A watch's name in plain words (rule 10); the measure's detail stays in the provenance."""
+    label = label.replace(" · p90 − p10 days, 7-day window", ", last 7 days")
+    return re.sub(r" · weekly$", ", each week", label)
+
+
+def _covers(spec: dict[str, Any], f: dict[str, Any]) -> str:
+    """What the briefs that would carry the alert cover, by the number's name and its part
+    ("overdue amount, over 90 days"); empty when the finding isn't a number's (a reconcile)."""
+    m = spec.get("metrics", {}).get(f["metric"])
+    if not m:
+        return ""
+    name = str(m.get("name") or f["metric"])
+    name = name if name.split()[0].isupper() else name[:1].lower() + name[1:]
+    part = f.get("breakdown_value")
+    return f"{name}, {part}" if part else name
+
+
+def _owner_note(spec: dict[str, Any], owner: str, f: dict[str, Any] | None = None) -> str:
+    """What the owner looks after, as names (the areas this finding falls in first)."""
+    areas = [a for o in spec.get("owners", []) if o["name"] == owner for a in o.get("areas", [])]
     if not areas:
         return ""
-    return f"Owns {', '.join(a.replace('_', ' ') for a in areas)} in your Business Model"
+    if f is not None:
+        keys = {f.get("metric"), f.get("family"), f.get("breakdown_value"), f.get("detector")}
+        keys |= set(f.get("entities") or [])
+        keys |= {k for a in areas for k in [a] if str(f.get("metric", "")).startswith(f"{a}_")}
+        mine = [a for a in areas if a in keys]
+        areas = mine or areas[:3]
+    names = list(dict.fromkeys(_area_name(spec, a) for a in areas))
+    joined = names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+    return f"Looks after {joined} in your Business Model"
+
+
+def _area_name(spec: dict[str, Any], key: str) -> str:
+    m = spec.get("metrics", {}).get(key)
+    if m and m.get("name"):
+        n = str(m["name"])
+        return n if n.split()[0].isupper() else n[:1].lower() + n[1:]
+    if key and key[:1].isupper():  # a place or a customer, as written
+        return key
+    label = sweep_text.LABELS.get(key)
+    return str(label or key.replace("_", " ")).lower()
 
 
 def _unit_value(v: Any, unit: str) -> str:
@@ -1654,46 +1840,103 @@ def _unit_value(v: Any, unit: str) -> str:
     return fmt.num(d)
 
 
+def threshold_text(v: Any, unit: str) -> str:
+    """The limit as the field shows it: ₹64 L, 2.4 days, 10%, 14 (never 6.4E+6)."""
+    try:
+        d = Decimal(str(v))
+    except (ArithmeticError, ValueError):
+        return str(v)
+    if unit == "percent":
+        return fmt.pct(d)
+    return _unit_value(d, unit)
+
+
+def parse_threshold(text: str | None, unit: str) -> str | None:
+    """The limit the owner typed, as a plain decimal: "₹64 L", "64,00,000", "6400000",
+    "1.2 Cr", "$2.5M", "10%", "2.4 days" (0.33). None when it isn't a number."""
+    if text is None:
+        return None
+    t = text.strip().lower().replace(",", "").replace("₹", "").replace("$", "").replace(" ", "")
+    t = re.sub(r"(days?|d)$", "", t)
+    mult = Decimal(1)
+    for suffix, m in (("crore", 7), ("cr", 7), ("lakh", 5), ("l", 5), ("k", 3), ("m", 6), ("b", 9)):
+        if t.endswith(suffix) and unit == "inr":
+            t, mult = t[: -len(suffix)], Decimal(10) ** m
+            break
+    pct = t.endswith("%")
+    t = t.rstrip("%").lstrip("+")
+    try:
+        d = Decimal(t) * mult
+    except (ArithmeticError, ValueError):
+        return None
+    if not d.is_finite():
+        return None
+    if unit == "percent" and (pct or abs(d) > 1):
+        d = d / 100
+    return str(d.normalize()) if d != d.to_integral() else str(d.quantize(Decimal(1)))
+
+
+def watch_threshold(rv: RunView, f: dict[str, Any], text: str | None) -> str | None:
+    """What a typed limit means for this finding's watch (its unit from the draft)."""
+    d = watches.draft(f, series_of(rv), rv.compiled)
+    return parse_threshold(text, d["unit"] if d else "count")
+
+
 def _replay_chart(
     f: dict[str, Any], d: dict[str, Any], rep: dict[str, Any], thr: str, unit: str
 ) -> ChartSpec | None:
-    pts = [(day, float(v)) for day, v in rep["points"]]
-    if len(pts) < 7:
+    raw = [(day, float(v)) for day, v in rep["points"]]
+    if len(raw) < 7:
         return None
+    u, div = _watch_unit(unit, [v for _, v in raw] + [float(thr)])
+    pts = [(day, v / div) for day, v in raw]
     side = "above" if d["direction"] == "above" else "below"
     limit = _unit_value(thr, unit)
-    ann = [Annotation("threshold", value=float(thr), label=f"alert {side} {limit}")]
+    ann = [Annotation("threshold", value=float(thr) / div, label=f"alert {side} {limit}")]
     first = dt.date.fromisoformat(rep["first_breach"]) if rep["first_breach"] else None
     if first is not None:
         ann.append(
             Annotation(
                 "vline",
                 at=rep["first_breach"],
-                label=f"{fmt.day_month(first)} · would have breached",
+                label=f"{fmt.day_month(first)} · would have alerted",
                 role="negative",
                 style="dashed",
             )
         )
-    u = Unit("days", decimals=1) if unit == "days" else Unit("count")
     ends = (
-        f": it would have breached first on {fmt.day_month(first)}."
+        f": it would first have gone {side} on {fmt.day_month(first)}."
         if first
-        else ": it never breached."
+        else f": it never went {side}."
     )
+    label = plain_label(d["label"])
     return ChartSpec(
         id=f"watch:{f['fingerprint']}",
         kind="line",
-        title=f"{d['label']} · last {fmt.num(len(pts))} days, replayed",
+        title=f"{label} · last {fmt.num(len(pts))} days, against this limit",
         unit=u,
         period=Period("day", pts[0][0], pts[-1][0]),
-        series=(Series("v", "indicator", "neutral", tuple(pts)),),
+        series=(Series("v", "Value", "neutral", tuple(pts)),),
         annotations=tuple(ann),
         provenance={"finding": f["fingerprint"]},
-        alt_text=(
-            f"{d['label']} over the last {fmt.num(len(pts))} days against the threshold {limit}"
-            + ends
-        ),
+        alt_text=f"{label} over the last {fmt.num(len(pts))} days against the limit {limit}" + ends,
     )
+
+
+def _watch_unit(unit: str, values: list[float]) -> tuple[Unit, float]:
+    """The chart's unit and divisor: money in crore (or $ millions) so its axis labels fit the
+    gutter, lakh-sized money too (0.33: the axis showed 0,000 and raw 76,38,304)."""
+    if unit == "inr":
+        from othor.engine.finding_charts import money_unit
+
+        top = max((abs(v) for v in values), default=0.0)
+        big, div = money_unit()
+        return (Unit(big.type, big.code, big.scale, 2 if top / div >= 0.1 else 3), div)
+    if unit == "days":
+        return Unit("days", decimals=1), 1.0
+    if unit in ("percent", "ratio"):
+        return Unit("percent", decimals=0), 1.0
+    return Unit("count"), 1.0
 
 
 # --- Sweep history (0.28.1, owner 19 Nov 2026): every night since the first -----------------

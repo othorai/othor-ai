@@ -107,11 +107,15 @@ def tile(
     role = "neutral"
     if rec is not None and rec.get("lower") is not None and rec.get("upper") is not None:
         lo, hi = Decimal(rec["lower"]), Decimal(rec["upper"])
-        if value < lo:
-            comp = {"kind": "band", "text": f"−{_pct((lo - value) / lo)} vs band"}
+        below = _pct((lo - value) / lo) if value < lo else None
+        above = _pct((value - hi) / hi) if value > hi else None
+        # 0.33.1 (the 100-night run, 38 nights): a miss that rounds to 0% read "−0% vs band";
+        # zero is never signed, so a miss too small to show is "in band"
+        if below is not None and below != _pct(Decimal(0)):
+            comp = {"kind": "band", "text": f"−{below} vs band"}
             role = "negative"
-        elif value > hi:
-            comp = {"kind": "band", "text": f"+{_pct((value - hi) / hi)} vs band"}
+        elif above is not None and above != _pct(Decimal(0)):
+            comp = {"kind": "band", "text": f"+{above} vs band"}
             role = "negative"
         else:
             comp = {"kind": "band", "text": "in band"}

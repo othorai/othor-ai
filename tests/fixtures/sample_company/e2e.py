@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import copy
 import datetime as dt
+import os
 from pathlib import Path
 from typing import Any
 
@@ -21,8 +22,10 @@ from othor.ontology.service import Change
 from tests.fixtures.sample_company.generate import SampleCompany, generate
 from tests.fixtures.sample_company.load import load_mysql, load_postgres, write_sheets
 
-ERP_DB = "erp_e2e"
-DW_DB = "sales_dw_e2e"
+STREAM = os.environ.get("OTHOR_SAMPLE_STREAM", "shared")
+DEMO = STREAM == "demo"
+ERP_DB = "erp_e2e_demo" if DEMO else "erp_e2e"
+DW_DB = "sales_dw_e2e_demo" if DEMO else "sales_dw_e2e"
 RO = "othor_ro"
 
 # the tables the sample Ontology reads (the generator's fillers aren't loaded: faster nights)
@@ -70,6 +73,10 @@ def ensure_databases(erp_admin: str, dw_admin: str) -> tuple[str, str]:
 
 def as_of(night: dt.date) -> SampleCompany:
     """What the sources hold when the run of `night` reads them (everything before that day)."""
+    if DEMO:
+        from tests.fixtures.sample_company.demo_stream import generate_demo
+
+        return generate_demo(as_of=night)
     return generate(as_of=night)
 
 

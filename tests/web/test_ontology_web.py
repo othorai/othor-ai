@@ -114,10 +114,9 @@ def test_cleaned_up_header_pill_and_tell_line(night):  # noqa: F811
         parts.append(f"{qs} question" + ("s" if qs != 1 else ""))
     if later:
         parts.append(f"{later} set aside")
-    label = f"{props + qs + later} to review on Home"
-    btn = page[page.index(label) - 300 : page.index(label) + len(label)]
-    assert 'class="btn"' in btn and 'href="/home"' in btn  # the blue one is Chat to update
-    assert 'title="' + " · ".join(parts) + ' waiting on Home"' in btn
+    # owner, 23 Nov 2026: the proposals are on this page now; no "N to review on Home" button
+    assert "to review on Home" not in page
+    assert (">Proposals for the Business Model<" in page) == bool(props)
     assert 'class="banner' not in _main(page)  # the full-width banner is gone
     head = page[page.index("<h1") : page.index("The business")]
     assert "Changes apply from the next run." in head  # moved up from the foot
@@ -138,7 +137,8 @@ def test_numbers_section_latest_see_all_and_fix(night):  # noqa: F811
     assert ">Latest<" in nums and ">Today<" not in nums
     assert "In briefs" not in nums  # the column goes; the metric panel still says where
     # "16 numbers · See all →" in the section head; the bottom link goes
-    assert " numbers" in nums and 'href="/ontology?numbers=all"' in nums and "See all →" in nums
+    assert " numbers" in nums and 'href="/ontology?tab=numbers&amp;numbers=all"' in nums
+    assert "See all →" in nums
     assert "All " not in nums or " numbers →" not in nums
     # no bullet dot on every row
     assert 'class="dot' not in nums
@@ -371,7 +371,10 @@ def test_the_page_description_is_behind_an_info_icon(night):  # noqa: F811
     pop = row[row.index('class="pop-body"') :]
     assert "What Othor AI knows about" in pop and "Changes apply from the next run." in pop
     assert 'aria-label="About this page"' in row
-    assert 'class="page-lede"' not in page[page.index("<main") : page.index("The business")]
+    head = page[page.index("<main") : page.index("The business")]
+    # #108 (owner, 21 Nov 2026): one plain line under the title, no second line
+    lede = "How Othor AI understands your business, and how complete it is."
+    assert f'<p class="page-lede">{lede}</p></div>' in head
 
 
 def test_each_section_heading_has_an_icon_and_no_number(night):  # noqa: F811

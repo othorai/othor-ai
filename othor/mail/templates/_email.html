@@ -145,6 +145,20 @@
 <td valign="top" style="padding:12px 0 12px 4px;font-family:{{ FONT }};font-size:14px;line-height:1.45;color:{{ INK2 }}">{{ rows[0].text }}{% if rows | length > 1 %} · {{ fmt.num(rows | length - 1) }} more{% endif %}</td></tr></table>
 {%- endmacro %}
 
+{# What to do (Morning Brief 2.5, #110): the brief's next steps (words.actions), numbered; no
+   buttons in an email, the brief opens each one #}
+{% macro todo(rows) -%}
+<p style="margin:0 0 8px;font-family:{{ FONT }};font-size:12px;line-height:1.4;font-weight:600;letter-spacing:0.06em;color:{{ MUTED }};text-transform:uppercase">Action plan</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+{% for a in rows %}<tr>
+  <td valign="top" width="22" style="width:22px;padding:12px 0;border-top:1px solid {{ RULE }};font-family:{{ FONT }};font-size:14px;font-weight:600;color:{{ INK }}">{{ loop.index }}</td>
+  <td valign="top" style="padding:12px 8px 12px 0;border-top:1px solid {{ RULE }};font-family:{{ FONT }}">
+    <p style="margin:0 0 4px;font-size:14px;line-height:1.5;color:{{ INK }}">{{ a.said }}</p>
+    <p style="margin:0;font-size:12px;line-height:1.4;color:{{ MUTED }}">{{ [a.status, ("Ask " ~ a.who.name ~ (", " ~ a.who.role if a.who.role else "")) if a.who else "", a.by] | select | join(" · ") }}</p></td>
+  <td valign="top" align="right" style="padding:12px 0;border-top:1px solid {{ RULE }};font-family:{{ FONT }};font-size:14px;font-weight:600;color:{{ INK }};white-space:nowrap">{{ a.money or "" }}</td>
+</tr>{% endfor %}</table>
+{%- endmacro %}
+
 {% macro ask(a) -%}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid {{ RULE }};border-bottom:1px solid {{ RULE }}"><tr><td style="padding:14px 0">
 <p style="margin:0 0 8px;font-family:{{ FONT }};font-size:12px;line-height:1.4;font-weight:600;letter-spacing:0.06em;color:{{ MUTED }}"><span style="text-transform:uppercase">Question to ask today</span>{% if a.to %} <span style="font-weight:400;letter-spacing:0;color:{{ INK2 }}">· for {{ a.to }}{% if a.role %} · {{ a.role }}{% endif %}</span>{% endif %}</p>

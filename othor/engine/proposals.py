@@ -93,6 +93,34 @@ def recurring(
     return sorted(years)
 
 
+# 0.33 (plan § F): what a check found, in plain words, for the proposal's sentence ("the same
+# step down"), never the check's name ("the same changepoint finding")
+PLAIN_CHECK = {
+    "net_hiding_gross": "hidden fall",
+    "rising_variance": "widening spread",
+    "broken_relationship": "break between two numbers",
+    "lead_lag": "early move",
+    "concentration": "concentration",
+    "missing_records": "quiet spell",
+    "process_artefact": "batch spike",
+    "cross_source": "mismatch between sources",
+    "bimodal_average": "split",
+    "forecast_breach": "move outside its forecast",
+}
+
+
+def plain_check(f: dict[str, Any]) -> str:
+    det = f.get("detector", "")
+    if det == "changepoint":
+        sl = f.get("slots") or {}
+        try:
+            up = Decimal(str(sl["after"])) > Decimal(str(sl["before"]))
+        except (KeyError, ArithmeticError, ValueError):
+            return "step change"
+        return "step up" if up else "dip"
+    return PLAIN_CHECK.get(det, "change")
+
+
 def suppression(
     s: Any, run: Run, spec: dict[str, Any], found: list[dict[str, Any]]
 ) -> list[Proposal]:
@@ -114,12 +142,12 @@ def suppression(
             continue
         start, end = (dt.date.fromisoformat(x) for x in f["window"])
         name = spec.get("metrics", {}).get(f["metric"], {}).get("name") or f["metric"]
-        label = (f.get("text") or {}).get("label") or f["detector"]
+        label = plain_check(f)
         span = f"{fmt.day_month(start)} – {fmt.day_month(end)}"
         p = Proposal(
             kind="suppression",
             text=(
-                f"{name}: the same {label.lower()} finding around {span} in "
+                f"{name}: the same {label} around {span} in "
                 f"{', '.join(str(y) for y in years)}. Mark it as a known pattern?"
             ),
             evidence={

@@ -1,0 +1,8 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{#- #107 · the floor's line after a save, swapped in place; the toast goes to the page's dock -#}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import toast %}
+{% from "components/buttons.html" import button %}
+{% from "components/ontology.html" import ont_floor %}
+{{ ont_floor(floor, csrf_token) }}
+{% if done %}{% call el("div", "toast-dock", attrs='id="toast-dock" aria-live="polite" hx-swap-oob="innerHTML"') %}{% call toast("Business Model v" ~ done ~ " · applies from tonight’s run", sub=floor.text) %}{% call el("form", attrs={"data-inplace": true, "method": "post", "action": "/ontology/versions/" ~ done ~ "/undo"}) %}<input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="back" value="/ontology">{{ button("Undo", kind="quiet", type="submit") }}{% endcall %}{% endcall %}{% endcall %}{% endif %}

@@ -29,6 +29,9 @@ returns a `Plugin`, every part optional:
   a failing hook is logged and never fails the scan, run or loop;
 - `hosts`: extra outbound hosts its fetches may reach (`othor.core.http`), listed on System
   Health;
+- `host_redirects` (23 Nov 2026): a sub-domain of the base domain the plug-in answers with a
+  301 to the root host, before any company routing (`blog` → the website's own pages); the
+  function takes the request's path and query and returns a path on the root host;
 - `asgi`, `lifespans` (0.27): an ASGI endpoint at an exact path for a protocol of its own (the
   MCP server at `/mcp`), and context managers held open for the app's lifetime.
 
@@ -127,6 +130,8 @@ class Plugin:
     # 0.29: Ask subjects of its own ("ask:discover:collections"): prefix -> about(session,
     # subject) returning {"title", "about" (names only, for the model), "opening"} or None
     ask_subjects: tuple[tuple[str, Callable[[Any, str], dict[str, Any] | None]], ...] = ()
+    # 23 Nov 2026: label -> fn(path, query) -> a path on the root host, for `<label>.<base>`
+    host_redirects: tuple[tuple[str, Callable[[str, str], str]], ...] = ()
 
 
 _loaded: tuple[Plugin, ...] | None = None
@@ -252,6 +257,15 @@ def root_page() -> Callable[[Any], Any] | None:
 
 def indexable_paths() -> list[str]:
     return [path for p in loaded() if p.indexable is not None for path in p.indexable()]
+
+
+def host_redirect(label: str) -> Callable[[str, str], str] | None:
+    """The plug-in that answers `<label>.<base>` with a redirect, or None."""
+    for p in loaded():
+        for name, fn in p.host_redirects:
+            if name == label:
+                return fn
+    return None
 
 
 def hosts() -> frozenset[str]:

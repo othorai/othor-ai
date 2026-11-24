@@ -7,7 +7,7 @@
 {% from "components/buttons.html" import button, link %}
 {% from "components/forms.html" import text_input %}
 {% from "components/panels.html" import pane %}
-{% from "components/sweep.html" import kv, reasons, rows_table, question_box, panel_head, code, hold_form, overlay, more_menu, run_phases %}
+{% from "components/sweep.html" import kv, reasons, rows_table, question_box, panel_head, code, hold_form, overlay, more_menu, run_phases, run_chip, hold_quiet, watch_icon, watching_mark %}
 {% set p = panel %}{% set b = p.body %}
 {% call overlay(p.title, close) %}
 {% call(part) pane() %}
@@ -97,20 +97,21 @@
 {% endif %}
 </div>
 {% else %}
-{% call el("div", layout="flex flex-wrap items-center justify-between gap-8 w-full") %}
-  {# #35: the run line has its own row above the actions, one line, so it never wraps word by word #}
-  {% call el("p", "prov-foot", layout="w-full min-w-0", attrs={"title": p.footer}) %}{{ p.footer }}{% endcall %}
-  <div class="flex flex-wrap items-center justify-end gap-8 w-full md:w-auto">
+{# 0.33 (owner, 22 Nov 2026): one row; the run in plain words with its details behind the (i);
+   at most one primary per tab; Watch · Snooze · Mute as the brief card's quiet buttons #}
+{% call el("div", "panel-foot-row") %}
+  {{ run_chip(p) }}
+  {% call el("div", "panel-foot-actions") %}
   {% if readonly %}{# 10d: details open read-only, without actions #}
   {% elif p.tab == "finding" %}
-    {% if b.nd %}{{ link("How is this calculated?", fbase ~ p.fp ~ "?" ~ fq ~ "&tab=test") }}{{ button("Add a known pause", href="#pause") }}{% if b.question %}{{ button("Copy question" ~ (" for " ~ b.question.to[0].name.split(" ")[0] if b.question.to else ""), kind="primary", attrs={"data-copy": b.question.text}) }}{% endif %}
-    {% else %}{{ link("How is this calculated?", fbase ~ p.fp ~ "?" ~ fq ~ "&tab=test") }}{% call el("span", layout="hidden md:inline-flex items-center gap-8") %}{{ hold_form("snooze", p.fp, run, "Snooze 7 days", csrf_token, kind="button") }}{{ hold_form("mute", p.fp, run, "Mute", csrf_token, kind="button") }}{% endcall %}{% call more_menu(layout="md:hidden") %}{{ hold_form("snooze", p.fp, run, "Snooze 7 days", csrf_token, kind="button") }}{{ hold_form("mute", p.fp, run, "Mute", csrf_token, kind="button") }}{{ button("Watch", href="/sweep/watch/" ~ p.fp ~ "?run=" ~ run) }}{% endcall %}{% call el("span", layout="hidden md:inline-flex") %}{{ button("Watch", href="/sweep/watch/" ~ p.fp ~ "?run=" ~ run) }}{% endcall %}{% if features.BRIEFS and p.state != "needs_confirmation" %}{{ button("Add to a brief", kind="primary", href="/sweep/finding/" ~ p.fp ~ "/brief?run=" ~ run, attrs={"data-dialog-open": "add-brief"} if add_dialog is defined and add_dialog else {}) }}{% endif %}{% endif %}
-  {% elif p.tab == "test" %}{% if b.replays %}{% call el("span", "hint", layout="mr-auto") %}Same inputs, same numbers: this run replays identically.{% endcall %}{% endif %}{{ button("See the SQL", href=fbase ~ p.fp ~ "?" ~ fq ~ "&tab=sql") }}{{ button("Open the metric", href=fbase ~ p.fp ~ "?" ~ fq ~ "&tab=metric") }}
+    {% if b.nd %}{{ button("Add a known pause", href="#pause") }}{% if b.question %}{{ button("Copy question" ~ (" for " ~ b.question.to[0].name.split(" ")[0] if b.question.to else ""), kind="primary", attrs={"data-copy": b.question.text}) }}{% endif %}
+    {% else %}{% if p.watching %}{{ watching_mark(p.watching) }}{% else %}{{ watch_icon("/sweep/watch/" ~ p.fp ~ "?run=" ~ run) }}{% endif %}{{ hold_quiet("snooze", p.fp, run, "Snooze", "Hide this for a week; it comes back if it gets worse", csrf_token) }}{{ hold_quiet("mute", p.fp, run, "Mute", "Stop showing this in your briefs; it stays in Sweep", csrf_token) }}{% if features.BRIEFS and p.state != "needs_confirmation" %}{{ button("Add to a brief", kind="primary", href="/sweep/finding/" ~ p.fp ~ "/brief?run=" ~ run, attrs={"data-dialog-open": "add-brief"} if add_dialog is defined and add_dialog else {}) }}{% endif %}{% endif %}
+  {% elif p.tab == "test" %}{{ button("See the query", href=fbase ~ p.fp ~ "?" ~ fq ~ "&tab=sql") }}
   {% elif p.tab == "metric" %}{{ button("Open in Business Model", href="/ontology") }}
-  {% elif p.tab == "sql" %}{% if b.statements %}{{ button("Copy SQL", attrs={"data-copy-text": b.statements | map(attribute="sql") | join("\n\n")}) }}{% endif %}{{ button("Download result", href=b.download) }}
-  {% else %}{{ button("Download run log", href=b.log) }}<form method="post" action="/sweep/run/{{ run }}/replay?fp={{ p.fp }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Replay this run", type="submit") }}</form>
+  {% elif p.tab == "sql" %}{{ link("Download result", b.download) }}{% if b.statements %}{{ button("Copy query", attrs={"data-copy-text": b.statements | map(attribute="sql") | join("\n\n")}) }}{% endif %}
+  {% else %}{{ link("Download run log", b.log) }}<form method="post" action="/sweep/run/{{ run }}/replay?fp={{ p.fp }}" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}">{{ button("Replay this run", type="submit") }}</form>
   {% endif %}
-  </div>
+  {% endcall %}
 {% endcall %}
 {% endif %}
 {% endcall %}

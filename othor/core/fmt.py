@@ -328,9 +328,12 @@ def inr_cr_rounded(value: Number) -> str:
 
 
 def inr_cr_band(lo: Number, hi: Number) -> str:
-    """'₹55.9–58.5 Cr'; '$55.9–58.5M'."""
+    """'₹55.9–58.5 Cr'; '$55.9–58.5M'; '$541–592M' (three figures at most, as the one money rule:
+    whole units once the larger end reaches 100, 21 Nov 2026)."""
     div, suffix = _big()
-    x, y = (num((_dec(v) / div).quantize(Decimal("0.1")), decimals=1) for v in (lo, hi))
+    a, b = (_dec(v) / div for v in (lo, hi))
+    d = 0 if max(abs(a), abs(b)) >= 100 else 1
+    x, y = (num(v, decimals=d) for v in (a, b))
     return f"{currency_symbol()}{x}–{y}{suffix}"
 
 

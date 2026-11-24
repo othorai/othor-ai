@@ -16,7 +16,7 @@ from collections.abc import Callable
 from decimal import Decimal
 from typing import Any
 
-from othor.briefs import ahead, consequence, ordinary, rank, scope, tiles, title, values
+from othor.briefs import actions, ahead, consequence, ordinary, rank, scope, tiles, title, values
 from othor.core import fmt
 from othor.engine.store import Point
 from othor.engine.sweep_text import money, money_tag
@@ -540,6 +540,22 @@ def assemble(
         ]
         if x
     )
+    gls = goal_lines(spec, version.get("goals") or [], goals, sc)
+    # What to do (Morning Brief 2.5, #110): the next steps, picked by code from the items, goals
+    # and watches above; stored only when there are some, so every other issue keeps its bytes
+    todo = actions.build(
+        spec,
+        sc,
+        items=items,
+        findings={f["fingerprint"]: f for f in found},
+        goals=[g for g in goals if g.get("key") in (version.get("goals") or [])],
+        goal_lines=gls,
+        watches=watches,
+        ask=ask,
+        # 0.33.1: a quiet night's largest still-open finding; only the brief's own watches
+        still_open=still_open,
+        watch_ok=lambda w: scope.watch_in_brief(spec, version, w),
+    )
     # What's ahead follows the tiles the brief shows: its chosen headline numbers, or the first
     # confirmed numbers when none are chosen (v0.19 fix, 15 Nov 2026)
     on_tiles = {**version, "headline": [x["metric"] for x in shown_tiles if x.get("metric")]}
@@ -563,7 +579,7 @@ def assemble(
         "ask": ask,
         "still_open": still_open,
         "situation": situation,
-        "goals": goal_lines(spec, version.get("goals") or [], goals, sc),
+        "goals": gls,
         # v0.19 (M19.4): where each headline number is heading, in plain words
         "ahead": ahead_rows,
         "ahead_note": ahead.note(spec, forecast or {}, ahead_rows),
@@ -575,6 +591,8 @@ def assemble(
         "tests": tests,
         "prose": {"source": "template"},
     }
+    if todo:
+        issue["actions"] = todo
     if quiet and pic["lines"]:  # only then, so every other issue keeps its bytes
         issue["ordinary"] = {"intro": ordinary.INTRO, "lines": pic["lines"]}
     if period:  # only then, so a daily issue keeps its bytes

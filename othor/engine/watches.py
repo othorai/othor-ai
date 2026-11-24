@@ -305,3 +305,72 @@ def snapshot(s: Any) -> list[dict[str, Any]]:
         }
         for w in rows
     ]
+
+
+def can_draft(f: dict[str, Any]) -> bool:
+    """Whether `draft` has a rule for this finding (without the night's series): a Watch button
+    shows only where Watch this can draft a number to follow (What to do, #110)."""
+    sl = f.get("slots") or {}
+    det = f.get("detector")
+    return bool(
+        (det == "rising_variance" and sl.get("started"))
+        or (det == "missing_records" and f.get("state") == "measured")
+        or (det == "changepoint" and sl.get("before"))
+        or det == "broken_relationship"
+        or (det == "cross_source" and "count" in sl)
+    )
+
+
+def covering(s: Any, finding: dict[str, Any]) -> Any:
+    """The active watch that already follows this finding's number (What to do, #110; plan § D):
+    one made from it, or one on the same metric (and the same part, when the watch names one), or
+    a detector's count from the same check. Matched by the indicator, not only by the finding,
+    so a watch set up another way still counts."""
+    import sqlalchemy as sa
+
+    from othor.engine.models import Watch
+
+    fp = finding.get("fingerprint")
+    rows = s.scalars(
+        sa.select(Watch).where(Watch.stopped_at.is_(None)).order_by(Watch.created_at, Watch.id)
+    ).all()
+    for w in rows:
+        if fp and w.created_from_finding == fp:
+            return w
+    for w in rows:
+        if covers(w.indicator or {}, None, finding):
+            return w
+    return None
+
+
+def covers(ind: dict[str, Any], from_finding: str | None, finding: dict[str, Any]) -> bool:
+    """Whether a watch (its indicator, and the finding it was made from) follows this finding's
+    number: made from it, on the same metric (and the same part, when the watch names one), or a
+    detector's count from the same check. Pure, so the brief's What to do can fold a watch into
+    the finding it follows (0.33.1) with the same rule as `covering`."""
+    fp, metric, det = finding.get("fingerprint"), finding.get("metric"), finding.get("detector")
+    if fp and from_finding == fp:
+        return True
+    if ind.get("kind") == "finding_slot":
+        return bool(det and ind.get("detector") == det)
+    if not metric or ind.get("metric") != metric:
+        return False
+    ents = set(finding.get("entities") or [])
+    if finding.get("breakdown_value"):
+        ents.add(str(finding["breakdown_value"]))
+    part = ind.get("breakdown_value")
+    return part is None or not ents or part in ents
+
+
+def label(w: Any, unit: str | None = None) -> str:
+    """'alert above 8 · Priya Menon': a watch as a card's or a row's quiet label."""
+    from othor.briefs.values import indicator_text
+    from othor.core import fmt
+
+    kind = (w.indicator or {}).get("kind")
+    thr = Decimal(str(w.threshold))
+    shown = fmt.inr(thr) if unit == "inr" and kind == "value" else indicator_text(thr, kind)
+    if unit == "days" and kind in ("value", "spread"):
+        shown = f"{fmt.num(thr, decimals=1)} days"
+    out = f"alert {w.direction} {shown}"
+    return f"{out} · {w.owner_name}" if w.owner_name else out

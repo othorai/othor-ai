@@ -222,6 +222,13 @@ a.card:focus-visible, .card.is-focus { box-shadow: var(--shadow-focus); border-c
 .tabs-row .tabs { flex: 1 1 auto; min-width: 0; border-bottom: 0; margin-bottom: -9px; align-self: flex-end; }
 .tabs-row .tab { height: 40px; }
 .tabs-aside { flex: none; display: flex; align-items: center; gap: 8px; }
+.tab-pane[hidden] { display: none !important; }
+/* 0.33.6 (owner, 23 Nov 2026): a tab bar wider than its page scrolls sideways, with a fade at the
+   edge that has more; the mouse wheel scrolls it too, and the chosen tab is brought into view */
+.tabs { overscroll-behavior-x: contain; scroll-behavior: smooth; }
+.tabs.more-r { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 64px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 64px), transparent); }
+.tabs.more-l { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 64px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 64px), transparent); }
+.tabs.more-l.more-r { -webkit-mask-image: linear-gradient(to right, transparent, #000 64px, #000 calc(100% - 64px), transparent); mask-image: linear-gradient(to right, transparent, #000 64px, #000 calc(100% - 64px), transparent); }  /* #106: one pane of a page's tabs at a time (Settings) */
 .tab { display: inline-flex; flex-shrink: 0; white-space: nowrap; align-items: center; height: 32px; padding: 0 2px; margin-right: 18px; border-bottom: 2px solid transparent;
   color: var(--color-muted); font-size: var(--text-row); text-decoration: none; }
 .tab:hover, .tab.is-hover { color: var(--color-ink); }
@@ -1417,6 +1424,11 @@ button.brief-card { font: inherit; width: 100%; cursor: pointer; }  /* a card th
 .ont-row .src { font-size: var(--text-row); color: var(--color-muted); }
 .ont-row .sub { display: block; font-size: var(--text-meta); color: var(--color-warn-text); }
 .ont-row.warn { background: var(--color-warn-tint); }
+/* #107: a line of The business changed in place (the floor): the amount, Save and Cancel inline */
+.ont-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ont-edit .input { width: 140px; }
+.ont-edit .hint { flex-basis: 100%; font-size: var(--text-meta); color: var(--color-muted); }
+.ont-row button.link { background: none; border: 0; padding: 0; font: inherit; color: var(--color-accent-deep); cursor: pointer; }
 .ont-row.ont-decided { grid-template-columns: minmax(0, 1fr) 180px auto; }
 .ont-decided .ev { display: block; font-size: var(--text-row); color: var(--color-muted); }
 .ont-decided .acts { display: inline-flex; align-items: center; gap: 12px; font-size: var(--text-row); }
@@ -2194,7 +2206,9 @@ a.bp-tile:hover { border-color: var(--color-border-hover); }
 .top-more > summary svg { width: 16px; height: 16px; }
 /* #98 (owner, 20 Nov 2026): the ⋯ menu as a proper menu: room around and between its rows, each
    row a hover target, a clear shadow so it reads above what's under it */
-.top-more .use-menu { top: 40px; width: 232px; z-index: 60; padding: 6px; gap: 2px; border-color: var(--color-rule);
+/* it opens leftward from the top right on phones too (the phone rule above opens other menus
+   rightward, which pushed this one off the screen) */
+.top-more .use-menu { top: 40px; right: 0; left: auto; width: 232px; z-index: 60; padding: 6px; gap: 2px; border-color: var(--color-rule);
   border-radius: var(--radius-12); box-shadow: 0 8px 24px rgba(16, 32, 44, .14); }
 .top-more .use-menu .opt { min-height: 36px; padding: 8px 12px; border-radius: var(--radius-8); }
 .top-more .use-menu .opt:hover, .top-more .use-menu .opt:focus-visible { background: var(--color-surface-2); }
@@ -2832,10 +2846,12 @@ a.brief-card:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
 .level-title b { font-size: var(--text-card); font-weight: 600; }
 .level-line { color: var(--color-muted); font-size: var(--text-row); }
 .level-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; max-width: 360px; }
-.level-bar i { height: 6px; border-radius: var(--radius-full); background: var(--color-rule); }
-.level-bar i.on { background: var(--color-accent); }
+.level-bar i { display: flex; gap: 2px; height: 6px; border-radius: var(--radius-full); overflow: hidden; }
+.level-bar b { flex: 1; background: var(--color-rule); }
+.level-bar b.on { background: var(--color-accent); }  /* one tick per item, lit when done (#104) */
 .level-open { flex: none; font-size: var(--text-row); }
 .level[open] .level-open { visibility: hidden; }
+.level.is-fixed > .level-head { cursor: default; pointer-events: none; }  /* its own tab: always open */
 .level-body { border-top: 1px solid var(--color-rule); padding: 8px 20px 16px; display: flex; flex-direction: column; gap: 8px; }
 .level-group { display: flex; flex-direction: column; }
 .level-group.done .level-g b { color: var(--color-muted); }
@@ -2863,3 +2879,92 @@ a.brief-card:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
   .level-item > .btn { margin-left: 30px; }
 }
 .level-find { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 12px; }
+
+/* What to do (Morning Brief 2.5, #110; docs/plans/what-to-do.md): the rows a brief's section,
+   Home's card and the What to do page draw (components/todo.html), on the dashboard rows */
+.wtd-sec { margin-bottom: 36px; }
+.wtd-sec[hidden], .wtd-list .db-row[hidden] { display: none; }
+.wtd-in-brief { margin: 24px 0 8px; }
+.wtd-home { margin-bottom: 28px; }
+.wtd-tabs { margin: 4px 0 28px; }
+.wtd-list .db-row { align-items: flex-start; padding: 18px 0; }
+.wtd-list .db-n { margin-top: 2px; }
+.wtd-body { flex: 1; min-width: 0; }
+.wtd-body .t { font-weight: 400; }
+.wtd-body .m { margin-top: 10px; row-gap: 6px; }
+.wtd-why { color: var(--color-ink-2); text-decoration: underline dotted var(--color-muted-2); text-underline-offset: 3px; }
+.wtd-why:hover { color: var(--color-accent-deep); }
+.wtd-r { flex: none; min-width: 120px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.wtd-briefs { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.wtd-holds { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 2px; margin-right: -6px; }
+.wtd-holds .hold-btn { text-decoration: none; }
+.wtd-held { display: inline-flex; align-items: center; gap: 4px; font-size: var(--text-meta); color: var(--color-muted); }
+.wtd-held .icon, .wtd-watching .icon { width: 14px; height: 14px; }
+.wtd-watching { display: inline-flex; align-items: center; gap: 4px; padding: 4px 6px; font-size: var(--text-meta); color: var(--color-accent-deep); white-space: nowrap; }
+.wtd-list .db-row.is-held .wtd-body, .wtd-list .db-row.is-held .v { opacity: .45; }
+.wtd-foot { display: grid; gap: 10px; }
+.wtd-held-line { margin: 8px 0 0; padding-top: 16px; border-top: 1px solid var(--color-rule); font-size: var(--text-row); color: var(--color-muted); }
+.wtd-held-line .link { font-size: var(--text-row); }
+@media (max-width: 559px) {
+  .wtd-list .db-row { flex-wrap: wrap; column-gap: 12px; }
+  .wtd-r { order: 3; min-width: 0; width: 100%; flex-direction: row; justify-content: space-between; align-items: center; padding-left: 34px; }
+  .wtd-list .v { text-align: left; }
+  .wtd-list .v small { display: inline; margin-left: 6px; }
+  .wtd-tabs { overflow-x: auto; scrollbar-width: none; }
+  .wtd-tabs .tabs { flex-wrap: nowrap; white-space: nowrap; }
+}
+
+/* --- 0.33 (owner, 22 Nov 2026): the finding panel's foot, one row ------------------------------
+   the run in plain words with its details behind the (i); the holds as the brief card's quiet
+   buttons; at most one primary. On a phone: the run line, then the actions on their own row. */
+.panel-foot-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; flex-wrap: wrap; }
+.panel-foot-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; flex-wrap: wrap; }
+.panel-foot-actions > .btn, .panel-foot-actions > form > .btn, .panel-foot-actions > .link { margin-left: 8px; }
+.run-chip { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-meta); color: var(--color-muted); white-space: nowrap; }
+a.hold-btn { text-decoration: none; }
+.watching-mark { display: inline-flex; align-items: center; gap: 4px; padding: 4px 6px; font-size: var(--text-meta); color: var(--color-accent-deep); white-space: nowrap; }
+.watching-mark .icon, .hold-line .how .icon { width: 14px; height: 14px; flex: none; }
+.pane-tabs { overflow-x: auto; scrollbar-width: none; }
+.pane-tabs .tabs { flex-wrap: nowrap; white-space: nowrap; }
+@media (max-width: 559px) {
+  .panel-foot-row { flex-direction: column; align-items: stretch; gap: 10px; }
+  .panel-foot-actions { justify-content: space-between; flex-wrap: nowrap; }
+  .panel-foot-actions > .btn, .panel-foot-actions > form > .btn { margin-left: auto; }
+}
+
+/* Sweep › Suppressed (0.33): a hold's icon, when, where it was done, Undo; a pattern's count and
+   each number with its dates; Show all in place */
+.hold-line .how { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.hold-line .how .from { color: var(--color-muted-2); }
+.pattern-group .how b { font-weight: 600; color: var(--color-ink-2); }
+.pattern-metrics li { display: flex; justify-content: space-between; gap: 12px; }
+.pattern-metrics li > span:last-child { color: var(--color-muted); }
+.show-all { margin-top: 10px; }
+.show-all > summary { list-style: none; cursor: pointer; display: inline-block; }
+.show-all > summary::-webkit-details-marker { display: none; }
+.show-all[open] > summary { display: none; }
+@media (max-width: 559px) { .hold-line { flex-wrap: wrap; } .hold-line .how { white-space: normal; flex-wrap: wrap; } }
+.pattern-metrics li.note { display: block; color: var(--color-muted-2); font-size: var(--text-meta); }
+/* What to do (0.33, owner's approved design): a quiet "·" between a row's details; none on a phone,
+   where they wrap to their own lines */
+.wtd-list .m > * + *::before { content: "·"; display: inline-block; margin-right: 8px; color: var(--color-muted-2); text-decoration: none; }
+@media (max-width: 559px) { .wtd-list .m > * + *::before { content: none; } }
+/* 0.33.1: the dot before the brief chips sat high (the chips are a flex row): centred, at the
+   row's size, with the chips' own gap after it */
+.wtd-list .m > .wtd-briefs::before { align-self: center; margin-right: 2px; font-size: var(--text-row); line-height: 1; }
+/* Watch on a brief card, once watched (0.33.1): the label in the quiet links' place */
+.brief-item .actions .held.is-watching { display: inline-flex; align-items: center; gap: 4px; color: var(--color-accent-deep); }
+.brief-item .actions .held.is-watching .icon { width: 14px; height: 14px; }
+/* Recently resolved, the Action plan's history (owner, 22 Nov 2026): today's rows, quieter; an
+   icon for why it left (check, eye-off, clock) in the number's place; Show all in place */
+.wtd-resolved { margin-top: 12px; }
+.wtd-res-row .t { color: var(--color-ink-2); }
+.wtd-res-ico { flex: none; width: 22px; height: 22px; border-radius: var(--radius-full); display: inline-flex; align-items: center; justify-content: center;
+  margin-top: 2px; background: var(--color-surface-2); color: var(--color-muted); }
+.wtd-res-ico .icon { width: 13px; height: 13px; }
+.wtd-res-why { color: var(--color-ink-2); font-weight: 500; }
+.wtd-res-more > summary { list-style: none; cursor: pointer; margin-top: 10px; display: inline-block; font-size: var(--text-row); }
+.wtd-res-more > summary::-webkit-details-marker { display: none; }
+.wtd-res-more[open] > summary { display: none; }
+.wtd-res-week { margin: 12px 0 0; font-size: var(--text-row); color: var(--color-muted); }
+.wtd-res-week .link { font-size: var(--text-row); }

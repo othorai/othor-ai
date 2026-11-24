@@ -33,13 +33,17 @@ def test_every_hook_reaches_the_running_app(tmp_path: Path) -> None:
         h = env.host("indigothread")
         c = env.client
         # its page answers before the core's catch-all, and its static file is served
-        assert "The demo plug-in page" in c.get(h + "/demo").text
+        assert "The demo plug-in page" in c.get(h + "/plugin-demo").text
         assert c.get(h + "/static/p/demo/hello.txt").text.strip() == "demo static"
         home = c.get(h + "/home").text
         # its menu item sits in the company group, right after Summary
-        assert home.index('href="/summary"') < home.index('href="/demo"') < home.index(">Setup<")
+        assert (
+            home.index('href="/summary"')
+            < home.index('href="/plugin-demo"')
+            < home.index(">Setup<")
+        )
         # its badge count sits on its item (Advanced Intelligence Phase 0)
-        demo_item = home[home.index('href="/demo"') : home.index(">Setup<")]
+        demo_item = home[home.index('href="/plugin-demo"') : home.index(">Setup<")]
         assert 'class="nav-badge"' in demo_item and ">3<" in demo_item
         # its fragment fills a slot with the page's context and its own
         from othor.web.templating import templates
@@ -48,7 +52,7 @@ def test_every_hook_reaches_the_running_app(tmp_path: Path) -> None:
         assert "Hi from the demo plug-in · Acme" in got
         settings = c.get(h + "/settings").text
         assert "data-demo-advanced" in settings
-        assert settings.index("data-demo-advanced") < settings.index("Delivery")
+        assert settings.index("data-demo-advanced") < settings.index('aria-label="Delivery"')
         # its field saves through the core's settings path, with an event
         tok = env.csrf(h + "/settings")
         bad = c.post(h + "/settings", data={"csrf": tok, "field": "demo_level", "value": "x"})
@@ -122,4 +126,21 @@ def test_without_plugins_no_trace(tmp_path: Path) -> None:
             page = env.client.get(h + path).text
             assert "demo" not in page.lower(), path
             assert "nav-badge" not in page, path
-        assert env.client.get(h + "/demo").status_code == 404
+        assert env.client.get(h + "/plugin-demo").status_code == 404
+
+
+def test_a_plugins_own_subdomain_moves_to_the_root_host(tmp_path: Path) -> None:
+    """Plugin.host_redirects (23 Nov 2026): `<label>.<base>` answers a 301 to the path the
+    plug-in gives, on the root host, before any company routing; without it, an unknown host."""
+    from tests.web.conftest import BASE, ROOT
+
+    with make_env(tmp_path, plugins=DEMO) as env:
+        r = env.client.get(f"http://old-demo.{BASE}/a/b?x=1", follow_redirects=False)
+        assert r.status_code == 301 and r.headers["location"] == f"{ROOT}/moved/a/b"
+        other = env.client.get(f"http://not-demo.{BASE}/a", follow_redirects=False)
+        assert other.status_code != 301
+    plugins.reset()
+    (tmp_path / "none").mkdir()
+    with make_env(tmp_path / "none", plugins="none") as env:
+        r = env.client.get(f"http://old-demo.{BASE}/a", follow_redirects=False)
+        assert r.status_code != 301

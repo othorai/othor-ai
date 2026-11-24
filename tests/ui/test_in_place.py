@@ -31,7 +31,7 @@ def browser() -> Iterator[Any]:
         b.close()
 
 
-def test_accept_and_undo_on_home_happen_in_place(browser: Any, night) -> None:  # noqa: F811
+def test_accept_and_undo_on_the_business_model_happen_in_place(browser: Any, night) -> None:  # noqa: F811
     expect = pytest.importorskip("playwright.sync_api").expect
     world, *_ = night
     name, _, value = session_cookie(world).partition("=")
@@ -42,7 +42,8 @@ def test_accept_and_undo_on_home_happen_in_place(browser: Any, night) -> None:  
         page = ctx.new_page()
         errors: list[str] = []
         page.on("pageerror", lambda e: errors.append(str(e)))
-        page.goto(f"http://{host}:{port}/home", wait_until="networkidle")
+        # the proposals moved from Home to the Business Model page (owner, 23 Nov 2026)
+        page.goto(f"http://{host}:{port}/ontology", wait_until="networkidle")
         page.evaluate("window.__stay = 1")  # gone if the page reloads
         rows = page.locator('[aria-label="Proposals"] [data-row]')
         n = rows.count()
@@ -56,7 +57,7 @@ def test_accept_and_undo_on_home_happen_in_place(browser: Any, night) -> None:  
         rows.nth(0).get_by_role("button", name="Accept").click()
         expect(page.locator("tr.is-decided")).to_have_count(1)
         assert page.evaluate("window.__stay") == 1, "the page reloaded"
-        assert page.url.endswith("/home")
+        assert "/ontology" in page.url
         assert abs(page.evaluate("window.scrollY") - y) <= 1
         expect(open_rows).to_have_count(n - 1)
         assert rows.nth(0).get_attribute("data-row") == first  # the Undo row sits in its place

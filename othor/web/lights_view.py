@@ -468,7 +468,7 @@ def _next(n: dict[str, Any]) -> dict[str, Any]:
 def _licence(lic: dict[str, Any]) -> dict[str, Any]:
     """The enterprise licence (M20.3): shown when the install has enterprise features or runs
     several companies. Expiry never locks anyone out; after the grace, no new companies."""
-    state, href, link = lic["state"], "/settings#licence", "Licence"
+    state, href, link = lic["state"], "/settings?tab=licence", "Licence"
     used = lic.get("companies")
     limit = (lic.get("limits") or {}).get("companies")
     use = f" · {fmt.num(used)} of {fmt.num(limit)} companies" if used is not None and limit else ""

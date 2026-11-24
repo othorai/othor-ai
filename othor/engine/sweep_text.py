@@ -520,7 +520,8 @@ def _step(f: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
             f"From {_unit(f, sl['before'])} to {_unit(f, sl['after'])}, held for "
             f"{fmt.num(sl['weeks_held'])} weeks."
         ),
-        "consequence": "it has held since",
+        # 0.33.1: the line named no date ("It has held since"); it says the week the step began
+        "consequence": f"it has held since the week of {_d(sl['change_week'])}",
         "why_unseen": (
             "Each week looks normal on its own; the step shows only against the weeks before."
         ),

@@ -47,7 +47,14 @@ def make(
     one brief (its count goes in a focused brief's quiet line)."""
     sweep = outputs_doc.get("sweep") or {}
     ind = {w["id"]: w for w in context.get("watches") or []}
-    ws = [{**w, "indicator": (ind.get(w["id"]) or {}).get("indicator")} for w in watches]
+    ws = [
+        {
+            **w,
+            "indicator": (ind.get(w["id"]) or {}).get("indicator"),
+            "from_finding": (ind.get(w["id"]) or {}).get("from_finding"),
+        }
+        for w in watches
+    ]
     stale = stale_as_of(spec, outputs_doc.get("coverage") or {})
     issues = []
 

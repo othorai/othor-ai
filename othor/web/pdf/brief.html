@@ -133,6 +133,10 @@ td.fc-line svg, .fc-range svg { width: 100%; height: auto; display: block; }
 {% if b.get('ahead_note') %}<p class="small muted">{{ b.ahead_note }}</p>{% endif %}
 </section>{% endif %}
 
+{# Action plan (owner, 22 Nov 2026): last, just above Since last week #}
+{% if actions %}<p class="caps">Action plan</p>
+<table>{% for a in actions %}<tr><td style="width:22px"><b>{{ loop.index }}</b></td><td>{{ a.said }}<br>{% if a.status %}<span class="tag soft">{{ a.status }}</span>{% endif %}{% if a.who %}<span class="small muted">Ask {{ a.who.name }}{% if a.who.role %}, {{ a.who.role }}{% endif %}</span>{% endif %}{% if a.by %}<span class="small muted"> · {{ a.by }}</span>{% endif %}</td><td class="num"><b>{{ a.money or "" }}</b></td></tr>{% endfor %}</table>{% endif %}
+
 {# 0.28.5 (owner, 20 Nov 2026): "Since last week" last, after everything else in the issue #}
 {% if week %}<section style="break-inside: avoid">
 <h2>Since {{ week.word }}</h2>

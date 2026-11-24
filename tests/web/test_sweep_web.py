@@ -13,6 +13,7 @@ import copy
 import datetime as dt
 import html
 import re
+from decimal import Decimal
 
 import pytest
 import sqlalchemy as sa
@@ -289,18 +290,23 @@ def test_watch_this_drafts_replays_and_starts(night):
     env, h, cid, rid, svc = night
     fp = _fp(svc, cid, rid, "rising_variance", "Coimbatore")
     page = env.client.get(f"{h}/sweep/watch/{fp}").text
-    assert "Watch this" in page and "Drafted from the finding" in page
-    assert "p90 − p10 days, 7-day window" in page and "Last 90 days, replayed" in page
+    # 0.33 (plan § E): plain words; the limit as the owner reads it, never 2.4E+0
+    assert "Watch this" in page and "Othor AI picked this from the finding" in page
+    assert "Coimbatore, last 7 days" in page and "p90" not in page
+    assert "The last 90 days, against this limit" in page and "Tell me when it goes above" in page
+    assert "E+" not in re.search(r'name="threshold"[^>]*value="([^"]+)"', page).group(1)
     assert "Checked every night · change or stop any time" in page
     thr = re.search(r'name="threshold"[^>]*value="([^"]+)"', page).group(1)
     r = _post(env, h, f"/sweep/watch/{fp}/start", {"threshold": thr, "owner": "Aditya Naik"})
     assert r.status_code == 303 and "tab=watching" in r.headers["location"]
     with svc.sf() as s, tenant_scope(cid):
         w = s.scalars(sa.select(Watch).where(Watch.created_from_finding == fp)).one()
-        assert w.owner_name == "Aditya Naik" and w.threshold == thr
+        # the field shows "2.4 days"; it is stored as the number (0.33)
+        assert w.owner_name == "Aditya Naik"
+        assert Decimal(w.threshold) == Decimal(sv.parse_threshold(thr, "days"))
         assert s.scalars(sa.select(Event).where(Event.action == "watch.started")).all()
     watching = env.client.get(h + "/sweep?tab=watching").text
-    assert "Watching since" in watching and "Breached" in watching
+    assert "Watching since" in watching and "Above the limit" in watching
     # stop one of the run's watches: it leaves the tab at once
     with svc.sf() as s, tenant_scope(cid):
         first = s.scalars(sa.select(Watch).order_by(Watch.created_at)).first()
@@ -424,7 +430,8 @@ def test_suppressed_lists_one_item_per_pattern_with_its_metrics(night):
     page = env.client.get(h + "/sweep?tab=suppressed").text
     assert page.count("<summary") >= 2
     diwali = page[page.index("Diwali week") :]
-    assert "known pattern" in diwali and "net revenue (week of 19 Oct)" in diwali
+    # 0.33: each number on its own line with its dates; the pattern's note last
+    assert "Known pattern" in diwali and "Net revenue</span><span>week of 19 Oct" in diwali
     surat = page[page.index("Surat plant shutdown") :]
     assert "catch-up week of 24 Aug" in surat and "confirmed 28 Oct" in surat
 
@@ -485,7 +492,10 @@ def test_how_is_this_calculated_for_net_hiding_gross(night):
     assert body["stake"].startswith("= South’s fall, Sep ")
     assert body["moved"]["rows"][-1][0] == "Total"
     page = env.client.get(f"{h}/sweep/finding/{fp}?tab=test").text
-    assert "<svg" in page and "Open the metric" in page and "See the SQL" in page
+    # 0.33: the tabs in plain words; one button in this tab's foot
+    foot = page.split('class="pane-foot"', 1)[1]
+    assert "<svg" in page and "How it’s calculated" in page and "See the query" in foot
+    assert "See the SQL" not in foot and "How is this calculated?" not in foot
 
 
 def test_history_and_add_to_a_brief_as_a_dialog(night):

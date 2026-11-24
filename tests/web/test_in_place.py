@@ -37,12 +37,12 @@ def _post(env: Env, h: str, path: str, data: dict | None = None, **kw):
 def _open(html: str) -> int:
     """The proposals still open on Home: rows with an Accept form (Home's header count went in
     design B2, 11 Nov 2026, so the rows are the count)."""
-    return len(re.findall(r'action="/home/proposals/[^"/]+/accept"', html))
+    return len(re.findall(r'action="/home/proposals/[^"/]+/accept\?back=ontology"', html))
 
 
 def test_every_home_action_is_in_place(night):  # noqa: F811
     env, h, *_ = night
-    for path in ("/home", "/home?panel=questions"):
+    for path in ("/home", "/home?panel=questions", "/ontology"):
         forms = _forms(env.client.get(h + path).text)
         assert forms, path
         plain = [f for f in forms if "data-inplace" not in f and "/logout" not in f]
@@ -59,21 +59,29 @@ def test_the_undo_row_sits_where_the_proposal_was(night):  # noqa: F811
         ).all()
         ids = [str(p.id) for p in rows]
     assert ids, "the night has an open proposal"
-    before = env.client.get(h + "/home").text
+    before = env.client.get(h + "/ontology").text  # on the Business Model page (23 Nov 2026)
     assert _open(before) == len(ids)
     pid = ids[0]
-    r = _post(env, h, f"/home/proposals/{pid}/accept", follow_redirects=True, headers=INPLACE)
+    r = _post(
+        env,
+        h,
+        f"/home/proposals/{pid}/accept?back=ontology",
+        follow_redirects=True,
+        headers=INPLACE,
+    )
     assert r.status_code == 200
     page = r.text
     rows_now = re.findall(r'data-row="([^"]+)"', page.split('aria-label="Proposals"', 1)[1])
     assert rows_now[: len(ids)] == ids, "the decided row keeps its place"
     assert "Accepted · applies from tonight’s run" in page
-    assert f'action="/home/proposals/{pid}/undo"' in page
+    assert f'action="/home/proposals/{pid}/undo?back=ontology"' in page
     assert _open(page) == len(ids) - 1
     # Undo puts the row back as it was
-    r = _post(env, h, f"/home/proposals/{pid}/undo", follow_redirects=True, headers=INPLACE)
+    r = _post(
+        env, h, f"/home/proposals/{pid}/undo?back=ontology", follow_redirects=True, headers=INPLACE
+    )
     assert _open(r.text) == len(ids)
-    assert f'action="/home/proposals/{pid}/accept"' in r.text
+    assert f'action="/home/proposals/{pid}/accept?back=ontology"' in r.text
 
 
 def test_a_failed_in_place_post_is_a_toast_not_a_page(night):  # noqa: F811

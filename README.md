@@ -173,6 +173,21 @@ Python 3.12 · FastAPI + Jinja2 + htmx (server-rendered, no SPA) · SQLAlchemy 2
 ruptures · charts as a `ChartSpec` rendered to SVG/PNG on the server · one container image,
 configured by environment variables and a data directory.
 
+## See it in 5 minutes
+
+Needs Docker and [uv](https://docs.astral.sh/uv/).
+
+```sh
+git clone https://github.com/othorai/othor-ai.git && cd othor-ai
+make demo
+```
+
+This starts the app with its databases, loads Indigo Thread Co. (an invented textile company with
+planted patterns) into a sample MySQL and PostgreSQL, sets it up in the app as an owner would
+(sources connected read-only, Business Model confirmed) and runs the night of 1 November 2026. It
+ends by printing where to sign in; the sign-in code arrives in the bundled mail catcher at
+http://localhost:8026. Then open the Morning Brief, Sweep and the Business Model.
+
 ## Quick start
 
 ```sh
@@ -202,13 +217,14 @@ through the same plug-in entry-point group (`othor.plugins`) this repository exp
 |---|---|---|
 | Nightly engine: every metric and breakdown, replayable byte for byte | ✓ | ✓ |
 | All 11 detectors, with false-discovery-rate control | ✓ | ✓ |
-| Forecasts and goals, with their chance | ✓ | ✓ |
+| What’s ahead in every brief: each number’s forecast, each goal’s chance | ✓ | ✓ |
 | Morning Brief (page, email, PDF), Sweep, Summary, Big Picture | ✓ | ✓ |
 | Business Model, Ask Othor AI | ✓ | ✓ |
 | Sources: PostgreSQL, MySQL, Google Sheets (read-only) | ✓ | ✓ |
 | Look back: why a closed period went the way it did | | ✓ |
 | Discover: groups of numbers your business isn't watching yet | | ✓ |
-| Plain Facts: your week as a plain write-up, every Monday (page, email, PDF) | | ✓ |
+| Forecasts: a page of what’s ahead for every number, and how far it can see | | ✓ |
+| Weekly Digest: your week as a newspaper’s data page, every Monday (page, email, PDF) | | ✓ |
 | External signals: exchange rates, cotton, rainfall, tested against your numbers | | ✓ |
 | Othor MCP: ask from Claude, ChatGPT or your own AI | | ✓ |
 | Companies per install | One | Several |

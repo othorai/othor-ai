@@ -57,7 +57,7 @@ def test_a_clean_rewrite_is_shown_with_its_numbers_unchanged(session_factory, tw
         "situation": BODY["situation"],
     }
     got = rewrite.rewrite(ModelGateway(session_factory, Scripted(good)), cid, BODY)
-    assert got["source"] == "model" and got["prompt"] == "brief_rewrite@v1"
+    assert got["source"] == "model" and got["prompt"] == "brief_rewrite@v2"
     assert rewrite.shown(BODY, got)["title"] == good["title"]
 
 
@@ -75,3 +75,54 @@ def test_the_provider_off_keeps_the_template(session_factory, two_companies):
         ModelGateway(session_factory, Scripted({})), cid, {**BODY, "quiet": True}
     )
     assert quiet["guard"] == "not-needed"
+
+
+# --- What to do (0.33, #110): each action sentence checked on its own ----------------------------
+
+WITH_ACTIONS = {
+    **BODY,
+    "actions": [
+        {"text": "Call Tessora EU and Ravira Exports: they carry most of South’s fall."},
+        {"text": "Have someone call them: 14 customers marked active went quiet for 90+ days."},
+    ],
+}
+
+
+def test_each_action_sentence_is_kept_only_with_its_own_numbers(session_factory, two_companies):
+    from othor.briefs import words
+
+    cid, _ = two_companies
+    out = {
+        **{k: BODY[k] for k in rewrite.FIELDS},
+        "actions": [
+            "Call Tessora EU and Ravira Exports this week: they carry most of South’s fall.",
+            "Have sales call the 15 customers marked active who went quiet.",  # 15: not its own
+        ],
+    }
+    got = rewrite.rewrite(ModelGateway(session_factory, Scripted(out)), cid, WITH_ACTIONS)
+    assert got["source"] == "model" and got["prompt"] == "brief_rewrite@v2"
+    assert got["actions_guard"] == "dropped:1"
+    said = [a["said"] for a in words.actions(WITH_ACTIONS, got)]
+    assert said == [out["actions"][0], WITH_ACTIONS["actions"][1]["text"]]
+
+
+def test_a_wrong_count_of_action_sentences_keeps_every_template(session_factory, two_companies):
+    from othor.briefs import words
+
+    cid, _ = two_companies
+    out = {**{k: BODY[k] for k in rewrite.FIELDS}, "actions": ["Only one."]}
+    got = rewrite.rewrite(ModelGateway(session_factory, Scripted(out)), cid, WITH_ACTIONS)
+    assert got["actions_guard"] == "dropped:2"
+    assert [a["said"] for a in words.actions(WITH_ACTIONS, got)] == [
+        a["text"] for a in WITH_ACTIONS["actions"]
+    ]
+
+
+def test_without_a_model_the_actions_are_the_templates(session_factory, two_companies):
+    from othor.briefs import words
+
+    cid, _ = two_companies
+    got = rewrite.rewrite(ModelGateway(session_factory, TemplateProvider()), cid, WITH_ACTIONS)
+    assert [a["said"] for a in words.actions(WITH_ACTIONS, got)] == [
+        a["text"] for a in WITH_ACTIONS["actions"]
+    ]

@@ -116,7 +116,7 @@
   <div class="card board">{{ empty_state(None, "No numbers to summarise yet", "Confirm your metrics in the Business Model; they show here after the next nightly run.", "Open the Business Model", "/ontology") }}</div>
 {% else %}
   {% if sm.card %}{{ summary_card(sm.card, csrf) }}{% endif %}
-  {% if sm.proposal_open %}<p class="sum-hint">Othor AI has drafted areas for your numbers. <a class="link" href="/home#proposals">Review them on Home</a></p>{% endif %}
+  {% if sm.proposal_open %}<p class="sum-hint">Othor AI has drafted areas for your numbers. <a class="link" href="/ontology#proposals">Review them on Home</a></p>{% endif %}
   {% if sm.view.rows == "numbers" %}
   {# Every number (owner, 14 Nov 2026): a row per number under its area's heading, all shown #}
   {% for g in sm.groups or [] %}

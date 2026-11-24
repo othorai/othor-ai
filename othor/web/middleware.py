@@ -72,10 +72,24 @@ SCRIPT_HOSTS = "https://apis.google.com"  # the Google Picker only (docs/05)
 PICKER_PATHS = ("/sources", "/setup/sources")
 
 
+VIDEO_FRAMES = (
+    "https://www.youtube-nocookie.com"  # a blog post's video, after a click (docs/security)
+)
+# where a video may play: the website's blog posts only (owner, 23 Nov 2026); nothing loads from
+# YouTube until the reader presses play, and no YouTube script runs on the page itself
+VIDEO_PATHS = ("/blog/",)
+
+
 def security_headers(path: str, env: str, base_domain: str = "") -> list[tuple[bytes, bytes]]:
     picker = path.startswith(PICKER_PATHS)
     script = "'self'" + (f" {SCRIPT_HOSTS}" if picker else "")
-    frame = "https://docs.google.com" if picker else "'none'"
+    frame = (
+        "https://docs.google.com"
+        if picker
+        else VIDEO_FRAMES
+        if path.startswith(VIDEO_PATHS)
+        else "'none'"
+    )
     # Signing in from the root address posts there and is redirected to the company's own host
     # (1a → 1b, and signup's handoff); form-action covers that redirect. Without a scheme these
     # match the page's own: http locally (where https: alone blocked it, #14), https live.
@@ -122,6 +136,30 @@ def is_db_down(exc: BaseException) -> bool:
             )
         )
     return False
+
+
+def _host_redirect(
+    scope: Scope, host: str, headers: dict[bytes, bytes], settings: Any
+) -> str | None:
+    """A 301's target when `<label>.<base>` is a sub-domain a plug-in answers
+    (Plugin.host_redirects, 23 Nov 2026), else None. The target is always on the root host:
+    the plug-in gives the path."""
+    base = str(getattr(settings, "base_domain", "") or "")
+    if not base or getattr(settings, "tenancy", "") == "single" or not host.endswith("." + base):
+        return None
+    from othor.core import plugins
+
+    fn = plugins.host_redirect(host[: -len(base) - 1])
+    if fn is None:
+        return None
+    query = (scope.get("query_string") or b"").decode("latin-1")
+    to = fn(scope.get("path", "") or "/", query)
+    if not to.startswith("/") or to.startswith("//"):
+        to = "/"
+    raw = headers.get(b"host", b"").decode("latin-1")
+    port = raw.rsplit(":", 1)[1] if ":" in raw else ""
+    netloc = base + (f":{port}" if port.isdigit() and port not in ("80", "443") else "")
+    return f"{scope.get('scheme', 'https')}://{netloc}{to}"
 
 
 class Edge:
@@ -184,6 +222,21 @@ class Edge:
             await send(message)
 
         try:
+            moved = _host_redirect(scope, host, headers, self.settings)
+            if moved is not None:  # a plug-in's own sub-domain (blog.othor.ai): never a company
+                await send_wrapped(
+                    {
+                        "type": "http.response.start",
+                        "status": 301,
+                        "headers": [
+                            (b"location", moved.encode()),
+                            (b"content-length", b"0"),
+                            (b"cache-control", b"public, max-age=86400"),
+                        ],
+                    }
+                )
+                await send_wrapped({"type": "http.response.body", "body": b""})
+                return
             if not getattr(self.state, "schema_ok", True) and not errors.exempt(path):
                 await errors.maintenance(scope, receive, send_wrapped)
                 return

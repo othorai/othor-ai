@@ -123,7 +123,8 @@
 <div class="field">
   <label for="f-topic">What it’s about</label>
   <select class="select{{ ' is-error' if errors.topic else '' }}" id="f-topic" name="topic"{% if errors.topic %} aria-invalid="true" aria-describedby="e-topic"{% endif %}>
-    {% for value, text in contact.topics %}<option value="{{ value }}"{% if value == (form.topic or "other") %} selected{% endif %}>{{ text }}</option>{% endfor %}
+    <option value="" disabled{% if not form.topic %} selected{% endif %}>Choose what it’s about</option>
+    {% for value, text in contact.topics %}<option value="{{ value }}"{% if value == form.topic %} selected{% endif %}>{{ text }}</option>{% endfor %}
   </select>
   {% if errors.topic %}<p class="field-error" id="e-topic">{{ errors.topic }}</p>{% endif %}
 </div>

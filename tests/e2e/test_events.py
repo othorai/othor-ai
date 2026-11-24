@@ -11,6 +11,13 @@ the Surat shutdown) and the 5e watches are on, as production's Indigo Thread has
 Each morning's Leadership issue and its email subject are kept (OTHOR_EVENTS_SUMMARY=<path>
 writes them as JSON), and each event is checked on the night it should show: the tag, the
 detector, a finding cleared by the data, the subject line. Needs `make dev`.
+
+`OTHOR_SAMPLE_STREAM=demo` runs the live demo company's stream instead
+(tests/fixtures/sample_company/demo_stream.py, docs/plans/live-demo-account.md): its first run
+on 20 Nov reads the two databases only (no MIS sheet, no earlier snapshots, as a company set up
+that day), its nights run from 21 Nov (30 by default; OTHOR_EVENT_NIGHTS=131 runs to 31 Mar),
+and the richness test checks every morning against the plan's target. The shared stream's event
+checks are skipped then.
 """
 
 from __future__ import annotations
@@ -35,8 +42,11 @@ from tests.integration.run_world import confirm_sample, engine_ctx, require_sour
 from tests.integration.test_seed import DW_ADMIN, ERP_ADMIN
 
 D = dt.date
-FIRST = D(2026, 11, 20)  # three nights before the seam, so 23 Nov isn't all New
-COUNT = int(os.environ.get("OTHOR_EVENT_NIGHTS", "44"))  # 20 Nov – 2 Jan; 103: to 2 Mar
+DEMO = e2e.DEMO
+# shared: three nights before the seam, so 23 Nov isn't all New; demo: the night after setup
+FIRST = D(2026, 11, 21) if DEMO else D(2026, 11, 20)
+# shared: 20 Nov – 2 Jan (103: to 2 Mar); demo: 21 Nov – 20 Dec (131: to 31 Mar)
+COUNT = int(os.environ.get("OTHOR_EVENT_NIGHTS", "30" if DEMO else "44"))
 NIGHTS = [FIRST + dt.timedelta(days=i) for i in range(COUNT)]
 
 
@@ -70,7 +80,7 @@ def nights(tmp_path_factory):
     ctx = engine_ctx(sf, tmp, clock=_clock(first))
     c = e2e.as_of(first)
     e2e.load_night(c, erp_url, dw_url, ctx.settings.sample_dir / "sheets")
-    confirm_sample(ctx, cid, c, with_mis=True, e2e=True, watches=True, surat_answered=True)
+    confirm_sample(ctx, cid, c, with_mis=not DEMO, e2e=True, watches=True, surat_answered=True)
     with ctx.sf() as s, tenant_scope(cid):
         company = s.scalars(sa.select(Company).where(Company.id == cid)).one()
         f = orchestrator.start_fixture(
@@ -78,7 +88,7 @@ def nights(tmp_path_factory):
             s,
             company,
             run_date=first,
-            points={"erp_db": prior_snapshots(c, FIRST)},
+            points={} if DEMO else {"erp_db": prior_snapshots(c, FIRST)},
             image_version="0.1.0",
         )
         s.commit()
@@ -128,6 +138,7 @@ def morning(ctx, cid, rid, night: dt.date) -> dict[str, Any]:
         "title": issue.title,
         "subject": subject,
         "quiet": bool(body.get("quiet")),
+        "since": body.get("since") or {},
         "items": [
             {"title": i.get("title"), "change": i.get("change"), "detector": i.get("detector")}
             for i in body.get("items") or []
@@ -153,6 +164,32 @@ def morning(ctx, cid, rid, night: dt.date) -> dict[str, Any]:
     }
 
 
+shared_only = pytest.mark.skipif(DEMO, reason="the shared stream's events")
+demo_only = pytest.mark.skipif(not DEMO, reason="the live demo stream")
+
+
+def richness(log: dict[dt.date, dict[str, Any]]) -> dict[str, Any]:
+    """The plan's target for the demo stream: Leadership has 4+ items on at least 85% of
+    mornings, a New/Worse/Better/Resolved line on at least 70%, and no empty morning except
+    the planned quiet ones."""
+    from tests.fixtures.sample_company.demo_stream import QUIET_MORNINGS
+
+    n = len(log)
+    rich = [d for d, m in log.items() if len(m["items"]) >= 4]
+    line = [
+        d
+        for d, m in log.items()
+        if any(m["since"].get(k) for k in ("new", "worse", "better", "resolved"))
+    ]
+    empty = [d for d, m in log.items() if not m["items"] and d not in QUIET_MORNINGS]
+    return {
+        "mornings": n,
+        "rich": len(rich) / n,
+        "line": len(line) / n,
+        "empty": empty,
+    }
+
+
 def _changes(log, day: dt.date, detector: str, change: str) -> list[dict[str, Any]]:
     return [x for x in log[day]["changes"] if x["detector"] == detector and x["change"] == change]
 
@@ -168,6 +205,7 @@ def test_every_night_has_a_leadership_issue_and_a_dated_subject(nights):
         assert " · Leadership · " in m["subject"]
 
 
+@shared_only
 def test_e1_ravira_back_clears_its_silence(nights):
     """Ravira's invoice of 24 Nov is in the data of 25 Nov: its silence is cleared by data."""
     _ctx, _cid, _runs, log = nights
@@ -175,12 +213,14 @@ def test_e1_ravira_back_clears_its_silence(nights):
     assert got, [log[d]["changes"] for d in (D(2026, 11, 25), D(2026, 11, 26))]
 
 
+@shared_only
 def test_south_is_cleared_once_november_is_in(nights):
     """P1 compares September and October; with November complete it is cleared by data."""
     _ctx, _cid, _runs, log = nights
     assert _changes(log, D(2026, 12, 1), "net_hiding_gross", "Resolved")
 
 
+@shared_only
 def test_e3_the_clean_up_shows_as_better(nights):
     """Six silent customers marked inactive on 1 Dec: the 90-day count is Better on 2 Dec."""
     _ctx, _cid, _runs, log = nights
@@ -188,6 +228,7 @@ def test_e3_the_clean_up_shows_as_better(nights):
     assert got["title"].startswith("10 customers")
 
 
+@shared_only
 def test_e6_receivables_over_60_days_get_worse(nights):
     _ctx, _cid, _runs, log = nights
     got = _between(log, D(2026, 12, 7), D(2026, 12, 20), "changepoint", "Worse")
@@ -196,6 +237,7 @@ def test_e6_receivables_over_60_days_get_worse(nights):
     ), got
 
 
+@shared_only
 def test_e8_a_calm_week_and_e10_the_year_end_push_are_quiet(nights):
     """Mid-December nothing new or worse for a week, and the year-end invoicing push (the
     quarter-end known pattern) isn't a finding: those mornings lead with what's still open.
@@ -214,6 +256,7 @@ def test_e8_a_calm_week_and_e10_the_year_end_push_are_quiet(nights):
     assert not any("customers" in str(i["title"]) for i in log[D(2027, 1, 2)]["items"])
 
 
+@shared_only
 def test_not_every_morning_says_still_open(nights):
     """The point of the events: the subject leads with what changed on enough mornings."""
     _ctx, _cid, _runs, log = nights
@@ -221,6 +264,7 @@ def test_not_every_morning_says_still_open(nights):
     assert len(fresh) >= len(log) // 5, [(d, log[d]["subject"]) for d in sorted(log)]
 
 
+@shared_only
 def test_since_last_week_says_what_got_fixed_and_how(nights):
     """0.28.5: Ravira's silence, cleared on 25 Nov, is under Fixed ("Back to normal on 25 Nov")
     for the week after; the calm mid-December mornings still carry the week's line; a week with
@@ -239,3 +283,10 @@ def test_every_night_replays(nights):
     with tenant_scope(cid):
         for night, rid in sorted(runs.items()):
             assert replay(ctx, rid).ok, night
+
+
+@demo_only
+def test_the_demo_mornings_are_rich(nights):
+    _ctx, _cid, _runs, log = nights
+    got = richness(log)
+    assert got["rich"] >= 0.85 and got["line"] >= 0.70 and not got["empty"], got

@@ -149,11 +149,21 @@ class Scope:
         return out
 
 
+class TableNotInUse(CompileError):
+    """A number reads a table the owner set aside (ignored). The compiler leaves out that number,
+    marked as needing a source, instead of failing the company's night (owner, 23 Nov 2026:
+    ts-test-001's nights failed after its sheet's old tab was set to ignored)."""
+
+    def __init__(self, metric: str, table: str) -> None:
+        super().__init__(f"{metric}: {table} is ignored; use it first")
+        self.metric, self.table = metric, table
+
+
 def check_use(metric: str, t: TableInfo) -> None:
     if t.use == "excluded" and not t.without_personal:
         raise PersonalColumnRejected(metric, f"{t.schema}.{t.name}", "an Excluded table")
     if t.use not in ("metric_source", "dimension", "excluded"):
-        raise CompileError(f"{metric}: {t.schema}.{t.name} is ignored; use it first")
+        raise TableNotInUse(metric, f"{t.schema}.{t.name}")
 
 
 def placeholder(name: str) -> exp.Expr:

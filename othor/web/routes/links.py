@@ -118,6 +118,12 @@ def _open(request: Request, token: str, fp: str | None, tab: str) -> Response:
                 "unsubscribe": f"{base}/unsubscribe",
             },
         )
+        # What to do (#110): the brief's next steps, read only (no buttons)
+        from othor.web import todo_view
+
+        ctx["todo"] = todo_view.for_issue(
+            s, bv.issue, bv.run, today, base=base, q="", back="", readonly=True
+        )
         if fp is not None:
             item = next((i for i in bv.body.get("items") or [] if i["fingerprint"] == fp), None)
             rv = sv.load(s, svc.settings, bv.run, today) if bv.run else None

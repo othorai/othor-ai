@@ -24,6 +24,7 @@ from othor.ontology.compiler.render import (
     PersonalColumnRejected,
     Rules,
     Scope,
+    TableNotInUse,
     aggregate,
     check_use,
     ident,
@@ -798,8 +799,22 @@ def compile_records(
             continue
         if body.get("table"):
             t = _table(cat, body["table"], m)
-            check_use(m, t)
-            sql = _base_sql(m, body, t, cat, rules, bds, vocabs, t.dialect)
+            try:
+                check_use(m, t)
+                sql = _base_sql(m, body, t, cat, rules, bds, vocabs, t.dialect)
+            except TableNotInUse as e:
+                # the number reads a table set to ignored: left out of the night, said which and why
+                entry.update(
+                    {
+                        "status": "needs_source",
+                        "needs": f"{e.table} is set to ignored",
+                        "source_label": "Needs a source",
+                        "run_location": None,
+                        "unread": {"table": e.table, "use": "ignored"},
+                    }
+                )
+                out_metrics[m] = entry
+                continue
             entry.update(
                 {
                     "type": "base",

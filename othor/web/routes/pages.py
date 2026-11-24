@@ -184,12 +184,11 @@ def _first_brief_ready(request: Request, o: Owner) -> bool:
 # Settings (7a): every change writes an event with before/after; Undo writes another
 
 
-def settings_page(request: Request, o: Owner) -> HTMLResponse:
+def settings_page(request: Request, o: Owner, tab: str = "") -> HTMLResponse:
     svc = services(request)
     with svc.sf() as s, tenant_scope(o.company.id):
         company = Repo(s).get(Company, o.company.id)
         assert company is not None
-        floor_v = floor_view(s, svc.settings, company)
         export_v = _export_state(s, svc, o)
         s.expunge_all()
     return page(
@@ -205,10 +204,10 @@ def settings_page(request: Request, o: Owner) -> HTMLResponse:
             "timezones": TIMEZONES,
             "tz_note": TZ_NOTE,
             "sender": f"brief@{svc.settings.mail_from_domain}",
-            "floor": floor_v,
             "export": export_v,
             "close": _close_ctx(svc, company),
             "licence": licence_view(svc),
+            "tab": tab,  # #106: the tab to open (the template checks it against its tabs)
         },
     )
 
@@ -279,8 +278,8 @@ def settings_licence(
 
 
 @router.get("/settings", response_class=HTMLResponse)
-def settings_get(request: Request, o: Owner = Depends(signed_in)) -> Response:
-    return settings_page(request, o)
+def settings_get(request: Request, tab: str = "", o: Owner = Depends(signed_in)) -> Response:
+    return settings_page(request, o, tab)
 
 
 def _apply(request: Request, o: Owner, changes: dict[str, Any], action: str) -> uuid.UUID | None:
@@ -344,44 +343,10 @@ def _settings_version(request: Request, o: Owner, field: str, value: Any) -> Non
         s.commit()
 
 
-def floor_view(s: Any, settings: Any, company: Company) -> dict[str, Any]:
-    """The floor on Settings (M15.6): the owner's, else the currency's default; and a suggestion,
-    1% of a typical month's revenue from the last run, computed by code."""
-    from decimal import Decimal
-
-    from othor.briefs import weather
-    from othor.engine.models import DETECTING_KINDS, Run
-    from othor.engine.store import RunFiles, read_json
-    from othor.ontology import service
-    from othor.ontology.compiler.build import DEFAULT_FLOOR
-    from othor.ontology.models import Spec
-
-    rec = next((r for r in service.active(s, ["materiality"])), None)
-    amount = (
-        Decimal(rec.body["amount"]) if rec else Decimal(DEFAULT_FLOOR.get(company.currency, "5000"))
-    )
-    suggest = None
-    run = s.scalars(
-        sa.select(Run)
-        .where(Run.status.in_(("done", "partial")), Run.kind.in_(DETECTING_KINDS))
-        .order_by(Run.number.desc())
-        .limit(1)
-    ).first()
-    if run is not None:
-        spec = s.scalars(sa.select(Spec).where(Spec.id == run.spec_id)).one()
-        base = read_json(RunFiles(settings.runs_dir(company.id), run.id).baselines) or {}
-        got = weather.revenue(dict(spec.compiled), base)
-        if got is not None and got[1] > 0:
-            suggest = (got[1] / 100).quantize(Decimal("1000"))
-    return {"amount": amount, "owner": rec is not None, "suggest": suggest or None}
-
-
 @router.post("/settings", response_class=HTMLResponse, dependencies=[Depends(check_csrf)])
 def settings_post(
     request: Request, field: str = Form(""), value: str = Form(""), o: Owner = Depends(signed_in)
 ) -> Response:
-    if field == "materiality":  # the floor the owner sets (M15.6): an Ontology version
-        return _save_floor(request, o, value)
     if field in SETTINGS_FIELDS:
         if value not in {o[0] for o in SETTINGS_FIELDS[field]}:
             return HTMLResponse("Not a valid choice.", status_code=400)
@@ -454,41 +419,6 @@ def settings_undo(request: Request, event_id: uuid.UUID, o: Owner = Depends(sign
     return resp
 
 
-def _save_floor(request: Request, o: Owner, value: str) -> Response:
-    from decimal import Decimal, InvalidOperation
-
-    from othor.ontology import service
-    from othor.ontology.compiler import compile_version
-    from othor.ontology.types import validate_body
-
-    try:
-        amount = Decimal(value.replace(",", "").strip())
-        body = validate_body("materiality", {"amount": f"{amount:f}", "source": "owner"})
-    except (InvalidOperation, ValueError):
-        return HTMLResponse("Enter an amount above zero.", status_code=400)
-    svc = services(request)
-    with svc.sf() as s, tenant_scope(o.company.id):
-        company = Repo(s).get(Company, o.company.id)
-        assert company is not None
-        v = service.apply(
-            s,
-            [service.put("materiality", "company", body)],
-            actor=str(o.viewer.id),
-            reason="Settings: the floor",
-        )
-        if v is not None and service.confirmed(s):
-            compile_version(s, company, actor=str(o.viewer.id))
-        s.commit()
-    return page(
-        request,
-        "partials/toast_saved.html",
-        {
-            "text": "Floor saved · applies from tonight · Undo in Business Model History",
-            "event_id": None,
-        },
-    )
-
-
 # ---------------------------------------------------------------------------------------------
 # The company's logo (M15.7): Settings uploads it; it is served on the company's own host (the
 # sign-in page shows it before anyone signs in), by the hash of the PNG we wrote
@@ -552,7 +482,10 @@ def logo_remove(request: Request, o: Owner = Depends(signed_in)) -> Response:
 # Your data (v0.18, M18.1): export everything as one zip; a large company's is built by a job
 
 # an expired, missing or another company's export reads the same (9a)
-EXPORT_GONE = ("This export has expired · build a new one in Settings", ("Settings", "/settings"))
+EXPORT_GONE = (
+    "This export has expired · build a new one in Settings",
+    ("Settings", "/settings?tab=data"),
+)
 
 
 def _export_state(s: Any, svc: Any, o: Owner) -> dict[str, Any]:
@@ -596,7 +529,7 @@ def export_download(request: Request, o: Owner = Depends(signed_in)) -> Response
     svc = services(request)
     with svc.sf() as s, tenant_scope(o.company.id):
         if exporting.is_large(s, svc.settings, o.company.id):
-            return RedirectResponse("/settings", 303)  # the job's flow (the row's button)
+            return RedirectResponse("/settings?tab=data", 303)  # the job's flow (the row's button)
         company = Repo(s).get(Company, o.company.id)
         assert company is not None
         got = exporting.build(s, svc.settings, company)
@@ -1033,7 +966,7 @@ def usage_count(request: Request, o: Owner = Depends(signed_in)) -> Response:
 @router.post("/contact/send", dependencies=[Depends(check_csrf), Depends(rate_limit("codes"))])
 def contact_send(
     request: Request,
-    topic: str = Form("other"),
+    topic: str = Form(""),
     message: str = Form(""),
     back: str = Form("/home"),
     website: str = Form(""),  # the honeypot, as on the website
@@ -1051,6 +984,8 @@ def contact_send(
     if not contact.available(svc.settings):
         return not_found(request, o.site)
     topic, message = contact.topic(topic), message.strip()
+    if not topic:
+        return toast(request, "Choose what it’s about", 422)
     if not message and topic not in contact.MESSAGE_OPTIONAL:
         return toast(request, "Write a line about what you need", 422)
     back = local_path(back, "/home")
@@ -1155,6 +1090,41 @@ def usage_page(
                 "trend_total": sum(t for _, t in last30),
             },
         },
+    )
+
+
+@router.get("/what-to-do")
+def what_to_do_moved(request: Request) -> Response:
+    """The page's first address (0.33): it is the Action plan now (owner, 22 Nov 2026)."""
+    q = request.url.query
+    return RedirectResponse("/action-plan" + (f"?{q}" if q else ""), 301)
+
+
+@router.get("/action-plan", response_class=HTMLResponse)
+def action_plan(request: Request, o: Owner = Depends(signed_in)) -> Response:
+    """Action plan (Morning Brief 2.5, #110; named What to do until 22 Nov 2026): today's
+    actions across the briefs."""
+    from othor.core.localtime import local_date
+    from othor.web import todo_view
+    from othor.web.routes.sweep import watch_panel
+
+    svc = services(request)
+    with svc.sf() as s, tenant_scope(o.company.id):
+        p = todo_view.page(s, local_date(o.company, svc.clock()))
+        # Watch this in place over the page (0.33.1)
+        wp = watch_panel(request, s, o, "action-plan")
+        s.expunge_all()
+    n = len(p.briefs)
+    when = (
+        f"From this morning’s {fmt.num(n)} brief{'s' if n != 1 else ''} · "
+        f"{fmt.day_month(p.date)}{', ' + p.time if p.time else ''}"
+        if p.date and n
+        else None
+    )
+    return page(
+        request,
+        "pages/what_to_do.html",
+        {**shell_ctx(o, "action-plan"), "p": p, "when": when, **(wp or {})},
     )
 
 

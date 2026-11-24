@@ -142,6 +142,10 @@ def home(
                 provider_for(svc.settings),
                 extended=size == "extended",
             )
+        if panel == "watch":  # Watch this in place from Home's What to do card (0.33.1)
+            from othor.web.routes.sweep import watch_panel
+
+            ctx.update(watch_panel(request, s, o, "home") or {})
         if panel == "lights" and ctx.get("lights"):  # Home's lights (owner, 16 Nov 2026)
             ctx["lpanel"] = ctx["lights"]
         if panel == "weather":
@@ -224,14 +228,23 @@ def decide(request: Request, pid: str, decision: str, o: Owner = Depends(signed_
             return not_found(request, o.site, *GONE)
         actor = str(o.viewer.id)
         if decision == "undo":
+            twins = hv.decided_twins(s, p)  # decided with it, undone with it (newest first)
             proposals.undo(s, p, actor=actor, now=svc.clock())
+            for twin in reversed(twins):
+                proposals.undo(s, twin, actor=actor, now=svc.clock())
         else:
+            for twin in hv.open_twins(s, p):  # the same goal twice: one decision for both
+                proposals.decide(s, twin, accept=decision == "accept", actor=actor, now=svc.clock())
             proposals.decide(s, p, accept=decision == "accept", actor=actor, now=svc.clock())
         if decision in ("accept", "undo"):
             compile_version(s, o.company, actor=actor)
         s.commit()
     # External signals reviews its links in place too (owner, 20 Nov 2026): back to that page
-    page_ = "/signals" if request.query_params.get("back") == "signals" else "/home"
+    back = request.query_params.get("back")
+    if back == "ontology":  # the Business Model page lists them since 23 Nov 2026
+        url = "/ontology#proposals" if decision == "undo" else f"/ontology?decided={pid}#proposals"
+        return RedirectResponse(url, 303)
+    page_ = "/signals" if back == "signals" else "/home"
     return RedirectResponse(page_ if decision == "undo" else f"{page_}?done={pid}", 303)
 
 

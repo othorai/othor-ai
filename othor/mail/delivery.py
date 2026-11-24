@@ -23,6 +23,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
 from othor.briefs.models import Brief, BriefIssue, BriefVersion, Recipient
+from othor.briefs.words import actions as issue_actions
 from othor.briefs.words import shown
 from othor.core import fmt
 from othor.core.config import Settings
@@ -125,6 +126,7 @@ def brief_mail(
         date=issue.date,
         body=dict(issue.body),
         words=shown(issue.body, issue.prose),
+        actions=issue_actions(issue.body, issue.prose),
         email_format=str((version.body if version else {}).get("email_format") or "simple"),
         run_number=run.number,
         spec_version=int(spec.compiled.get("ontology_version") or 0) or None,

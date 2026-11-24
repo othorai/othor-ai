@@ -87,6 +87,17 @@
 <nav class="tabs" x-data="tabs">{% for label, href in items %}<a class="tab{{ ' is-on' if label == current else '' }}{{ ' is-' ~ state if state and label != current else '' }}" href="{{ href }}"{% if label == current %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
 {%- endmacro %}
 
+{# 0.32.1 (#106, owner 21 Nov 2026): tabs over panes of one page (Settings). items: (key, label).
+   Every pane is in the page; a click shows its pane in place (othor.js), the address keeps
+   ?tab=<key>, and without JavaScript each tab is a link the server answers with that pane. #}
+{% macro pane_tabs(items, current, label) -%}
+<nav class="tabs" x-data="tabs" aria-label="{{ label }}" data-pane-tabs>{% for key, text in items %}<a class="tab{{ ' is-on' if key == current else '' }}" href="?tab={{ key }}" id="tab-{{ key }}" aria-controls="pane-{{ key }}"{% if key == current %} aria-current="page"{% endif %} data-tab="{{ key }}">{{ text }}</a>{% endfor %}</nav>
+{%- endmacro %}
+
+{% macro tab_pane(key, current, layout="flex flex-col gap-56") -%}
+<div class="tab-pane {{ layout }}" id="pane-{{ key }}" aria-labelledby="tab-{{ key }}" data-pane="{{ key }}"{% if key != current %} hidden{% endif %}>{{ caller() }}</div>
+{%- endmacro %}
+
 {# 0.28.4 (owner, 19 Nov 2026): tabs and an action on one line, the tabs' rule running under both
    (Morning Brief's New brief) #}
 {% macro tabs_row(items, current) -%}

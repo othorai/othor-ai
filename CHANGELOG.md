@@ -6,6 +6,216 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.33.12] - 2026-11-24
+
+### Added
+- `make demo`: one command from a fresh clone to a working sample company. It starts the app and its databases, loads Indigo Thread Co. into the sample MySQL and PostgreSQL, sets the company up as an owner would (sources connected read-only, Business Model confirmed), runs the night of 1 November 2026 and prints where to sign in. The README's "See it in 5 minutes" describes it.
+
+## [0.33.11] - 2026-11-24
+
+### Added
+- Website: a long read, "Significant is not material": why a result that is unlikely to be chance can still be too small to act on, and how Othor AI's money floor keeps those out of the brief (the sample company's 1 November night, from 363 results to 8 findings).
+
+## [0.33.10] - 2026-11-24
+
+### Added
+- Website: two posts, "Is this drop real, or just April?" (how a month is judged against its own time of year and the known patterns the owner has named) and "What the Morning Brief does between 2 and 6 AM" (one night, step by step).
+
+### Fixed
+- Data sources: a source with no rows on its usual quiet day (a sales warehouse on Sundays, a weekly sheet) reads Up to date instead of warning "Not updated since"; a gap on a usual day still warns.
+- Local development: `make dev` finishes; the worker and the stylesheet watcher no longer run the web health check they can't pass.
+
+### Fixed
+- Data sources and Home: a source with no rows yesterday on a day it is usually quiet (a sales warehouse on Sundays, a sheet updated weekly) shows "Up to date" with its newest date, not a "Not updated since" warning. A gap on a usual day still warns.
+
+## [0.33.9] - 2026-11-23
+
+### Added
+- Website: the other 24 posts from the old blog on othor.ai/history, revised and sourced: History of BI (Hollerith, Enigma, SABRE, Moneyball, Walmart, Netflix, Cambridge Analytica, ChatGPT and more), decision intelligence (von Neumann, the Berlin Airlift, Nash, Koopmans, Simon, decision support systems, interior-point methods and more) and COVID-19 dashboards. Every old blog.othor.ai address redirects to its own post. The history page has finer eras and compact rows.
+- Website: links to othor.ai/compare from the home page's "A new BI" section and from /enterprise.
+- Website: the 30 data visualizations post gains pictures for the parts that had none: public-domain and openly licensed originals with their credits, and charts drawn by Othor AI from public data, each saying so under it; Rosling's TED talk and NASA's Climate Spiral as videos that load only when played, and the Met Office's post on X quoted with its link.
+
+### Changed
+- Business Model: To review's Accept and Suggest edits at the row size. External Signals' review rows: Accept and Decline at the same size; Suggest edits removed there.
+- Website: the blog's three history tracks are one "History" chip to othor.ai/history, and the chips wrap instead of breaking their words.
+- Website: the blog posts list only the founder as their author; the technical paper's byline follows.
+- Website: Learn › Home describes Home as it is now; proposals are on the Business Model page and questions in the Othor AI chat.
+
+### Fixed
+- Website: the open-source page and the Enterprise comparison no longer put Forecasts in both editions. The open core forecasts in every brief (What’s ahead); the Forecasts page is the Enterprise Edition’s. The comparison also lists the Weekly Digest.
+
+## [0.33.8] - 2026-11-23
+
+### Added
+- Website: othor.ai/history, the history of intelligence: business intelligence, decision intelligence and data visualization on one timeline, by the year each story happened. Five posts from the old blog, revised and sourced: the Target pregnancy prediction, 30 data visualizations that changed the world, Kantorovich and linear programming, Bellman's principle of optimality, and Karmarkar's algorithm.
+- Old blog.othor.ai addresses redirect permanently (301) to the new posts, the history page or the blog.
+
+### Changed
+- Business Model: To review at the top, with the proposals that were on Home, each with Accept and Suggest edits (which opens the chat on it); then tabs Business & Goals, Numbers, Names & Patterns and the level, its checklist open. The "to review on Home" button went.
+- External Signals' proposals: Accept and Suggest edits.
+
+### Fixed
+- The same goal entered twice made two "at risk" proposals; it is now one, and a decision or Undo covers both.
+
+## [0.33.7] - 2026-11-23
+
+### Added
+- Website: othor.ai/compare and a page for each of five other ways to know your numbers (BI with an AI copilot, chat AI on your data, AI-native analytics tools, automated insights and anomaly alerts, the analyst and spreadsheet way), each beside Othor AI: what it does well, where it stops, a side-by-side table, an example from the sample company's brief and a screenshot. Compared as of November 2026 from each vendor's public documentation, with a trademark line. Compare is in the Product menu and the footer.
+
+## [0.33.6] - 2026-11-23
+
+### Changed
+- Home: Today's action plan sits below the briefs, above Suggested by Othor AI.
+- Briefs: the Action plan comes last, just above Since last week, on the page, the read-only link, the emails and the PDF.
+- The ⋯ menu at the top right on more pages: Sweep's History, and the Morning Brief list's Archive and Weekly Digest. On phones every ⋯ menu opens inside the screen.
+- Tab bars wider than the page scroll sideways (mouse wheel or swipe), with a fade on the side that has more.
+- The sub-processor register says Business Model, not Ontology, and lists Anthropic (Claude Code), which our engineers use to build and run the service.
+
+### Fixed
+- A number that reads a table set to ignored no longer stops the company's whole nightly run: that number is left out and shown as needing a source, with the reason. Setting a table to ignored now names the numbers that pause.
+
+## [0.33.5] - 2026-11-22
+
+### Added
+- Website: an Action plan video on othor.ai/demo, right after Setup (54 s, the same voice and captions as the others).
+
+## [0.33.4] - 2026-11-22
+
+### Changed
+- The Action plan's icon in the side menu is a flag (owner, 22 Nov 2026; was a tick).
+
+## [0.33.3] - 2026-11-22
+
+### Fixed
+- External Signals: one genuine link among many candidates can now be suggested. The link test's
+  p-value floor was 1/500 (499 permutations), so after the false-discovery pool over a company's
+  candidate pairs (22 for the sample company) a single real link could never reach q ≤ 0.01. It
+  now draws 9,999 seeded permutations, computed at once on ranks (same statistic, lags, held-out
+  check and pool). Look back reports made before keep their method and replay byte for byte.
+
+## [0.33.2] - 2026-11-22
+
+### Changed
+- What to do is now **Action plan** (owner, 22 Nov 2026): the side menu, the page at
+  `/action-plan` (`/what-to-do` redirects, and links and holds made from it still return there),
+  Home's "Today's action plan" card, and the section at the end of every brief, its emails and
+  its PDF; Sweep says a hold was made "from the action plan".
+
+### Added
+- Action plan: Recently resolved, the last 30 days at the foot of the page. Each step that ended
+  says how long it was open, when, and why: the numbers no longer show it, back on track, back
+  inside its limit, explained by your answer; a step you muted or snoozed says so ("Muted 31 Oct").
+  Home's card says how many resolved this week. Computed from the stored briefs; nothing new to tick.
+- Website: the Action plan on Pricing (Free card), Product, Home, How it works, Learn (The Morning
+  Brief) and llm-info.
+
+## [0.33.1] - 2026-11-22
+
+### Changed
+- What to do: Watch opens in place, as a side panel, from a brief, Home and the What to do page
+  (`?panel=watch`); Close and Start watching stay on that page. Brief cards have Watch beside
+  Snooze and Mute, or "Watching · alert above …" once watched.
+- What to do: figures in action sentences are bold; the person to ask is named once; the chosen
+  brief tab is kept after a snooze, a mute or a panel; the dot before a brief chip is centred.
+- Look back: value per customer names the group's size beside the best ("a median of ₹77.7 L
+  across 11 customers"); a group under 5 customers is never called best, and reads "too few to
+  call" on the card and its chart; a new groups table (Customers, median per customer); the same
+  floor for "deductions rose the most".
+- Contact us (website and the app's panel): no topic is chosen by default; the headline reads
+  "How can we help?" until one is; links that name a topic open on it as before.
+- othor.ai/demo: the External Signals video re-recorded so every scene matches its narration
+  (the brief's Outside item, the External signals page with fetch times and a connection, Check
+  now pressed, Home's suggestion); the invented sample company's links are staged for the
+  video, the public figures are real.
+
+### Fixed
+- What to do: an action from a watch past its limit comes only from the brief's own numbers (a
+  Dispatch brief no longer offers receivables or customer watches); a watch that follows one of
+  the brief's findings folds into that finding's action.
+- What to do: the watch sentence never reads "12%, above its 12% limit" (decimals are added
+  until value and limit differ), the number's name is lower case mid-sentence, money and days
+  in their units.
+- What to do: a quiet brief offers at most one action from the largest finding still open for a
+  week ("Still open · N days").
+- What to do: plainer template sentences per check (no "call them", no capital after a colon,
+  the item's title not repeated).
+- Briefs: a headline number that misses its band by less than the rounding reads "in band",
+  never "−0% vs band"; "close in 1 day" and "close today".
+- Sweep and briefs: a step change's note reads "it has held since the week of …" (the date was
+  missing). Replays of runs sealed before 0.33.1 show this one line differing.
+- Look back: a report made from a Suggested Look back no longer fails with "The confirmed
+  numbers have no night run to read from yet." (it was never given its years); each cause now
+  has its own message.
+
+## [0.33.0] - 2026-11-22
+
+### Added
+- What to do (#110): every brief ends with up to three actions (page, read-only views, both
+  emails, PDF), picked by code from the brief's items, an off-track goal and breached watches,
+  stored in the issue body (replay reproduces them); related findings fold into one action;
+  template sentences per check, goal and watch; Othor AI's wording (`brief_rewrite` v2) is kept
+  only where its figures match the template's.
+- Home's "What to do today" card and a What to do page (side menu, after Home): every action
+  across today's briefs once, tabs per brief in place, Start here · Also today · Nothing to do,
+  and "N snoozed or muted · See them in Sweep →".
+- Snooze, Mute and Watch on What to do rows and brief cards; `also=` holds every finding of a
+  folded action at once; `back` returns to a brief, What to do or Home; a finding already
+  watched (matched by the number watched, not only the finding) shows "Watching · …".
+  Watch from these pages opens Sweep's Watch panel, which returns to where it was opened.
+- Home's Next 4 weeks cards open the Forecasts page when it is licensed (#109).
+- Blog: "The German tank problem", "Why Othor AI says what it can't tell you" and the long read
+  "The most dangerous equation".
+
+### Changed
+- The finding panel: tabs Finding · How it's calculated · The number · Query · Run; one footer
+  row (run line with its details behind an (i), Watch · Snooze · Mute as quiet buttons, Add to a
+  brief as the one primary); one button per other tab.
+- Sweep's Suppressed tab: a plain line per section; held findings with their date, where they
+  were held (from 0.33) and Undo, snoozed first; known patterns with their finding count;
+  proposals with "Review on Home"; Show all after five. Watching reads Above / Below / Inside
+  the limit. Suppression proposals name what recurred ("the same dip"), not the check.
+- A finding's question to ask comes from the brief's rule, so the panel and the brief agree.
+- Website: the demo page's video frame (1px) and the Hosted pricing card (2px) take the Ask
+  Othor AI gradient border.
+
+### Fixed
+- Watch this: the limit shows in money or days ("₹64 L", "2.4 days", not "6.4E+6") and is read
+  back as typed; its chart uses the number's units with readable axis labels; plain words, plain
+  owner hints.
+
+## [0.32.2] - 2026-11-21
+
+### Added
+- Website: othor.ai/demo, a page of its own like an app: the intro tour and one short video per
+  feature (Morning Brief, Sweep, Business Model, External Signals, Setup, Discover, Forecasts,
+  Look back, Summary, Weekly Digest), recorded on the invented sample company with a voice-over
+  and captions; the home page's second button reads "Watch Demo Videos".
+- Website: the top menu has Security under Product, and Contact after Pricing.
+
+## [0.32.1] - 2026-11-22
+
+### Changed
+- Every side-menu page opens with one plain line under its title; the grey second line moved
+  behind the title's ⓘ where it held detail (#108).
+- Settings in tabs: Company, MCP, Charts, Delivery, Your data, Licence; one at a time, switched in
+  place, the tab kept in the address (`?tab=`).
+- The materiality floor ("Problems worth reporting · over ₹5 L") moved from Settings to the
+  Business Model, edited in place as money ("₹5 L", "5 lakh", "500000"); the same `materiality`
+  record, so the night's spec is unchanged in kind; event `ontology.floor_changed`.
+- Business Model's level bar lights one tick per checklist item done.
+- Discover: Switch on's Undo sits in the computing box; the "is on" note comes once, with the
+  dashboard.
+- AI usage: token counts in short (256k of 500k); the table keeps exact counts.
+- /contact opens with only the top bar, then the form.
+
+### Fixed
+- Discover: a group switched on with history draws its headline numbers and trend from the run's
+  stored values at once; its write-up describes that movement (prompt `discover_summary@v2`) and
+  writes each number's name as given.
+- Money: a goal's range keeps three figures ($541–592M, not $540.8–592.3M).
+- The live demo stream: costs follow the weeks the plants move, so margin per metre holds on every
+  night.
+
 ## [0.32.0] - 2026-11-21
 
 ### Added

@@ -69,6 +69,9 @@ def test_sweep_has_one_history_button_and_older_nights_load_in_place(night, monk
     env, h, cid, _rid, svc = night
     page = env.client.get(h + "/sweep").text
     assert 'href="/sweep/history"' in page and "Last 7 runs" not in page
+    # the top bar's ⋯ menu on every page (owner, 15 Nov 2026; 23 Nov 2026): History is in it
+    more = page[page.index('class="use top-more"') :]
+    assert 'role="menuitem" href="/sweep/history">History<' in more[: more.index("</details>")]
     monkeypatch.setattr(sv, "HISTORY_FIRST", 1)
     monkeypatch.setattr(sv, "HISTORY_MORE", 1)
     real = sv._history_runs

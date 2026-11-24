@@ -25,7 +25,7 @@
    consequence, then More info, Snooze and Mute (owner, 13 Nov: More info kept, #36/#37).
    hold: the owner's hold on it ("Snoozed until 20 Nov"); actions: (run number, brief id, csrf
    token) or None on the recipients' view #}
-{% macro brief_item(i, href, calc, actions=None, hold=None) -%}
+{% macro brief_item(i, href, calc, actions=None, hold=None, watch=None) -%}
 <article class="brief-item has-visual" id="item-{{ i.rank }}">
   {% if i.chart_spec %}<a class="chart visual" href="{{ href }}" aria-label="More about {{ i.title }}">{{ chart(i.chart_spec, 520, 150) }}</a>{% elif i.rows %}<div class="records visual">{{ rows_table(i.rows, compact=True) }}</div>{% endif %}
   <div class="body">
@@ -39,7 +39,7 @@
     {% if i.link == "reasons" %}<a class="calc" href="{{ calc }}">Possible reasons</a>{% endif %}
     {% if actions %}{% set run, bid, tok = actions %}<span class="quiet-links">
       {% if hold %}<span class="held">{{ hold }}</span>{{ _hold_btn("undo", i.fingerprint, run, bid, tok, "Undo") }}
-      {% else %}{{ _hold_btn("snooze", i.fingerprint, run, bid, tok, "Snooze") }}{{ _hold_btn("mute", i.fingerprint, run, bid, tok, "Mute") }}{% endif %}
+      {% else %}{# 0.33.1 (owner, 22 Nov 2026): Watch beside Snooze and Mute, in place; once watched, its label #}{% if watch and watch.watching %}<span class="held is-watching"><svg class="icon" aria-hidden="true"><use href="{{ asset('icons/sprite.svg') }}#eye"></use></svg>{{ watch.watching }}</span>{% elif watch and watch.href %}<a class="hold-btn" href="{{ watch.href }}" data-panel title="Check this number every night against a limit" aria-label="Watch: check this number every night against a limit"><svg class="icon" aria-hidden="true"><use href="{{ asset('icons/sprite.svg') }}#eye"></use></svg><span>Watch</span></a>{% endif %}{{ _hold_btn("snooze", i.fingerprint, run, bid, tok, "Snooze") }}{{ _hold_btn("mute", i.fingerprint, run, bid, tok, "Mute") }}{% endif %}
     </span>{% endif %}
   </div>
   </div>

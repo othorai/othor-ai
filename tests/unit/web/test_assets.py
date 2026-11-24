@@ -67,6 +67,20 @@ def test_the_picker_may_load_where_it_is_shown() -> None:
         assert "apis.google.com" not in c and "frame-src 'none'" in c, path
 
 
+def test_a_blog_post_may_frame_youtube_and_nothing_else_may() -> None:
+    """23 Nov 2026: a blog post's video plays in the youtube-nocookie.com player after a click;
+    that frame is allowed on blog posts only, and no outside script on any of them."""
+    from othor.web.middleware import security_headers
+
+    def csp(path: str) -> str:
+        return dict(security_headers(path, "prod"))[b"content-security-policy"].decode()
+
+    post = csp("/blog/data-visualizations-that-changed-the-world")
+    assert "frame-src https://www.youtube-nocookie.com;" in post and "script-src 'self';" in post
+    for path in ("/blog", "/", "/home", "/sources/abc", "/history"):
+        assert "youtube" not in csp(path), path
+
+
 def test_picker_pages_send_their_origin_to_google() -> None:
     """11 Nov 2026: Google said "The API developer key is invalid": the key is restricted to
     othor.ai's sites, and with no Referer Google can't check it. The Picker pages send the origin

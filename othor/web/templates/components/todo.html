@@ -1,0 +1,98 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# What to do (Morning Brief 2.5, #110; docs/plans/what-to-do.md § C, D): the rows a brief's
+   section, Home's card and the What to do page draw (todo_view.rows). Every value is the stored
+   issue's; the holds and the watch label are tonight's. Snooze and Mute act on the finding,
+   company-wide (the same routes as a brief card); an action that holds two findings holds both
+   (`also`). A row with no run (a read-only link, the email) has no buttons. #}
+
+{% set TODO_HOLD = {
+  "snooze": ("clock", "Snooze", "Hide this for a week; it comes back if it gets worse"),
+  "mute": ("eye-off", "Mute", "Stop showing this in your briefs; it stays in Sweep"),
+  "undo": ("undo", "Undo", "Show it again"),
+} %}
+
+{% macro _ico(name) -%}<svg class="icon" aria-hidden="true" focusable="false"><use href="{{ asset('icons/sprite.svg') }}#{{ name }}"></use></svg>{%- endmacro %}
+
+{% macro _todo_hold(r, action, tok) -%}
+{% set icon_name, label, tip = TODO_HOLD[action] %}<form method="post" action="/sweep/finding/{{ r.fp }}/{{ action }}?run={{ r.run }}&amp;back={{ r.back }}{% if r.also %}&amp;also={{ r.also }}{% endif %}" class="inline" data-inplace><input type="hidden" name="csrf" value="{{ tok }}"><button class="hold-btn" type="submit" title="{{ tip }}" aria-label="{{ label }}: {{ tip }}">{{ _ico(icon_name) }}<span>{{ label }}</span></button></form>
+{%- endmacro %}
+
+{% macro _todo_status(r) -%}
+{% if r.tone == "off" %}<span class="tag-goal off">{{ r.status }}</span>{% elif r.tone == "new" %}<span class="tag new">{{ r.status }}</span>{% elif r.status %}<span class="db-pill is-muted">{{ r.status }}</span>{% endif %}
+{%- endmacro %}
+
+{# r: todo_view.rows() item; tok: the csrf token (None: no buttons); chips: show the briefs it is in #}
+{% macro todo_row(r, tok=None, chips=False) -%}
+<li class="db-row{{ ' is-held' if r.held else '' }}" data-row{% if r.briefs %} data-briefs="{{ r.briefs | join('|') }}"{% endif %}>
+  <span class="db-n" aria-hidden="true">{{ r.n }}</span>
+  <div class="wtd-body">
+    <p class="t">{{ r.said_html or r.said }}</p>
+    <p class="m">{{ _todo_status(r) }}{% for w in r.why %}<a class="wtd-why" href="{{ w.href }}">{{ w.title }}</a>{% endfor %}{% if r.who %}<span>Ask {{ r.who }}</span>{% endif %}{% if r.by %}<span>{{ r.by }}</span>{% endif %}{% if chips and r.briefs %}<span class="wtd-briefs" aria-label="In these briefs">{% for b in r.briefs %}<span class="chip soft">{{ b }}</span>{% endfor %}</span>{% endif %}</p>
+  </div>
+  <div class="wtd-r">
+    {% if r.money %}<p class="v">{{ r.money }}{% if r.money_note %}<small>{{ r.money_note }}</small>{% endif %}</p>{% endif %}
+    {% if tok and r.holdable %}<span class="wtd-holds">
+      {% if r.held %}<span class="wtd-held">{{ _ico("clock" if r.held.startswith("Snoozed") else "eye-off") }}{{ r.held if r.held.startswith("Snoozed") else "Muted in your briefs" }}</span>{{ _todo_hold(r, "undo", tok) }}
+      {% else %}
+        {% if r.watching %}<span class="wtd-watching">{{ _ico("eye") }}{{ r.watching }}</span>{% elif r.watch_href %}<a class="hold-btn" href="{{ r.watch_href }}" data-panel title="Check this number every night against a limit" aria-label="Watch: check this number every night against a limit">{{ _ico("eye") }}<span>Watch</span></a>{% endif %}
+        {{ _todo_hold(r, "snooze", tok) }}{{ _todo_hold(r, "mute", tok) }}
+      {% endif %}
+    </span>{% elif r.watching %}<span class="wtd-watching">{{ _ico("eye") }}{{ r.watching }}</span>{% endif %}
+  </div>
+</li>
+{%- endmacro %}
+
+{# rows: a list of todo_view rows; label: the list's name (for in-place focus) #}
+{% macro todo_list(rows, tok=None, chips=False, label="Action plan") -%}
+<ol class="db-rows db-points wtd-list" data-rows aria-label="{{ label }}">{% for r in rows %}{{ todo_row(r, tok, chips) }}{% endfor %}</ol>
+{%- endmacro %}
+
+{# a brief's own section (page and read-only link): at most three, after its items #}
+{% macro todo_section(rows, tok=None) -%}
+{% if rows %}<section class="wtd-sec wtd-in-brief" aria-label="Action plan"><div class="db-sec-h"><h2>Action plan</h2></div>{{ todo_list(rows, tok) }}</section>{% endif %}
+{%- endmacro %}
+
+{# Home's card: the first few across the briefs, each naming its brief, and See all #}
+{% macro todo_card(p, tok=None, n=5) -%}
+{% if p.all %}<section class="wtd-sec wtd-home" aria-label="Today’s action plan"><div class="db-sec-h"><h2>Today’s action plan</h2><a class="link" href="/action-plan">See all {{ fmt.num(p.all | length) }} →</a></div>{{ todo_list(p.all[:n], tok, chips=True, label="Today’s action plan") }}{% if p.resolved_week %}<p class="wtd-res-week">{{ fmt.num(p.resolved_week) }} resolved this week · <a class="link" href="/action-plan#resolved">See them →</a></p>{% endif %}</section>{% endif %}
+{%- endmacro %}
+
+{# the What to do page (p: todo_view.Page): tabs per brief (in place, othor.js), Start here,
+   Also today, Nothing to do, the held line #}
+{% macro todo_page(p, tok=None) -%}
+<div class="tabs-row wtd-tabs"><nav class="tabs" aria-label="Briefs" data-wtd-tabs><a class="tab is-on" href="#" data-wtd-tab="all" aria-current="page">All · {{ fmt.num(p.all | length) }}</a>{% for name, n in p.briefs %}<a class="tab" href="#{{ name }}" data-wtd-tab="{{ name }}">{{ name }} · {{ fmt.num(n) }}</a>{% endfor %}</nav></div>
+<section class="wtd-sec" data-wtd-sec aria-label="Start here"><div class="db-sec-h"><h2>Start here</h2><span class="db-sec-r">What matters most today</span></div>{{ todo_list(p.start, tok, chips=True, label="Start here") }}</section>
+{% if p.also %}<section class="wtd-sec" data-wtd-sec aria-label="Also today"><div class="db-sec-h"><h2>Also today</h2></div>{{ todo_list(p.also, tok, chips=True, label="Also today") }}</section>{% endif %}
+{{ todo_nothing(p.nothing) }}
+{%- endmacro %}
+
+{# what needs no action: a goal on track, a known pause #}
+{% macro todo_nothing(lines) -%}
+{% if lines %}<section class="wtd-sec" aria-label="Nothing to do"><div class="db-sec-h"><h2>Nothing to do</h2></div><div class="wtd-foot">{% for x in lines %}<p class="db-note">{{ x }}</p>{% endfor %}</div></section>{% endif %}
+{%- endmacro %}
+
+{# Recently resolved (owner, 22 Nov 2026): the last 30 days' actions whose reason is gone,
+   newest first (todo_view.history); five shown, the rest behind Show all (a <details>, in place,
+   no script). Quieter than today's rows: an icon for why it left instead of a number. #}
+{% set RESOLVED_SHOWN = 5 %}
+{% macro _resolved_row(r) -%}
+<li class="db-row wtd-res-row">
+  <span class="wtd-res-ico" aria-hidden="true">{{ _ico(r.icon) }}</span>
+  <div class="wtd-body">
+    <p class="t">{{ r.said_html or r.said }}</p>
+    <p class="m"><span class="wtd-res-why">{{ r.reason }}</span><span>{{ {"eye-off": "Muted", "clock": "Snoozed"}.get(r.icon, "Resolved") }} {{ r.on }}</span><span>Open {{ r.open_for }}</span><a class="wtd-why" href="{{ r.href }}">See its history</a>{% if r.briefs %}<span class="wtd-briefs" aria-label="In these briefs">{% for b in r.briefs %}<span class="chip soft">{{ b }}</span>{% endfor %}</span>{% endif %}</p>
+  </div>
+</li>
+{%- endmacro %}
+{% macro todo_resolved(items) -%}
+<section class="wtd-sec wtd-resolved" id="resolved" aria-label="Recently resolved"><div class="db-sec-h"><h2>Recently resolved</h2><span class="db-sec-r">Last 30 days</span></div>
+{% if items %}<ol class="db-rows db-points wtd-list">{% for r in items[:RESOLVED_SHOWN] %}{{ _resolved_row(r) }}{% endfor %}</ol>
+{% if items | length > RESOLVED_SHOWN %}<details class="wtd-res-more"><summary class="link">Show all {{ fmt.num(items | length) }}</summary><ol class="db-rows db-points wtd-list">{% for r in items[RESOLVED_SHOWN:] %}{{ _resolved_row(r) }}{% endfor %}</ol></details>{% endif %}
+{% else %}<p class="hint">Nothing resolved in the last 30 days.</p>{% endif %}
+</section>
+{%- endmacro %}
+
+{# the held line at a page's foot: "2 snoozed or muted · See them in Sweep →" #}
+{% macro todo_held_line(text) -%}
+{% if text %}<p class="wtd-held-line">{{ text }} · <a class="link" href="/sweep?tab=suppressed">See them in Sweep →</a></p>{% endif %}
+{%- endmacro %}

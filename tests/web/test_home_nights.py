@@ -78,7 +78,7 @@ def test_an_accepted_suppression_covers_the_finding_from_the_next_run(night):  #
         s.add(p)
         s.commit()
         pid = str(p.id)
-    assert "Suppression" in env.client.get(h + "/home").text
+    assert "Suppression" in env.client.get(h + "/ontology").text  # proposals moved here 23 Nov
     assert _post(env, h, f"/home/proposals/{pid}/accept").status_code == 303
     with svc.sf() as s, tenant_scope(cid):
         (rec,) = [

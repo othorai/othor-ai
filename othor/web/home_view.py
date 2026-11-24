@@ -456,7 +456,7 @@ def checks_strip(
         state = "partial"
         if splits:
             tail = f"{splits} so more checks can run."
-            action = ("Review the split", "/home#proposals")
+            action = ("Review the split", "/ontology#proposals")
         elif questions and n["waiting"]:
             reach = round(100 * (n["ran"] + n["waiting"]) / total)
             answers = f"{fmt.num(questions)} quick answer{'s' if questions != 1 else ''}"
@@ -469,7 +469,7 @@ def checks_strip(
         elif proposals:
             p = f"{fmt.num(proposals)} proposal{'s' if proposals != 1 else ''}"
             tail = f"Review {p} that change what the checks can see."
-            action = ("Review proposals", "/home#proposals")
+            action = ("Review proposals", "/ontology#proposals")
         elif n["history"] and not n["waiting"]:
             h = n["history"]
             tail = f"{fmt.num(h)} more turn{'s' if h == 1 else ''} on as your history grows."
@@ -600,7 +600,46 @@ def proposal_rows(s: Session) -> list[dict[str, Any]]:
         .where(Proposal.status == "open", Proposal.kind != "join")
         .order_by(Proposal.created_at, Proposal.id)
     ).all()
-    return [proposal_row(p) for p in rows]
+    # twins (23 Nov 2026, indigodemo): two goals on the same number, year and target each made
+    # an "at risk" proposal; the newest one stands for both, and a decision applies to both
+    newest: dict[str, Proposal] = {}
+    for p in rows:
+        newest[twin_key(p)] = p
+    return [proposal_row(p) for p in rows if newest[twin_key(p)] is p]
+
+
+def twin_key(p: Proposal) -> str:
+    """Proposals that say the same thing: a goal's head (number, year, target), else itself."""
+    if p.kind == "goal":
+        return "goal:" + p.text.split(" → ", 1)[0]
+    return str(p.id)
+
+
+def open_twins(s: Session, p: Proposal) -> list[Proposal]:
+    """The other open proposals that say the same as `p` (decided together with it)."""
+    if p.kind != "goal":
+        return []
+    rows = s.scalars(
+        sa.select(Proposal).where(
+            Proposal.status == "open", Proposal.kind == "goal", Proposal.id != p.id
+        )
+    ).all()
+    return [x for x in rows if twin_key(x) == twin_key(p)]
+
+
+def decided_twins(s: Session, p: Proposal) -> list[Proposal]:
+    """The twins decided together with `p` (same decision, same moment): undone with it."""
+    if p.kind != "goal" or p.decided_at is None:
+        return []
+    rows = s.scalars(
+        sa.select(Proposal).where(
+            Proposal.kind == "goal",
+            Proposal.id != p.id,
+            Proposal.status == p.status,
+            Proposal.decided_at == p.decided_at,
+        )
+    ).all()
+    return [x for x in rows if twin_key(x) == twin_key(p)]
 
 
 def proposal_row(p: Proposal) -> dict[str, Any]:
@@ -657,6 +696,24 @@ def question_rows(qs: list[Question], in_briefs: set[str]) -> list[dict[str, Any
 
 
 # --- the page --------------------------------------------------------------------------------
+
+
+def _todo(s: Session, today: dt.date) -> Any:
+    """What to do today (Morning Brief 2.5, #110): the actions across today's briefs."""
+    from othor.web import todo_view
+
+    return todo_view.page(s, today, back="home")
+
+
+def _to_forecasts(outlook: dict[str, Any] | None) -> dict[str, Any] | None:
+    """#109 (owner, 22 Nov 2026): with the Forecasts page installed, Next 4 weeks' cards open it;
+    without it they keep their panel on Home."""
+    from othor.core import plugins
+
+    if not outlook or not any(n.key == "forecasts" for n in plugins.nav("company")):
+        return outlook
+    weeks = [{**w, "href": "/forecasts"} if w.get("href") else w for w in outlook["weeks"]]
+    return {**outlook, "weeks": weeks, "href": "/forecasts" if outlook.get("href") else None}
 
 
 def page(
@@ -720,7 +777,11 @@ def page(
         "swept": sweep_box(s, rv),
         # v0.12: the company's weather, from the run the checks strip reads
         "weather": weather_view.banner(settings, rv.run if rv is not None else None),
-        "outlook": weather_view.outlook(settings, rv.run if rv is not None else None),
+        "outlook": _to_forecasts(
+            weather_view.outlook(settings, rv.run if rv is not None else None)
+        ),
+        # What to do (Morning Brief 2.5, #110): today's first steps across the briefs
+        "todo": _todo(s, today),
         "weather_run": rv.run if rv is not None else None,
         "checks": checks,
         "proposals": props,
@@ -773,8 +834,13 @@ def source_status(name: str, facts: dict[str, Any] | None) -> tuple[str, str, st
         return ("No daily numbers", "muted", "–")
     if f.get("updated"):
         return ("Updated", "ok", newest)
-    # #82 (owner, 18 Nov 2026): whenever the newest data is older than the last read, a warning
-    # dot and the date it stopped at
+    # owner, 23 Nov 2026: no rows yesterday on a day this source is usually quiet (a sales
+    # warehouse on Sundays, a sheet updated weekly) is not a gap: no warning, as Learn › Home says.
+    # Runs stored before `late` was kept say nothing about the usual days, so they still warn.
+    if f.get("late") is False:
+        return ("Up to date", "ok", newest)
+    # #82 (owner, 18 Nov 2026): newest data older than the last read on a day it usually has rows:
+    # a warning dot and the date it stopped at
     return (f"Not updated since {newest}", "warn", newest)
 
 

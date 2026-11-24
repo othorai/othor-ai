@@ -47,7 +47,9 @@ def of(f: dict[str, Any], spec: dict[str, Any], run_date: dt.date) -> dict[str, 
     if det in MONTH_CLOSE and (f.get("slots") or {}).get("kind") != "goal":
         d = month_close(run_date)
         days = (d - run_date).days
-        return {"text": f"{d:%B} close in {days} days", "date": d.isoformat()}
+        # 0.33.1 (the 100-night run): "September close in 1 days"
+        when = "today" if days == 0 else f"in {days} day" + ("" if days == 1 else "s")
+        return {"text": f"{d:%B} close {when}", "date": d.isoformat()}
     if det in HORIZON:
         n, text = HORIZON[det]
         return {"text": text, "date": (run_date + dt.timedelta(days=n)).isoformat()}

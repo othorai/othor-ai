@@ -25,7 +25,11 @@ def test_the_sample_business_model_levels(world) -> None:
     assert lv.line().endswith("left to reach full potential")
     v = lv.view()
     assert [g["level"] for g in v["groups"]] == [1, 2, 3]
-    assert v["segs"][: lv.level] == [True] * lv.level
+    assert all(all(seg) for seg in v["segs"][: lv.level])  # a reached level: every tick lit
+    # #104: a level part done lights its done items' ticks, never a blank bar
+    assert [sum(seg) for seg in v["segs"]] == [
+        sum(1 for i in lv.items if i.done and i.level == n) for n in (1, 2, 3)
+    ]
 
 
 def test_without_owners_it_is_below_level_one_with_the_sentence_to_say(world) -> None:

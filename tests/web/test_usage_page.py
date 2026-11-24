@@ -11,6 +11,7 @@ import re
 import sqlalchemy as sa
 
 from othor.ai.models import ModelCall
+from othor.core import fmt
 from othor.core.models import Company
 from othor.core.tenancy import system_scope, tenant_scope
 from tests.web.conftest import Env, signup
@@ -80,7 +81,7 @@ def test_the_page_counts_the_month_in_the_owners_words(env: Env) -> None:
     assert "<h1>AI usage</h1>" in page
     n = 3 + signup_calls["nov"]
     tokens = 3 * 1250 + signup_calls["nov_tokens"]
-    assert f'<span class="v">{tokens:,}</span>' in page
+    assert f'<span class="v">{fmt.count_short(tokens)}</span>' in page  # #105: in short
     assert f'<span class="l">Calls</span><span class="v">{n}</span>' in page
     assert "Draft your metrics" in page and "claude-opus-5-5" in page and "1.4 s" in page
     # the first section: tokens per day for the last 30 days, a bar a day, in colour
@@ -92,7 +93,7 @@ def test_the_page_counts_the_month_in_the_owners_words(env: Env) -> None:
     assert SECRET_IN not in page and SECRET_OUT not in page  # never the input or the output
     oct_ = env.client.get(env.host("indigothread") + "/usage?month=2026-10").text
     assert '<option value="2026-10" selected>October 2026</option>' in oct_
-    assert f'<span class="v">{1250 + signup_calls["oct_tokens"]:,}</span>' in oct_
+    assert f'<span class="v">{fmt.count_short(1250 + signup_calls["oct_tokens"])}</span>' in oct_
 
 
 def test_the_task_filter_and_show_more(env: Env) -> None:

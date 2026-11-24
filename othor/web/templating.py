@@ -80,6 +80,10 @@ def use_plugins(dirs: list[Path]) -> None:
     )
 
 
+# a core item whose icon isn't named after its key (What to do, #110)
+NAV_ICONS = {"action-plan": "flag"}  # owner, 22 Nov 2026 (was check)
+
+
 @pass_context
 def nav_items(
     ctx: Any, group: str, core: list[tuple[str, str, str]]
@@ -91,7 +95,7 @@ def nav_items(
     from othor.core import plugins
 
     out: list[tuple[str, str, str, str, str | None, int]] = [
-        (k, label, href, k, None, 0) for k, label, href in core
+        (k, label, href, NAV_ICONS.get(k, k), None, 0) for k, label, href in core
     ]
     # Forecasts 1.0 (21 Nov 2026): an item may follow another plug-in's item (Discover after Look
     # back), so items wait until what they follow is placed; two after the same item keep the
@@ -204,6 +208,21 @@ def slot_cards(ctx: Any, name: str, limit: int = CARDS_MAX) -> dict[str, Any] | 
     return {"cards": cards, "count": count, "more": more, "toasts": toasts}
 
 
+# Each side-menu page's one-line description under its title (owner, #108, 21 Nov 2026), by its
+# nav key; a plug-in's pages carry their own.
+PAGE_LEDES = {
+    "home": "What needs you today, and what Othor AI suggests next.",
+    "action-plan": "What Othor AI suggests you do about today’s briefs, the most important first.",
+    "brief": "The few things that matter each morning, how sure Othor AI is, and who to ask.",
+    "sweep": "Every number and breakdown, checked every night for what no single report shows.",
+    "summary": "Every number at a glance: what changed, and what moved together.",
+    "ontology": "How Othor AI understands your business, and how complete it is.",
+    "sources": "Where your numbers come from, and how fresh each source is.",
+    "usage": "What Othor AI’s drafting and wording used this month.",
+    "settings": "Your company, delivery and charts, and your data.",
+}
+
+templates.env.globals["page_ledes"] = PAGE_LEDES
 templates.env.globals["nav_items"] = nav_items
 templates.env.globals["slot"] = slot
 templates.env.globals["slot_cards"] = slot_cards

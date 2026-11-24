@@ -133,7 +133,9 @@ class Levels:
             "top": TOP,
             "title": self.title(),
             "line": self.line(),
-            "segs": [lv <= self.level for lv in range(1, TOP + 1)],
+            # one segment per level, one tick per item in it, lit when done (#104: a level part
+            # done shows how far, instead of a grey bar until the whole level is reached)
+            "segs": [[i.done for i in self.items if i.level == lv] for lv in range(1, TOP + 1)],
             "groups": groups,
             "left": len(self.left),
             # the next level's items stay open by default; the rest fold

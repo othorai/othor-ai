@@ -38,6 +38,24 @@
 {% endif %}
 {%- endmacro %}
 
+{# 0.33 (owner, 22 Nov 2026): the finding panel's foot, one row: the run in plain words, the
+   fingerprint, Business Model version and app behind its (i) (rule 5, one click) #}
+{% macro run_chip(p) -%}
+<span class="run-chip">Run #{{ "%04d" | format(p.run_number) }} · {{ p.run_word }}{{ info(text=p.run_detail, id="run-" ~ p.fp, label="About this run") }}</span>
+{%- endmacro %}
+{% macro hold_quiet(action, fp, run, label, tip, csrf_token, back=None) -%}
+{% from "components/icons.html" import icon %}
+<form method="post" action="/sweep/finding/{{ fp }}/{{ action }}?run={{ run }}{% if back %}&amp;back={{ back }}{% endif %}" class="inline" data-inplace><input type="hidden" name="csrf" value="{{ csrf_token }}"><button class="hold-btn" type="submit" title="{{ tip }}" aria-label="{{ label }}: {{ tip }}">{{ icon({"snooze": "clock", "mute": "eye-off"}[action]) }}<span>{{ label }}</span></button></form>
+{%- endmacro %}
+{% macro watch_icon(href) -%}
+{% from "components/icons.html" import icon %}
+<a class="hold-btn" href="{{ href }}" data-panel title="Check this number every night against a limit" aria-label="Watch: check this number every night against a limit">{{ icon("eye") }}<span>Watch</span></a>
+{%- endmacro %}
+{% macro watching_mark(text) -%}
+{% from "components/icons.html" import icon %}
+<span class="watching-mark">{{ icon("eye") }}Watching · {{ text }}</span>
+{%- endmacro %}
+
 {% macro hold_form(action, fp, run, label, csrf_token, kind="link") -%}
 <form method="post" action="/sweep/finding/{{ fp }}/{{ action }}?run={{ run }}" class="inline" data-inplace>
 <input type="hidden" name="csrf" value="{{ csrf_token }}">
@@ -123,8 +141,9 @@
 <dl class="kv{{ ' ruled' if ruled else '' }}">{% for k, v in rows %}{% if v %}<dt>{{ k }}</dt><dd>{{ v }}</dd>{% endif %}{% endfor %}</dl>
 {%- endmacro %}
 
-{% macro status_pill(status) -%}
-<span class="status-pill {{ status }}"><span class="dot"></span>{{ {"breached": "Breached", "within": "Within", "no_value": "No value"}[status] }}</span>
+{# 0.33 (plan § F): plain words; a breach says which side of the limit it is on #}
+{% macro status_pill(status, direction="above") -%}
+<span class="status-pill {{ status }}"><span class="dot"></span>{{ {"breached": ("Below the limit" if direction == "below" else "Above the limit"), "within": "Inside the limit", "no_value": "No value"}[status] }}</span>
 {%- endmacro %}
 
 {% macro held_rows(items) -%}
@@ -132,8 +151,33 @@
 {%- endmacro %}
 
 {# Suppressed by your Ontology (5a): one item per known pattern, expanding to its metrics #}
-{% macro pattern_groups(items) -%}
-<div class="section lines">{% for h in items %}<details class="pattern-group"><summary class="held-row"><span>{{ h.label }}</span><span class="how">{{ h.tail }}</span></summary><ul class="pattern-metrics">{% for m in h.metrics %}<li>{{ m }}</li>{% endfor %}</ul></details>{% endfor %}</div>
+{% macro _pattern_group(h, open=False) -%}
+<details class="pattern-group"{{ " open" if open else "" }}><summary class="held-row"><span>{{ h.label }}</span><span class="how">{% if h.count is defined %}<b>{{ fmt.num(h.count) }} finding{{ "" if h.count == 1 else "s" }}</b>{% else %}{{ h.tail }}{% endif %}</span></summary><ul class="pattern-metrics">{% if h.rows is defined %}{% for name, when in h.rows %}<li><span>{{ name }}</span><span>{{ when }}</span></li>{% endfor %}{% if h.tail %}<li class="note">{{ h.tail[:1] | upper }}{{ h.tail[1:] }}</li>{% endif %}{% else %}{% for m in h.metrics %}<li>{{ m }}</li>{% endfor %}{% endif %}</ul></details>
+{%- endmacro %}
+{# Suppressed by your Business Model (5a; 0.33: "N findings", each number with its dates, the
+   first group open, Show all after `first`) #}
+{% macro pattern_groups(items, first=None) -%}
+{% set n = first or items | length %}
+<div class="section lines">{% for h in items[:n] %}{{ _pattern_group(h, open=loop.first) }}{% endfor %}</div>
+{% if items | length > n %}<details class="show-all"><summary class="link">Show all {{ fmt.num(items | length) }}</summary><div class="section lines">{% for h in items[n:] %}{{ _pattern_group(h) }}{% endfor %}</div></details>{% endif %}
+{%- endmacro %}
+
+{# Snoozed and muted by you (0.33, the owner's preview of 22 Nov 2026): the icon of the hold, when,
+   where it was done, Undo; Show all after `first` #}
+{% macro _hold_line(h, run, csrf_token) -%}
+{% from "components/icons.html" import icon %}
+<div class="held-row hold-line"><span>{{ h.title }}</span><span class="how">{{ icon("clock" if h.kind == "snooze" else "eye-off") }}<span>{{ h.how }}</span>{% if h.where %}<span class="from">· {{ h.where }}</span>{% endif %}<span>·</span>{{ hold_form("undo", h.fp, run, "Undo", csrf_token) }}</span></div>
+{%- endmacro %}
+{% macro hold_lines(items, run, csrf_token, first=5) -%}
+<div class="section lines">{% for h in items[:first] %}{{ _hold_line(h, run, csrf_token) }}{% endfor %}</div>
+{% if items | length > first %}<details class="show-all"><summary class="link">Show all {{ fmt.num(items | length) }}</summary><div class="section lines">{% for h in items[first:] %}{{ _hold_line(h, run, csrf_token) }}{% endfor %}</div></details>{% endif %}
+{%- endmacro %}
+
+{# Proposed for your Business Model (0.33): each one to review on the Business Model page (23 Nov 2026) #}
+{% macro proposal_lines(items, first=5) -%}
+{% from "components/buttons.html" import link %}
+<div class="section lines">{% for p in items[:first] %}<div class="held-row"><span>{{ p.text }}</span>{{ link("Review →", p.href) }}</div>{% endfor %}</div>
+{% if items | length > first %}<details class="show-all"><summary class="link">Show all {{ fmt.num(items | length) }}</summary><div class="section lines">{% for p in items[first:] %}<div class="held-row"><span>{{ p.text }}</span>{{ link("Review →", p.href) }}</div>{% endfor %}</div></details>{% endif %}
 {%- endmacro %}
 
 {# The finding panel head (5b, 5c, 4f, 10p): tags, kind, title, money, context, tabs #}
@@ -142,7 +186,9 @@
 {% from "components/panels.html" import pane_title %}
 {% call pane_title(p.title, p.context, close, aside=p.money) %}{{ state_tag(p.state, p.confidence | capitalize if p.confidence else None) }}{% if p.change[0] in ("new", "worse", "better", "open", "back") %}{{ change_tag(p.change[0], p.change[1]) }}{% endif %}<span class="kind-chip">{{ p.label }}</span>{% endcall %}
 {% from "components/blocks.html" import tabs as tabs_bar %}
-<div class="pane-tabs">{{ tabs_bar([("Finding", fbase ~ p.fp ~ "?" ~ fq), ("Test", fbase ~ p.fp ~ "?" ~ fq ~ "&tab=test"), ("Metric", fbase ~ p.fp ~ "?" ~ fq ~ "&tab=metric"), ("SQL", fbase ~ p.fp ~ "?" ~ fq ~ "&tab=sql"), ("Run", fbase ~ p.fp ~ "?" ~ fq ~ "&tab=run")], p.tab | capitalize if p.tab != "sql" else "SQL") }}</div>
+{# 0.33 (owner, 22 Nov 2026): the tabs in plain words #}
+{% set names = {"finding": "Finding", "test": "How it’s calculated", "metric": "The number", "sql": "Query", "run": "Run"} %}
+<div class="pane-tabs">{{ tabs_bar([(names.finding, fbase ~ p.fp ~ "?" ~ fq), (names.test, fbase ~ p.fp ~ "?" ~ fq ~ "&tab=test"), (names.metric, fbase ~ p.fp ~ "?" ~ fq ~ "&tab=metric"), (names.sql, fbase ~ p.fp ~ "?" ~ fq ~ "&tab=sql"), (names.run, fbase ~ p.fp ~ "?" ~ fq ~ "&tab=run")], names[p.tab]) }}</div>
 {%- endmacro %}
 
 {% macro code(text, id=None) -%}<pre class="code-block"{% if id %} id="{{ id }}"{% endif %}>{{ text }}</pre>{%- endmacro %}

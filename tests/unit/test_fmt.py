@@ -142,6 +142,7 @@ def test_usd_reads_compact_with_thousands_grouping():
         assert fmt.inr(1_200_000, sign=True) == "+$1.2M"
         assert fmt.inr_cr_rounded(57_200_000) == "$57.2M"
         assert fmt.inr_cr_band(55_900_000, 58_500_000) == "$55.9–58.5M"
+        assert fmt.inr_cr_band(540_800_000, 592_300_000) == "$541–592M"  # three figures
         assert sweep_text.money_col([1_100_000, 800_000]) == ["$1.1M", "$0.8M"]
     assert fmt.inr(14_000_000) == "₹1.40 Cr"  # the style never leaks past its render
 

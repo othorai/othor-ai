@@ -300,11 +300,12 @@ def _add(
     scale: float = 1.0,
     order_days: list[D] | None = None,
     order_floor: D | None = None,
+    seam: np.datetime64 = SEAM,
 ) -> None:
     """New invoices copied from template invoices (their lines, order, dispatch, receivable),
     dated `dates`, every date of the copy on or after the seam."""
     r = co.stream(seed, "events", key, "pay")
-    floor = d64(order_floor) if order_floor else SEAM
+    floor = d64(order_floor) if order_floor else seam
     o_by_inv = f.orders.dropna(subset=["invoice_no"]).set_index("invoice_no")
     l_by_inv = {k: g for k, g in f.lines.groupby("invoice_no", sort=False)}
     d_by_inv = {k: g for k, g in f.dispatch.groupby("invoice_no", sort=False)}
@@ -411,10 +412,10 @@ def _add(
     f.rec = pd.concat([f.rec, pd.DataFrame(new_rec)], ignore_index=True)
 
 
-def _drop_orders(f: Frames, sel: pd.Series) -> None:
+def _drop_orders(f: Frames, sel: pd.Series, seam: np.datetime64 = SEAM) -> None:
     """Orders that are never placed, with everything that followed them."""
     gone = f.orders[sel.to_numpy()]
-    if (days(gone["order_date"]) < SEAM).any():
+    if (days(gone["order_date"]) < seam).any():
         raise ValueError("an event may only drop orders placed on or after the seam")
     nos = set(gone["invoice_no"].dropna())
     f.orders = f.orders[~sel.to_numpy()]
@@ -554,12 +555,12 @@ def _rebates(f: Frames) -> None:
     f.ledger = pd.concat([lg, pd.DataFrame(rows)], ignore_index=True)
 
 
-def _renumber(f: Frames, t: Any) -> Frames:
+def _renumber(f: Frames, t: Any, seam: np.datetime64 = SEAM) -> Frames:
     """Rows on or after the seam take the numbers after the seam's last ones, in date order, as
     the base generator numbers them; rows before the seam keep theirs (and their order)."""
     # invoices
     inv = f.inv
-    pre = days(inv["date"]) < SEAM
+    pre = days(inv["date"]) < seam
     a, z = inv[pre], inv[~pre].sort_values(["date", "cust", "amt"], kind="stable")
     fy = np.array([b.fiscal_year(x) for x in days(z["date"])])
     start = {
@@ -585,19 +586,19 @@ def _renumber(f: Frames, t: Any) -> Frames:
 
     # lines and receivables follow their invoices
     lines = remap(f.lines)
-    pre = days(lines["date"]) < SEAM
+    pre = days(lines["date"]) < seam
     lines = pd.concat(
         [lines[pre], lines[~pre].sort_values(["invoice_id", "line_no"], kind="stable")],
         ignore_index=True,
     )
     rec = remap(f.rec)
-    pre = days(rec["date"]) < SEAM
+    pre = days(rec["date"]) < seam
     rec = pd.concat(
         [rec[pre], rec[~pre].sort_values("invoice_id", kind="stable")], ignore_index=True
     )
     # orders
     o = remap(f.orders)
-    pre = days(o["order_date"]) < SEAM
+    pre = days(o["order_date"]) < seam
     a, z = o[pre], o[~pre].sort_values(["order_date", "cust", "amount"], kind="stable")
     yy = z["order_date"].astype("datetime64[s]").dt.year % 100
     onos = [
@@ -609,13 +610,13 @@ def _renumber(f: Frames, t: Any) -> Frames:
     # dispatch
     dsp = remap(f.dispatch)
     dsp["order_no"] = dsp["order_no"].map(lambda v: o_map.get(v, v))
-    pre = dsp["dispatched_at"].to_numpy() < SEAM.astype("datetime64[s]")
+    pre = dsp["dispatched_at"].to_numpy() < seam.astype("datetime64[s]")
     a, z = dsp[pre], dsp[~pre].sort_values(["dispatched_at", "order_no"], kind="stable")
     z = z.assign(dispatch_key=np.arange(len(a) + 1, len(a) + len(z) + 1))
     dsp = pd.concat([a, z], ignore_index=True)
     # ledger
     lg = f.ledger
-    pre = days(lg["entry_date"]) < SEAM
+    pre = days(lg["entry_date"]) < seam
     a = lg[pre]
     z = lg[~pre].sort_values(
         ["entry_date", "account_code", "plant"], kind="stable", na_position="last"
@@ -626,7 +627,7 @@ def _renumber(f: Frames, t: Any) -> Frames:
     ledger["entry_id"] = ledger["entry_id"].astype("int64")
     # approvals
     ap = f.approvals
-    pre = days(ap["request_date"]) < SEAM
+    pre = days(ap["request_date"]) < seam
     a, z = ap[pre], ap[~pre].sort_values("request_date", kind="stable")
     z = z.assign(approval_id=np.arange(len(a) + 1, len(a) + len(z) + 1))
     approvals = pd.concat([a, z], ignore_index=True)
@@ -636,12 +637,14 @@ def _renumber(f: Frames, t: Any) -> Frames:
     return Frames(inv, lines, orders, dsp, rec, ledger, approvals, f.fx)
 
 
-def _bank(base: pd.DataFrame, rec: pd.DataFrame, seed: int) -> pd.DataFrame:
+def _bank(
+    base: pd.DataFrame, rec: pd.DataFrame, seed: int, seam: np.datetime64 = SEAM
+) -> pd.DataFrame:
     """The bank ledger after the seam, rebuilt from the receivables the way build.bank does."""
     r = co.stream(seed, "events", "bank")
     ed = days(base["entry_date"])
-    keep = base[ed < SEAM]
-    paid = rec[(days(rec["paid_true"]) >= SEAM) & (days(rec["paid_true"]) < b.INF)]
+    keep = base[ed < seam]
+    paid = rec[(days(rec["paid_true"]) >= seam) & (days(rec["paid_true"]) < b.INF)]
     credits = pd.DataFrame(
         {
             "entry_date": days(paid["paid_true"]),
@@ -652,7 +655,7 @@ def _bank(base: pd.DataFrame, rec: pd.DataFrame, seed: int) -> pd.DataFrame:
         }
     )
     # the week that straddles the seam counts its receipts from before the seam too
-    week0 = b.week_end(np.array([SEAM]))[0] - 6 * b.DAY
+    week0 = b.week_end(np.array([seam]))[0] - 6 * b.DAY
     early = keep[(days(keep["entry_date"]) >= week0) & (keep["bank"] == "HDFC current")]
     early = early[early["credit"] > 0]
     allc = pd.concat([early[["entry_date", "credit"]], credits[["entry_date", "credit"]]])
@@ -667,7 +670,7 @@ def _bank(base: pd.DataFrame, rec: pd.DataFrame, seed: int) -> pd.DataFrame:
             "credit": 0.0,
         }
     )
-    sbi_base = base[(ed >= SEAM) & (base["bank"] == "SBI cash credit")][
+    sbi_base = base[(ed >= seam) & (base["bank"] == "SBI cash credit")][
         ["entry_date", "bank", "description", "debit", "credit"]
     ]
     months = pd.period_range("2027-01", pd.Timestamp(EXT_END).strftime("%Y-%m"), freq="M")

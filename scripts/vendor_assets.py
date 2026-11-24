@@ -75,6 +75,7 @@ ICONS = {
     "menu": "menu",
     "eye": "eye",
     "eye-off": "eye-off",
+    "flag": "flag",  # the Action plan in the side menu (owner, 22 Nov 2026)
     "clock": "clock",
     "chat": "message-square",
     "send": "send",

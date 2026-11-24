@@ -152,8 +152,8 @@ def test_the_ontology_title_and_its_pill_line_up(live: tuple[int, str]) -> None:
 
 
 def test_the_finding_panels_run_line_is_one_line(live: tuple[int, str]) -> None:
-    """#35: the run line ("Run #0002 · 178c…2b · spec v2 · replayable") was squeezed beside
-    the actions and wrapped word by word; it has its own row now, on one line."""
+    """#35: the run line was squeezed beside the actions and wrapped word by word. 0.33: one row,
+    the run in plain words beside the quiet holds and the one primary, never wrapping."""
     sync_api = pytest.importorskip("playwright.sync_api")
     port, _session = live
     with sync_api.sync_playwright() as p:
@@ -164,14 +164,17 @@ def test_the_finding_panels_run_line_is_one_line(live: tuple[int, str]) -> None:
         page = browser.new_page(viewport={"width": 680, "height": 400})
         page.goto(f"http://{BASE}:{port}/login", wait_until="load")
         css = page.eval_on_selector('link[rel="stylesheet"][href*="/css/app."]', "e => e.href")
-        buttons = "".join(f'<a class="btn">{t}</a>' for t in ("Snooze 7 days", "Mute", "Watch"))
+        holds = "".join(
+            f'<button class="hold-btn"><span>{t}</span></button>'
+            for t in ("Watch", "Snooze", "Mute")
+        )
         page.set_content(
-            f'<link rel="stylesheet" href="{css}"><div class="flex flex-wrap items-center '
-            'justify-between gap-8 w-full" style="width:620px"><p class="prov-foot w-full '
-            'min-w-0">Run #0002 · 178c…2b · spec v2 · replayable</p><div class="flex flex-wrap '
-            f'items-center justify-end gap-8 w-full md:w-auto">{buttons}</div></div>',
+            f'<link rel="stylesheet" href="{css}"><div class="panel-foot-row" style="width:620px">'
+            '<span class="run-chip">Run #0002 · same numbers on replay</span>'
+            f'<div class="panel-foot-actions">{holds}'
+            '<a class="btn primary">Add to a brief</a></div></div>',
             wait_until="load",
         )
-        box = page.locator(".prov-foot").bounding_box()
-        assert box is not None and box["height"] <= 20 and box["width"] >= 600, box
+        box = page.locator(".run-chip").bounding_box()
+        assert box is not None and box["height"] <= 20, box
         browser.close()

@@ -173,6 +173,8 @@ def context(
         ),
         "tiles": [{**t, "spark": None} for t in bvw.tiles(bv)],
         "items": bvw.items(bv),
+        # What to do (Morning Brief 2.5, #110): the issue's next steps, as the page and email
+        "actions": m.actions,
         "since": bvw.since_line(bv),
         "since_word": since_word(bv.body),
         "findings": findings,

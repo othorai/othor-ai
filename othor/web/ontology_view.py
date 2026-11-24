@@ -387,6 +387,63 @@ def settings_line(company: Company) -> str:
     )
 
 
+FLOOR_LEAD = "Problems worth reporting"
+
+
+def floor_line(s: Session, settings: Settings, company: Company) -> dict[str, Any]:
+    """#107 (owner, 21 Nov 2026): the floor (M15.6) as a line of The business, edited in place.
+    The owner's `materiality` record, else the currency's default; and a suggestion, 1% of a
+    typical month's revenue from the last run, computed by code. The same record the night's
+    spec compiles from, so moving it here changes no number."""
+    from othor.briefs import weather
+    from othor.engine.models import DETECTING_KINDS
+    from othor.ontology.compiler.build import DEFAULT_FLOOR
+
+    rec = next((r for r in service.active(s, ["materiality"])), None)
+    amount = (
+        Decimal(rec.body["amount"]) if rec else Decimal(DEFAULT_FLOOR.get(company.currency, "5000"))
+    )
+    suggest = None
+    run = s.scalars(
+        sa.select(Run)
+        .where(Run.status.in_(("done", "partial")), Run.kind.in_(DETECTING_KINDS))
+        .order_by(Run.number.desc())
+        .limit(1)
+    ).first()
+    if run is not None:
+        spec = s.scalars(sa.select(Spec).where(Spec.id == run.spec_id)).one()
+        base = read_json(RunFiles(settings.runs_dir(company.id), run.id).baselines) or {}
+        got = weather.revenue(dict(spec.compiled), base)
+        if got is not None and got[1] > 0:
+            suggest = (got[1] / 100).quantize(Decimal("1000"))
+    shown = fmt.money(amount)
+    return {
+        "amount": amount,
+        "owner": rec is not None,
+        "text": f"{FLOOR_LEAD} · over {shown}",
+        "value": shown,  # typed back as money: "₹5 L", "5 lakh" and "500000" all read
+        "source": (f"You · {fmt.day_month(rec.created_at.date())}" if rec else "The default"),
+        "hint": (f"1% of a typical month’s revenue is {fmt.money(suggest)}" if suggest else ""),
+    }
+
+
+def parse_floor(text: str) -> Decimal:
+    """The floor as typed: "₹5 L", "5 lakh", "$5K", "500000" or "5,00,000". Whole rupees or
+    dollars above zero; ValueError otherwise."""
+    from decimal import InvalidOperation
+
+    from othor.briefs.values import parse
+
+    try:
+        v = parse("inr", text)
+    except (ValueError, InvalidOperation):
+        raise ValueError(text) from None
+    v = v.quantize(Decimal("1"))
+    if v <= 0 or v >= Decimal("1e12"):
+        raise ValueError(text)
+    return v
+
+
 def name_lines(s: Session) -> list[dict[str, Any]]:
     out = []
     customers = service.active(s, ["customer"])
@@ -509,6 +566,7 @@ def page(
         if not r.key.startswith("setting:")  # Settings' own (M15.6): the settings line covers them
     ]
     facts.append({"text": settings_line(company), "source": "Settings"})
+    floor = floor_line(s, settings, company)  # #107: the floor, edited in place on this line
     props, qs = len(proposal_rows(s)), len(answers.queue(s, today))
     home = []
     if props:
@@ -534,6 +592,7 @@ def page(
         "home_line": (" · ".join(home) + " waiting on Home") if home else "",
         "home_count": props + qs + later,  # the title row's button: "N to review on Home"
         "business": business,
+        "floor": floor,
         "goals": goals,
         "business_count": len(business) + len(goals),
         "numbers": shown,

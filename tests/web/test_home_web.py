@@ -65,13 +65,24 @@ def test_a_goal_proposal_is_accepted_and_undone(night):  # noqa: F811
     with svc.sf() as s, tenant_scope(cid):
         p = s.scalars(sa.select(Proposal).where(Proposal.kind == "goal")).one()
         pid, n = str(p.id), service.current_number(s)
-    page = env.client.get(h + "/home").text
-    # owner, 14 Nov 2026 (M16.1): proposals also come from the Ontology
+    # owner, 23 Nov 2026: the proposals moved from Home to the top of the Business Model page
+    assert ">Proposals for the Business Model<" not in env.client.get(h + "/home").text
+    page = env.client.get(h + "/ontology").text
     assert ">Proposals for the Business Model<" in page
+    assert page.index(">Proposals for the Business Model<") < page.index("The business")
+    assert "to review on Home" not in page
     assert "Net revenue FY27 target ₹60 Cr → tracking ₹57.2 Cr" in page
     assert "Morning Brief · forecast" in page
-    r = _post(env, h, f"/home/proposals/{pid}/accept")
-    assert r.status_code == 303 and r.headers["location"] == f"/home?done={pid}"
+    assert f'action="/home/proposals/{pid}/accept?back=ontology"' in page
+    # Accept and Suggest edits (owner, 23 Nov 2026): the chat opens on it; Decline went into it
+    card = page.split('aria-label="Proposals"', 1)[1].split("</section>", 1)[0]
+    assert f'href="/ontology?panel=othor&amp;subject=proposal:{pid}"' in card
+    assert ">Suggest edits<" in card and ">Decline<" not in card
+    # the row size, as Data sources' Tables · Schemas · Manage (owner, 23 Nov 2026)
+    assert 'class="btn soft sm"' in card and 'class="btn sm" href="/ontology?panel=othor' in card
+    r = _post(env, h, f"/home/proposals/{pid}/accept?back=ontology")
+    assert r.status_code == 303
+    assert r.headers["location"] == f"/ontology?decided={pid}#proposals"
     page = env.client.get(h + r.headers["location"]).text
     assert (
         "Accepted · applies from tonight’s run" in page or "Accepted · applies from tonight" in page
@@ -85,9 +96,43 @@ def test_a_goal_proposal_is_accepted_and_undone(night):  # noqa: F811
         p = s.scalars(sa.select(Proposal).where(Proposal.id == uuid.UUID(pid))).one()
         assert p.status == "open" and service.current_number(s) == n + 2
     assert _events(svc, cid, "proposal.accepted") and _events(svc, cid, "proposal.undone")
-    r = _post(env, h, f"/home/proposals/{pid}/decline")
+    r = _post(env, h, f"/home/proposals/{pid}/decline?back=ontology")
     page = env.client.get(h + r.headers["location"]).text
     assert "Declined · it won’t be proposed again" in page
+
+
+def test_the_same_goal_twice_is_one_proposal_decided_together(night):  # noqa: F811
+    """indigodemo (23 Nov 2026): two goals on the same number, year and target each made an
+    "at risk" proposal; the page shows the newest one, and its decision (and Undo) covers both."""
+    env, h, cid, _rid, svc = night
+    with svc.sf() as s, tenant_scope(cid):
+        p = s.scalars(sa.select(Proposal).where(Proposal.kind == "goal")).one()
+        twin = Proposal(
+            company_id=cid,
+            workspace_id=cid,
+            kind="goal",
+            text=p.text.split(" → ", 1)[0] + " → tracking ₹57.1 Cr",
+            evidence={**p.evidence},
+            origin={**p.origin, "goal": "fy27_net_revenue_2"},
+            fingerprint=p.fingerprint + ":twin",
+            status="open",
+            run_id=p.run_id,
+        )
+        s.add(twin)
+        s.commit()
+        pid, tid = str(p.id), str(twin.id)
+    page = env.client.get(h + "/ontology").text
+    card = page.split('aria-label="Proposals"', 1)[1]
+    assert card.count(p.text.split(" → ", 1)[0]) == 1 and "tracking ₹57.1 Cr" in card
+    r = _post(env, h, f"/home/proposals/{tid}/decline?back=ontology")
+    assert r.status_code == 303
+    with svc.sf() as s, tenant_scope(cid):
+        st = {str(x.id): x.status for x in s.scalars(sa.select(Proposal))}
+    assert st[pid] == st[tid] == "declined"
+    _post(env, h, f"/home/proposals/{tid}/undo?back=ontology")
+    with svc.sf() as s, tenant_scope(cid):
+        st = {str(x.id): x.status for x in s.scalars(sa.select(Proposal))}
+    assert st[pid] == st[tid] == "open"
 
 
 def test_a_stale_source_and_an_unsubscribe_show_first(night):  # noqa: F811

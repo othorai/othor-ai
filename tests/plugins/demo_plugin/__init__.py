@@ -18,7 +18,7 @@ HERE = Path(__file__).resolve().parent
 router = APIRouter()
 
 
-@router.get("/demo", response_class=HTMLResponse)
+@router.get("/plugin-demo", response_class=HTMLResponse)
 def demo_page() -> HTMLResponse:
     from othor.web.templating import templates
 
@@ -96,7 +96,7 @@ def plugin(settings: Any) -> Plugin:
             NavItem(
                 "demo",
                 "Demo",
-                "/demo",
+                "/plugin-demo",
                 "dna",
                 group="company",
                 after="summary",
@@ -118,6 +118,8 @@ def plugin(settings: Any) -> Plugin:
         after_seal=(_after_seal,),
         ticks=(_tick,),
         hosts=frozenset({"demo-feed.example"}),
+        # an old address of its own, moved to the root host (23 Nov 2026)
+        host_redirects=(("old-demo", lambda path, query: "/moved" + path),),
         connectors=(ConnectorKind("demo_feed", "Demo feed", "DF", "local", "duckdb"),),
         jobs={"demo_job": _job},
         cli=(("demo", cli),),
