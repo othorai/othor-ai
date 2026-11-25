@@ -175,7 +175,12 @@ configured by environment variables and a data directory.
 
 ## See it in 5 minutes
 
-Needs Docker and [uv](https://docs.astral.sh/uv/).
+Needs Docker (Compose v2), [uv](https://docs.astral.sh/uv/) and `make`, on Linux or macOS.
+
+> **On Windows**, run this and every `make` command below inside a **WSL 2** terminal, not PowerShell:
+> 1. In PowerShell, `wsl -l -v` must show `VERSION 2` (if not: `wsl --set-version <distro> 2`).
+> 2. In Docker Desktop → Settings → Resources → WSL integration, enable your distro.
+> 3. Inside WSL, install uv and `make` (`sudo apt install make` on Ubuntu); `docker version` should show both Client and Server.
 
 ```sh
 git clone https://github.com/othorai/othor-ai.git && cd othor-ai
