@@ -5,10 +5,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}Othor AI{% endblock %}</title>
-<link rel="icon" href="/static/favicon.ico" sizes="48x48">
+{# the company's own tab icon on its signed-in pages (Company identity 1.0); othor.ai and
+   sign-in keep the Othor AI icon -#}
+{% if tab_icon %}{% from "components/blocks.html" import tab_icon_links %}{{ tab_icon_links(tab_icon) }}
+{% else %}<link rel="icon" href="/static/favicon.ico" sizes="48x48">
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
-<link rel="stylesheet" href="/static/css/fonts.css">
+{% endif %}<link rel="stylesheet" href="/static/css/fonts.css">
 <link rel="stylesheet" href="{{ asset('app.css') }}">
 {% block robots %}<meta name="robots" content="noindex, nofollow">{% endblock %}
 {% block head %}{% endblock %}

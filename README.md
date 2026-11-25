@@ -11,7 +11,7 @@
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue)](pyproject.toml)
 [![Self-hostable](https://img.shields.io/badge/self--hostable-one%20image-0A7FA8)](docs/self-host.md)
 
-![Othor AI: the Morning Brief on the sample company, scrolled top to bottom: what changed, the headline numbers, the findings and what is ahead](docs/images/brief-tour.webp)
+![A 30-second tour of Othor AI on the sample company: Home, the Morning Brief, a finding's How it's calculated, Sweep, the Action plan and the Business Model](docs/images/readme-tour.webp)
 
 [What is Othor AI](#what-is-othor-ai-in-1-minute) · [Quick start](#quick-start) · [Architecture](#architecture) · [Self-hosting](docs/self-host.md) · [Contributing](CONTRIBUTING.md)
 
@@ -175,18 +175,36 @@ configured by environment variables and a data directory.
 
 ## See it in 5 minutes
 
-Needs Docker and [uv](https://docs.astral.sh/uv/).
+Needs Docker with Compose v2, [uv](https://docs.astral.sh/uv/) and `make`. It runs on Linux and
+macOS as it is.
+
+**Windows:** use a WSL 2 terminal for `make demo` and every other `make` command; PowerShell and
+cmd won't run the Makefile. Check three things first:
+
+- `wsl -l -v` (in PowerShell) lists your Linux distribution with `VERSION 2`; `wsl --set-version
+  <distro> 2` converts it.
+- Docker Desktop has WSL integration turned on for that distribution (Settings › Resources › WSL
+  integration).
+- Inside WSL, uv and `make` are installed (`sudo apt install make` on Ubuntu), and `docker version`
+  answers with both a Client and a Server section.
 
 ```sh
 git clone https://github.com/othorai/othor-ai.git && cd othor-ai
-make demo
+make demo                            # or: make demo CURRENCY=INR
 ```
 
 This starts the app with its databases, loads Indigo Thread Co. (an invented textile company with
 planted patterns) into a sample MySQL and PostgreSQL, sets it up in the app as an owner would
-(sources connected read-only, Business Model confirmed) and runs the night of 1 November 2026. It
-ends by printing where to sign in; the sign-in code arrives in the bundled mail catcher at
-http://localhost:8026. Then open the Morning Brief, Sweep and the Business Model.
+(sources connected read-only, Business Model confirmed, in US dollars and New York time) and runs
+the night of 1 November 2026. It ends by printing a one-time sign-in link: open it within 15
+minutes and you land on Home. Then open the Morning Brief, Sweep and the Business Model. No model
+key is needed: the brief's sentences come from templates.
+
+If the link has expired, sign in at http://othor.localhost:8000/login as
+`owner@indigothread.example`; the six-digit code arrives in the bundled mail catcher at
+http://localhost:8026. The stack uses host ports 8000, 8026, 1026, 5442, 5443 and 3307; if one is
+taken, set `OTHOR_APP_PORT`, `OTHOR_MAILPIT_PORT`, `OTHOR_SMTP_PORT`, `OTHOR_META_DB_PORT`,
+`OTHOR_SALES_DW_PORT` or `OTHOR_ERP_DB_PORT` before `make demo`. `make down` stops it.
 
 ## Quick start
 

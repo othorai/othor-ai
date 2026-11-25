@@ -27,7 +27,7 @@
   <span class="db-n" aria-hidden="true">{{ r.n }}</span>
   <div class="wtd-body">
     <p class="t">{{ r.said_html or r.said }}</p>
-    <p class="m">{{ _todo_status(r) }}{% for w in r.why %}<a class="wtd-why" href="{{ w.href }}">{{ w.title }}</a>{% endfor %}{% if r.who %}<span>Ask {{ r.who }}</span>{% endif %}{% if r.by %}<span>{{ r.by }}</span>{% endif %}{% if chips and r.briefs %}<span class="wtd-briefs" aria-label="In these briefs">{% for b in r.briefs %}<span class="chip soft">{{ b }}</span>{% endfor %}</span>{% endif %}</p>
+    <p class="m">{{ _todo_status(r) }}{% for w in r.why %}<a class="wtd-why" href="{{ w.href }}">{{ w.title }}</a>{% endfor %}{% if r.who %}<span>Ask {{ r.who }}</span>{% endif %}{% if r.by %}<span>{{ r.by }}</span>{% endif %}{% if chips and r.briefs %}<span class="wtd-briefs" aria-label="In these briefs">{% if r.brief_links %}{% for b in r.brief_links %}<a class="chip soft" href="{{ b.href }}" title="Open this brief’s Action plan">{{ b.name }} ›</a>{% endfor %}{% else %}{% for b in r.briefs %}<span class="chip soft">{{ b }}</span>{% endfor %}{% endif %}</span>{% endif %}</p>
   </div>
   <div class="wtd-r">
     {% if r.money %}<p class="v">{{ r.money }}{% if r.money_note %}<small>{{ r.money_note }}</small>{% endif %}</p>{% endif %}
@@ -47,20 +47,28 @@
 <ol class="db-rows db-points wtd-list" data-rows aria-label="{{ label }}">{% for r in rows %}{{ todo_row(r, tok, chips) }}{% endfor %}</ol>
 {%- endmacro %}
 
-{# a brief's own section (page and read-only link): at most three, after its items #}
+{# a brief's own section (page and read-only link): at most three, after its items. On the
+   signed-in page (tok) it is the place Home and the Action plan page open (#action-plan) and
+   leads to today's plan across the briefs (#110, owner 25 Nov 2026); the read-only link has
+   neither #}
 {% macro todo_section(rows, tok=None) -%}
-{% if rows %}<section class="wtd-sec wtd-in-brief" aria-label="Action plan"><div class="db-sec-h"><h2>Action plan</h2></div>{{ todo_list(rows, tok) }}</section>{% endif %}
+{% if rows %}<section class="wtd-sec wtd-in-brief"{% if tok %} id="action-plan"{% endif %} aria-label="Action plan"><div class="db-sec-h"><h2>Action plan</h2>{% if tok %}<a class="link" href="/action-plan">Today’s plan across your briefs →</a>{% endif %}</div>{{ todo_list(rows, tok) }}</section>{% endif %}
 {%- endmacro %}
 
-{# Home's card: the first few across the briefs, each naming its brief, and See all #}
+{# Home's card: the first few across the briefs, each naming its brief (a link to that brief's
+   own Action plan, #110), "From your briefs: Leadership · 3" (not on a phone, where the rows'
+   chips carry the links) and See all #}
 {% macro todo_card(p, tok=None, n=5) -%}
-{% if p.all %}<section class="wtd-sec wtd-home" aria-label="Today’s action plan"><div class="db-sec-h"><h2>Today’s action plan</h2><a class="link" href="/action-plan">See all {{ fmt.num(p.all | length) }} →</a></div>{{ todo_list(p.all[:n], tok, chips=True, label="Today’s action plan") }}{% if p.resolved_week %}<p class="wtd-res-week">{{ fmt.num(p.resolved_week) }} resolved this week · <a class="link" href="/action-plan#resolved">See them →</a></p>{% endif %}</section>{% endif %}
+{% if p.all %}<section class="wtd-sec wtd-home" aria-label="Today’s action plan"><div class="db-sec-h"><h2>Today’s action plan</h2><span class="wtd-home-r">{% if p.links %}<span class="db-sec-r wtd-from">From your briefs: {% for name, k in p.briefs if name in p.links %}{% if not loop.first %} · {% endif %}<a class="link" href="{{ p.links[name] }}">{{ name }} · {{ fmt.num(k) }}</a>{% endfor %}</span>{% endif %}<a class="link" href="/action-plan">See all {{ fmt.num(p.all | length) }} →</a></span></div>{{ todo_list(p.all[:n], tok, chips=True, label="Today’s action plan") }}{% if p.resolved_week %}<p class="wtd-res-week">{{ fmt.num(p.resolved_week) }} resolved this week · <a class="link" href="/action-plan#resolved">See them →</a></p>{% endif %}</section>{% endif %}
 {%- endmacro %}
 
 {# the What to do page (p: todo_view.Page): tabs per brief (in place, othor.js), Start here,
    Also today, Nothing to do, the held line #}
 {% macro todo_page(p, tok=None) -%}
 <div class="tabs-row wtd-tabs"><nav class="tabs" aria-label="Briefs" data-wtd-tabs><a class="tab is-on" href="#" data-wtd-tab="all" aria-current="page">All · {{ fmt.num(p.all | length) }}</a>{% for name, n in p.briefs %}<a class="tab" href="#{{ name }}" data-wtd-tab="{{ name }}">{{ name }} · {{ fmt.num(n) }}</a>{% endfor %}</nav></div>
+{# #110 (owner, 25 Nov 2026): on a brief's tab, one line to that brief's own Action plan; shown
+   in place by the tabs (othor.js), none on All #}
+{% for name, n in p.briefs if name in p.links %}<p class="wtd-lead" data-wtd-line="{{ name }}" hidden>{{ name }}{{ "" if name.lower().endswith("brief") else " brief" }} · {{ fmt.num(n) }} action{{ "s" if n != 1 else "" }} today · <a class="link" href="{{ p.links[name] }}">Open it in the brief →</a></p>{% endfor %}
 <section class="wtd-sec" data-wtd-sec aria-label="Start here"><div class="db-sec-h"><h2>Start here</h2><span class="db-sec-r">What matters most today</span></div>{{ todo_list(p.start, tok, chips=True, label="Start here") }}</section>
 {% if p.also %}<section class="wtd-sec" data-wtd-sec aria-label="Also today"><div class="db-sec-h"><h2>Also today</h2></div>{{ todo_list(p.also, tok, chips=True, label="Also today") }}</section>{% endif %}
 {{ todo_nothing(p.nothing) }}

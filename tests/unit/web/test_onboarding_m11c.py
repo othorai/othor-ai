@@ -61,9 +61,7 @@ def test_a_drafted_box_is_filled_and_carries_the_draft_note() -> None:
     )
     assert "Drafted from MIS.xlsx and r.sql · edit or delete anything" in html
     assert ">We make technical textiles.</textarea>" in html
-    assert (
-        "Drafts only. Numbers are computed, not written. Nothing changes until you apply." in html
-    )
+    assert "Drafts only" not in html  # no note on any screen (owner, 24 Nov 2026)
     assert "hx-get" not in html  # done: no more polling
     assert "Clear" not in html
 

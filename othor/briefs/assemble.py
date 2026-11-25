@@ -190,8 +190,8 @@ def goal_lines(
         unit = m.get("unit")
         name = str(m.get("name") or g["metric"])
         by = dt.date.fromisoformat(str(g["by"]))
-        target = values.rounded(unit, g["target"])
-        tracking = values.rounded(unit, g["projection"])
+        target = values.goal_target(unit, g["target"])
+        tracking = values.rounded(unit, g["projection"], like=g["target"])
         if g.get("aggregate") == "fiscal_year_total":
             head = f"{name} FY{by.year % 100:02d} · {target} target"
         else:
@@ -199,7 +199,7 @@ def goal_lines(
         text = f"{head} · tracking {tracking}"
         tone = "ok"
         if g.get("lower") is not None and g.get("upper") is not None:
-            text += f" (80% band {values.band(unit, g['lower'], g['upper'])})"
+            text += f" (80% band {values.band(unit, g['lower'], g['upper'], like=g['target'])})"
             lo, hi, t = (Decimal(str(g[k])) for k in ("lower", "upper", "target"))
             miss = hi < t if g.get("direction", "at_least") == "at_least" else lo > t
             tone = "off" if miss else ("risk" if lo <= t <= hi else "ok")
@@ -388,6 +388,27 @@ def _changed_on(
     return out
 
 
+def situation_text(
+    first: str, head: str, ranked: list[dict[str, Any]], items: list[dict[str, Any]]
+) -> str:
+    """The sentences under the title: a known pause the title had no room for, then the top
+    item's headline unless the title is it, then each other item's own title (0.28.4: what it's
+    about, not its detail lines). The title is already above, so nothing in it is said again
+    (4d1, M12b), and the top item is said once: in its headline or by its title, never both (the
+    100-night test, 24 Nov 2026)."""
+    top = title.headline(ranked) if ranked else ""
+    lead = top if top and top != head else ""
+    top_fp = ranked[0].get("fingerprint") if lead else None
+    rest = [
+        str(i["title"]).rstrip(".") + "."
+        for i in items
+        if i.get("title")
+        and str(i["title"]) not in head
+        and (top_fp is None or i.get("fingerprint") != top_fp)
+    ]
+    return " ".join(x for x in [first, lead, *rest] if x)
+
+
 def assemble(
     spec: dict[str, Any],
     version: dict[str, Any],
@@ -524,22 +545,7 @@ def assemble(
     pause = title.pause_sentence(drill)
     # a known pause the title had no room for goes first (decided 6 Nov 2026)
     first = pause if pause and title.paused_note(drill) not in head else ""
-    situation = " ".join(
-        x
-        # the title is already above the Situation: it isn't said twice (4d1, M12b)
-        for x in [
-            first,
-            title.headline(ranked) if ranked and title.headline(ranked) != head else "",
-            # 0.28.4 (100-night test): each item's own title, which says what it's about, not
-            # every item's detail lines run together ("From ₹1.52 Cr to ₹1.64 Cr, held for…")
-            *[
-                str(i["title"]).rstrip(".") + "."
-                for i in items
-                if i.get("title") and str(i["title"]) not in head
-            ],
-        ]
-        if x
-    )
+    situation = situation_text(first, head, ranked, items)
     gls = goal_lines(spec, version.get("goals") or [], goals, sc)
     # What to do (Morning Brief 2.5, #110): the next steps, picked by code from the items, goals
     # and watches above; stored only when there are some, so every other issue keeps its bytes

@@ -747,7 +747,7 @@ def _today(
             key,
             LINES["goal_miss"].format(
                 edge="top" if at_least else "bottom",
-                metric=metric if metric.split()[0].isupper() else metric[:1].lower() + metric[1:],
+                metric=fmt.lower_first(metric),
                 bound=val(g["upper"] if at_least else g["lower"]),
                 target=val(g["target"]),
                 by=by,
@@ -854,7 +854,7 @@ def _today(
         unit = (spec.get("metrics", {}).get(g["metric"]) or {}).get("unit")
         val = _value(unit)
         metric = names.get(g["metric"], g["metric"])
-        lower = metric if metric.split()[0].isupper() else metric[:1].lower() + metric[1:]
+        lower = fmt.lower_first(metric)
         return scene(
             "overcast",
             LINES["overcast_goal"].format(

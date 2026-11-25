@@ -60,11 +60,20 @@ def money_style(currency: str | None) -> Iterator[None]:
 def request_holder() -> Any:
     """For the web middleware: a fresh holder for this request, and no explicit currency left over
     from whatever ran before in this context (reset together with the token)."""
-    return (_REQUEST.set([None]), _MONEY.set(None), _REQUEST_CHART.set([None]), _CHART.set(None))
+    return (
+        _REQUEST.set([None]),
+        _MONEY.set(None),
+        _REQUEST_CHART.set([None]),
+        _CHART.set(None),
+        _REQUEST_TZ.set([None]),
+        _DISPLAY_TZ.set(None),
+    )
 
 
 def end_request(token: Any) -> None:
-    box, money, cbox, chart = token
+    box, money, cbox, chart, tbox, tz = token
+    _DISPLAY_TZ.reset(tz)
+    _REQUEST_TZ.reset(tbox)
     _CHART.reset(chart)
     _REQUEST_CHART.reset(cbox)
     _MONEY.reset(money)
@@ -76,6 +85,15 @@ def set_request_currency(currency: str | None) -> None:
     box = _REQUEST.get()
     if box is not None:
         box[0] = _ok(currency)
+
+
+def set_request_company(company: Any) -> None:
+    """The company of this request is known (its site, or the sign-in check): its currency, chart
+    choices and time zone for every render in the request, a partial as much as a full page
+    (#125: an in-place redraw formatted its times in India time)."""
+    set_request_currency(getattr(company, "currency", None))
+    set_request_chart(company)
+    set_request_tz(getattr(company, "timezone", None))
 
 
 # --- how charts are drawn (v0.25 M25.1, owner 18 Nov 2026) --------------------------------------
@@ -403,6 +421,11 @@ def day_month_year(d: dt.date) -> str:
     return f"{d.day} {d:%b %Y}"
 
 
+def month_year(d: dt.date) -> str:
+    """Oct 2026."""
+    return f"{d:%b %Y}"
+
+
 def day_range(a: dt.date, b: dt.date) -> str:
     """23–27 Oct; 30 Sep – 2 Oct; a single day when they're the same."""
     if a == b:
@@ -427,17 +450,38 @@ def time_hm(t: dt.time | str, *, seconds: bool = False) -> str:
 # 2026). The zone it's shown in is the display zone of the current render: the company's today
 # (set per page and per email); the viewer's or recipient's from v0.15, by changing only where it
 # is set, not the templates.
-_DISPLAY_TZ: ContextVar[str] = ContextVar("othor_display_tz", default="Asia/Kolkata")
+_DEFAULT_TZ = "Asia/Kolkata"
+_DISPLAY_TZ: ContextVar[str | None] = ContextVar("othor_display_tz", default=None)
+# a web request's company zone: one holder per request (set by the middleware), filled when the
+# company is known, like the currency (#125): the sign-in check runs in a worker thread with its
+# own copy of the context, so only a shared holder reaches the route's partial
+_REQUEST_TZ: ContextVar[list[str | None] | None] = ContextVar("othor_request_tz", default=None)
+
+
+def set_request_tz(tz: str | None) -> None:
+    box = _REQUEST_TZ.get()
+    if box is not None:
+        box[0] = tz or None
+
+
+def _zone() -> str:
+    """The display zone of the current render: an explicit one (a page, an email), else the
+    request's company's, else India."""
+    explicit = _DISPLAY_TZ.get()
+    if explicit:
+        return explicit
+    box = _REQUEST_TZ.get()
+    return (box[0] if box and box[0] else None) or _DEFAULT_TZ
 
 
 def set_display_tz(tz: str | None) -> None:
     """Set the zone for the rest of this render (a request's thread, an email's build)."""
-    _DISPLAY_TZ.set(tz or "Asia/Kolkata")
+    _DISPLAY_TZ.set(tz or _DEFAULT_TZ)
 
 
 @contextmanager
 def display_tz(tz: str | None) -> Iterator[None]:
-    token = _DISPLAY_TZ.set(tz or "Asia/Kolkata")
+    token = _DISPLAY_TZ.set(tz or _DEFAULT_TZ)
     try:
         yield
     finally:
@@ -447,7 +491,7 @@ def display_tz(tz: str | None) -> Iterator[None]:
 def tz_abbr(tz: str | None = None, on: dt.date | None = None) -> str:
     """'IST' for Asia/Kolkata, 'EST' / 'EDT' for New York by the date; 'UTC+04' where the zone has
     no letters."""
-    zone = ZoneInfo(tz or _DISPLAY_TZ.get())
+    zone = ZoneInfo(tz or _zone())
     day = on or dt.date(2026, 1, 15)
     name = dt.datetime(day.year, day.month, day.day, 12, tzinfo=zone).tzname() or ""
     return f"UTC{name}" if name[:1] in "+-" else name
@@ -457,7 +501,7 @@ def local(t: dt.datetime) -> dt.datetime:
     """A stored time (UTC; naive means UTC) in the display zone, for its date and time of day."""
     if t.tzinfo is None:
         t = t.replace(tzinfo=dt.UTC)
-    return t.astimezone(ZoneInfo(_DISPLAY_TZ.get()))
+    return t.astimezone(ZoneInfo(_zone()))
 
 
 def clock(t: dt.time | dt.datetime | str | None, *, seconds: bool = False) -> str:
@@ -466,7 +510,7 @@ def clock(t: dt.time | dt.datetime | str | None, *, seconds: bool = False) -> st
     datetime is converted to it."""
     if t is None or t == "":
         return ""
-    zone = _DISPLAY_TZ.get()
+    zone = _zone()
     # a time of day ("06:00") is labelled with today's abbreviation in its zone: EDT in July, EST
     # in January (M15.6); display only, the night never writes clock times
     on = dt.datetime.now(ZoneInfo(zone)).date()
@@ -500,3 +544,19 @@ def said_at(t: dt.datetime, now: dt.datetime | None = None) -> str:
 def code(value: int | str) -> str:
     s = f"{int(value):06d}" if isinstance(value, int) else value
     return f"{s[:3]} {s[3:]}"
+
+
+# --- a name inside a sentence -----------------------------------------------------------------
+
+
+def lower_first(name: str) -> str:
+    """A name inside a sentence: "Revenue" → "revenue", its first letter lower-cased, unless its
+    first word is an abbreviation or a formula: a capital after the first letter (DSO, GST, A/R,
+    TiO2) or a digit (B2B, Q3). A paint maker's demo, 25 Nov 2026: "tiO2 stock"."""
+    words = name.split()
+    if not words:
+        return name
+    w = words[0]
+    if any(c.isupper() or c.isdigit() for c in w[1:]) or w[:1].isdigit():
+        return name
+    return name[:1].lower() + name[1:]

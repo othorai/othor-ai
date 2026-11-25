@@ -36,6 +36,8 @@ TEMPLATES = [
     ROOT / "othor" / "web" / "templates" / "components" / "dashboard.html",
     ROOT / "othor" / "web" / "templates" / "components" / "summary.html",  # Summary 1.1
     ROOT / "othor_ee" / "discover" / "templates" / "discover" / "group.html",
+    ROOT / "othor" / "web" / "templates" / "components" / "audit.html",  # Audit log (0.35)
+    ROOT / "othor_ee" / "members" / "templates" / "members" / "people_tab.html",  # People (#126)
 ]
 
 
@@ -84,3 +86,15 @@ def test_the_dashboard_templates_words_are_plain() -> None:
 def test_the_guard_sees_a_term() -> None:
     assert offenders([("sub", "Days to pay, within the forecast band")]) != []
     assert offenders([("sub", "Days to pay, within its usual range")]) == []
+
+
+def test_the_audit_logs_words_are_plain() -> None:
+    """0.35: every sentence, kind and filter the Audit log shows."""
+    from othor.audit import view, words
+
+    texts = [("sentence", s) for _, s in words.WORDS.values()]
+    texts += [("family", s) for _, s in words.FAMILIES.values()]
+    texts += [("kind", label) for _, label in words.KINDS]
+    texts += [("range", label) for _, label in view.RANGES]
+    texts += [("who", label) for _, label in view.WHO_GROUPS]
+    assert offenders(texts) == []

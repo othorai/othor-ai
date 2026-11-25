@@ -25,7 +25,8 @@ from othor.migrations.runner import upgrade
 PG_ADMIN_URL = os.environ.get(
     "OTHOR_TEST_PG_ADMIN_URL", "postgresql+psycopg://othor:othor@localhost:5442/othor"
 )
-PG_TEST_DB = "othor_test"
+# one test database per pytest-xdist worker (gw0, gw1, …), so parallel runs don't share it
+PG_TEST_DB = "othor_test" + (f"_{w}" if (w := os.environ.get("PYTEST_XDIST_WORKER")) else "")
 SKIP_DB = os.environ.get("OTHOR_TEST_SKIP_DB") == "1"
 # Sign-up by invitation is the cloud default (M11d part C); tests sign up openly unless a test
 # sets `signup="invite"` itself.
@@ -51,7 +52,13 @@ def _test_licence() -> None:
         "issued": "2026-01-01",
         "expires": None,
     }
-    os.environ.setdefault("OTHOR_LICENCE", licence.sign(priv, payload))
+    signed = licence.sign(priv, payload)
+    if os.environ.get("PYTEST_XDIST_WORKER"):
+        # a parallel worker inherits the controller's licence, signed with the controller's key,
+        # which this process doesn't trust: each worker carries its own
+        os.environ["OTHOR_LICENCE"] = signed
+    else:
+        os.environ.setdefault("OTHOR_LICENCE", signed)
     os.environ["OTHOR_TEST_LICENCE_KEY"] = licence.public_key_text(priv.public_key())
     _TEST_SIGNER.append(priv)
 
@@ -141,9 +148,19 @@ def sample_sources_seeded(tmp_path_factory: pytest.TempPathFactory) -> None:
 
     if not (_reachable(ERP_ADMIN) and _reachable(DW_ADMIN)):
         return  # tests that need the sources skip themselves
+    import fcntl
+
+    # parallel workers (pytest-xdist) share the sample sources: one loads them, the rest wait
+    lock = tmp_path_factory.getbasetemp().parent / "sample-sources.lock"
+    with lock.open("w") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        _seed_if_empty(tmp_path_factory, ERP_ADMIN, DW_ADMIN)
+
+
+def _seed_if_empty(tmp_path_factory: pytest.TempPathFactory, erp_admin: str, dw_admin: str) -> None:
     import sqlalchemy as sa
 
-    eng = sa.create_engine(ERP_ADMIN)
+    eng = sa.create_engine(erp_admin)
     with eng.connect() as c:
         has = c.execute(
             sa.text(
@@ -159,8 +176,8 @@ def sample_sources_seeded(tmp_path_factory: pytest.TempPathFactory) -> None:
 
     load_all(
         generate(),
-        mysql_url=ERP_ADMIN,
-        pg_url=DW_ADMIN,
+        mysql_url=erp_admin,
+        pg_url=dw_admin,
         sheets_dir=tmp_path_factory.mktemp("sheets"),
     )
 

@@ -6,6 +6,137 @@ Notable changes for people running Othor AI, newest first. The format follows
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-11-25
+
+### Fixed
+- Sweep: a lasting step in a number that isn't in rupees now puts at risk only the part of its linked rupees that the size of the step says, never all of them (#138). A share moves in points of the whole (scans away from the dealer's district 3.2% → 3.8% puts 0.6% of primary sales at risk, about ₹29 L of ₹48 Cr, not ₹48 Cr); a count, a duration or another number by how far it moved from where it was (orders 1,000 → 800 a week: 20%). It is never more than half the linked rupees. A step from nothing (a number that was 0) is still reported and says its money can't be sized; a step the way the number's goal wants puts no money at risk. The finding's "How is this calculated?" shows the linked rupees, the share and the limit. A small step can now fall under your floor for problems worth reporting. Earlier runs keep their figures.
+- Replay: runs made before the Sweep changes of 24 and 25 Nov (the spread's start week, rupees at risk for a non-rupee step) and before the company's size was recorded replay byte for byte again; each run now records the versions of these checks it ran. The finding's "How is this calculated?" names the version of the check that made it.
+- Sweep: a finding no longer closes just because more checks ran that night (#142). Adding breakdowns raises the number of checks, which raises the bar every finding must clear, so findings whose numbers hadn't changed closed overnight as "Cleared by data". Now a finding opens at the usual bar and, once open, stays open while it stays under a looser one (0.05 instead of 0.01); a new finding still needs the usual bar. One that does fall under it says so ("Below the bar: more checks ran, its numbers held", or "Weaker: below the bar to stay open"), and How is this calculated? shows both bars and how many checks ran. Nights before this change replay as they were.
+- Goals: a goal in days keeps its own decimals: "at most 3.5 days" reads 3.5 d, and where it is heading 3.6 d, never "4 d" (#147).
+- Goals: a goal on a count reads in whole numbers everywhere (the brief, Home, the Business Model, Forecasts and Discover): 2,27,200 target, heading for 2,09,773, never "2,27,200.0" (#148).
+- Business Model: the Decided by Othor AI list names each record plainly ("Goal: First-year premium each month", "Number: Banca share"), never by its key (#149).
+- Signed-in Home no longer fails on an install made from the image alone: PyYAML, which the numbers-for-your-size catalogue reads, is now a runtime dependency (it was only in the development set). CI now imports every shipped module with the production dependencies alone.
+
+### Changed
+- Pages stay fast with many companies signed in at once: each night's numbers are also kept in a small page index beside the run, so Sweep, a finding, the Business Model and Edit brief open a run that isn't in memory in milliseconds instead of rebuilding it (Sweep about 450 ms → 20 ms on the sample company). A run from before this release builds its index once, on its first page. The index is a cache: it is not part of the run's ledger or replay, and deleting it is harmless.
+- othor.ai's web now runs as two processes, so one slow page no longer holds up the others. `othor web` can run several processes on one port: `--workers N` or `OTHOR_WEB_WORKERS` (default 1; othor.ai runs 2). The scheduler still runs only in `othor worker`.
+
+## [0.38.0] - 2026-11-25
+
+### Added
+- External Signals (Enterprise Edition) has many more public series to test against your numbers: about 320 in all, up from 87. Suggested for you draws on them, each with one plain reason, and the chat adds one by name (“add rainfall in Mumbai”) to the nightly test; only links that pass the test are reported. The new kinds, each with its source credited:
+  - the rupee against 29 currencies (up from 16), worked out from the European Central Bank's reference rates (free reuse with the source quoted), and the ECB's key interest rates (deposit facility, main refinancing);
+  - overnight and 10-year government bond rates of large markets, from the OECD (CC BY 4.0), each named for what it is: "US overnight interbank rate (follows the Fed's policy rate)", never a policy rate; the RBI's repo rate as before;
+  - 67 commodity prices (up from 25) from the World Bank's Pink Sheet (CC BY 4.0): crude oil, gas, coal, metals, fertilisers, grains, oils, sugar, cotton, rubber and more;
+  - demand in export markets: retail sales, factory output, construction and producer prices in the EU and its member states (Eurostat, CC BY 4.0), retail sales, factory output and lead indicators of major markets (OECD, CC BY 4.0), and imports, industrial production and retail sales of markets in South and South-East Asia, the Gulf, Latin America and Africa (World Bank Global Economic Monitor, CC BY 4.0);
+  - India's consumer prices, industrial production, exports, imports and share prices (OECD, CC BY 4.0);
+  - electricity demand and generation, India's by source and large markets' demand (Ember, CC BY 4.0);
+  - rainfall and temperature in 18 large Indian cities, beside the states' (NASA POWER, a model estimate; no restrictions on use, credit NASA LaRC POWER);
+  - India's public holidays: working days in each month from the gazetted holidays for 2023 to 2027 (Department of Personnel and Training, built in, no download).
+- Each public series is downloaded once for the whole install and shared by its companies; daily values older than five years are kept as the month's average.
+- When a source can't be reached, External Signals says which month its stored values reach, and the test goes on with them.
+- An install without internet access can take the same values from a file: `othor signals export <folder>` on a connected install, `othor signals import <folder>` on the other, with every file's checksum checked before anything is stored.
+- data.gov.in can be read with the install's own free key (`OTHOR_DATA_GOV_IN_KEY`); no series uses it yet.
+- othor.ai/learn/checks: a small picture for each check.
+
+### Changed
+- Settings: the tab where you choose the model is now called AI Model.
+
+## [0.37.0] - 2026-11-25
+
+### Added
+- Any model: Settings › Othor AI lets the super admin or an admin choose the model Othor AI writes with. Pick a provider (Claude, OpenAI, Gemini, Azure OpenAI, Mistral, DeepSeek, Groq, Together AI, OpenRouter, Ollama on your own machine, or another model server such as LM Studio, vLLM or llama.cpp) and a model, for every kind of work at once or one kind at a time. Paste the company's own key: it is kept encrypted, shown afterwards only as "Key saved", and never logged or exported. Check this model asks it one question on made-up figures and scores the answer in place; Back to the usual model undoes the choice. Every change and check is in the Audit log.
+- Work done on the company's own key or model server is outside the monthly AI allowance; it is still listed on AI usage.
+- Chat answers and brief rewrites: the model now writes each figure as a placeholder and Othor AI puts the computed number in, so a right number can no longer appear under the wrong label ("3 were suppressed" when 3 were clean). A sentence with a number of its own is dropped, and each Action plan line may use only its own figures (#122).
+- Each company's browser tab shows its own icon: its logo, or the first two letters of its name. When a logo won't read at tab size, Settings › Company › Logo suggests the letters, and the owner applies them.
+- Suggested numbers for the company's size and goals (#76): from the last 12 months' net revenue Othor AI places the company in a size band and suggests the numbers companies of that size usually watch, the ones serving an off-track goal first, each with its figure and one plain reason. They show in the Business Model's To review, on Home's Suggested by Othor AI (with Not now and Undo) and under the checklist item they complete. Accept adds the number; one that needs another source offers Connect a source.
+- Action plan and briefs link to each other (#110): Home's Action plan card names the briefs its lines come from, each line opens its own brief's Action plan, and a brief's Action plan leads back to today's plan across your briefs.
+- Next 4 weeks opens Forecasts (#109): a week on Home opens that week on Forecasts, and the brief's What's ahead links each number to its chart.
+- `make demo` ends with a one-time sign-in link (development only, 15 minutes, used once), and the demo company is in US dollars and New York time by default (`CURRENCY=INR` for rupees and India time).
+- The README opens with a 30-second tour of the real app.
+- othor.ai/demo: two new videos, People and Audit log.
+
+### Fixed
+- Sweep: a widening spread now says the week it really widened ("Dispatch time spread at Coimbatore tripled from 14 Sep"). Before, it always said the first week the check looks at (8 weeks before the night), so the date slid a week every week and could fall before the spread began; the rupees at risk run from the real start.
+- A sentence from Othor AI that says a number moved the wrong way, or miscounts what ran, is dropped (chat) or keeps the template's words (brief) (#120).
+- A number drafted from an uploaded workbook now finds its tab when the same workbook is connected as Google Sheets, instead of staying "No source" (#116).
+- Times on partly refreshed parts of a page (People's Last signed in, Home's Updated line) use the company's own time zone (#125).
+- People's suggestion to invite someone names each area in plain words, not its internal key (#126).
+- README and CONTRIBUTING: on Windows, `make demo` needs a WSL 2 terminal (#127). `make seed` follows the sample databases' port settings, and `make dev` and `othor demo` print the ports in use.
+
+## [0.36.0] - 2026-11-25
+
+### Added
+- External Signals: Othor AI suggests the outside numbers worth testing for your business, from the Business Model, each with one plain reason and the numbers it could lead: "Suggested for you" with Add to the test and Not now, a card on Home, and "what outside things affect my business?" in the chat. A catalogue of 87 public series (World Bank Pink Sheet commodities, ECB exchange rates, NASA POWER rainfall and temperature by state, the RBI repo rate), each with its licence and credit; only links that pass the test are reported. A new satellite-dish icon for External Signals.
+- Settings › Company: rename the company in place; the web address stays the same; recorded in the Audit log.
+- Blog: a post's pictures open full size on a click.
+
+### Fixed
+- The numbers check reads a date written "1 Nov 2026" against the 2026-11-01 it came from, so correct chat answers are no longer dropped (#123).
+- The chat no longer takes the text "null" as a tool name (#119).
+- The brief's (i) says how many sentences Othor AI reworded, instead of "rewritten" when nothing changed (#124).
+- The company address is lowercased as you type (#115).
+- The Audit log names the person removed from People.
+- Names like TiO2, DSO and GST keep their capitals inside sentences.
+- Look back's Read again reads today's years, not the old report's (#121).
+- The website's editions table: the Audit log and its CSV are in every edition.
+
+## [0.35.3] - 2026-11-25
+
+### Fixed
+- The numbers check on every model answer now reads numbers written as words: "Fourteen customers" is checked as 14, "twenty-one" as 21, "three hundred" as 300, so a number a model spells out can no longer reach a brief or the chat unless it was computed (#118). A lone "one" stays a word.
+
+## [0.35.2] - 2026-11-25
+
+### Changed
+- Look back on young data: with fewer than two complete financial years, a report compares the latest complete months with the same months a year earlier (e.g. Jul–Oct 2025 against Jul–Oct 2026) instead of saying it can't tell. A connected read reaches the last full month when the older year is empty; reports made before keep their numbers; the budget still needs whole years.
+- Discover: every group's dashboard, not only Collections, shows its numbers' parts on one scale, a weekday heatmap for a number kept by day, a sortable table by the first split (against the month before and the same month last year), and "By …" chips.
+
+## [0.35.1] - 2026-11-24
+
+### Fixed
+- Google Sheets: a sheet whose dates are stored as text no longer fails its nightly read ("Cannot compare values of type VARCHAR and type DATE"); the date is converted in the window as it already was in the period.
+
+## [0.35.0] - 2026-11-24
+
+### Added
+- Audit log: a page in the side menu (Setup, after AI usage) for the super admin and admins. Who did what, and when, newest first, in plain sentences: a person, Othor AI acting on someone's request ("Othor AI (asked by …)"), System or Othor support. The object is linked to its screen; a row with a before and after opens its details in place. Filters by who, kind and time, "Load more" in pages of 50, and Download CSV of the filtered rows. Othor AI's own drafting shows as "Othor AI wrote: …" with the task and its result, never the text.
+- Othor AI chat: a read-only tool answers "who changed … last week?" from the same log.
+
+### Changed
+- Events now name the person by their user id where some actions wrote their email address; older rows still read as the person. A change Othor AI applies on someone's request is recorded as Othor AI acting for that person, and applying a draft Othor AI wrote says so.
+- The export's `events.csv` gains plain "who" and "what" columns, worded as the Audit log shows them.
+
+## [0.34.1] - 2026-11-24
+
+### Changed
+- Sweep: a lasting step in a number that isn't in rupees (truck fill, stock in kilograms, a count) now carries the rupees it puts at risk, through the number named as what it puts at risk (the same link the spread check uses), shown as "at risk". Before, such steps had no money and fell under the money floor. A number with no such link is unchanged.
+- Business Model: a customer-like breakdown can say what one is called and what it does (for example partner banks that issue policies), so "still marked active but gone quiet" findings and their Action plan lines read in the business's own words. Without them, nothing changes.
+
+## [0.34.0] - 2026-11-24
+
+### Added
+- People (Enterprise Edition): invite admins by email from Settings › People, with Resend, Revoke and Remove; the invitation's link opens a join page and a 6-digit code signs the person in. Othor AI suggests brief recipients who aren't in yet.
+
+### Changed
+- The person who set up the company is shown as the Super admin. Only the super admin can close the company, change the licence, export everything or remove people.
+- The "Drafts only" note is no longer shown on any screen. Nothing Othor AI drafts changes anything until someone applies it, as before.
+
+### Fixed
+- Sign-in: after entering the code, the email step no longer shows again when the code form was sent twice (a paste or autofill, then Continue or Enter); it was most visible in Firefox.
+
+## [0.33.13] - 2026-11-24
+
+### Changed
+- Morning Brief: a quiet night's title gives the count and how long ("Nothing new came up; 3 items from last week are still open, the largest for 12 days."); the items are listed below it.
+- Action plan: a watch's name reads as a phrase ("dispatch time spread for Coimbatore", "the share of receivables over 60 days") and the limit as "above your limit of 1.6 days".
+- Data sources: the table's cells stay on one line, and Tables, Schemas and Manage line up down the rows.
+
+### Fixed
+- Google Sheets: choosing a spreadsheet works in Edge and Firefox too ("The API developer key is invalid" before).
+- Morning Brief: the sentences under the title no longer say the top item twice when the title leads with another one.
+- Sweep: a widening spread still open keeps the start it was first reported with ("doubled from 17 Aug"), instead of a start that moved a week later every week.
+
 ## [0.33.12] - 2026-11-24
 
 ### Added

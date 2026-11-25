@@ -79,7 +79,7 @@ def test_edit_chat_without_a_model(env: Env, sample, need_sources, tmp_path):
     page = env.client.get(h + url).text
     # no choice buttons until Suggest edits (owner, 18 Nov 2026)
     assert "Fix with Othor AI" in page and "Change the threshold" not in page
-    assert "Suggest edits" in page and "Later" not in page and "Drafts only." in page
+    assert "Suggest edits" in page and "Later" not in page and "Drafts only." not in page
     page = env.client.get(h + url + "&edit=1").text
     assert "Change the threshold" in page and "Not available right now" in page
     # the threshold quick reply (a small form) → a card computed by the worker
@@ -307,7 +307,7 @@ def test_after_setup_review_confirm_and_fix_chat(env: Env, sample, need_sources,
     url = f"/sources?panel=chat&s={sid}&key={keys[0]}&purpose=fix"
     assert url.replace("&", "&amp;") in page
     page = env.client.get(h + url + "&edit=1").text  # the reply box opens on Suggest edits
-    assert "Fix with Othor AI" in page and "Drafts only." in page
+    assert "Fix with Othor AI" in page and "Drafts only." not in page
     assert f'name="back" value="{url.replace("&", "&amp;")}"' in page
     with svc.sf() as s, tenant_scope(cid):
         before = ontology.current_number(s)
@@ -378,7 +378,7 @@ def test_tab_fix_units_without_a_model(env: Env, tmp_path):
     assert "Values are in another unit" not in page and "Suggest edits" in page
     page = env.client.get(h + check + "?fix=1&edit=1").text
     assert "Values are in another unit" in page and "Not available right now" in page
-    assert "Drafts only." in page
+    assert "Drafts only." not in page
     r = post_page(
         env,
         check + "/shape",

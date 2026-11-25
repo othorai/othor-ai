@@ -51,7 +51,7 @@ def table_input(t: SourceTable, cols: list[SourceColumn]) -> dict[str, Any]:
 
 def run(ctx: WorkerContext, job: Job) -> None:
     gw: ModelGateway | None = ctx.gateway
-    if gw is None or gw.provider.name == "template":
+    if gw is None:
         return
     source_id = uuid.UUID(job.payload["source_id"])
     with ctx.sf() as s:
@@ -76,7 +76,7 @@ def run(ctx: WorkerContext, job: Job) -> None:
         personal = tuple(sorted({c.name for cs in cols.values() for c in cs if c.is_personal}))
         company_id = tables[0].company_id if tables else None
         items = [(t.id, table_input(t, cols.get(t.id, []))) for t in tables]
-    if company_id is None:
+    if company_id is None or not gw.has_model(company_id, PROMPT[0]):
         return
     for i in range(0, len(items), BATCH):
         batch = items[i : i + BATCH]

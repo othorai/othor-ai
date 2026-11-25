@@ -67,7 +67,7 @@ def test_the_tiles_stakes_and_forecasts_are_computed_not_written():
     ]
     assert [(s["value"], s["unit"]) for s in b["stakes"]] == [
         ("₹1.4 Cr", ""),
-        ("₹4.59 Cr", "at risk"),
+        ("₹4.06 Cr", "at risk"),
         ("₹3.6 Cr", ""),
         ("₹5.84 L", "/ month"),
     ]

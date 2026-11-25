@@ -85,8 +85,17 @@ def compute(inp: Inputs) -> Outputs:
             "stale_metrics": sorted({p.metric for p in points if p.stale}),
         },
         "headline": _headline(spec, baselines),
+        # #76: net revenue over the last 12 complete months, its band and each band number's
+        # computed figure; from the points above, so replay writes the same
+        "size": _size(spec, points, inp.run_date),
     }
     return Outputs(points, baselines, questions, doc)
+
+
+def _size(spec: dict[str, Any], points: list[Point], run_date: dt.date) -> dict[str, Any] | None:
+    from othor.ontology import size
+
+    return size.of(spec, points, run_date)
 
 
 # --- 0. allocations add up exactly (decided 4 Nov) --------------------------------------------

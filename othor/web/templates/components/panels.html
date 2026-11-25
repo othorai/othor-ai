@@ -1,19 +1,13 @@
 {#- SPDX-License-Identifier: Apache-2.0 -#}
 {# Side panels (docs/07): 480 px AI chat (page stays live) and 680 px wide (scrim). #}
-{% set DRAFT_NOTE = "Drafts only. Numbers are computed, not written. Nothing changes until you apply." %}
-
-{# Where Othor AI drafts a change the owner applies (non-negotiable 6, owner 12 Nov 2026, option C):
-   one quiet line, the full sentence behind the (i). Not on panels where the answers are the
-   owner's (the questions panel, the setup decisions). #}
-{% macro draft_note(id="draft-note") -%}
-<p class="draft-note">Drafts only · nothing changes until you apply <span class="pop" x-data="popover"><button class="info" type="button" aria-label="About drafts" aria-controls="{{ id }}" aria-expanded="false">i</button><span class="pop-body" role="tooltip" id="{{ id }}">{{ DRAFT_NOTE }}</span></span></p>
-{%- endmacro %}
+{# 24 Nov 2026 (owner): no "Drafts only" note on any screen; the rule stays (nothing Othor AI
+   drafts goes live until applied), only the visible note is gone #}
 
 {% macro chat_panel(title, subject=None, inline=False) -%}
 <aside class="panel chat{{ ' in-page' if inline else '' }}" aria-label="{{ title }}">
   <header class="panel-head"><div><p class="strong">{{ title }}</p>{% if subject %}<p class="hint">{{ subject }}</p>{% endif %}</div><button class="btn quiet" type="button" aria-label="Close">×</button></header>
   <div class="panel-body">{{ caller() }}</div>
-  <div class="composer"><input class="input" placeholder="Ask or tell Othor AI…" aria-label="Ask or tell Othor AI">{{ draft_note("draft-note-chat") }}</div>
+  <div class="composer"><input class="input" placeholder="Ask or tell Othor AI…" aria-label="Ask or tell Othor AI"></div>
 </aside>
 {%- endmacro %}
 

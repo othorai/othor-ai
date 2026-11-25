@@ -125,6 +125,97 @@ def at_stake(
     return None, None
 
 
+# #138 (owner, 25 Nov 2026): a change in a number with no ₹ of its own puts at risk the share of
+# its linked ₹ that the size of the move says, never more than this share of it
+MAX_AT_RISK = 0.5
+SHARE_UNITS = ("percent", "ratio")
+
+
+def at_risk_fraction(unit: str, before: float, after: float) -> tuple[float | None, str]:
+    """The share of the linked ₹ a move from `before` to `after` puts at risk, uncapped, and how
+    it was read: a share of a whole (a percent or ratio with both levels inside 0–1) moves in
+    points of the whole ("share": 3.2% → 3.8% is 0.6% of the linked ₹); anything else (a count,
+    metres, a duration, a ratio over 1) by its move as a share of where it was ("relative":
+    1,000 → 800 orders is 20%). From a level of 0 there is no share to read: None, the money
+    can't be sized (owner, 25 Nov 2026)."""
+    move = abs(after - before)
+    if unit in SHARE_UNITS and 0 <= before <= 1 and 0 <= after <= 1:
+        return move, "share"
+    if before == 0:
+        return (None if move > 0 else 0.0), "relative"
+    return move / abs(before), "relative"
+
+
+def good_direction(ctx: Context, metric: str) -> tuple[str, list[str]] | None:
+    """The way the owner wants `metric` to move, where it is known: its goals' direction (at
+    least: up; at most: down) and the goals' keys, when every goal on it agrees; else None. (No
+    metric carries a direction setting of its own yet.)"""
+    goals = [g for g in ctx.spec.get("goals") or [] if g.get("metric") == metric]
+    ways = {"up" if g.get("direction", "at_least") == "at_least" else "down" for g in goals}
+    if len(ways) != 1:
+        return None
+    return ways.pop(), sorted(str(g.get("key") or "") for g in goals)
+
+
+def capped(fraction: float) -> float:
+    return min(fraction, MAX_AT_RISK)
+
+
+def share_text(fraction: float) -> str:
+    """'0.6%', '23.4%', '50%': one decimal, a whole number without it."""
+    from decimal import Decimal
+
+    t = str((Decimal(str(fraction)) * 100).quantize(Decimal("0.1")))
+    return (t[:-2] if t.endswith(".0") else t) + "%"
+
+
+def at_stake_of_change(
+    ctx: Context,
+    s: Series,
+    start: dt.date,
+    end: dt.date,
+    before: float,
+    after: float,
+    *,
+    scaled: bool = True,
+) -> tuple[float | None, str, dict[str, Any]]:
+    """The ₹ a change in a non-₹ number puts at risk, over [start, end): its linked `at_stake` ₹
+    (`at_stake`) times the share the move says (`at_risk_fraction`), capped at MAX_AT_RISK; with
+    its basis and the parameters provenance shows (the linked ₹, the scaling and the cap). A move
+    the way the number's goals want puts none at risk; a move from 0 can't be sized (None, with
+    `at_risk_scaling` "from_zero"; owner, 25 Nov 2026). Not `scaled` (changepoint version 2, runs
+    made before #138): the linked ₹ in full, whatever the direction."""
+    from othor.engine.detectors.base import PAISA, dec
+
+    got, target = at_stake(ctx, s, start, end)
+    if got is None or target is None:
+        return None, "", {}
+    since = f"{s.label()} since {start.isoformat()}"
+    if not scaled:
+        return got, f"{target} at risk for {since}", {}
+    params: dict[str, Any] = {"linked_metric": target, "linked_money": dec(got, places=PAISA)}
+    good = good_direction(ctx, s.metric)
+    way = "up" if after > before else "down"
+    if good is not None and after != before:
+        keys = ", ".join(good[1])
+        if way == good[0]:
+            params["at_risk_direction"] = f"good: {way}, as the goal {keys} wants"
+            return None, "", params
+        params["at_risk_direction"] = f"bad: {way}, against the goal {keys}"
+    raw, how = at_risk_fraction(unit(ctx, s.metric), before, after)
+    if raw is None:
+        params["at_risk_scaling"] = "from_zero"
+        return None, f"the money at risk can't be sized: {s.label()} started from 0", params
+    used = capped(raw)
+    params |= {
+        "at_risk_scaling": how,
+        "at_risk_fraction": dec(raw),
+        "at_risk_cap": str(MAX_AT_RISK),
+        "at_risk_fraction_used": dec(used),
+    }
+    return got * used, f"{share_text(used)} of {target} at risk for {since}", params
+
+
 def weeks_between(a: dt.date, b: dt.date) -> int:
     return max(0, (b - a).days // 7)
 

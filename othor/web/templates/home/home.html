@@ -3,7 +3,6 @@
 {% from "components/ui.html" import el %}
 {% from "components/buttons.html" import button, link, run_again, ai_button, top_menu, menu_link %}
 {% from "components/blocks.html" import banner, toast, empty_state, page_title %}
-{% from "components/panels.html" import DRAFT_NOTE, draft_note %}
 {% from "components/forms.html" import action_form, text_area %}
 {% from "components/home.html" import home_card, question_row, qp_steps, qp_why, qp_pick, qp_nav, qp_found, qp_decided, confidence_pill, checks_strip, section_label, suggested_section, brief_more, sweep_box, sweep_card, sources_table, health_button, lights_panel, trial_chip, intel_button %}
 {% from "components/brief.html" import nb_head, nb_ai_tag, nb_busy %}
@@ -56,12 +55,15 @@
 
   {# Suggested by Othor AI (owner, 20 Nov 2026): cards the plug-ins offer (Discover's groups,
      Look back's reports), after the briefs; hidden when none is offered #}
-  {% set sg = slot_cards("home.suggested") %}
+  {% set sg = slot_cards("home.suggested", lead=size_lead) %}
   {% if sg %}{{ suggested_section(sg, csrf_token) }}{% endif %}
 
   {% if weather and outlook %}
   {% call el("section", attrs={"aria-label": "Next 4 weeks"}) %}
-    {{ section_label("Next 4 weeks") }}
+    {# #109 (owner, 25 Nov 2026): with Forecasts installed, the heading opens it; each card keeps
+       its quick panel here, which opens that week there #}
+    {% if outlook.forecasts %}{% call el("div", layout="flex items-baseline justify-between gap-12") %}{{ section_label("Next 4 weeks") }}{{ link("Open Forecasts →", outlook.forecasts) }}{% endcall %}
+    {% else %}{{ section_label("Next 4 weeks") }}{% endif %}
     {{ weather_outlook(outlook) }}
   {% endcall %}
   {% endif %}

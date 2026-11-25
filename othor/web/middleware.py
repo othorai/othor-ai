@@ -186,7 +186,7 @@ class Edge:
         token = CURRENT.set(stats)
         from othor.core import fmt
 
-        money_token = fmt.request_holder()  # the company's currency, once known (M15.6)
+        money_token = fmt.request_holder()  # the company's currency, charts, zone, once known
         scope.setdefault("state", {})["request_id"] = rid
         path: str = scope.get("path", "")
         host = headers.get(b"host", b"").decode("latin-1").split(":")[0].lower().rstrip(".")

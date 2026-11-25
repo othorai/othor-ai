@@ -45,9 +45,21 @@ class Settings(BaseSettings):
     public_scheme: Literal["http", "https"] = "https"
     public_port: int | None = None
 
-    model_provider: Literal["template", "anthropic", "openai", "local"] = "template"
+    model_provider: Literal[
+        "template", "anthropic", "ollama", "openai_compat", "openai", "local"
+    ] = "template"
+    # openai_compat (Any model, 0.37): which preset (openai · gemini · azure · mistral · deepseek ·
+    # groq · together · openrouter · local; othor.ai.providers.presets). Azure and local take
+    # OTHOR_MODEL_BASE_URL; the others have their own
+    model_preset: str = "openai"
     model_id: str = ""
     model_api_key: SecretStr = SecretStr("")
+    # ollama (a local model on the customer's own machine, 24 Nov 2026): where it listens, its
+    # context window in tokens, and its thinking ("" = the model's default · off · low · medium ·
+    # high)
+    model_base_url: str = "http://localhost:11434"
+    model_context: int = 32768
+    model_think: Literal["", "off", "low", "medium", "high"] = ""
 
     google_client_id: str = ""
     google_client_secret: SecretStr = SecretStr("")
@@ -96,6 +108,10 @@ class Settings(BaseSettings):
     # the proxy in front that sets X-Forwarded-*: AWS's load balancer, or Caddy in the self-host
     # compose (M20.4); both append the address they saw, so the last one is the client
     trust_proxy: Literal["none", "fly", "alb", "caddy"] = "none"
+    # web processes behind one port (`othor web`; load test, 25 Nov 2026): othor.ai runs 2 on
+    # its 2 vCPUs (deploy/aws/host/compose.prod.yml); 1 elsewhere and always with --reload. The
+    # scheduler never runs in the web, only in `othor worker`
+    web_workers: int = Field(default=1, ge=1, le=16)
     # which image this is (M20.4): core (othor) · ee (othor-ee) · hosted (othor.ai) · dev
     edition: Literal["core", "ee", "hosted", "dev"] = "dev"
     # the worker watched from outside it (M11b §6): check-in URLs (Healthchecks.io or a

@@ -1,0 +1,72 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{#- Settings › AI Model (Any model, 0.37): which model writes Othor AI's words, for every kind of
+   work or one kind each. Change opens the row in place; the provider list redraws the form for
+   that provider; Save, Check this model and Back to the usual model swap the pane. The key is
+   never shown back: a saved one shows as "Key saved". -#}
+{% from "components/ui.html" import el %}
+{% from "components/forms.html" import text_input, select %}
+{% from "components/buttons.html" import button %}
+{% macro now_line(r) -%}
+{%- if r.current -%}{{ r.current.label }}{{ (" · " ~ r.current.model_id) if r.current.model_id else "" }}{{ " · key saved" if r.current.key_saved else "" }}
+{%- elif r.same -%}Same as every kind of work
+{%- else -%}{{ m.install.label }}{{ (" · " ~ m.install.model_id) if m.install.model_id else "" }} · Othor AI's usual model
+{%- endif -%}
+{%- endmacro %}
+{% call el("div", layout="flex flex-col gap-56", attrs={"id": "model-pane"}) %}
+{% call el('section', 'section lines', attrs={"aria-label": "Othor AI"}) %}
+  {% call el("div", "section-head") %}Othor AI{% endcall %}
+  {% for r in m.rows %}
+  {% call el('div', 'section-row', attrs={"id": "model-" ~ r.kind}) %}
+    {% call el("div", layout="flex flex-col gap-4 min-w-0") %}
+      {% call el('p', 'title') %}{{ "Writes with" if r.kind == "all" else r.label }}{% endcall %}
+      {% call el('p', 'sub') %}{% if r.kind != "all" %}{{ r.note }} · {% endif %}{{ now_line(r) }}{% endcall %}
+    {% endcall %}
+    {% if m.can_edit and not r.editing %}
+    {% call el("div", layout="flex items-center gap-8 flex-wrap") %}
+      {% if r.current and r.current.provider != "template" %}{{ button("Check this model", "soft", "sm", attrs={"hx-post": "/settings/model/check", "hx-vals": '{"kind": "' ~ r.kind ~ '"}', "data-busy": "Checking…", "hx-target": "#model-pane", "hx-swap": "outerHTML"}) }}{% endif %}
+      {{ button("Change", "", "sm", attrs={"hx-get": "/settings/model?edit=" ~ r.kind, "hx-target": "#model-pane", "hx-swap": "outerHTML"}) }}
+      {% if r.current %}{{ button("Back to the usual model" if r.kind == "all" else "Same as every kind", "quiet", "sm", attrs={"hx-post": "/settings/model/reset", "hx-vals": '{"kind": "' ~ (r.kind if r.kind != "all" else "") ~ '"}', "hx-target": "#model-pane", "hx-swap": "outerHTML"}) }}{% endif %}
+    {% endcall %}
+    {% endif %}
+  {% endcall %}
+  {% if r.saved %}{% call el("div", layout="py-12") %}{% call el("div", "callout ok", attrs={"role": "status"}) %}Saved. Othor AI writes with {{ r.current.label if r.current else m.install.label }}{{ (" for " ~ r.label | lower) if r.kind != "all" else "" }} from now on.{% endcall %}{% endcall %}{% endif %}
+  {% if r.check %}
+  {% call el("div", layout="py-12") %}{% call el("div", "callout " ~ ("ok" if r.check.ok else "err"), layout="flex flex-col gap-4", attrs={"role": "status"}) %}
+    {% call el("b") %}{{ r.check.title }}{{ (" · " ~ r.check.seconds ~ " s") if r.check.seconds else "" }}{% endcall %}
+    {% call el("span") %}{{ ("“" ~ r.check.text ~ "”") if r.check.ok else r.check.text }}{% endcall %}
+  {% endcall %}{% endcall %}
+  {% endif %}
+  {% if r.editing %}{% set f = r.form %}
+  {% call el("form", layout="flex flex-col gap-12 py-16", attrs={"hx-post": "/settings/model", "hx-sync": "this:drop", "autocomplete": "off", "hx-target": "#model-pane", "hx-swap": "outerHTML"}) %}
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <input type="hidden" name="kind" value="{{ r.kind }}">
+    {% call el("div", layout="grid gap-12 md:grid-cols-2") %}
+      {{ select("provider", m.providers, f.provider, label="Provider", id="provider-" ~ r.kind, attrs='hx-get="/settings/model" hx-vals=\'{"edit": "' ~ r.kind ~ '"}\' hx-include="this" hx-target="#model-pane" hx-swap="outerHTML"') }}
+      {% if f.preset.wire != "none" %}
+      {{ text_input("model_id", "Model", value=f.model_id, placeholder=(f.preset.models[0] if f.preset.models else "the model's name"), error=f.error[1] if f.error and f.error[0] == "model_id" else None, attrs='list="models-' ~ r.kind ~ '" spellcheck="false" maxlength="120"') }}
+      <datalist id="models-{{ r.kind }}">{% for mid in f.preset.models %}<option value="{{ mid }}"></option>{% endfor %}</datalist>
+      {% endif %}
+      {% if f.preset.needs_url %}
+      {{ text_input("base_url", "Address", value=f.base_url, placeholder=f.preset.url_hint, error=f.error[1] if f.error and f.error[0] == "base_url" else None, attrs='spellcheck="false" maxlength="300" inputmode="url"') }}
+      {% endif %}
+      {% if f.preset.needs_key or f.preset.key == "local" %}
+      {{ text_input("api_key", "Key" if f.preset.needs_key else "Key (if your server needs one)", type="password", placeholder=("Key saved · paste a new one to replace it" if f.key_saved else "Paste your " ~ f.preset.label ~ " key"), error=f.error[1] if f.error and f.error[0] == "api_key" else None, attrs='autocomplete="new-password" spellcheck="false" maxlength="400"') }}
+      {% endif %}
+    {% endcall %}
+    {% if f.error and f.error[0] in ("provider", "kind") %}{% call el("p", "field-error", attrs={"role": "alert"}) %}{{ f.error[1] }}{% endcall %}{% endif %}
+    {% if f.preset.wire == "none" %}{% call el("p", "hint") %}Othor AI writes with its own templates: every page, brief and email keeps working, without written summaries and chat answers.{% endcall %}{% endif %}
+    {% call el("div", layout="flex items-center gap-8") %}
+      {{ button("Save", "primary", "sm", type="submit", attrs={"data-busy": "Saving…"}) }}
+      {{ button("Cancel", "quiet", "sm", attrs={"hx-get": "/settings/model" ~ ("?split=1" if m.split else ""), "hx-target": "#model-pane", "hx-swap": "outerHTML"}) }}
+    {% endcall %}
+  {% endcall %}
+  {% endif %}
+  {% endfor %}
+  {% if m.can_edit and not m.split %}
+  {% call el('div', 'section-row') %}
+    {% call el("div", layout="flex flex-col gap-4 min-w-0") %}{% call el('p', 'title') %}A different model for one kind of work{% endcall %}{% call el('p', 'sub') %}Understanding your business · Writing your reports · Answering you{% endcall %}{% endcall %}
+    {{ button("Choose per kind", "", "sm", attrs={"hx-get": "/settings/model?split=1", "hx-target": "#model-pane", "hx-swap": "outerHTML"}) }}
+  {% endcall %}
+  {% endif %}
+{% endcall %}
+{% endcall %}

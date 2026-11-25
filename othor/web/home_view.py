@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
@@ -43,6 +44,7 @@ KIND_LABEL = {
     "breakdowns": "Breakdowns",
     "areas": "Areas",
     "duplicate_metric": "Same number twice",
+    "size_number": "New number",  # #76
 }
 CONFIDENCE = {"high": "High", "medium": "Medium", "low": "Low"}
 
@@ -605,7 +607,19 @@ def proposal_rows(s: Session) -> list[dict[str, Any]]:
     newest: dict[str, Proposal] = {}
     for p in rows:
         newest[twin_key(p)] = p
-    return [proposal_row(p) for p in rows if newest[twin_key(p)] is p]
+    return [proposal_row(p) for p in review_order(rows) if newest[twin_key(p)] is p]
+
+
+def review_order(rows: Sequence[Proposal]) -> list[Proposal]:
+    """#76: the numbers suggested for the company's size first, in their rank (the lead line
+    sits above them), then every other proposal as it came (a stable sort)."""
+
+    def key(p: Proposal) -> tuple[int, int]:
+        if p.kind == "size_number":
+            return (0, int((p.evidence or {}).get("rank", 99)))
+        return (1, 0)
+
+    return sorted(rows, key=key)
 
 
 def twin_key(p: Proposal) -> str:
@@ -657,6 +671,8 @@ def proposal_row(p: Proposal) -> dict[str, Any]:
         frm = "Sweep · your numbers"
     elif p.kind == "areas":
         frm = "Business Model · your numbers"
+    elif p.kind == "size_number":
+        frm = "Othor AI · for your size"
     elif p.kind in PROPOSALS:
         frm = PROPOSALS[p.kind].from_line(p)
     else:
@@ -670,7 +686,14 @@ def proposal_row(p: Proposal) -> dict[str, Any]:
         "from": frm,
         "confidence": CONFIDENCE.get(ev.get("confidence", ""), "Medium"),
         "status": p.status,
+        **(size_row(p) if p.kind == "size_number" else {}),
     }
+
+
+def size_row(p: Proposal) -> dict[str, Any]:
+    from othor.ontology.size_numbers import row_extra
+
+    return row_extra(p)
 
 
 def origin_of(q: Question, in_briefs: set[str]) -> Origin:
@@ -706,14 +729,12 @@ def _todo(s: Session, today: dt.date) -> Any:
 
 
 def _to_forecasts(outlook: dict[str, Any] | None) -> dict[str, Any] | None:
-    """#109 (owner, 22 Nov 2026): with the Forecasts page installed, Next 4 weeks' cards open it;
-    without it they keep their panel on Home."""
-    from othor.core import plugins
-
-    if not outlook or not any(n.key == "forecasts" for n in plugins.nav("company")):
+    """#109 (owner, 25 Nov 2026): the week cards keep their quick panel on Home (in place, rule
+    9), and the panel opens that week on Forecasts; with the Forecasts page installed the heading
+    also opens it (`forecasts`). Without it nothing changes."""
+    if not outlook or not weather_view.forecasts_on():
         return outlook
-    weeks = [{**w, "href": "/forecasts"} if w.get("href") else w for w in outlook["weeks"]]
-    return {**outlook, "weeks": weeks, "href": "/forecasts" if outlook.get("href") else None}
+    return {**outlook, "forecasts": weather_view.FORECASTS}
 
 
 def page(

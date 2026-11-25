@@ -1,8 +1,20 @@
 {#- SPDX-License-Identifier: Apache-2.0 -#}
-{#- M15.7 · the logo row in Settings; uploads and removes swap this row in place -#}
+{#- M15.7 · the logo row in Settings; uploads and removes swap this row in place. Company identity
+   1.0: a line on the browser tab's icon; when the logo won't read at tab size, the letters are
+   suggested and the owner applies them here -#}
 {% from "components/ui.html" import el %}
-{% from "components/blocks.html" import company_logo %}
-{% call el('div', 'section-row', attrs={"id": "logo-row"}) %}<div>{% call el('p', 'title') %}Logo{% endcall %}{% call el('p', 'sub') %}A square mark · on sign-in, emails, links and PDFs · PNG or JPEG, up to 1 MB{% endcall %}</div>
+{% from "components/blocks.html" import company_logo, tab_icon_img %}
+{% from "components/buttons.html" import button %}
+{% call el('div', 'section-row', attrs={"id": "logo-row"}) %}<div>{% call el('p', 'title') %}Logo{% endcall %}{% call el('p', 'sub') %}A square mark · on sign-in, emails, links and PDFs · PNG or JPEG, up to 1 MB{% endcall %}
+  {% set tab = tab_line %}{% if tab %}{% call el("div", layout="flex items-center flex-wrap gap-8 mt-8", attrs={"id": "tab-line"}) %}{{ tab_icon_img(tab.url) }}
+    {% if tab.reason %}{% call el('p', 'sub') %}Your logo is {{ tab.reason }} · the letters {{ tab.letters }} read better there{% endcall %}
+      {{ button("Use the letters", "", "sm", attrs={"hx-post": "/settings/tab-icon", "hx-vals": '{"choice": "letters"}', "hx-target": "#logo-row", "hx-swap": "outerHTML"}) }}
+    {% elif tab.kind == "letters" %}{% call el('p', 'sub') %}The browser tab shows the letters {{ tab.letters }}{% endcall %}
+      {% if tab.can_switch %}{{ button("Use the logo", "quiet", "sm", attrs={"hx-post": "/settings/tab-icon", "hx-vals": '{"choice": "logo"}', "hx-target": "#logo-row", "hx-swap": "outerHTML"}) }}{% endif %}
+    {% else %}{% call el('p', 'sub') %}The browser tab shows your logo{% endcall %}
+      {% if tab.can_switch %}{{ button("Use the letters", "quiet", "sm", attrs={"hx-post": "/settings/tab-icon", "hx-vals": '{"choice": "letters"}', "hx-target": "#logo-row", "hx-swap": "outerHTML"}) }}{% endif %}
+    {% endif %}
+  {% endcall %}{% endif %}</div>
   {% call el("div", layout="flex items-center gap-8") %}{{ company_logo(company, "md") }}
     {% call el("form", layout="relative", attrs={"hx-post": "/settings/logo", "hx-encoding": "multipart/form-data", "hx-target": "#logo-row", "hx-swap": "outerHTML"}) %}{% call el('label', 'btn sm', layout='relative') %}{{ "Replace" if company.logo_sha else "Upload" }}{{ el('input', 'drop-input', attrs='type="file" name="file" data-autosubmit aria-label="Choose a logo" accept="image/png,image/jpeg"') }}{% endcall %}{% endcall %}
     {% if company.logo_sha %}{% call el("button", "btn sm quiet", attrs={"type": "button", "hx-post": "/settings/logo/remove", "hx-target": "#logo-row", "hx-swap": "outerHTML"}) %}Remove{% endcall %}{% endif %}
@@ -10,3 +22,5 @@
 {% endcall %}
 {% from "components/blocks.html" import toast as toast_note %}
 {% if toast %}{% call el("div", "toast-dock", attrs='id="toast-dock" aria-live="polite" hx-swap-oob="innerHTML"') %}{{ toast_note(toast) }}{% endcall %}{% endif %}
+{#- the tab's own icon changes at once, without a reload -#}
+{% if tab_icon_oob %}{% from "components/blocks.html" import tab_icon_links %}{{ tab_icon_links(tab_icon_oob, oob=True) }}{% endif %}

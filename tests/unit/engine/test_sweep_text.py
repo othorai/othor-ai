@@ -120,3 +120,38 @@ def test_a_step_says_since_when_it_held():
 def test_the_same_finding_gives_the_same_text():
     for f in FIX["findings"]:
         assert sweep_text.words(f, SPEC) == sweep_text.words(json.loads(json.dumps(f)), SPEC)
+
+
+def _with_words(f: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """The 1 Nov missing-records finding, its entity named the way an insurer would (an insurance
+    pilot, 24 Nov 2026): partner banks that issue policies, not customers that invoice."""
+    import copy
+
+    spec = copy.deepcopy(SPEC)
+    key = f["family"].split(":", 1)[1]
+    spec.setdefault("probes", {}).setdefault("entities", {}).setdefault(key, {})["words"] = {
+        "noun": "partner bank",
+        "plural": "partner banks",
+        "did": "issued a policy",
+        "doing": "issuing policies",
+        "event": "policy",
+    }
+    return f, spec
+
+
+def test_an_entity_can_carry_its_own_words():
+    f, spec = _with_words(BY[("missing_records", None)])
+    group = sweep_text.words(f, spec)
+    assert group["title"] == (
+        "14 partner banks still marked active haven’t issued a policy in 90+ days"
+    )
+    assert "invoice" not in group["why_unseen"].lower() and "ordering" not in group["why_unseen"]
+    assert group["rows"]["headers"][:2] == ["Partner bank", "Last policy"]
+    assert group["rows"]["noun"] == "partner banks"
+    one, spec = _with_words(BY[("missing_records", "Ravira Exports")])
+    nd = sweep_text.words(one, spec)
+    assert nd["title"] == "Ravira Exports stopped issuing policies on 9 Oct"
+    # without words: today's wording, unchanged
+    assert sweep_text.words(BY[("missing_records", None)], SPEC)["title"] == (
+        "14 customers still marked active haven’t invoiced in 90+ days"
+    )

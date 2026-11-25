@@ -22,6 +22,9 @@ document.addEventListener("click", async (e) => {
     new google.picker.PickerBuilder()
       .addView(view)
       .setOAuthToken(token).setDeveloperKey(form.dataset.apiKey).setAppId(form.dataset.appId)
+      // our address told to Google outright: Edge's and Firefox's privacy protections strip the
+      // referrer the API key's website restriction checks, so only Chrome worked (#113, 24 Nov)
+      .setOrigin(window.location.origin)
       .setCallback((data) => {
         if (data.action !== google.picker.Action.PICKED) return;
         form.action = `/sources/${btn.dataset.sid}/files`;

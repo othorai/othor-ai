@@ -6,7 +6,6 @@
 {% from "components/ui.html" import el %}
 {% from "components/forms.html" import action_form %}
 {% from "components/buttons.html" import button %}
-{% from "components/panels.html" import draft_note %}
 
 {% macro source_tag(t) -%}
 {% if t %}<span class="oc-tag"><svg class="icon" aria-hidden="true"><use href="{{ asset('icons/sprite.svg') }}#sources"></use></svg>{{ t.plain }}{% if not t.same %} ({{ t.source }}){% endif %} › <code>{{ t.table }}</code></span>{% endif %}
@@ -61,7 +60,7 @@
 {% macro oc_shell(title, close, sub="", id="othor-chat", poll=None, scrim=True) -%}
 {% if scrim %}<a class="scrim" href="{{ close }}" aria-label="Close"></a>{% endif %}
 <aside class="panel chat oc" aria-label="{{ title }}" id="{{ id }}"{% if poll %} hx-get="{{ poll }}" hx-trigger="every 1s" hx-select="#{{ id }}" hx-swap="outerHTML"{% endif %}>
-  <header class="panel-head"><div><p class="panel-title">{{ title }}</p>{% if sub %}<p class="hint">{{ sub }}</p>{% endif %}<p class="hint">{{ draft_note() }}</p></div><a class="btn quiet" href="{{ close }}" aria-label="Close">×</a></header>
+  <header class="panel-head"><div><p class="panel-title">{{ title }}</p>{% if sub %}<p class="hint">{{ sub }}</p>{% endif %}</div><a class="btn quiet" href="{{ close }}" aria-label="Close">×</a></header>
   <div class="panel-body oc-thread">{{ caller("body") }}</div>
   {{ caller("composer") }}
 </aside>
@@ -109,7 +108,7 @@
 {% macro othor_chat(p, csrf) -%}
 <a class="scrim" href="{{ p.close }}" aria-label="Close"></a>
 <aside class="panel chat oc" aria-label="{{ p.title }}" id="othor-chat">
-  <header class="panel-head"><div><p class="panel-title">{{ p.title }}</p>{% if p.has_set %}<p class="hint">{{ draft_note() }}</p>{% endif %}</div><a class="btn quiet" href="{{ p.close }}" aria-label="Close">×</a></header>
+  <header class="panel-head"><div><p class="panel-title">{{ p.title }}</p></div><a class="btn quiet" href="{{ p.close }}" aria-label="Close">×</a></header>
   {# a chat not started yet: the box right under the opening (owner, 19 Nov 2026, layout A) #}
   {% set fresh = p.editing and not p.messages and p.opening %}
   <div class="panel-body oc-thread" data-at-end>
@@ -130,6 +129,8 @@
           {% if m.card.facts %}<table class="oc-table"><thead><tr><th>Number</th><th>Value</th></tr></thead><tbody>{% for k, v in m.card.facts if v != "No data yet" %}{% set vv = v.split(" · ", 1) %}<tr><td>{{ k }}</td><td>{{ vv[0] }}{% if vv | length > 1 %}<span class="oc-sub">{{ vv[1] }}</span>{% endif %}</td></tr>{% endfor %}</tbody></table>
           {% set nodata = m.card.facts | selectattr(1, "equalto", "No data yet") | map(attribute=0) | list %}{% if nodata %}<p class="oc-note">No data yet: {{ nodata | join(", ") }}.</p>{% endif %}{% endif %}
           {% for l in m.card.lines %}<p class="oc-note">{{ l }}</p>{% endfor %}
+          {# 2.1: a card's one-click actions (Add to the test): the owner's click is the apply, answered where the button was #}
+          {% if m.card.actions %}<ul class="oc-items">{% for a in m.card.actions %}<li class="oc-item"><div class="flex-1"><p><b>{{ a.text }}</b></p>{% if a.why %}<p class="oc-note">{{ a.why }}</p>{% endif %}</div><form hx-post="{{ a.url }}" hx-swap="outerHTML">{{ button(a.label, "soft", size="sm", type="submit", attrs={"data-busy": "Adding…"}) }}</form></li>{% endfor %}</ul>{% endif %}
           <details class="oc-where"><summary>How this was worked out</summary><p class="oc-note">Computed by code{% if m.card.where %} · {{ m.card.where }}{% endif %}. Othor AI only chose where to look{% if m.text %} and put it in words{% endif %}; every figure is from the computed result.</p></details>
         </div>{% endif %}
         {% if m.to_change %}{{ button("Review the change", "primary", href="/ontology?panel=othor&subject=ontology") }}{% endif %}

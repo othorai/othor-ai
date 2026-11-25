@@ -3,8 +3,9 @@
    cl.step: "name" (type the company's name) or "code" (the emailed code, then Delete). -#}
 {% from "components/ui.html" import el %}
 {% from "components/forms.html" import text_input, code_boxes %}
-{% macro close_step(cl, company, csrf) -%}
-{%- call el("div", attrs={"id": "close-step"}) -%}
+{% macro close_step(cl, company, csrf, oob=False) -%}
+{#- oob: sent beside another swap (a rename) to replace the dialog's step in place -#}
+{%- call el("div", attrs={"id": "close-step", "hx-swap-oob": "outerHTML" if oob else None}) -%}
 {%- if cl.step == "code" -%}
   {%- call el("form", layout="flex flex-col gap-16", attrs={"hx-post": "/settings/close/confirm", "hx-target": "#close-step", "hx-swap": "outerHTML", "hx-sync": "this:drop"}) -%}
     <input type="hidden" name="csrf" value="{{ csrf }}">

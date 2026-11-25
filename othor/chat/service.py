@@ -288,6 +288,7 @@ def apply(
             "version": out["version"],
             "answers": len(out["applied"]),
             "skipped": len(skipped),
+            "drafted_by": "othor_ai",  # 0.35: the owner applied Othor AI's draft
         },
     )
     return done

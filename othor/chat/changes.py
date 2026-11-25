@@ -404,6 +404,11 @@ def apply(
         action="othor_chat.applied",
         object_type="chat_thread",
         object_id=t.id,
-        after={"subject": t.subject, "version": v.number if v is not None else None, "changes": n},
+        after={
+            "subject": t.subject,
+            "version": v.number if v is not None else None,
+            "changes": n,
+            "drafted_by": "othor_ai",  # 0.35: the owner applied Othor AI's draft
+        },
     )
     return done

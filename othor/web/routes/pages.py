@@ -80,8 +80,7 @@ def signed_in(request: Request) -> Owner:
         raise Bounce(not_found(request, site))
     from othor.core import fmt
 
-    fmt.set_request_currency(site.company.currency)  # M15.6: the route formats in it
-    fmt.set_request_chart(site.company)  # v0.25 M25.1
+    fmt.set_request_company(site.company)  # currency, charts, time zone: the route formats in them
     with svc.sf() as s:
         user = s.scalars(sa.select(AppUser).where(AppUser.id == sess.user_id)).one()
     with svc.sf() as s, tenant_scope(site.company.id):
@@ -91,6 +90,31 @@ def signed_in(request: Request) -> Owner:
     owner = Owner(site, site.company, Viewer.of(user, role), sess.id)
     request.state.owner = owner  # a 404 in this request renders in the app shell (M11a)
     return owner
+
+
+def super_admin_only(request: Request) -> Owner:
+    """signed_in, for the actions only the super admin may take (0.34): close the company,
+    change the licence, export everything. An admin gets a 403, a toast for htmx."""
+    o = signed_in(request)
+    if o.viewer.is_super_admin:
+        return o
+    from othor.web.errors import is_htmx, toast
+
+    if is_htmx(request):
+        raise Bounce(toast(request, SUPER_ADMIN_ONLY, 403))
+    raise Bounce(
+        page(
+            request,
+            "pages/super_admin_only.html",
+            {**shell_ctx(o, "settings"), "text": SUPER_ADMIN_ONLY},
+            status=403,
+        )
+    )
+
+
+SUPER_ADMIN_ONLY = (
+    "Only the super admin can close the company, change the licence or export everything."
+)
 
 
 def shell_ctx(o: Owner, nav: str) -> dict[str, Any]:
@@ -191,11 +215,14 @@ def settings_page(request: Request, o: Owner, tab: str = "") -> HTMLResponse:
         assert company is not None
         export_v = _export_state(s, svc, o)
         s.expunge_all()
+    from othor.web.routes.model_settings import pane_ctx
+
     return page(
         request,
         "pages/settings.html",
         {
             **shell_ctx(o, "settings"),
+            **pane_ctx(request, o),  # Settings › AI Model (0.37)
             "company": company,
             "fy_months": FY_MONTHS,
             "currencies": CURRENCIES,
@@ -206,7 +233,9 @@ def settings_page(request: Request, o: Owner, tab: str = "") -> HTMLResponse:
             "sender": f"brief@{svc.settings.mail_from_domain}",
             "export": export_v,
             "close": _close_ctx(svc, company),
+            "address": _address(svc, company),
             "licence": licence_view(svc),
+            "tab_line": _tab_line(request, company),
             "tab": tab,  # #106: the tab to open (the template checks it against its tabs)
         },
     )
@@ -231,7 +260,7 @@ def licence_view(svc: Any, error: str = "", saved: bool = False) -> dict[str, An
 
 @router.post("/settings/licence", response_class=HTMLResponse, dependencies=[Depends(check_csrf)])
 def settings_licence(
-    request: Request, key: str = Form(""), o: Owner = Depends(signed_in)
+    request: Request, key: str = Form(""), o: Owner = Depends(super_admin_only)
 ) -> Response:
     """Paste a new licence key (M20.3): checked offline, saved to the data folder, an event."""
     from othor.core import licence
@@ -420,6 +449,111 @@ def settings_undo(request: Request, event_id: uuid.UUID, o: Owner = Depends(sign
 
 
 # ---------------------------------------------------------------------------------------------
+# The company's name (owner, 24 Nov 2026): fix a spelling at sign-up or a later change, in place.
+# The web address (slug) stays, so links and emails keep working; every page, email, PDF and
+# read-only link reads the name from the company row when it is made, so the next one has it.
+
+NAME_MIN, NAME_MAX = 2, 80
+ADMIN_ONLY = "Only the super admin or an admin can rename the company."
+
+
+def admin_only(request: Request) -> Owner:
+    """signed_in, for the super admin and admins; anyone else gets a 403 (a toast for htmx)."""
+    o = signed_in(request)
+    if o.viewer.is_admin:
+        return o
+    from othor.web.errors import toast
+
+    raise Bounce(toast(request, ADMIN_ONLY, 403))
+
+
+def _name_error(name: str) -> str | None:
+    if not name:
+        return "Enter the company name."
+    if len(name) < NAME_MIN:
+        return f"Use at least {NAME_MIN} characters."
+    if len(name) > NAME_MAX:
+        return f"Use {NAME_MAX} characters or fewer."
+    return None
+
+
+def _address(svc: Any, company: Company) -> str | None:
+    """The company's web address, which a rename never changes (none on a one-company install,
+    whose address is its own)."""
+    if svc.settings.tenancy == "single":
+        return None
+    return f"{company.slug}.{svc.settings.base_domain}"
+
+
+def _name_row(
+    request: Request,
+    o: Owner,
+    company: Company,
+    *,
+    edit: bool = False,
+    typed: str | None = None,
+    error: str | None = None,
+    saved: bool = False,
+) -> HTMLResponse:
+    """The name row; always 200, as htmx swaps only a 2xx (an error shows in the row)."""
+    svc = services(request)
+    return page(
+        request,
+        "partials/settings_name.html",
+        {
+            "company": company,
+            "user": o.viewer,
+            "address": _address(svc, company),
+            "edit": edit,
+            "typed": company.name if typed is None else typed,
+            "error": error,
+            "saved": saved,
+            "close_oob": _close_ctx(svc, company) if saved and o.viewer.is_super_admin else None,
+        },
+    )
+
+
+@router.get("/settings/name", response_class=HTMLResponse)
+def settings_name(request: Request, edit: int = 0, o: Owner = Depends(signed_in)) -> Response:
+    if edit and not o.viewer.is_admin:
+        from othor.web.errors import toast
+
+        return toast(request, ADMIN_ONLY, 403)
+    return _name_row(request, o, o.company, edit=bool(edit))
+
+
+@router.post("/settings/name", response_class=HTMLResponse, dependencies=[Depends(check_csrf)])
+def settings_name_save(
+    request: Request, name: str = Form("", alias="company_name"), o: Owner = Depends(admin_only)
+) -> Response:
+    """Rename the company: trimmed, 2–80 characters; an event with before and after."""
+    name = " ".join(name.split())
+    error = _name_error(name)
+    if error:
+        return _name_row(request, o, o.company, edit=True, typed=name, error=error)
+    svc = services(request)
+    with svc.sf() as s, tenant_scope(o.company.id):
+        company = Repo(s).get(Company, o.company.id)
+        assert company is not None
+        before = company.name
+        if name != before:
+            company.name = name
+            record_event(
+                s,
+                actor=o.viewer.id,
+                action="company.renamed",
+                object_type="company",
+                object_id=company.id,
+                before={"name": before},
+                after={"name": name},
+            )
+            s.commit()
+        s.refresh(company)
+        s.expunge(company)
+    return _name_row(request, o, company, saved=name != before)
+
+
+# ---------------------------------------------------------------------------------------------
 # The company's logo (M15.7): Settings uploads it; it is served on the company's own host (the
 # sign-in page shows it before anyone signs in), by the hash of the PNG we wrote
 
@@ -431,6 +565,7 @@ def _set_logo(request: Request, o: Owner, sha: str | None, action: str) -> None:
         assert company is not None
         before = company.logo_sha
         company.logo_sha = sha
+        company.tab_icon = None  # a new logo, or none: the tab follows it again
         record_event(
             s,
             actor=o.viewer.id,
@@ -443,13 +578,48 @@ def _set_logo(request: Request, o: Owner, sha: str | None, action: str) -> None:
         s.commit()
 
 
-def _logo_row(request: Request, o: Owner, toast: str | None = None) -> Response:
+def _tab_line(request: Request, company: Company) -> dict[str, Any] | None:
+    """Settings' line about the browser tab (Company identity 1.0): which icon it shows and, when
+    the logo won't read at tab size (simple image rules, no model), the letters suggested."""
+    from othor.core import logo
+    from othor.web import tab_icon
+
+    icon = tab_icon.choose(company)
+    if icon is None:
+        return None
+    text = tab_icon.letters(company.name)
+    reason = None
+    if company.logo_sha and icon.kind == "logo":
+        src = logo.read(services(request).settings, company.id, company.logo_sha)
+        why = tab_icon.check(src) if src else None
+        reason = tab_icon.REASONS[why] if why else None
+    return {
+        "kind": icon.kind,
+        "url": icon.url(32),
+        "letters": text,
+        "reason": reason,
+        "can_switch": bool(company.logo_sha and text),
+    }
+
+
+def _logo_row(
+    request: Request, o: Owner, toast: str | None = None, icon_changed: bool = False
+) -> Response:
+    from othor.web import tab_icon
+
     svc = services(request)
     with svc.sf() as s, tenant_scope(o.company.id):
         company = Repo(s).get(Company, o.company.id)
         assert company is not None
         s.expunge_all()
-    return page(request, "partials/settings_logo.html", {"company": company, "toast": toast})
+    ctx = {
+        "company": company,
+        "toast": toast,
+        "tab_line": _tab_line(request, company),
+        # the tab's icon changes on this page at once (no reload): the head's links, swapped
+        "tab_icon_oob": tab_icon.links(company) if icon_changed else None,
+    }
+    return page(request, "partials/settings_logo.html", ctx)
 
 
 @router.post("/settings/logo", response_class=HTMLResponse, dependencies=[Depends(check_csrf)])
@@ -465,9 +635,13 @@ async def logo_upload(
         from othor.web.errors import toast
 
         return toast(request, str(e), 400)
-    sha = logo.store(services(request).settings, o.company.id, png)
+    from othor.web import tab_icon
+
+    settings = services(request).settings
+    sha = logo.store(settings, o.company.id, png)
+    tab_icon.store_logo_icons(settings, o.company.id, sha, png)  # the tab's and the phone's
     _set_logo(request, o, sha, "company.logo_set")
-    return _logo_row(request, o, "Logo saved")
+    return _logo_row(request, o, "Logo saved", icon_changed=True)
 
 
 @router.post(
@@ -475,7 +649,36 @@ async def logo_upload(
 )
 def logo_remove(request: Request, o: Owner = Depends(signed_in)) -> Response:
     _set_logo(request, o, None, "company.logo_removed")
-    return _logo_row(request, o, "Logo removed")
+    return _logo_row(request, o, "Logo removed", icon_changed=True)
+
+
+@router.post("/settings/tab-icon", response_class=HTMLResponse, dependencies=[Depends(check_csrf)])
+def tab_icon_choose(
+    request: Request, choice: str = Form(""), o: Owner = Depends(signed_in)
+) -> Response:
+    """The browser tab shows the company's letters, or its logo again (Company identity 1.0):
+    the owner applies what Settings suggests when the logo won't read at tab size."""
+    if choice not in ("letters", "logo"):
+        return Response(status_code=400)
+    svc = services(request)
+    with svc.sf() as s, tenant_scope(o.company.id):
+        company = Repo(s).get(Company, o.company.id)
+        assert company is not None
+        before = company.tab_icon or "logo"
+        if choice != before and company.logo_sha:
+            company.tab_icon = "letters" if choice == "letters" else None
+            record_event(
+                s,
+                actor=o.viewer.id,
+                action="company.tab_icon_set",
+                object_type="company",
+                object_id=company.id,
+                before={"tab_icon": before},
+                after={"tab_icon": choice},
+            )
+            s.commit()
+    toast = "The tab shows the letters" if choice == "letters" else "The tab shows the logo"
+    return _logo_row(request, o, toast, icon_changed=True)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -519,7 +722,7 @@ def _zip_response(data: bytes, name: str) -> Response:
 
 
 @router.get("/settings/export")
-def export_download(request: Request, o: Owner = Depends(signed_in)) -> Response:
+def export_download(request: Request, o: Owner = Depends(super_admin_only)) -> Response:
     """A small company's export, built while the owner waits."""
     import hashlib
 
@@ -551,7 +754,7 @@ def export_download(request: Request, o: Owner = Depends(signed_in)) -> Response
 
 
 @router.post("/settings/export", response_class=HTMLResponse, dependencies=[Depends(check_csrf)])
-def export_request(request: Request, o: Owner = Depends(signed_in)) -> Response:
+def export_request(request: Request, o: Owner = Depends(super_admin_only)) -> Response:
     """A large company's export: a job builds it and emails a link. A second click while one is
     being prepared queues nothing."""
     from othor import exporting
@@ -575,12 +778,12 @@ def export_request(request: Request, o: Owner = Depends(signed_in)) -> Response:
 
 
 @router.get("/settings/export/row", response_class=HTMLResponse)
-def export_row(request: Request, o: Owner = Depends(signed_in)) -> Response:
+def export_row(request: Request, o: Owner = Depends(super_admin_only)) -> Response:
     return _export_row(request, o)
 
 
 @router.get("/settings/export/{job_id}")
-def export_file(request: Request, job_id: str, o: Owner = Depends(signed_in)) -> Response:
+def export_file(request: Request, job_id: str, o: Owner = Depends(super_admin_only)) -> Response:
     """A built export: this company's, signed in, less than 48 hours old."""
     import uuid as _uuid
 
@@ -649,7 +852,7 @@ def _owner_email(request: Request, o: Owner) -> str:
     response_class=HTMLResponse,
     dependencies=[Depends(check_csrf), Depends(rate_limit("codes"))],
 )
-async def close_start(request: Request, o: Owner = Depends(signed_in)) -> Response:
+async def close_start(request: Request, o: Owner = Depends(super_admin_only)) -> Response:
     """Step 1: the company's name, typed; then a code to the owner's email."""
     from othor.closing import name_matches
     from othor.core import auth
@@ -705,7 +908,7 @@ async def close_start(request: Request, o: Owner = Depends(signed_in)) -> Respon
     response_class=HTMLResponse,
     dependencies=[Depends(check_csrf), Depends(rate_limit("codes"))],
 )
-async def close_confirm(request: Request, o: Owner = Depends(signed_in)) -> Response:
+async def close_confirm(request: Request, o: Owner = Depends(super_admin_only)) -> Response:
     """Step 2: the code, then Delete. The company is closed and the owner lands on the Closed
     page on the root host (the company's own host no longer resolves)."""
     from othor import closing
@@ -828,6 +1031,30 @@ def logo_file(request: Request, sha: str) -> Response:
     )
 
 
+@router.get("/tab-icon/{version}-{size}.png")
+def tab_icon_file(request: Request, version: str, size: int) -> Response:
+    """The company's browser tab icon (16, 32) and home-screen icon (180), on its own host only.
+    The version in the URL is what the icon shows (the logo's hash, or the letters and their
+    style): a new logo or a rename is a new URL, so each one caches for a year."""
+    from othor.web import tab_icon
+
+    company = resolve_site(request).company
+    if company is None:
+        return Response(status_code=404)
+    tag = f'"{version}-{size}"'
+    data = tab_icon.read(services(request).settings, company, version, size)
+    if data is None:
+        return Response(status_code=404)
+    headers = {
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "ETag": tag,
+        "X-Content-Type-Options": "nosniff",
+    }
+    if request.headers.get("if-none-match") == tag:
+        return Response(status_code=304, headers=headers)
+    return Response(data, media_type="image/png", headers=headers)
+
+
 # ---------------------------------------------------------------------------------------------
 # Nav pages that arrive in later milestones: 9a empty states
 
@@ -910,7 +1137,7 @@ async def account_name(request: Request, o: Owner = Depends(signed_in)) -> Respo
             user.name = name
             record_event(
                 s,
-                actor=o.viewer.email,
+                actor=str(o.viewer.id),
                 action="user.renamed",
                 object_type="user",
                 object_id=str(user.id),

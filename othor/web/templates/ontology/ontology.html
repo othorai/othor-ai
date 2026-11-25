@@ -26,7 +26,7 @@
   {# owner, 23 Nov 2026: To review always on top (proposals and Othor AI's decisions), then the
      page in tabs: Business & Goals · Numbers · Names & Patterns · the level (open), last #}
   {% call el("section", layout="flex flex-col gap-24", attrs={"aria-label": "To review", "id": "review"}) %}
-    {% if proposals %}{{ proposals_card(proposals, csrf_token) }}{% endif %}
+    {% if proposals %}{{ proposals_card(proposals, csrf_token, lead=size_lead) }}{% endif %}
     {# Let Othor AI decide (v0.12): its decisions, listed to confirm or fix #}
     {% if decided %}
     {% call el("div", attrs={"id": "decided"}) %}

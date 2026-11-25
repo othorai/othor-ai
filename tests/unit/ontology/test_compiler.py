@@ -727,3 +727,35 @@ def test_ignoring_a_table_says_which_numbers_pause(world):
         s.rollback()
     assert "pause" in text and "until" in text
     assert names[0] in text
+
+
+def test_a_sheets_date_is_cast_before_the_window_is_compared(
+    session_factory, two_companies, sample
+):
+    """#112 (a tester's sheet, 24 Nov 2026): a Sheets column holding dates as text is cast for
+    the period, but the window compared the raw text with a DATE, and DuckDB refused ("Cannot
+    compare values of type VARCHAR and type DATE"). Sheets dates are cast in the window too; a
+    database's real date column is compared as it is, so its index still serves the read."""
+    import re
+
+    cid, _ = two_companies
+    build(session_factory, cid, sample, order_tracker=True)
+    with session_factory() as s, tenant_scope(cid):
+        from othor.core.models import Company
+        from othor.core.tenancy import Repo
+
+        doc = compile_version(s, Repo(s).get(Company, cid)).compiled
+    # the window's left side: "… AS DATE)" when cast, a bare quoted column when not
+    window = re.compile(r"(\S+) >= CAST\((?:\$from|:from|%\(from\)s) AS DATE\)")
+    sheets = db = 0
+    for m in doc["metrics"].values():
+        for sql in (m.get("queries") or {}).values():
+            for left in window.findall(str(sql)):
+                cast = left == "DATE)"
+                if m.get("dialect") == "duckdb":
+                    assert cast, (m.get("name"), left)
+                    sheets += 1
+                else:
+                    assert not cast, (m.get("name"), left)
+                    db += 1
+    assert sheets and db  # both kinds were checked

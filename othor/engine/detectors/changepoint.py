@@ -8,7 +8,8 @@ after. Snapshot metrics use their daily points rolled to week ends, back-filled 
 a change seen only on reconstructed weeks is Assessed, never Measured.
 
 Money: for a stock (a snapshot, or a share of stocks) the step in ₹ of its ₹ part; for a flow,
-the step × the weeks it has held.
+the step × the weeks it has held. A number with no ₹ part puts at risk the share of its
+`at_stake` ₹ since the change that the size of the step says, capped (`common.at_stake_of_change`).
 """
 
 from __future__ import annotations
@@ -32,7 +33,10 @@ from othor.engine.detectors.base import (
 )
 
 NAME = "changepoint"
-VERSION = "1"
+# 1: a non-₹ step has no money; 2: it puts its at_stake ₹ at risk in full (24 Nov 2026); 3: only
+# the share of it the size of the step says, capped (#138, 25 Nov 2026). The earlier versions stay
+# in the code: a run replays as the version it was made with (`Context.versions`)
+VERSION = "3"
 WINDOW = 52
 MIN_SEGMENT = 4
 STRONG_SIGMAS = 3.0
@@ -68,7 +72,7 @@ def test_series(ctx: Context, s: Series) -> Result | None:
     recon = [r for r, k in zip(s.reconstructed, ok, strict=True) if k][-WINDOW:]
     base = Result(
         detector=NAME,
-        version=VERSION,
+        version=ctx.version(NAME, VERSION),
         series=[s.id],
         metric=s.metric,
         breakdown=s.breakdown,
@@ -123,7 +127,9 @@ def test_series(ctx: Context, s: Series) -> Result | None:
         base.slots["change_date"] = day.isoformat()
     if not open_:
         base.reason = "the change is older than 26 weeks"
-    base.money, base.money_basis = _money(ctx, s, b, periods, held)
+    base.money, base.money_basis = _money(
+        ctx, s, b, periods, held, (mean_before, float(np.mean(after))), base
+    )
     return base
 
 
@@ -146,11 +152,33 @@ def _refine(ctx: Context, s: Series, week: dt.date, before: float, after: float)
 
 
 def _money(
-    ctx: Context, s: Series, b: int, periods: list[dt.date], held: int
+    ctx: Context,
+    s: Series,
+    b: int,
+    periods: list[dt.date],
+    held: int,
+    levels: tuple[float, float],
+    res: Result,
 ) -> tuple[str | None, str]:
     rupee = common.inr_component(ctx, s.metric)
     if rupee is None:
-        return None, ""
+        # no ₹ of its own (truck fill, stock in kg, a count): the ₹ through the metric it names in
+        # `at_stake` since the change is at risk (owner, 24 Nov 2026), since v3 only the share of
+        # it the size of the move says, capped (#138, 25 Nov 2026); no link, no money
+        v = ctx.version(NAME, VERSION)
+        if v == "1":
+            return None, ""
+        change = periods[b]
+        got, basis, params = common.at_stake_of_change(
+            ctx, s, change, periods[-1] + dt.timedelta(days=7), *levels, scaled=v != "2"
+        )
+        res.params = {**res.params, **params}
+        if params.get("at_risk_scaling") == "from_zero":
+            # the money can't be sized: still reported, and the finding says so (owner, 25 Nov)
+            res.slots["money_unsized"] = True
+        if got is None:
+            return None, basis
+        return dec(got, places=PAISA), basis
     src = s if rupee == s.metric else ctx.series.get(rupee, s.grain, s.breakdown, s.breakdown_value)
     if src is None:
         return None, ""

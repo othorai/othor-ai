@@ -20,10 +20,11 @@ from sqlalchemy.orm import Session
 from othor.connectors import service
 from othor.connectors.models import Source
 from othor.jobs.queue import enqueue
-from othor.ontology.compiler.catalog import Catalog
+from othor.ontology.compiler.catalog import Catalog, TableInfo
 from othor.setup import drafts
 from othor.setup.candidates import table_candidates
 from othor.setup.models import SetupDraft
+from othor.setup.parse import Ref
 from othor.setup.patches import Patch, PatchRefused, apply_patch
 from othor.setup.rules_draft import rule_drafts, tokens
 from othor.setup.suggest_sources import KINDS, Suggestion, suggest, without_connected_kinds
@@ -145,17 +146,20 @@ def draft_for_source(
     rules: list[tuple[str, dict[str, Any]]],
     vocabulary: list[dict[str, Any]],
     names: str = "",
+    refs: list[tuple[str, Ref]] | None = None,
 ) -> SourceDrafts:
     """The metric it was connected for, the other metrics waiting on this source (their `needs`
-    names it), and new drafts from its tables."""
+    names it, or the uploaded cell they were drafted from is on one of its tabs), and new drafts
+    from its tables. refs: the uploads' parsed refs, (file name, ref)."""
     sub = _sub(cat, source)
     out = SourceDrafts()
     named = tokens(f"{source} {names}")
     for r in sorted(rows.values(), key=lambda x: (x.key != key, x.position, x.key)):
         is_target = r.key == key and (not drafts.locked(r) or waiting(r))
-        if not is_target and not (waiting(r) and tokens(_words(r)) & named):
+        from_upload = _from_upload(r, sub, refs or []) if waiting(r) else None
+        if not is_target and from_upload is None and not (waiting(r) and tokens(_words(r)) & named):
             continue
-        got = _redraft(r, sub)
+        got = _redraft(r, sub, from_upload)
         if got is not None:
             out.redrafted.append(got)
     taken = set(rows) | ({key} if key else set())
@@ -174,30 +178,83 @@ _NOT_A_SUM = re.compile(
 )
 
 
-def _redraft(row: SetupDraft, sub: Catalog) -> tuple[str, dict[str, Any]] | None:
-    """A waiting metric that is a sum of one column (Order book value) is redrafted by code. A
-    rate, ratio or duration needs more than one column: it stays waiting for the owner's chat."""
+_NUMBER_KINDS = ("decimal", "float", "int", "integer", "bigint", "numeric", "double")
+
+
+def _upload_cells(row: SetupDraft, refs: list[tuple[str, Ref]]) -> list[Ref]:
+    """The uploaded column refs a waiting metric was drafted from: the refs it keeps, then the
+    cells its own words name ("Transactions!G1"). Only cells the upload's parse holds count, so
+    a model's text alone never maps a metric."""
+    cols = [(u, r) for u, r in refs if r.kind == "column" and r.data.get("tab")]
+    out: list[Ref] = []
+    for x in row.refs or []:
+        hit = next(
+            (r for u, r in cols if u == x.get("upload") and r.locator == x.get("locator")), None
+        )
+        if hit is not None and hit not in out:
+            out.append(hit)
+    words = _words(row)
+    for _u, r in cols:
+        cell = r.locator.split(" ", 1)[1] if r.locator.startswith("tab ") else r.locator
+        if r not in out and re.search(
+            r"(?<![A-Za-z0-9_])" + re.escape(cell) + r"(?![0-9])", words, re.I
+        ):
+            out.append(r)
+    return out
+
+
+def _from_upload(
+    row: SetupDraft, sub: Catalog, refs: list[tuple[str, Ref]]
+) -> tuple[TableInfo, str] | None:
+    """#116: the connected tab with the same name as the uploaded tab the metric was drafted
+    from, and the same column (a Sheets column's name is its header as the read names it). A
+    number column only; never a personal one."""
+    from othor.connectors.sheets.extract import column_name
+
+    for r in _upload_cells(row, refs):
+        if not r.data.get("number"):
+            continue
+        tab = str(r.data.get("tab") or "").strip().lower()
+        for t in sorted(sub.tables.values(), key=lambda x: (x.schema, x.name)):
+            if t.name.strip().lower() != tab or t.use in ("excluded", "ignored"):
+                continue
+            c = t.column(column_name(r.text)) or t.column(r.text)
+            if c is not None and not c.personal and c.kind in _NUMBER_KINDS:
+                return t, c.name
+    return None
+
+
+def _redraft(
+    row: SetupDraft, sub: Catalog, from_upload: tuple[TableInfo, str] | None = None
+) -> tuple[str, dict[str, Any]] | None:
+    """A waiting metric that is a sum of one column (Order book value) is redrafted by code: the
+    uploaded column it was drafted from when the source has it, else a table and amount column
+    found by name. A rate, ratio or duration needs more than one column: it stays waiting for the
+    owner's chat."""
     if row.body.get("unit") in ("percent", "ratio", "days") or _NOT_A_SUM.search(
         str(row.body.get("name") or row.key)
     ):
         return None
     snapshot = row.body.get("kind") == "snapshot"
-    for tc in table_candidates(sub, _words(row)):
-        amount = next((u for u in tc.useful if "value" in u or "amount" in u), None)
-        if amount is None:
-            continue
+    found = [from_upload] if from_upload is not None else []
+    found += [
+        (tc.table, amount)
+        for tc in table_candidates(sub, _words(row))
+        if (amount := next((u for u in tc.useful if "value" in u or "amount" in u), None))
+    ]
+    for table, amount in found:
         from othor.setup.chat import _first_date
 
         patch = Patch(
             "use_column",
             {
                 "table": {
-                    "source": tc.table.source_name,
-                    "schema": tc.table.schema,
-                    "table": tc.table.name,
+                    "source": table.source_name,
+                    "schema": table.schema,
+                    "table": table.name,
                 },
                 "column": amount,
-                **({} if snapshot else {"date": _first_date(tc.table)}),
+                **({} if snapshot else {"date": _first_date(table)}),
             },
         )
         base = {k: v for k, v in row.body.items() if k not in ("needs",)}
@@ -209,7 +266,7 @@ def _redraft(row: SetupDraft, sub: Catalog) -> tuple[str, dict[str, Any]] | None
         body = dict(got.body)
         if not body.get("description"):
             by = f" by {body['date']}" if body.get("date") else ""
-            body["description"] = f"Sum of {tc.table.name}.{amount}{by}"
+            body["description"] = f"Sum of {table.name}.{amount}{by}"
         return row.key, body
     return None
 

@@ -221,6 +221,12 @@ class Context:
     forecasts: dict[str, Any] = field(default_factory=dict)
     # plug-in run inputs stored before the manifest (Advanced Intelligence Phase 0 §3)
     run_inputs: dict[str, Any] = field(default_factory=dict)
+    # the detector versions this run behaves as (`context.json` `detector_versions`, from #138):
+    # a run replays with the rules it was made with; a detector not named runs its current one
+    versions: dict[str, str] = field(default_factory=dict)
+
+    def version(self, detector: str, current: str) -> str:
+        return str(self.versions.get(detector) or current)
 
     def config(self, detector: str) -> dict[str, Any]:
         return dict(self.spec.get("detectors", {}).get(detector, {}))

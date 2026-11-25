@@ -150,11 +150,16 @@ def summary(doc: dict[str, Any]) -> dict[str, Any]:
 
 
 def preview(
-    files: RunFiles, spec: dict[str, Any], run_date: dt.date, version: dict[str, Any]
+    files: RunFiles,
+    spec: dict[str, Any],
+    run_date: dt.date,
+    version: dict[str, Any],
+    points: list[Point] | None = None,
 ) -> dict[str, Any]:
     """A brief version against a sealed run's own files: the same function the run calls, so
     Edit brief's "Today with this change" and New brief's "tomorrow's brief" are what the next
-    run would make from the same data (4c1, 4d2–4d6)."""
+    run would make from the same data (4c1, 4d2–4d6). `points`: the run's points as a page
+    already holds them (`run_cache.points`, the same points in the same order); else read."""
     outputs_doc = read_json(files.outputs_json) or {}
     night = with_run_inputs(read_json(files.inputs / "context.json") or {}, files)
     ref = next((b for b in night.get("briefs") or [] if b.get("default")), None)
@@ -166,7 +171,7 @@ def preview(
         read_json(files.outputs / "findings.json") or [],
         read_json(files.outputs / "watches.json") or [],
         read_json(files.outputs / "forecasts.json") or {},
-        read_points(files.series),
+        read_points(files.series) if points is None else points,
         outputs_doc,
         reference=None if version.get("default") else ref,
     )

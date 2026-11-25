@@ -24,13 +24,14 @@ from othor.charts.spec import Annotation, ChartSpec, Period, Series, Unit
 from othor.connectors.models import RunQuery, Source
 from othor.core import features, fmt
 from othor.core.config import Settings
+from othor.core.fmt import lower_first
 from othor.core.models import Event
 from othor.engine import findings as fnd
 from othor.engine import holds, sweep_text, watches
 from othor.engine.detectors import REGISTRY, core
 from othor.engine.detectors.base import SeriesIndex
 from othor.engine.models import DETECTING_KINDS, Finding, Proposal, Run, RunStep, Watch
-from othor.engine.store import RunFiles, read_json, read_points_cached
+from othor.engine.store import RunFiles, read_json
 from othor.ontology.models import Spec
 
 RUNS_SHOWN = 7
@@ -809,7 +810,7 @@ def resolved(rv: RunView) -> list[dict[str, Any]]:
             "title": (f.get("text") or {}).get("title", f["metric"]),
             "label": (f.get("text") or {}).get("label", f["detector"]),
             "on": dt.date.fromisoformat(f["resolved"]["date"]),
-            "how": f["resolved"]["reason"],
+            "how": fnd.shown_reason(f["resolved"]["reason"]),
             "into": f["resolved"].get("into"),
         }
         for f in rv.shown
@@ -1007,6 +1008,7 @@ def gates(rv: RunView, f: dict[str, Any], result: dict[str, Any] | None) -> list
     if f.get("q_value") is not None:
         fdr = Decimal(str(params.get("fdr_q", spec.get("detectors", {}).get("fdr_q", "0.01"))))
         tests = params.get("tests")
+        keep = params.get("keep_q")  # #142: the looser bar an open finding stays open under
         out.append(
             {
                 "name": "It isn’t chance",
@@ -1015,7 +1017,8 @@ def gates(rv: RunView, f: dict[str, Any], result: dict[str, Any] | None) -> list
                     if tests
                     else "After correcting the night’s tests"
                 )
-                + f" · needs under {_small(fdr)}",
+                + f" · needs under {_small(fdr)}"
+                + (f" to open, under {_small(keep)} to stay open" if keep else ""),
                 "value": f"q {_small(f['q_value'])}",
             }
         )
@@ -1235,6 +1238,33 @@ STATE_NOTE = {
 }
 
 
+def at_risk_setting(params: dict[str, Any], spec: dict[str, Any]) -> tuple[str, str] | None:
+    """#138: how a change in a number with no ₹ of its own priced its linked ₹ (the linked ₹,
+    the share of it at risk and how that share was read, the cap), from the result's parameters;
+    None for any other money (and for a run sealed before #138)."""
+    if params.get("linked_money") is None:
+        return None
+    from othor.engine.detectors.common import share_text
+
+    key = str(params["linked_metric"])
+    linked = str(spec.get("metrics", {}).get(key, {}).get("name") or key)
+    of = f"{linked} ({sweep_text.money(params['linked_money'])} since the change)"
+    if params.get("at_risk_scaling") == "from_zero":
+        return ("Money at risk", f"Can't be sized: the number started from 0 · linked to {of}")
+    if params.get("at_risk_fraction_used") is None:  # a move the way its goal wants
+        return ("Money at risk", f"None: it moved the way its goal wants · linked to {of}")
+    how = (
+        "the move in points of the whole"
+        if params.get("at_risk_scaling") == "share"
+        else "the move as a share of where it was"
+    )
+    return (
+        "Money at risk",
+        f"{share_text(float(params['at_risk_fraction_used']))} of {of}: {how}, "
+        f"never more than {share_text(float(params['at_risk_cap']))}",
+    )
+
+
 def test_tab(rv: RunView, s: Session | None, f: dict[str, Any]) -> dict[str, Any]:
     """The finding panel's Test tab, "How is this calculated?" (M15.3, the v0.15 design): what it
     tested, how it moved, the gates it passed with their values, the money and its arithmetic,
@@ -1249,7 +1279,7 @@ def test_tab(rv: RunView, s: Session | None, f: dict[str, Any]) -> dict[str, Any
     sl = f.get("slots") or {}
     period = dt.date.fromisoformat(sl["period"]).strftime("%B") if sl.get("period") else ""
     tested = sweep_text.TESTED.get(f["detector"], "").format(
-        metric=name if name[:2].isupper() else name[:1].lower() + name[1:],
+        metric=lower_first(name),
         breakdown=(f.get("breakdown") or "part"),
         period=period,
     )
@@ -1269,18 +1299,33 @@ def test_tab(rv: RunView, s: Session | None, f: dict[str, Any]) -> dict[str, Any
         settings.append(
             ("Offset needed", f"{fmt.num(Decimal(str(params['offset_ratio'])))}× the net change")
         )
+    at_risk = at_risk_setting(params, spec)
+    if at_risk is not None:
+        settings.append(at_risk)
     settings += [
         ("Materiality floor", f"{sweep_text.money(floor)} · company setting"),
         (
             "False discoveries",
-            f"{fmt.pct(fdr)} (Benjamini–Hochberg), across every test of the night",
+            f"{fmt.pct(fdr)} (Benjamini–Hochberg), across every test of the night"
+            + (f" ({fmt.num(params['tests'])})" if params.get("tests") else ""),
+        ),
+        *(
+            [
+                (
+                    "Stays open",
+                    f"while q is under {_small(params['keep_q'])}, once open"
+                    + (" · kept open tonight" if params.get("kept_open") else ""),
+                )
+            ]
+            if params.get("keep_q")
+            else []
         ),
         (
             "Run",
             f"#{rv.run.number:04d} · {fmt.date_short(rv.run.run_date)} · "
             f"Business Model v{rv.spec.ontology_version} · "
             f"{sweep_text.LABELS.get(f['detector'], f['detector'])} v"
-            f"{det.version if det else f.get('version', '')}",
+            f"{f.get('version') or (det.version if det else '')}",
         ),
     ]
     rep = last_replay(s, rv.run.id) if s is not None else None
@@ -1508,8 +1553,11 @@ def sql_tab(rv: RunView, s: Session, f: dict[str, Any]) -> dict[str, Any]:
 def result_csv(rv: RunView, f: dict[str, Any]) -> str:
     """The run's stored values for the finding's series (aggregates, never source rows)."""
     metric, grain, bd = _series_key(f)
+    from othor.web import run_cache
+
     lines = ["period,breakdown_value,value,reconstructed"]
-    for p in sorted(read_points_cached(rv.files.series), key=lambda p: p.sort_key()):
+    mine = run_cache.by_metric(rv.files.series).get(metric, ())
+    for p in sorted(mine, key=lambda p: p.sort_key()):
         if p.metric == metric and p.grain == grain and p.breakdown == bd and p.complete:
             lines.append(
                 f"{p.period.isoformat()},{p.breakdown_value or ''},"
@@ -1795,7 +1843,7 @@ def _covers(spec: dict[str, Any], f: dict[str, Any]) -> str:
     if not m:
         return ""
     name = str(m.get("name") or f["metric"])
-    name = name if name.split()[0].isupper() else name[:1].lower() + name[1:]
+    name = lower_first(name)
     part = f.get("breakdown_value")
     return f"{name}, {part}" if part else name
 
@@ -1820,7 +1868,7 @@ def _area_name(spec: dict[str, Any], key: str) -> str:
     m = spec.get("metrics", {}).get(key)
     if m and m.get("name"):
         n = str(m["name"])
-        return n if n.split()[0].isupper() else n[:1].lower() + n[1:]
+        return lower_first(n)
     if key and key[:1].isupper():  # a place or a customer, as written
         return key
     label = sweep_text.LABELS.get(key)

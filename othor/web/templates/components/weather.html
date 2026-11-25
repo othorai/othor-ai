@@ -52,12 +52,18 @@
 {# The forecast panel (part 1b): the item and its line, the chart (a ChartSpec rendered by
    render_svg), what's driving it, how it is calculated, and the actions. A Limited-view week
    shows the short explanation instead. #}
+{# #109 (owner, 25 Nov 2026): Home's panel opens that week on Forecasts, when it's installed #}
+{% macro _week_go(p) -%}
+{% if p.forecasts %}<p class="wx-panel-go">{{ link("Open that week in Forecasts →", p.forecasts) }}</p>{% endif %}
+{%- endmacro %}
+
 {% macro forecast_panel(p, close) -%}
 {% call(part) side_panel(p.title, p.line, close=close, kicker=p.kicker) %}
 {% if part == "body" %}
 <div class="flex flex-col gap-16">
   {% if p.kind == "forecast" %}
     {% if p.chart %}<div class="chart">{{ chart(p.chart, 620, 220) }}</div>{% endif %}
+    {{ _week_go(p) }}
     <p class="label-caps">What’s driving it</p>
     {% if p.driving %}<div class="section">{% for d in p.driving %}<div class="held-row"><a class="link" href="{{ d.href }}">{{ d.title }}</a>{% if d.money %}<span class="how">{{ d.money }}</span>{% endif %}</div>{% endfor %}</div>
     {% else %}<p class="hint">Nothing unusual found</p>{% endif %}
@@ -65,6 +71,7 @@
     {{ kv(p.prov) }}
   {% else %}
     <p class="finding-line">{{ p.text }}</p>
+    {{ _week_go(p) }}
   {% endif %}
 </div>
 {% else %}

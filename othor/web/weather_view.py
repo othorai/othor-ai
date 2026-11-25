@@ -164,6 +164,27 @@ def _params(row: dict[str, Any], unit: str | None) -> str:
     return ", ".join(parts)
 
 
+FORECASTS = "/forecasts?window=4w"  # the Forecasts page on its next four weeks (EE)
+
+
+def forecasts_on() -> bool:
+    """The Forecasts page is installed and licensed (its menu item is there): only then do Home's
+    weeks and a brief's What's ahead link to it (#109, owner 25 Nov 2026); without it nothing
+    changes."""
+    from othor.core import plugins
+
+    return any(n.key == "forecasts" for n in plugins.nav("company"))
+
+
+def week_on_forecasts(week: Any) -> str | None:
+    """A week of the outlook on Forecasts, landed on and outlined (#109): week 1-4, else None."""
+    try:
+        n = int(week)
+    except (TypeError, ValueError):
+        return None
+    return f"{FORECASTS}&week={n}#fc-week-{n}" if 1 <= n <= 4 else None
+
+
 def forecast_panel(
     s: Any, settings: Settings, run: Any, week: str | None, brief: Any = None
 ) -> dict[str, Any] | None:
@@ -175,8 +196,9 @@ def forecast_panel(
 
     from othor.briefs import outlook as ol
     from othor.briefs import scope
-    from othor.engine.store import read_json, read_points_cached
+    from othor.engine.store import read_json
     from othor.ontology.models import Spec
+    from othor.web import run_cache
 
     got = _stored(settings, run, brief)
     o = got[1].get("outlook") if got else None
@@ -187,6 +209,7 @@ def forecast_panel(
     w, item = _item(o, week)
     n = run.number
     head = {
+        "week": w["week"],
         "kicker": f"{w['name']} · {w['dates']} · {w['label']}",
         "title": (item or {}).get("name") or (item or {}).get("title") or w["label"],
         "line": o["ahead_line"] if week == "ahead" and o.get("ahead") else w["line"],
@@ -198,7 +221,8 @@ def forecast_panel(
     row = s.scalars(sa.select(Spec).where(Spec.id == run.spec_id)).first()
     spec = dict(row.compiled) if row else {}
     rows = [r for r in (read_json(files.outputs / weather.AHEAD) or {}).get("rows") or []]
-    chart = ol.chart(spec, item, rows, list(read_points_cached(files.series)), 12)
+    mine = run_cache.by_metric(files.series).get(str(item.get("metric") or ""), ())
+    chart = ol.chart(spec, item, rows, list(mine), 12)  # only the item's metric is drawn
     metric = item.get("metric")
     findings = [
         f for f in read_json(files.outputs / "findings.json") or [] if scope.finding_in(spec, sc, f)

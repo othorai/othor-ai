@@ -43,20 +43,32 @@ CONFIG = {
 }
 PASSWORD = "othor_ro_dev"  # the read-only login `make seed` creates in both sample databases
 
+# the public demo in US dollars by default, rupees on request (owner, 25 Nov 2026); the time zone
+# follows, as in the README's pictures. Number grouping follows the currency (othor/core/fmt.py).
+TIMEZONE = {"USD": "America/New_York", "INR": "Asia/Kolkata"}
+
 
 @dataclass(frozen=True)
 class Installed:
     company_id: uuid.UUID
     created: bool
+    user_id: uuid.UUID | None = None  # the owner, for the one-time sign-in link
+    currency: str = "USD"
 
 
-def install(ctx: EngineContext, *, as_of: dt.date = dt.date(2026, 11, 4)) -> Installed:
-    """Idempotent: an existing indigothread is left as it is (created=False)."""
+def install(
+    ctx: EngineContext, *, as_of: dt.date = dt.date(2026, 11, 4), currency: str = "USD"
+) -> Installed:
+    """Idempotent: an existing indigothread is left as it is (created=False), its currency too."""
+    if currency not in TIMEZONE:
+        raise ValueError(f"currency is one of {', '.join(sorted(TIMEZONE))}")
     with ctx.sf() as s, system_scope("demo: install the sample company"):
         found = s.scalars(sa.select(Company).where(Company.slug == SLUG)).first()
-        if found is not None:
-            return Installed(found.id, created=False)
         user = s.scalars(sa.select(AppUser).where(AppUser.email == EMAIL)).first()
+        if found is not None:
+            return Installed(
+                found.id, created=False, user_id=user.id if user else None, currency=found.currency
+            )
         if user is None:
             user = AppUser(email=EMAIL, name=OWNER_NAME)
             s.add(user)
@@ -65,8 +77,8 @@ def install(ctx: EngineContext, *, as_of: dt.date = dt.date(2026, 11, 4)) -> Ins
             name=NAME,
             website="https://indigothread.example",
             fiscal_year_start_month=4,
-            currency="INR",
-            timezone="Asia/Kolkata",
+            currency=currency,
+            timezone=TIMEZONE[currency],
         )
         s.add(company)
         s.flush()
@@ -93,7 +105,12 @@ def install(ctx: EngineContext, *, as_of: dt.date = dt.date(2026, 11, 4)) -> Ins
             action="demo.installed",
             object_type="company",
             object_id=cid,
-            after={"slug": SLUG, "sources": sorted(ids), "as_of": as_of.isoformat()},
+            after={
+                "slug": SLUG,
+                "sources": sorted(ids),
+                "as_of": as_of.isoformat(),
+                "currency": currency,
+            },
         )
         s.commit()
-    return Installed(cid, created=True)
+    return Installed(cid, created=True, user_id=uid, currency=currency)

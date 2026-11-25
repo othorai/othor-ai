@@ -61,7 +61,10 @@ def test_the_undo_row_sits_where_the_proposal_was(night):  # noqa: F811
     assert ids, "the night has an open proposal"
     before = env.client.get(h + "/ontology").text  # on the Business Model page (23 Nov 2026)
     assert _open(before) == len(ids)
-    pid = ids[0]
+    # the page's own order (#76, 0.37: the "New number" rows lead, then the rest by age)
+    shown = re.findall(r'data-row="([^"]+)"', before.split('aria-label="Proposals"', 1)[1])
+    assert sorted(shown[: len(ids)]) == sorted(ids)
+    pid = shown[0]
     r = _post(
         env,
         h,
@@ -72,7 +75,7 @@ def test_the_undo_row_sits_where_the_proposal_was(night):  # noqa: F811
     assert r.status_code == 200
     page = r.text
     rows_now = re.findall(r'data-row="([^"]+)"', page.split('aria-label="Proposals"', 1)[1])
-    assert rows_now[: len(ids)] == ids, "the decided row keeps its place"
+    assert rows_now[: len(ids)] == shown[: len(ids)], "the decided row keeps its place"
     assert "Accepted · applies from tonight’s run" in page
     assert f'action="/home/proposals/{pid}/undo?back=ontology"' in page
     assert _open(page) == len(ids) - 1

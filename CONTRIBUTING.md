@@ -6,6 +6,7 @@ keeps, and how contributions are accepted.
 ## Run it from source
 
 You need Docker (with Compose) and [uv](https://docs.astral.sh/uv/). No Node.
+On Windows, run them in a WSL 2 terminal (the checks are in the README's [See it in 5 minutes](README.md#see-it-in-5-minutes)).
 
 ```sh
 make dev     # the app, a metadata Postgres, two sample databases and a test mailbox

@@ -180,3 +180,20 @@ def test_a_set_aside_question_stays_counted_and_answerable(world):
         assert q in answers.set_aside(s, TODAY)
         assert q in answers.todays_order(s, TODAY, dt.UTC)
         assert q not in answers.queue(s, TODAY)  # not open: it isn't nagged for
+
+
+def test_a_decided_record_reads_by_its_name_never_its_key():
+    """#149: the Business Model's Decided by Othor AI list showed 'Goal:
+    fyp_month_by_2027_03_31' and 'Metric: banca_share'; the line names the record plainly."""
+    goal = OntologyRecord(
+        type="goal",
+        key="fyp_month_by_march",
+        body={"name": "First-year premium each month", "metric": "fyp", "target": "5"},
+    )
+    metric = OntologyRecord(type="metric", key="banca_share", body={"name": "Banca share"})
+    bare = OntologyRecord(type="metric_family", key="sales_by_channel", body={})
+    assert answers.record_line(goal) == "Goal: First-year premium each month"
+    assert answers.record_line(metric) == "Number: Banca share"
+    assert answers.record_line(bare) == "Group of numbers: Sales by channel"
+    for r in (goal, metric, bare):
+        assert "_" not in answers.record_line(r)

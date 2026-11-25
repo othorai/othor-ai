@@ -83,9 +83,9 @@ def resolve_site(request: Request) -> Site:
     else:
         site = _resolve_site(request)
         request.state.site = site  # the error pages and logs read it (M11a)
-    if site.company is not None:  # every company page, signed in or a recipient's link (M15.6)
-        fmt.set_request_currency(site.company.currency)
-        fmt.set_request_chart(site.company)  # v0.25: smooth lines, values on lines
+    if site.company is not None:  # every company page, signed in or a recipient's link
+        # its currency (M15.6), chart choices (v0.25) and time zone (#125), partial or full page
+        fmt.set_request_company(site.company)
     return site
 
 
@@ -142,6 +142,9 @@ def initials(name: str) -> str:
     return "".join(p[0] for p in parts[:2]).upper() or "?"
 
 
+ROLE_LABELS = {"owner": "Super admin", "admin": "Admin"}
+
+
 @dataclass(frozen=True)
 class Viewer:
     """The signed-in owner, as templates see them."""
@@ -157,7 +160,18 @@ class Viewer:
 
     @property
     def role_label(self) -> str:
-        return self.role.capitalize()
+        # the stored "owner" is shown as "Super admin" (owner, 24 Nov 2026: the business's own
+        # owner may join as an admin or, later, a viewer)
+        return ROLE_LABELS.get(self.role, self.role.capitalize())
+
+    @property
+    def is_super_admin(self) -> bool:
+        return self.role == "owner"
+
+    @property
+    def is_admin(self) -> bool:
+        """The super admin or an admin (a later viewer role is neither)."""
+        return self.role in ("owner", "admin")
 
     @classmethod
     def of(cls, user: AppUser, role: str = "owner") -> Viewer:

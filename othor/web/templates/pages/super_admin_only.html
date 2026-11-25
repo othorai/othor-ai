@@ -1,0 +1,11 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{#- 0.34: an admin opening an action only the super admin may take (close, licence, export). -#}
+{% extends "shells/app.html" %}
+{% from "components/ui.html" import el %}
+{% from "components/blocks.html" import empty_state, page_title %}
+{% block title %}Super admin only · Othor AI{% endblock %}
+{% block crumb %}Settings{% endblock %}
+{% block main %}
+{{ page_title("Settings") }}
+{% call el("div", "card board") %}{{ empty_state("Super admin only", text, None, "Back to Settings", "/settings") }}{% endcall %}
+{% endblock %}

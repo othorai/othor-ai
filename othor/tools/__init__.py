@@ -30,9 +30,12 @@ class Card:
     lines: list[str] = field(default_factory=list)
     provenance: dict[str, Any] = field(default_factory=dict)
     empty: str = ""  # what to say when there's nothing to show
+    # 2.1 (External Signals): one-click actions the chat shows under the card, each {"text",
+    # "why", "label", "url"}: a POST to the app's own route; the owner's click is the apply
+    actions: list[dict[str, str]] = field(default_factory=list)
 
     def as_json(self) -> dict[str, Any]:
-        return {
+        out: dict[str, Any] = {
             "tool": self.tool,
             "title": self.title,
             "facts": [list(f) for f in self.facts],
@@ -40,6 +43,9 @@ class Card:
             "provenance": dict(self.provenance),
             "empty": self.empty,
         }
+        if self.actions:
+            out["actions"] = [dict(a) for a in self.actions]
+        return out
 
 
 @dataclass(frozen=True)
@@ -60,6 +66,9 @@ class Tool:
     args_schema: dict[str, Any]
     run: Callable[[Ctx, dict[str, Any]], Card]
     keywords: tuple[str, ...] = ()  # the chat without a model matches a question by these
+    # False (2.1): the chat says the card's own first line, from code, instead of a model's words
+    # (a card whose rows already say everything; no repeat, no tokens)
+    worded: bool = True
 
 
 REGISTRY: dict[str, Tool] = {}
@@ -140,7 +149,7 @@ def call(
     card = tool.run(ctx, clean)
     record_event(
         ctx.s,
-        actor=actor,
+        actor=_who(actor, via, extra),
         action="tool.called",
         object_type="tool",
         object_id=name,
@@ -155,6 +164,18 @@ def call(
     return card
 
 
+def _who(actor: str, via: str, extra: dict[str, Any] | None) -> str:
+    """0.35: a call from the chat is Othor AI on the person's request; one from an AI app is
+    that app's key (the Audit log reads both)."""
+    from othor.core import actors
+
+    if via == "mcp" and (extra or {}).get("key"):
+        return actors.mcp(str((extra or {})["key"]))
+    if via == "chat":
+        return actors.othor_ai(actor)
+    return actor
+
+
 def match(question: str) -> str | None:
     """Without a model: the tool whose keywords the question names (first wins, by name)."""
     _load()
@@ -166,4 +187,4 @@ def match(question: str) -> str | None:
 
 
 def _load() -> None:
-    from othor.tools import read  # noqa: F401  (registers the read tools)
+    from othor.tools import audit, read  # noqa: F401  (registers the read tools)

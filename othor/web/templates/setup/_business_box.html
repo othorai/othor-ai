@@ -6,7 +6,6 @@
    polled every 2 s and swapped in place when the draft lands. Otherwise the box itself: filled
    with the draft (the owner edits or deletes it; nothing is saved until Continue), or empty with
    the example as placeholder text. `oob` also swaps the footer's Continue (on the poll). #}
-{% set DRAFT_NOTE = "Drafts only. Numbers are computed, not written. Nothing changes until you apply." %}
 {% call el('div', 'biz-box', attrs={'id': 'biz-box', 'hx-get': ('/setup/business/draft' if box == 'waiting' else none), 'hx-trigger': ('every 2s' if box == 'waiting' else none), 'hx-target': ('#biz-box' if box == 'waiting' else none), 'hx-swap': ('outerHTML' if box == 'waiting' else none)}) %}
 {% if box == "waiting" %}
   {% call el('div', 'card flush biz-wait', attrs='role="status" aria-live="polite"') %}
@@ -27,7 +26,6 @@
     {% endcall %}{% endcall %}
     {% call el('textarea', 'message-text', attrs={'id': 'f-text', 'name': 'text', 'aria-label': 'About the business', 'placeholder': 'For example:\n\n' ~ example}) %}{{ text }}{% endcall %}
   {% endcall %}
-  {% if box == "drafted" %}{% from "components/panels.html" import draft_note %}{{ draft_note() }}{% endif %}
   {% if not_covered %}{% call el('p', 'biz-note') %}Not in your files: {{ not_covered | join(", ") }}.{% endcall %}{% endif %}
 {% endif %}
 {% endcall %}

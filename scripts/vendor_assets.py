@@ -78,6 +78,13 @@ ICONS = {
     "flag": "flag",  # the Action plan in the side menu (owner, 22 Nov 2026)
     "clock": "clock",
     "chat": "message-square",
+    "satellite": "satellite-dish",  # External Signals: its menu item and Home cards (owner, 25 Nov 2026)
+    "signal-fuel": "droplet",  # External Signals 2.1: a Home card's picture by category
+    "signal-rain": "cloud-rain",  # External Signals 2.1: a Home card's picture by category
+    "signal-currency": "banknote",  # External Signals 2.1: a Home card's picture by category
+    "signal-metal": "pickaxe",  # External Signals 2.1: a Home card's picture by category
+    "signal-crop": "wheat",  # External Signals 2.1: a Home card's picture by category
+    "signal-rate": "percent",  # External Signals 2.1: a Home card's picture by category
     "send": "send",
     "link": "link",
     "undo": "undo-2",

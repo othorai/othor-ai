@@ -115,6 +115,10 @@ def compile_probes(
                 "active_values": sorted(e.get("active_values") or []),
                 "attributes": attrs,
             }
+            # the entity's own words, only when set, so every other spec keeps its bytes
+            words = {k: e[k] for k in ("noun", "plural", "did", "doing", "event") if e.get(k)}
+            if words:
+                probes["entities"][key]["words"] = words
         elif typ == "rule" and body.get("kind") == "threshold":
             if _scanned(cat, body["table"]):
                 probes["thresholds"].append(_threshold(key, body, cat, rules, _from, _table))
@@ -163,7 +167,7 @@ def compile_probes(
                 else None
             )
             k = scope.column({"col": d["key"]}, where="distribution key", convert=False)
-            date = scope.column({"col": base["date"]}, where="date", convert=False)
+            date = scope.date_column({"col": base["date"]}, where="date")
             sel = exp.select(
                 exp.alias_(k, "key", quoted=True),
                 exp.alias_(aggregate(base["measure"]["agg"], value), "value", quoted=True),
@@ -301,7 +305,7 @@ def _threshold(
     if body.get("when"):
         sel = sel.where(render(body["when"], scope, where="threshold filter"))
     if body.get("date"):
-        d = scope.column({"col": body["date"]}, where="threshold date", convert=False)
+        d = scope.date_column({"col": body["date"]}, where="threshold date")
         sel = sel.where(exp.GTE(this=d.copy(), expression=exp.cast(placeholder("from"), "DATE")))
         sel = sel.where(exp.LT(this=d.copy(), expression=exp.cast(placeholder("to"), "DATE")))
     sql = to_sql(sel, t.dialect)

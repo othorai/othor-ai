@@ -73,7 +73,7 @@ def test_the_pair_question_shows_cards_with_computed_reasons(night):  # noqa: F8
     panel = _panel(env, h, q.id)
     assert "Should these two numbers move together?" in panel
     assert "Sweep test" not in panel and "could not run last night" not in panel  # #33
-    assert NOTE in panel  # Othor AI's picks are drafts until Apply (0.26)
+    assert NOTE not in panel  # no note on any screen (owner, 24 Nov 2026); still drafts until Apply
     pick = sub["decide"]["pick"]
     for c in cards:  # the suggestion by its name; no list of other options (owner, 18 Nov)
         assert (c["label"] in panel) == (c["key"] == pick)

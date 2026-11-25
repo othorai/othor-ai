@@ -124,7 +124,6 @@
    drafts Othor AI found in the files and sources (L3) show under their item with one Apply. #}
 {% macro level_card(lv, csrf="", example=None, back="/ontology", fixed=False) -%}
 {% from "components/buttons.html" import button %}
-{% from "components/panels.html" import draft_note %}
 <section class="level-card" aria-label="Business Model level">
   {# fixed (owner, 23 Nov 2026): on its own tab the checklist is always open, with no toggle #}
   <details class="level{{ ' is-fixed' if fixed else '' }}"{% if lv.open or fixed %} open{% endif %}>
@@ -146,6 +145,7 @@
               {% if not i.done %}<p class="level-unlocks">{{ i.unlocks }}</p>
               {% if i.say %}<p class="level-say">“{{ i.say }}”</p>{% endif %}
               {% for d in i.drafts %}<div class="level-draft"><p><span class="oc-badge pick">Found</span> {{ d.text }}</p>{% if d.why %}<p class="level-unlocks">{{ d.why }}</p>{% endif %}<span class="flex items-center gap-8"><form method="post" action="/othor/apply" data-inplace><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="subject" value="{{ d.subject }}"><input type="hidden" name="back" value="{{ back }}">{{ button("Apply", "primary", size="sm", type="submit", attrs={"data-busy": "Applying…"}) }}</form>{{ button("See it", size="sm", href="/ontology?panel=othor&subject=" ~ d.subject, attrs={"data-panel": true}) }}</span></div>{% endfor %}
+              {% for d in i.size %}<div class="level-draft" data-size="{{ d.id }}"><p><span class="oc-badge pick">For your size</span> {{ d.text }}</p><p class="level-unlocks">{{ size_line(d) }}</p><span class="flex items-center gap-8">{% if d.size == "table" %}{{ button("Set it up", "primary", size="sm", href="/ontology?panel=othor&subject=ontology:add&say=" ~ (d.say | urlencode), attrs={"data-panel": true}) }}{% else %}<form method="post" action="/home/proposals/{{ d.id }}/accept?back=ontology" data-inplace><input type="hidden" name="csrf" value="{{ csrf }}">{{ button("Accept", "primary", size="sm", type="submit", attrs={"data-busy": "Applying…"}) }}</form>{{ button("Suggest edits", size="sm", href="/ontology?panel=othor&subject=proposal:" ~ d.id, attrs={"data-panel": true}) }}{% endif %}</span></div>{% endfor %}
               {% endif %}
             </div>
             {% if not i.done %}{{ button(i.action, size="sm", href=i.url, attrs=({} if i.href else {"data-panel": true})) }}{% endif %}
@@ -155,7 +155,6 @@
       </div>
       {% endfor %}
       {% if lv.can_find %}<form class="level-find" method="post" action="/ontology/level/find" data-inplace><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="{{ back }}">{{ button("Look in my files and sources", size="sm", type="submit", attrs={"data-busy": "Looking…"}) }}</form>{% endif %}
-      {% if lv.can_find or lv.has_drafts %}{{ draft_note("level-draft-note") }}{% endif %}
       {% if example %}<p class="level-foot"><a class="link" href="{{ example }}" download>See a complete Business Model</a><span class="level-unlocks"> · a sample company’s, as a PDF</span></p>{% endif %}
     </div>
   </details>
@@ -166,7 +165,14 @@
    each with Accept and Suggest edits (owner, 23 Nov 2026: the same two buttons as setup's
    decisions): Suggest edits opens the one chat on it, where it can be asked about, applied or
    skipped (declined); Accept is decided in place, the decided row keeps its Undo #}
-{% macro proposals_card(proposals, csrf_token) -%}
+{# #76 (owner, 25 Nov 2026): the numbers suggested for the company's size come first, under a
+   lead line with the size (computed); a row's figure is in bold; one built from a table opens
+   the chat to set it up, one that needs a source offers Connect a source, never Accept #}
+{% macro size_line(p) -%}
+{% if p.line_b %}{{ p.line_b[0] }}<b>{{ p.line_b[1] }}</b>{{ p.line_b[2] }}{% else %}{{ p.line }}{% endif %}
+{%- endmacro %}
+
+{% macro proposals_card(proposals, csrf_token, lead="") -%}
 {% from "components/ui.html" import el %}
 {% from "components/buttons.html" import button, link %}
 {% from "components/blocks.html" import toast %}
@@ -174,17 +180,23 @@
 {% from "components/home.html" import confidence_pill %}
   {% call el("section", "card lines", attrs={"aria-label": "Proposals", "id": "proposals"}) %}
     {% call el("div", "section-head") %}{% call el("p", "card-title") %}Proposals for the Business Model{% endcall %}{% call el("p", "hint") %}Accepted items apply from tonight’s run{% endcall %}{% endcall %}
+    {% if lead %}{% call el("p", "lede", attrs={"data-size-lead": true}) %}{{ lead[0] }}<b>{{ lead[1] }}</b>{{ lead[2] }}{% endcall %}{% endif %}
     {% call el("div", "table-wrap") %}{% call el("table", "table flush stack") %}<thead><tr><th>Kind</th><th>Proposal</th><th>From</th><th>Confidence</th><th></th></tr></thead><tbody data-rows>
     {% for p in proposals %}{% if p.decided %}{% call el("tr", "is-decided", attrs={"data-row": p.id}) %}
       {% call el("td", attrs={"colspan": "5"}) %}{% call toast(p.decided, sub=p.text) %}{% call action_form("/home/proposals/" ~ p.id ~ "/undo?back=ontology", csrf_token) %}{{ button("Undo", type="submit") }}{% endcall %}{% endcall %}{% endcall %}
     {% endcall %}{% else %}<tr data-row="{{ p.id }}">
       <td>{% call el("span", "chip soft") %}{{ p.kind }}{% endcall %}</td>
-      {% call el("td", "wrap") %}{% call el("p", "strong") %}{{ p.text }}{% endcall %}{% if p.line %}{% call el("p", "hint") %}{{ p.line }}{% endcall %}{% endif %}{% endcall %}
+      {% call el("td", "wrap") %}{% call el("p", "strong") %}{{ p.text }}{% endcall %}{% if p.line %}{% call el("p", "hint") %}{{ size_line(p) }}{% endcall %}{% endif %}{% endcall %}
       {% call el("td", "wrap") %}{{ p.from }}{% endcall %}
-      <td>{{ confidence_pill(p.confidence) }}</td>
+      <td>{% if p.size != "source" %}{{ confidence_pill(p.confidence) }}{% endif %}</td>
       <td>{% call el("div", layout="flex items-center gap-6 justify-end") %}
+        {% if p.size == "source" %}{{ button("Connect a source", size="sm", href="/sources") }}
+        {% elif p.size == "table" %}{{ button("Set it up", kind="soft", size="sm", href="/ontology?panel=othor&subject=ontology:add&say=" ~ (p.say | urlencode), attrs={"data-panel": true}) }}
+        {% call action_form("/home/proposals/" ~ p.id ~ "/decline?back=ontology", csrf_token) %}{{ button("Not now", kind="quiet", size="sm", type="submit") }}{% endcall %}
+        {% else %}
         {% call action_form("/home/proposals/" ~ p.id ~ "/accept?back=ontology", csrf_token) %}{{ button("Accept", kind="soft", size="sm", type="submit") }}{% endcall %}
         {{ button("Suggest edits", size="sm", href="/ontology?panel=othor&subject=proposal:" ~ p.id, attrs={"data-panel": true}) }}
+        {% endif %}
       {% endcall %}</td>
     </tr>{% endif %}{% endfor %}
     </tbody>{% endcall %}{% endcall %}

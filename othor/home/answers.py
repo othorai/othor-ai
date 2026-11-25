@@ -18,7 +18,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from othor.core import fmt
+from othor.core import actors, fmt
 from othor.core.events import record_event
 from othor.ontology import service
 from othor.ontology.models import OntologyRecord, Question
@@ -559,17 +559,18 @@ def decide(s: Session, q: Question, *, actor: str, now: dt.datetime) -> bool:
         "decided_on": now.date().isoformat(),
     }
     q.draft = None
+    ai = actors.othor_ai(actor)  # 0.35: Othor AI decided, on the owner's request
     _save(
         s,
         q,
         [service.put(ch["type"], ch["key"], ch["body"], ref)],
         f"{DECIDED_TAG}: {c.get('label', '')}",
-        actor=actor,
+        actor=ai,
         now=now,
     )
     record_event(
         s,
-        actor=actor,
+        actor=ai,
         action="question.decided_by_ai",
         object_type="question",
         object_id=q.id,
@@ -694,7 +695,22 @@ def record_line(r: OntologyRecord | None) -> str:
         )
     if r.type == "metric" and b.get("distribution"):
         return f"Single values: {b.get('name', r.key)}, one per {b['distribution'].get('key')}"
-    return f"{r.type.replace('_', ' ').capitalize()}: {r.key}"
+    # #149: the record's own name in plain words; its key stays in provenance
+    kind = _TYPE_WORD.get(r.type) or r.type.replace("_", " ").capitalize()
+    name = b.get("name") or b.get("label") or b.get("text") or r.key.replace("_", " ").capitalize()
+    return f"{kind}: {name}"
+
+
+_TYPE_WORD = {
+    "metric": "Number",
+    "metric_family": "Group of numbers",
+    "goal": "Goal",
+    "business_fact": "About the business",
+    "customer": "Customer",
+    "competitor": "Competitor",
+    "alias": "Also called",
+    "weather": "Thresholds",
+}
 
 
 def confirmation(q: Question, r: OntologyRecord | None) -> str:

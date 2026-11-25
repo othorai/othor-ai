@@ -63,9 +63,20 @@ def run(ctx: WorkerContext, job: Job) -> None:
     if status in ("done", "partial"):
         from othor.core import plugins
 
+        write_page_index(ctx, job.company_id, run_id)  # before anything opens its pages
         plugins.after_seal(ctx, job.company_id, run_id)  # needs no model (rule 4)
     if status in ("done", "partial") and ctx.gateway is not None:
         rewrite_prose(ctx, job.company_id, run_id)
+
+
+def write_page_index(ctx: WorkerContext, company_id: uuid.UUID, run_id: uuid.UUID) -> None:
+    """The pages' index of the sealed run, beside it (`othor.engine.page_index`, load test
+    25 Nov 2026): a derived cache outside the ledger and replay; a failure only means the first
+    page view builds it."""
+    from othor.engine import page_index
+    from othor.engine.store import RunFiles
+
+    page_index.build_quietly(RunFiles(ctx.settings.runs_dir(company_id), run_id).series)
 
 
 def queue_alerts(ctx: WorkerContext, company_id: uuid.UUID, run_id: uuid.UUID, status: str) -> None:
@@ -138,6 +149,12 @@ def rewrite_prose(ctx: WorkerContext, company_id: uuid.UUID, run_id: uuid.UUID) 
 
         logging.getLogger(__name__).warning("pair ranking failed: %s", type(exc).__name__)
     try:
+        word_size_numbers(ctx, company_id, run_id)
+    except Exception as exc:  # the catalogue's reasons stay; nothing else depends on them
+        import logging
+
+        logging.getLogger(__name__).warning("size reasons failed: %s", type(exc).__name__)
+    try:
         draft_areas(ctx, company_id)
     except Exception as exc:  # no proposal tonight; nothing else depends on it
         import logging
@@ -158,6 +175,22 @@ def rank_pair_suggestions(ctx: WorkerContext, company_id: uuid.UUID, run_id: uui
         run = s.scalars(sa.select(Run).where(Run.id == run_id)).one()
         spec = s.scalars(sa.select(Spec).where(Spec.id == run.spec_id)).one()
         rank_pairs(s, ctx.gateway, company_id, dict(spec.compiled))
+        s.commit()
+
+
+def word_size_numbers(ctx: WorkerContext, company_id: uuid.UUID, run_id: uuid.UUID) -> None:
+    """#76: Othor AI words the reason of each number suggested for the company's size, after
+    seal; the figure stays code's, a reason with a number in it is dropped."""
+    import sqlalchemy as sa
+
+    from othor.core.tenancy import tenant_scope
+    from othor.home.size_ai import word_reasons
+    from othor.ontology.models import Spec
+
+    with ctx.sf() as s, tenant_scope(company_id):
+        run = s.scalars(sa.select(Run).where(Run.id == run_id)).one()
+        spec = s.scalars(sa.select(Spec).where(Spec.id == run.spec_id)).one()
+        word_reasons(s, ctx.gateway, company_id, dict(spec.compiled))
         s.commit()
 
 

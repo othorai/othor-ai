@@ -9,7 +9,9 @@
 - Resolved: an open finding of the previous run that doesn't pass tonight, with the reason
   ("Cleared by data" when its own test no longer fires; "Explained by your answer" when an
   answer stops testing it, an entity pause). Resolved findings stay listed for 7 days (Sweep's
-  Resolved tab), then drop out.
+  Resolved tab), then drop out. From #142 an open finding stays open while q ≤ 0.05
+  (`detect.KEEP_Q`); one that falls under that bar while its signal still fires says so ("Below
+  the bar: …", "Weaker: …"), never "Cleared by data".
 - Not Resolved (decided 5 Nov 2026): one now covered by a confirmed known pattern is
   `covered` (Suppressed, under its pattern, with the nights it was open); one absorbed into
   another finding is `merged` (under that finding's "Also seen by"). Neither is counted.
@@ -59,11 +61,27 @@ def pattern_of(f: dict[str, Any]) -> str:
 HELD = ("snoozed", "muted")
 
 
+def _since(r: Result, kept: dict[str, Any] | None) -> dict[str, Any]:
+    """A widening spread still open keeps the start it was first reported with, as "since"
+    (24 Nov 2026, the 100-night test): the check finds a start in its last 8 weeks only, so an
+    older widening's start slid a week every week. Tonight's own slots stay as measured."""
+    if r.detector != "rising_variance" or not kept or not r.slots.get("started"):
+        return r.slots
+    was = kept.get("slots") or {}
+    first = str(was.get("since") or was.get("started") or "")
+    if first and first < str(r.slots["started"]):
+        return {**r.slots, "since": first}
+    return r.slots
+
+
 def build(
     results: list[Result],
     previous: list[dict[str, Any]],
     run_date: dt.date,
+    keep: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
+    """`keep`: the run's `fdr_keep` (#142: the bar to stay open and the previous run's test
+    count), which words a finding that fell under the bar; None for a run before it."""
     prev = {f["fingerprint"]: f for f in previous}
     tonight: dict[str, dict[str, Any]] = {}
     for r in results:
@@ -83,6 +101,7 @@ def build(
         first = kept["first_seen"] if kept else {"date": run_date.isoformat()}
         days = (run_date - dt.date.fromisoformat(first["date"])).days + 1
         tag = CAME_BACK if back is not None else _tag(before, r, days)
+        slots = _since(r, kept)
         tonight[fp] = {
             "fingerprint": fp,
             "status": "open",
@@ -103,7 +122,7 @@ def build(
             "q_value": r.q_value,
             "window": [r.window[0].isoformat(), r.window[1].isoformat()],
             "reconstructed_only": r.reconstructed_only,
-            "slots": r.slots,
+            "slots": slots,
             "evidence": r.evidence[:50],
             "reasons": r.reasons,
             "first_seen": first,
@@ -140,7 +159,10 @@ def build(
                 "days_open": days,
                 "status": "resolved",
                 "change": "Resolved",
-                "resolved": {"date": run_date.isoformat(), "reason": resolution(by_fp.get(fp))},
+                "resolved": {
+                    "date": run_date.isoformat(),
+                    "reason": resolution(by_fp.get(fp), f, keep),
+                },
             }
         elif f.get("status") == "resolved":
             when = dt.date.fromisoformat(f["resolved"]["date"])
@@ -205,10 +227,23 @@ def _absorbed(f: dict[str, Any], results: list[Result]) -> str | None:
     return None
 
 
-def resolution(r: Result | None) -> str:
+NOT_SIGNIFICANT = "not significant after FDR"
+# a finding that fell under the bar to stay open (#142), in plain words; never "Cleared by data"
+MORE_CHECKS = "Below the bar: more checks ran, its numbers held"
+HELD_BELOW = "Below the bar: its numbers held"
+WEAKER = "Weaker: below the bar to stay open"
+BELOW_BAR = "Below the bar"  # how a night before #142 is shown (it stored the test's words)
+_OLD_BAR = "Cleared by data · " + NOT_SIGNIFICANT
+
+
+def resolution(
+    r: Result | None, before: dict[str, Any] | None = None, keep: dict[str, Any] | None = None
+) -> str:
     """Why an open finding was resolved: its own test stopped firing (cleared by data), an
     answer stopped testing it, it fell under the floor, or it isn't tested any more. (Covered
-    and merged findings aren't resolved: `_left`.)"""
+    and merged findings aren't resolved: `_left`.) From #142 (`keep` given), one whose signal
+    still fires but fell under the bar to stay open says so: its p held (the bar moved, with
+    more checks when last night's count was lower) or weakened."""
     if r is None:
         return "No longer tested"
     why = r.reason or ""
@@ -216,7 +251,27 @@ def resolution(r: Result | None) -> str:
         return "Explained by your answer" + why.removeprefix("explained by your answer")
     if why == "below materiality":
         return "Below the materiality floor"
+    if keep is not None and why.startswith(NOT_SIGNIFICANT):
+        was = (before or {}).get("p_value")
+        if was is None or r.p_value is None or Decimal(r.p_value) > Decimal(was):
+            return WEAKER
+        tests, then = r.params.get("tests"), keep.get("tests_before")
+        if tests is not None and then is not None and int(tests) > int(then):
+            return MORE_CHECKS
+        return HELD_BELOW
     return "Cleared by data" + (f" · {why}" if why and why != "no signal" else "")
+
+
+def shown_reason(reason: str) -> str:
+    """A stored reason as pages show it: a night before #142 stored the test's own words for a
+    finding that fell under the bar ("Cleared by data · not significant after FDR (q …)"),
+    which is neither plain nor true (the data may not have changed)."""
+    return BELOW_BAR if reason.startswith(_OLD_BAR) else reason
+
+
+def under_bar(reason: str) -> bool:
+    """Closed because it fell under the bar, not because the numbers stopped showing it."""
+    return reason.startswith((BELOW_BAR, WEAKER, _OLD_BAR))
 
 
 CAME_BACK = "Came back"

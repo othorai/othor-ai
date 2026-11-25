@@ -84,6 +84,12 @@ def test_what_the_zip_holds(night):  # noqa: F811
     assert "Indigo Thread" in readme and "computed by code" in readme
     rows = list(csv.DictReader(io.StringIO(files["findings.csv"].decode())))
     assert rows and {"fingerprint", "detector", "metric", "money", "run_id"} <= set(rows[0])
+    # 0.35: events.csv carries the plain who and what, as the Audit log shows them
+    evs = list(csv.DictReader(io.StringIO(files["events.csv"].decode())))
+    assert evs and {"actor", "action", "who", "what"} <= set(evs[0])
+    done = [e for e in evs if e["action"] == "run.finished"]
+    assert done and done[0]["who"] == "System"
+    assert done[0]["what"].startswith("Nightly run #") and done[0]["what"].endswith(" finished")
 
 
 def test_no_secret_or_token_is_in_the_zip(night):  # noqa: F811

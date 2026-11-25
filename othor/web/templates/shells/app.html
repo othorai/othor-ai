@@ -11,14 +11,14 @@
     <div class="side-top"><a class="brand" href="/">{{ logo() }}OTHOR AI</a>
       <input type="checkbox" id="nav-toggle" class="nav-toggle"><label for="nav-toggle" class="btn quiet nav-button" aria-label="Menu">☰</label></div>
     <div class="nav-links">
-    <p class="group">{{ company.name }}</p>
+    <p class="group" id="nav-company">{{ company.name }}</p>
     {# plug-in items join their group after the core item they name (M20.1) #}
     {% for key, label, href, ic, tag, badge in nav_items("company", [("home", "Home", "/home"), ("action-plan", "Action plan", "/action-plan"), ("brief", "Morning Brief", "/brief"), ("sweep", "Sweep", "/sweep"), ("summary", "Summary", "/summary")]) %}
     <a class="nav-item{{ ' is-on' if nav == key else '' }}" href="{{ href }}"{% if nav == key %} aria-current="page"{% endif %}>{{ icon(ic) }}{{ label }}{% if badge %}<span class="nav-badge" aria-label="{{ fmt.num(badge) }} new">{{ fmt.num(badge) }}</span>{% endif %}{% if tag == "ee" %}{{ ee_tag(short=True) }}{% endif %}</a>{% endfor %}
     <p class="group">Setup</p>
     {# owner, 18 Nov 2026 (0.26): AI usage is a plain menu item above Settings, this month's
        tokens on its right (loaded after the page, so no page waits for it) #}
-    {% for key, label, href, ic, tag, badge in nav_items("setup", [("ontology", "Business Model", "/ontology"), ("sources", "Data sources", "/sources"), ("usage", "AI usage", "/usage"), ("settings", "Settings", "/settings")]) %}
+    {% for key, label, href, ic, tag, badge in nav_items("setup", [("ontology", "Business Model", "/ontology"), ("sources", "Data sources", "/sources"), ("usage", "AI usage", "/usage"), ("audit", "Audit log", "/audit"), ("settings", "Settings", "/settings")]) %}
     <a class="nav-item{{ ' is-on' if nav == key else '' }}" href="{{ href }}"{% if nav == key %} aria-current="page"{% endif %}>{{ icon(ic) }}{{ label }}{% if key == "usage" %}<span class="nav-count" hx-get="/usage/count" hx-trigger="load" hx-swap="outerHTML"></span>{% endif %}{% if badge %}<span class="nav-badge" aria-label="{{ fmt.num(badge) }} new">{{ fmt.num(badge) }}</span>{% endif %}{% if tag == "ee" %}{{ ee_tag(short=True) }}{% endif %}</a>{% endfor %}
     </div>
     <div class="side-fill"></div>
@@ -26,7 +26,7 @@
   </nav>
   <div>
     {% if request.cookies.get("othor_first_run") %}<div hx-get="/first-run/strip" hx-trigger="load" hx-swap="outerHTML"></div>{% endif %}
-    <header class="app-header"><div class="flex items-center gap-10 min-w-0"><p class="crumbs"><span>{{ company.name }}</span><span>/</span><span class="here">{% block crumb %}{% endblock %}</span></p>{% block crumb_after %}{% endblock %}</div><div class="app-header-end">{% if company and not ask_in_title %}{% from "components/buttons.html" import ai_button %}{{ ai_button("Ask Othor AI", state="quiet", href=request.url.path ~ "?panel=othor&subject=ask", attrs={"data-panel": true}) }}{% endif %}<div id="app-actions">{% block actions %}{% endblock %}</div></div></header>
+    <header class="app-header"><div class="flex items-center gap-10 min-w-0"><p class="crumbs"><span id="crumb-company">{{ company.name }}</span><span>/</span><span class="here">{% block crumb %}{% endblock %}</span></p>{% block crumb_after %}{% endblock %}</div><div class="app-header-end">{% if company and not ask_in_title %}{% from "components/buttons.html" import ai_button %}{{ ai_button("Ask Othor AI", state="quiet", href=request.url.path ~ "?panel=othor&subject=ask", attrs={"data-panel": true}) }}{% endif %}<div id="app-actions">{% block actions %}{% endblock %}</div></div></header>
     <main class="app-main{% block main_class %}{% endblock %}" id="main">{% if paused %}<div class="mb-20">{{ banner("warn", "<b>Nightly runs are paused</b> · " ~ paused ~ ". Othor AI has been told.") }}</div>{% endif %}{% block main %}{% endblock %}</main>
     {# #63 (owner, 14 Nov 2026): one loading view for the main panel while a menu page loads:
        very light grey boxes in the page style's layout, shown at once on a menu click #}

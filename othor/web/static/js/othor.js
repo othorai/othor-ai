@@ -26,6 +26,16 @@ document.addEventListener("keydown", (e) => {
   const th = e.target.closest && e.target.closest("table[data-sort-table] th[data-sort]");
   if (th && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); sortTable(th); }
 });
+// A company address is lowercase only (#115): lower-cased in place as it is typed, the caret kept.
+document.addEventListener("input", (e) => {
+  const f = e.target;
+  if (!f.matches || !f.matches("input[data-lowercase]")) return;
+  const low = f.value.toLowerCase();
+  if (low === f.value) return;
+  const at = f.selectionStart;
+  f.value = low;
+  if (at !== null) f.setSelectionRange(at, at);
+});
 document.addEventListener("input", (e) => {
   const box = e.target.closest("[data-code-boxes] .digit");
   if (box && box.value && box.nextElementSibling) box.nextElementSibling.focus();
@@ -141,6 +151,18 @@ document.addEventListener("input", (e) => {
   if (!boxes || boxes.hasAttribute("data-no-autosubmit")) return;
   const all = [...boxes.querySelectorAll(".digit")];
   if (all.every((b) => /^\d$/.test(b.value))) boxes.closest("form")?.requestSubmit();
+});
+// A code form goes once (#117): a paste or autofill fills every box (one input event each) and
+// Continue or Enter can follow; the second post found the sign-in done and showed the email step.
+document.addEventListener("submit", (e) => {
+  const form = e.target;
+  if (!form.querySelector || !form.querySelector("[data-code-boxes]")) return;
+  if (form.dataset.sent) { e.preventDefault(); return; }
+  form.dataset.sent = "1";
+}, true);
+// Back to a page from the browser's cache: its code form can be sent again.
+window.addEventListener("pageshow", () => {
+  document.querySelectorAll("form[data-sent]").forEach((f) => delete f.dataset.sent);
 });
 // 2kb: ticking an Ignored row shows the select bar with the count.
 document.addEventListener("change", (e) => {
@@ -1366,6 +1388,8 @@ document.addEventListener("submit", (e) => {
       if (on && num) num.textContent = ++n;
     });
     page.querySelectorAll("[data-wtd-sec]").forEach((sec) => { sec.hidden = !sec.querySelector("[data-briefs]:not([hidden])"); });
+    // #110: a brief's tab shows its line to that brief's own Action plan; All shows none
+    page.querySelectorAll("[data-wtd-line]").forEach((l) => { l.hidden = l.dataset.wtdLine !== key; });
   }
   document.addEventListener("click", (e) => {
     const t = e.target.closest("[data-wtd-tab]");
@@ -1419,4 +1443,39 @@ document.addEventListener("submit", (e) => {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => fit(document));
   else fit(document);
   document.addEventListener("htmx:afterSettle", () => fit(document));
+})();
+
+// Blog pictures open full size in place (owner, 25 Nov 2026): a click on a post's picture shows it
+// over the page; Esc, the ×, or a click anywhere closes it, and focus goes back to the picture.
+// Without JavaScript the link opens the picture's file.
+(function () {
+  let box = null;
+  let from = null;
+  function close() {
+    if (box && box.open) box.close();
+  }
+  function open(a) {
+    if (!box) {
+      box = document.createElement("dialog");
+      box.className = "site-zoom";
+      box.setAttribute("aria-label", "Picture, full size");
+      box.innerHTML = '<button type="button" aria-label="Close">×</button><img alt="">';
+      box.addEventListener("click", close);
+      box.addEventListener("close", () => from && from.focus());
+      document.body.appendChild(box);
+    }
+    const img = a.querySelector("img");
+    const big = box.querySelector("img");
+    big.src = a.getAttribute("href");
+    big.alt = img ? img.alt : "";
+    from = a;
+    box.showModal();
+    box.querySelector("button").focus();
+  }
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest("a[data-zoom]");
+    if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    open(a);
+  });
 })();

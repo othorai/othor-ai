@@ -2,8 +2,9 @@
 """Rising variance (docs/04 §3, detector 4): the spread widens before the level moves.
 
 For intensive measures (averages, durations, rates: not sums), by process (each plant), the
-daily values since the spread started (the first of the last 8 weeks where it rose and stayed up;
-else the last 4 weeks, spec `recent_weeks`) against the 12 weeks before (`prior_weeks`):
+daily values since the spread started (the week of the last 8 that best splits narrow days from
+wide ones, the spread since staying up; at least the last 4 weeks, spec `recent_weeks`) against
+the 12 weeks before (`prior_weeks`):
 F = var(recent) / var(prior), one-sided F-test, Bonferroni over the 8 candidate weeks. It fires
 only while the level holds (its mean moved under 10%); a level that moved is a changepoint's.
 
@@ -32,7 +33,9 @@ from othor.engine.detectors.base import (
 )
 
 NAME = "rising_variance"
-VERSION = "1"
+# 2: the start is the week that best splits narrow from wide (25 Nov 2026); version 1 (the first
+# wide week) stays in the code, so a run made with it replays as it was (`Context.versions`)
+VERSION = "2"
 INTENSIVE_AGGS = ("avg", "stddev", "median")
 INTENSIVE_UNITS = ("days", "percent", "ratio", "inr_per_metre")
 STRONG_F = 4.0
@@ -73,7 +76,7 @@ def _test(ctx: Context, s: Series, recent_w: int, prior_w: int, min_w: int) -> R
     split = end - dt.timedelta(weeks=recent_w)
     base = Result(
         detector=NAME,
-        version=VERSION,
+        version=ctx.version(NAME, VERSION),
         series=[s.id],
         metric=s.metric,
         breakdown=s.breakdown,
@@ -92,21 +95,30 @@ def _test(ctx: Context, s: Series, recent_w: int, prior_w: int, min_w: int) -> R
     if not pairs or (end - pairs[0][0]).days < min_w * 7:
         base.eligible, base.reason = False, "insufficient history"
         return base
-    # when it started: among the last CANDIDATES weeks, the first from which the spread is well
-    # above that of the 16 weeks before them; then since it started against the prior_w weeks
-    # before that (docs/04: recent vs prior), paying for the choice of start (Bonferroni)
+    # when it started: among the last CANDIDATES weeks, the one that best splits the narrow days
+    # from the wide ones, with the spread since well above that of the 16 weeks before them; then
+    # since it started against the prior_w weeks before that (docs/04: recent vs prior), paying
+    # for the choice of start (Bonferroni). A start under recent_w weeks back is still the start
+    # reported (and the money since it); the test then reads the last recent_w weeks
     first_candidate = end - dt.timedelta(weeks=CANDIDATES)
     base_vals = np.array(
         [v for p, v in pairs if first_candidate - dt.timedelta(weeks=16) <= p < first_candidate]
     )
     vb = float(np.var(base_vals, ddof=1)) if len(base_vals) > 10 else 0.0
-    started = _start(pairs, end, first_candidate, vb) if vb > 0 else split
-    chosen = started != split
-    if (end - started).days < recent_w * 7:
-        started, chosen = split, False
-    prior_start = started - dt.timedelta(weeks=prior_w)
-    recent = np.array([v for p, v in pairs if started <= p < end])
-    prior = np.array([v for p, v in pairs if prior_start <= p < started])
+    if ctx.version(NAME, VERSION) == "1":
+        tested = _start_v1(pairs, end, first_candidate, vb) if vb > 0 else split
+        chosen = tested != split
+        if (end - tested).days < recent_w * 7:
+            tested, chosen = split, False
+        started = tested
+    else:
+        found = _start(pairs, end, first_candidate, base_vals, vb) if vb > 0 else None
+        tested = found if found is not None and (end - found).days >= recent_w * 7 else split
+        chosen = found is not None and tested == found
+        started = found or tested
+    prior_start = tested - dt.timedelta(weeks=prior_w)
+    recent = np.array([v for p, v in pairs if tested <= p < end])
+    prior = np.array([v for p, v in pairs if prior_start <= p < tested])
     if len(recent) < 10 or len(prior) < 30:
         base.eligible, base.reason = False, "insufficient history"
         return base
@@ -154,9 +166,40 @@ def _test(ctx: Context, s: Series, recent_w: int, prior_w: int, min_w: int) -> R
     return base
 
 
-def _start(pairs: list[tuple[dt.date, float]], end: dt.date, start: dt.date, vb: float) -> dt.date:
-    """The first week from `start` whose spread is over 2.5 × the baseline's and stays up (its
-    own and the following weeks' values together), else `end` − 4 weeks."""
+def _start(
+    pairs: list[tuple[dt.date, float]], end: dt.date, start: dt.date, base: np.ndarray, vb: float
+) -> dt.date | None:
+    """The week from `start` that best splits the narrow days before it (the baseline's and the
+    candidate weeks' before it) from the wide days since it (the split with the smallest
+    two-part spread, the earliest on a tie), among weeks whose spread since is over 2.5 × the
+    baseline's (it stayed up); else None. Version 1 took the first such week, and a
+    quiet week passed once the wide weeks after it were pooled with it, so the start was always
+    the first candidate week: run date − 8 weeks (25 Nov 2026, the Coimbatore date)."""
+    weeks: dict[dt.date, list[float]] = {}
+    for p, v in pairs:
+        if start <= p < end:
+            weeks.setdefault(p - dt.timedelta(days=p.weekday()), []).append(v)
+    order = sorted(weeks)
+    best: tuple[float, dt.date] | None = None
+    for i, w in enumerate(order):
+        after = [v for x in order[i:] for v in weeks[x]]
+        if len(weeks[w]) < 4 or len(after) < 10 or float(np.var(after, ddof=1)) <= 2.5 * vb:
+            continue
+        before = np.concatenate([base, [v for x in order[:i] for v in weeks[x]]])
+        cost = len(before) * np.log(float(np.var(before))) + len(after) * np.log(
+            float(np.var(after))
+        )
+        if best is None or cost < best[0]:
+            best = (cost, w)
+    return best[1] if best is not None else None
+
+
+def _start_v1(
+    pairs: list[tuple[dt.date, float]], end: dt.date, start: dt.date, vb: float
+) -> dt.date:
+    """Version 1, kept for runs made with it: the first week from `start` whose spread is over
+    2.5 × the baseline's and stays up (its own and the following weeks' values together), else
+    `end` − 4 weeks."""
     weeks: dict[dt.date, list[float]] = {}
     for p, v in pairs:
         if start <= p < end:

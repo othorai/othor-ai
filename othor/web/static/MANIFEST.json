@@ -188,7 +188,7 @@
   "source": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf"
  },
  "icons/sprite.svg": {
-  "sha256": "085487b722c450ab55bfbcee09b5515f4271438333fa9cf54edb01e35d0bda20",
+  "sha256": "9f914d26f43c04d643707e023b6ae5d0ca8e009580bd4d9f2e7c2fcffec80b09",
   "source": "https://unpkg.com/lucide-static@0.469.0/icons/*.svg"
  },
  "js/alpine-csp.min.js": {

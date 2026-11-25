@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "properties": {
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {"type": "string"},
+          "reason": {"type": "string"}
+        },
+        "required": ["key", "reason"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["reasons"],
+  "additionalProperties": false
+}

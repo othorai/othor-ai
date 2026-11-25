@@ -50,6 +50,8 @@ TABLES: dict[str, Rule] = {
     "company": Rule(drop={"logo_sha": "an internal file name; the logo is the owner's own"}),
     "app_user": Rule(),  # only the company's members, below
     "membership": Rule(),
+    # invitations to join (Enterprise, 0.34): who was invited, by whom and when; not the link
+    "member_invitation": Rule(drop={"token_hash": HIDDEN + " (the invitation link)"}),
     "setup_state": Rule(),
     "summary_layout": Rule(),
     "business_message": Rule(),
@@ -145,6 +147,8 @@ TABLES: dict[str, Rule] = {
             "input_hash": "an internal cache key",
         }
     ),
+    # Settings › AI Model (0.37): which model the company chose; never its key
+    "model_setting": Rule(drop={"key_ciphertext": HIDDEN + " (the model provider's key)"}),
     # stays behind
     "source_secret": Rule(skip=HIDDEN + " (source passwords and Google tokens)"),
     "auth_session": Rule(skip=HIDDEN + " (sign-in sessions)"),
@@ -161,6 +165,7 @@ TABLES: dict[str, Rule] = {
     "outside_fetch": Rule(skip="the instance's fetch log of public series"),
     # the owner's choices (Enterprise Edition, 0.28.4, named here only): signals turned off
     "outside_choice": Rule(),
+    "outside_suggestion": Rule(),
     "access_request": Rule(skip="website requests for access, not company data"),
     "purge_lock": Rule(skip="the purge's own lock (M18.3), never company data"),
 }
@@ -337,8 +342,15 @@ def build(s: Session, settings: Settings, company: Company) -> Export:
     fs = s.scalars(sa.select(Finding).order_by(Finding.created_at, Finding.id)).all()
     files["findings.csv"] = _csv(fcols, [[getattr(f, c) for c in fcols] for f in fs])
     ecols = ["at", "actor", "action", "object_type", "object_id", "before", "after"]
-    es = s.scalars(sa.select(Event).order_by(Event.at, Event.id)).all()
-    files["events.csv"] = _csv(ecols, [[getattr(e, c) for c in ecols] for e in es])
+    es = list(s.scalars(sa.select(Event).order_by(Event.at, Event.id)))
+    # 0.35: the plain who and what, as the Audit log shows them
+    from othor.audit.view import who_what
+
+    plain = who_what(s, es)
+    files["events.csv"] = _csv(
+        [*ecols, "who", "what"],
+        [[*(getattr(e, c) for c in ecols), *plain[i]] for i, e in enumerate(es)],
+    )
     pts = _points(settings, company.id, run)
     files["series/last_run.csv"] = _csv(
         list(OUTPUT_FIELDS), [[getattr(p, f) for f in OUTPUT_FIELDS] for p in pts]

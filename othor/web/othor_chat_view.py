@@ -65,6 +65,12 @@ def _card(c: dict[str, Any] | None) -> dict[str, Any] | None:
         "lines": list(c.get("lines") or []),
         "where": " · ".join(where),
         "tool": c.get("tool") or "",
+        # 2.1: one-click actions, only to the app's own routes
+        "actions": [
+            a
+            for a in c.get("actions") or []
+            if isinstance(a, dict) and str(a.get("url") or "").startswith("/")
+        ],
     }
 
 

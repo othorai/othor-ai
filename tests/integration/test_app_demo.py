@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import pytest
 import sqlalchemy as sa
 
 from othor.connectors import credentials
@@ -44,3 +45,23 @@ def test_installs_the_sample_company_once(tmp_path):
         for src in sources.values():
             got = credentials.load(s, ctx.key, first.company_id, src.id)
             assert got["password"] == app_demo.PASSWORD
+
+
+@pytest.mark.parametrize(("currency", "tz"), [("USD", "America/New_York"), ("INR", "Asia/Kolkata")])
+def test_the_currency_sets_the_time_zone(tmp_path, currency, tz):
+    """USD by default for the public demo, INR on request (owner, 25 Nov 2026)."""
+    ctx = _ctx(tmp_path)
+    kw = {} if currency == "USD" else {"currency": currency}
+    got = app_demo.install(ctx, **kw)
+    assert got.currency == currency and got.user_id is not None
+    with ctx.sf() as s, system_scope("test"):
+        c = s.scalars(sa.select(Company)).one()
+        assert (c.currency, c.timezone) == (currency, tz)
+    # a second make demo leaves the company as it is, whatever it asks for
+    again = app_demo.install(ctx, currency="INR" if currency == "USD" else "USD")
+    assert not again.created and again.currency == currency and again.user_id == got.user_id
+
+
+def test_only_dollars_or_rupees(tmp_path):
+    with pytest.raises(ValueError):
+        app_demo.install(_ctx(tmp_path), currency="EUR")

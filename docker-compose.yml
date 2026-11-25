@@ -71,6 +71,7 @@ services:
       OTHOR_SMTP_URL: smtp://mailpit:1025
       OTHOR_PUBLIC_SCHEME: http
       OTHOR_PUBLIC_PORT: ${OTHOR_APP_PORT:-8000}
+      OTHOR_MAILPIT_PORT: ${OTHOR_MAILPIT_PORT:-8026}  # where `othor demo` says the codes arrive
       OTHOR_MODEL_PROVIDER: ${OTHOR_MODEL_PROVIDER:-template}
       OTHOR_MODEL_ID: ${OTHOR_MODEL_ID:-}
       OTHOR_MODEL_API_KEY: ${OTHOR_MODEL_API_KEY:-}

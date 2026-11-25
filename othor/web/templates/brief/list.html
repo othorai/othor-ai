@@ -2,7 +2,7 @@
 {% extends "shells/app.html" %}
 {% from "components/ui.html" import el %}
 {% from "components/buttons.html" import button, link, top_menu, menu_link %}
-{% from "components/brief.html" import brief_card, new_brief_card, suggested_card, nb_steps, nb_head, nb_ai_tag, nb_card, nb_busy, nb_name, draft_table, mini_brief, nb_note, ai_box, ai_ask, nb_watch %}
+{% from "components/brief.html" import brief_card, new_brief_card, suggested_card, nb_steps, nb_head, nb_ai_tag, nb_card, nb_busy, nb_name, draft_table, mini_brief, ai_box, ai_ask, nb_watch %}
 {% from "components/blocks.html" import toast, page_title %}
 {% from "components/sweep.html" import overlay %}
 {% from "components/panels.html" import pane %}
@@ -70,7 +70,6 @@
     {% call el("div", "nb-suggest") %}{% for c in new.cards %}{{ nb_card(c) }}{% endfor %}{% endcall %}
   {% endcall %}{% endif %}
 {% endcall %}
-{% else %}{{ nb_note() }}
 {% endif %}
 {% endcall %}
 </form>
@@ -95,7 +94,6 @@
 {% endcall %}
 {% else %}{% call el("div", layout="flex flex-col gap-10 w-full") %}
   {% call el("div", layout="flex items-center gap-16 w-full") %}{{ button("← Back", kind="quiet", href="/brief/new") }}{{ nb_busy("Othor AI is changing the draft…") }}{% call el("span", layout="flex-1") %}{% endcall %}{{ button("Create brief", kind="primary nb-go", type="submit", attrs={"formaction": "/brief/new/create", "data-busy": "Creating…", "data-busy-say": "Creating your brief…"}) }}{% endcall %}
-  {{ nb_note() }}
 {% endcall %}
 {% endif %}
 {% endcall %}

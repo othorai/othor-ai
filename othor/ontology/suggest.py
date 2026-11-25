@@ -128,7 +128,7 @@ def _name(spec: Mapping[str, Any], key: str) -> str:
 
 
 def _lower_first(s: str) -> str:
-    return s[:1].lower() + s[1:] if s[:2] != s[:2].upper() else s
+    return fmt.lower_first(s)
 
 
 def _decide(cards: list[Card], score: Any) -> tuple[str | None, str]:

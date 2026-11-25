@@ -6,14 +6,14 @@ South fell ₹1.4 Cr while West’s growth hid it; three accounts carry 72% of t
 
 Sources fresh · erp_db 02:03 · sales_dw 02:04
 
-South fell ₹1.4 Cr; West’s rise hid it. Dispatch time spread at Coimbatore tripled from 7 Sep while the average held at 4.3 days. 14 customers still marked active haven’t invoiced in 90+ days. Freight expense tracked metres dispatched for 20 weeks, then decoupled on 14 Sep.
+South fell ₹1.4 Cr; West’s rise hid it. Dispatch time spread at Coimbatore tripled from 14 Sep while the average held at 4.3 days. 14 customers still marked active haven’t invoiced in 90+ days. Freight expense tracked metres dispatched for 20 weeks, then decoupled on 14 Sep.
 
 Needs attention · 4
 
 1. South fell ₹1.4 Cr; West’s rise hid it · ₹1.4 Cr
    Assessed · High · New
 
-2. Dispatch time spread at Coimbatore tripled from 7 Sep while the average held at 4.3 days · ₹4.59 Cr at risk
+2. Dispatch time spread at Coimbatore tripled from 14 Sep while the average held at 4.3 days · ₹4.06 Cr at risk
    Assessed · High · New
 
 3. 14 customers still marked active haven’t invoiced in 90+ days · ₹3.6 Cr

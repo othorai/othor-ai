@@ -24,6 +24,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       code: ${{ steps.diff.outputs.code }}
+      site: ${{ steps.diff.outputs.site }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,7 +43,18 @@ jobs:
           # docs, designs and the hand-run preview scripts never need the tests (ci-cost; not
           # marketing/, which the website reads, nor .claude/, which the export test reads)
           other=$(echo "$changed" | grep -vE '^(docs|design)/|^tests/ui/preview_[a-z0-9_]+\.py$|\.md$' || true)
-          if [ -n "$other" ]; then echo "code=true"; else echo "code=false"; fi >> "$GITHUB_OUTPUT"
+          if [ -z "$other" ]; then printf 'code=false\nsite=false\n' >> "$GITHUB_OUTPUT"; exit 0; fi
+          # the website alone (blog posts, site pages) plus a release's version lines: the site's
+          # tests and the guards in one short job instead of the whole suite (owner, 24 Nov 2026)
+          bump='^(pyproject\.toml|uv\.lock|othor/__init__\.py|tests/web/test_version_bump\.py)$'
+          rest=$(echo "$other" | grep -vE "^othor_site/|^marketing/|^tests/ui/blog_[a-z0-9_]+\.json$|$bump" || true)
+          lines=$(git diff "$BEFORE" "$GITHUB_SHA" -- pyproject.toml uv.lock othor/__init__.py \
+            tests/web/test_version_bump.py | grep -E '^[-+][^-+]' | grep -v version || true)
+          if [ -z "$rest" ] && [ -z "$lines" ]; then
+            printf 'code=false\nsite=true\n'
+          else
+            printf 'code=true\nsite=false\n'
+          fi >> "$GITHUB_OUTPUT"
       - uses: astral-sh/setup-uv@v6
         if: steps.diff.outputs.code == 'false'
         with:
@@ -53,7 +65,7 @@ jobs:
 
   static:
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.site == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -65,6 +77,31 @@ jobs:
         run: uv sync --frozen
       - name: Lint, types, import contracts, SPDX lines, licences, CSS build
         run: make lint type contracts spdx licences css
+      # 0.39: every shipped module imports with the production dependencies alone (0.37 left
+      # PyYAML in the dev group and signed-in Home failed in production)
+      - name: Runtime imports, production dependencies only
+        run: make runtime-imports PROD_ENV="$RUNNER_TEMP/prod-env"
+
+  # A website-only push (see changes): the site's tests, the guards and the version check.
+  site:
+    needs: changes
+    if: needs.changes.outputs.site == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    name: tests · website only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.7"
+      - name: Start metadata DB and sample sources
+        run: docker compose up -d meta-db sales-dw erp-db --wait
+      - name: Install
+        run: uv sync --frozen
+      - name: CSS
+        run: make css
+      - name: Tests
+        run: uv run pytest tests/guards tests/web/test_version_bump.py --durations=30 --durations-min=10
 
   tests:
     needs: changes
@@ -75,18 +112,20 @@ jobs:
       fail-fast: false
       matrix:
         area:
+          # 24 Nov 2026: unit, web and e2e run their test files in parallel inside the job
+          # (pytest-xdist, one process per core; each process has its own test databases), so a
+          # job takes about half the time and no extra job's setup is billed (docs/plans/ci-cost.md).
+          # The web tests are one job again (two from 20 Nov, four before).
           - name: unit, detectors, guards, ui, sample company
             paths: tests/unit tests/detectors tests/guards tests/ui tests/sample_company
-          # the web tests in two jobs side by side (scripts/ci_shard.py; one job took ~56 min; four
-          # jobs until 20 Nov 2026, two since: each job's setup is billed, docs/plans/ci-cost.md)
-          - name: web 1/2
-            shard: 1
-          - name: web 2/2
-            shard: 2
-          # the slowest job (22 min of tests) in two halves of about 11 min (v0.11, 12 Nov 2026):
-          # every test still runs on every push and before every deploy
+            parallel: "-n auto --dist loadfile"
+          - name: web
+            paths: tests/web
+            parallel: "-n auto --dist loadfile"
           - name: e2e nights, sample run
             paths: tests/e2e tests/integration/test_run_sample.py tests/integration/test_series_versions.py
+            parallel: "-n auto --dist loadfile"
+          # one at a time: test_seed reloads the shared sample databases the others read
           - name: integration, replay
             paths: tests/integration --ignore=tests/integration/test_run_sample.py --ignore=tests/integration/test_series_versions.py
     name: tests · ${{ matrix.area.name }}
@@ -114,8 +153,8 @@ jobs:
       - name: Tests
         env:
           PATHS: ${{ matrix.area.paths }}
-          SHARD: ${{ matrix.area.shard }}
+          PARALLEL: ${{ matrix.area.parallel }}
         run: |
-          if [ -n "$SHARD" ]; then PATHS=$(python3 scripts/ci_shard.py "$SHARD"); fi
-          # shellcheck disable=SC2086  # a list of paths, split on purpose
-          uv run pytest $PATHS --durations=30 --durations-min=10
+          nproc
+          # shellcheck disable=SC2086  # lists of paths and options, split on purpose
+          uv run pytest $PATHS $PARALLEL --durations=30 --durations-min=10

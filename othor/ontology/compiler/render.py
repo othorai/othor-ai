@@ -130,6 +130,19 @@ class Scope:
         self.used.setdefault(alias, set()).add(info.name)
         return exp.Column(this=ident(info.name), table=ident(alias))
 
+    def date_column(self, node: dict[str, Any], *, where: str) -> exp.Expr:
+        """A number's date column as its window compares it (#112, 24 Nov 2026): a Sheets column
+        (read into DuckDB, often as text) or a database column the scan found to be text is
+        cast to DATE, as the period already is; a database's real date or timestamp column is
+        compared as it is, so its index still serves the incremental read."""
+        alias, t = self.table_for(node.get("table"), where)
+        c = self._raw(alias, t, node["col"], where=where)
+        info = t.column(node["col"])
+        is_date = info is not None and str(info.kind).lower() in ("date", "timestamp")
+        if t.source_kind == "gsheets" or not is_date:
+            return exp.cast(c, "DATE")
+        return c
+
     def column(self, node: dict[str, Any], *, where: str, convert: bool = True) -> exp.Expr:
         alias, t = self.table_for(node.get("table"), where)
         c = self._raw(alias, t, node["col"], where=where)

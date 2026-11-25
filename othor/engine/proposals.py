@@ -38,6 +38,7 @@ CORE_KINDS = frozenset(
         "duplicate_metric",
         "breakdowns",
         "areas",
+        "size_number",  # #76: a number suggested for the company's size and goals
     }
 )
 
@@ -381,18 +382,20 @@ def goal(s: Any, run: Run, spec: dict[str, Any], results: list[dict[str, Any]]) 
         if s.scalars(sa.select(Proposal.id).where(Proposal.fingerprint == fp)).first():
             continue
         unit = spec.get("metrics", {}).get(r["metric"], {}).get("unit")
-        target = values.rounded(unit, sl["target"])
-        tracking = values.rounded(unit, sl["projection"])
+        target = values.goal_target(unit, sl["target"])
+        tracking = values.rounded(unit, sl["projection"], like=sl["target"])
         metric = spec.get("metrics", {}).get(r["metric"], {}).get("name") or r["metric"]
         head = (
             f"{metric} {_fy(by)} target {target}"
             if _aggregate(spec, sl["goal"]) == "fiscal_year_total"
             else f"{metric} target {target} by {fmt.day_month(by)}"
         )
-        line = f"Mark as at risk · short by {values.rounded(unit, sl['short_by'])}"
+        line = (
+            f"Mark as at risk · short by {values.rounded(unit, sl['short_by'], like=sl['target'])}"
+        )
         whole_band = False
         if sl.get("lower") is not None and sl.get("upper") is not None:
-            line += f" · 80% band {values.band(unit, sl['lower'], sl['upper'])}"
+            line += f" · 80% band {values.band(unit, sl['lower'], sl['upper'], like=sl['target'])}"
             hi, lo, t = (Decimal(str(sl[k])) for k in ("upper", "lower", "target"))
             whole_band = hi < t if sl.get("direction", "at_least") == "at_least" else lo > t
         p = Proposal(
@@ -556,6 +559,10 @@ def _changes(s: Any, p: Proposal) -> list[Any]:
             if rec is not None and not (rec.body or {}).get("area"):
                 out.append(service.put("metric", key, {**rec.body, "area": area}, ref))
         return out
+    if p.kind == "size_number":  # #76: the drafted number, a formula over the company's own
+        from othor.ontology import size_numbers
+
+        return size_numbers.changes(s, p)
     if p.kind in PROPOSALS:  # a plug-in's kind
         return PROPOSALS[p.kind].changes(s, p)
     return []
@@ -566,6 +573,8 @@ def _decide_one(s: Any, p: Proposal, *, accept: bool, actor: str, now: Any) -> N
 
     if p.status != "open":
         return
+    if accept and p.kind == "size_number" and (p.evidence or {}).get("status") != "now":
+        return  # a number that needs a table or a source has nothing to apply yet
     if accept:
         v = service.apply(
             s, _changes(s, p), actor=actor, reason=f"Accepted on Home: {p.text}"[:300]

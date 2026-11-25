@@ -61,7 +61,7 @@ def test_interleaved_first_plugin_first_up_to_three(two: dict[str, Any]) -> None
     assert page.index('data-row="a1"') < page.index('data-row="b1"') < page.index('data-row="a2"')
     assert 'data-row="b2"' not in page and 'data-row="a3"' not in page
     assert "Suggested by Othor AI · 7" in page
-    assert "From last night’s results · nothing changes until you choose" in page
+    assert "From last night’s results" in page and "nothing changes until you choose" not in page
     # each plug-in with more than it got has its link; the first says "All suggestions"
     assert "All suggestions in A →" in page and "In B →" in page
     assert page.index("All suggestions in A →") < page.index("In B →")

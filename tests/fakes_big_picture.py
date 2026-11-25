@@ -28,7 +28,7 @@ EN = {
         {
             "fact": "b1i2",
             "title": "Coimbatore’s slowest orders are getting slower",
-            "sentence": "The average dispatch time held at 4.3 days, but the slowest orders started getting slower from 7 Sep. Customers usually feel this before the average changes.",
+            "sentence": "The average dispatch time held at 4.3 days, but the slowest orders started getting slower from 14 Sep. Customers usually feel this before the average changes.",
         },
         {
             "fact": "b1i4",
@@ -48,7 +48,7 @@ EN = {
             "text": "Call Tessora EU and Ravira Exports: have they moved orders elsewhere, or are they on hold?",
             "fact": "b1i1",
         },
-        {"text": "Ask the Coimbatore plant what changed in the week of 7 Sep.", "fact": "b1i2"},
+        {"text": "Ask the Coimbatore plant what changed in the week of 14 Sep.", "fact": "b1i2"},
         {
             "text": "Go through the 14 silent customers with Sales and mark who has really left.",
             "fact": "b1i3",
@@ -79,7 +79,7 @@ HI = {
         {
             "fact": "b1i2",
             "title": "कोयंबटूर के सबसे धीमे ऑर्डर और धीमे हो रहे हैं",
-            "sentence": "औसत डिस्पैच समय 4.3 days पर टिका रहा, पर 7 Sep से सबसे धीमे ऑर्डर और धीमे होने लगे।",
+            "sentence": "औसत डिस्पैच समय 4.3 days पर टिका रहा, पर 14 Sep से सबसे धीमे ऑर्डर और धीमे होने लगे।",
         },
         {
             "fact": "b1i4",
@@ -99,7 +99,7 @@ HI = {
             "text": "Tessora EU और Ravira Exports से बात करें: क्या उन्होंने ऑर्डर कहीं और दिए हैं, या रोके हैं?",
             "fact": "b1i1",
         },
-        {"text": "कोयंबटूर प्लांट से पूछें कि 7 Sep वाले हफ़्ते में क्या बदला।", "fact": "b1i2"},
+        {"text": "कोयंबटूर प्लांट से पूछें कि 14 Sep वाले हफ़्ते में क्या बदला।", "fact": "b1i2"},
         {"text": "सेल्स के साथ 14 चुप ग्राहकों की सूची देखें और तय करें कि कौन सच में चला गया।", "fact": "b1i3"},
     ],
     "words": [

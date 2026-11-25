@@ -1,17 +1,19 @@
 # SPDX-License-Identifier: Apache-2.0
-.PHONY: dev demo down seed migrate test test-fast css-check lint fmt type contracts spdx licences css css-watch ci
+.PHONY: dev demo down seed migrate test test-parallel test-fast runtime-imports css-check lint fmt type contracts spdx licences css css-watch ci
 
 UV ?= uv
 
 dev:  ## app + metadata Postgres + sample MySQL/Postgres + Mailpit
 	@test -f .env || cp .env.example .env
 	docker compose up -d --build --wait
-	@echo "app http://localhost:8000/healthz · mail http://localhost:8026"
+	@echo "app http://localhost:$${OTHOR_APP_PORT:-8000}/healthz · mail http://localhost:$${OTHOR_MAILPIT_PORT:-8026}"
 
-demo:  ## the whole thing in one go: dev stack, sample data, Indigo Thread set up, one night run, how to sign in
+CURRENCY ?= USD
+
+demo:  ## the whole thing in one go: dev stack, sample data, Indigo Thread set up, one night run, a one-time sign-in link (CURRENCY=INR for rupees)
 	$(MAKE) dev
 	$(MAKE) seed
-	docker compose exec -T app othor demo
+	docker compose exec -T app othor demo --currency $(CURRENCY)
 
 down:
 	docker compose down
@@ -26,6 +28,10 @@ migrate:
 
 test:  ## unit + guards + sample company + integration (needs `make dev`)
 	$(UV) run pytest
+
+test-parallel:  ## the whole suite as CI runs it: in parallel on every core, then integration alone (needs `make dev`)
+	$(UV) run pytest -n auto --dist loadfile tests/unit tests/detectors tests/guards tests/ui tests/sample_company tests/web tests/e2e tests/integration/test_run_sample.py tests/integration/test_series_versions.py
+	$(UV) run pytest tests/integration --ignore=tests/integration/test_run_sample.py --ignore=tests/integration/test_series_versions.py
 
 test-fast:  ## no containers needed
 	OTHOR_TEST_SKIP_DB=1 $(UV) run pytest
@@ -49,6 +55,11 @@ contracts:
 
 css:  ## Tailwind v4 standalone (pinned, checksum-verified): static/css/app.<sha8>.css + manifest
 	$(UV) run python scripts/build_css.py
+
+PROD_ENV ?= /tmp/othor-prod-env
+runtime-imports:  ## every shipped module imports with production dependencies only (0.39)
+	UV_PROJECT_ENVIRONMENT=$(PROD_ENV) $(UV) sync --frozen --no-dev
+	UV_PROJECT_ENVIRONMENT=$(PROD_ENV) $(UV) run --no-sync python scripts/check_runtime_imports.py
 
 css-check:  ## fail if the built CSS is missing or stale (CI and the image build, M12b)
 	$(UV) run python scripts/build_css.py --check

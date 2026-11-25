@@ -201,3 +201,27 @@ def test_migrate_create_key_only_on_a_fresh_install(
         s.commit()
     res = CliRunner().invoke(app, ["migrate", "--create-key"])
     assert res.exit_code == 1 and "restore /data" in res.output and not key.exists()
+
+
+def test_web_runs_the_configured_number_of_processes(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Load test, 25 Nov 2026: othor.ai runs 2 web processes (OTHOR_WEB_WORKERS); 1 by default
+    and always 1 with --reload (dev)."""
+    import uvicorn
+
+    from othor.core import config
+
+    got: list[dict[str, object]] = []
+    monkeypatch.setattr(uvicorn, "run", lambda *_a, **kw: got.append(kw))
+    monkeypatch.delenv("OTHOR_WEB_WORKERS", raising=False)
+    config.get_settings.cache_clear()
+    try:
+        assert CliRunner().invoke(app, ["web"]).exit_code == 0
+        monkeypatch.setenv("OTHOR_WEB_WORKERS", "2")
+        config.get_settings.cache_clear()
+        assert CliRunner().invoke(app, ["web"]).exit_code == 0
+        assert CliRunner().invoke(app, ["web", "--reload"]).exit_code == 0
+        assert CliRunner().invoke(app, ["web", "--workers", "3"]).exit_code == 0
+    finally:
+        config.get_settings.cache_clear()
+    assert [kw["workers"] for kw in got] == [1, 2, 1, 3]
+    assert all(kw["factory"] is True for kw in got)

@@ -419,7 +419,9 @@ async def edit_post(request: Request, bid: str, o: Owner = Depends(signed_in)) -
             body = edit.clean(draft, spec, options)
             current = service.current(s, brief)
             if current is None or body != edit.clean(dict(current.body), spec, options):
-                v = service.save_version(s, brief, body, actor=o.viewer.email, reason="Edit brief")
+                v = service.save_version(
+                    s, brief, body, actor=str(o.viewer.id), reason="Edit brief"
+                )
                 s.commit()
                 return RedirectResponse(f"/brief/{brief.id}?saved={v.number}", status_code=303)
             return RedirectResponse(f"/brief/{brief.id}", status_code=303)
@@ -464,7 +466,7 @@ async def add_recipient(request: Request, bid: str, o: Owner = Depends(signed_in
                 got.status, got.unsubscribed_at, got.bounced_at = "active", None, None
             record_event(
                 s,
-                actor=o.viewer.email,
+                actor=str(o.viewer.id),
                 action="brief.recipient_added",
                 object_type="brief",
                 object_id=brief.id,
@@ -500,7 +502,7 @@ def remove_recipient(
         revoke_for(s, r.id, svc.clock())  # their signed links stop at once
         record_event(
             s,
-            actor=o.viewer.email,
+            actor=str(o.viewer.id),
             action="brief.recipient_removed",
             object_type="brief",
             object_id=brief.id,
@@ -777,11 +779,11 @@ async def create_brief(request: Request, o: Owner = Depends(signed_in)) -> Respo
         body = edit.clean(draft, spec, run_cache.scope_options(spec, files.series))
         if not body["question"] or not body["headline"]:
             return RedirectResponse("/brief/new", status_code=303)
-        b = service.create(s, body, actor=o.viewer.email, reason="New brief")
+        b = service.create(s, body, actor=str(o.viewer.id), reason="New brief")
         # 0.29.4: its first issue at once, from last night's results (no run, no model)
         from othor.briefs import first_issue
 
-        first_issue.at_creation(s, svc.settings, b, actor=o.viewer.email, now=svc.clock())
+        first_issue.at_creation(s, svc.settings, b, actor=str(o.viewer.id), now=svc.clock())
         sug = _uuid(str(form.get("suggestion") or ""))
         if sug:
             row = s.scalars(sa.select(SuggestedBrief).where(SuggestedBrief.id == sug)).first()
@@ -789,7 +791,7 @@ async def create_brief(request: Request, o: Owner = Depends(signed_in)) -> Respo
                 row.status = "created"
                 record_event(
                     s,
-                    actor=o.viewer.email,
+                    actor=str(o.viewer.id),
                     action="suggested_brief.created",
                     object_type="suggested_brief",
                     object_id=row.id,
@@ -813,7 +815,7 @@ def undo_create(request: Request, bid: str, o: Owner = Depends(signed_in)) -> Re
         b.status = "archived"
         record_event(
             s,
-            actor=o.viewer.email,
+            actor=str(o.viewer.id),
             action="brief.removed",
             object_type="brief",
             object_id=b.id,
@@ -842,7 +844,7 @@ def dismiss_suggestion(request: Request, sid: str, o: Owner = Depends(signed_in)
         row.status = "dismissed"
         record_event(
             s,
-            actor=o.viewer.email,
+            actor=str(o.viewer.id),
             action="suggested_brief.dismissed",
             object_type="suggested_brief",
             object_id=row.id,
@@ -1029,6 +1031,9 @@ def brief(
             q=ctx["q"],
             back=f"brief-{bv.brief.id}",
         )
+        # #109 (owner, 25 Nov 2026): What's ahead links each number to its chart on Forecasts,
+        # on this signed-in page only and only with Forecasts installed
+        ctx["ahead_fc"] = weather_view.forecasts_on()
         # Watch on the item cards, in place (0.33.1)
         ctx["card_watch"] = todo_view.card_watch(
             s,
@@ -1169,7 +1174,7 @@ async def add_to_brief_post(
         pat = pattern_of(f)
         if pat not in (body.get("pinned") or []):
             body["pinned"] = [*(body.get("pinned") or []), pat]
-            service.save_version(s, brief, body, actor=o.viewer.email, reason="Add to a brief")
+            service.save_version(s, brief, body, actor=str(o.viewer.id), reason="Add to a brief")
             s.commit()
     sep = "&" if q else "?"
     if request.query_params.get("back") == "panel":  # from the dialog: the panel stays (M15.3)

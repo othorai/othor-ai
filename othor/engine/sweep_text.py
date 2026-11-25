@@ -103,7 +103,7 @@ def money_tag(f: dict[str, Any]) -> str:
         return f"{money(slots['money_per_month'])} / month"
     if f.get("money") is None:
         return ""
-    if f["detector"] == "rising_variance":
+    if f["detector"] == "rising_variance" or " at risk " in f" {f.get('money_basis') or ''} ":
         return f"{money(f['money'])} at risk"
     return money(f["money"])
 
@@ -121,7 +121,7 @@ def _name(spec: dict[str, Any], metric: str) -> str:
 
 
 def _lower(s: str) -> str:
-    return s[:1].lower() + s[1:] if s[:2] != s[:2].upper() else s
+    return fmt.lower_first(s)
 
 
 def _unit(f: dict[str, Any], v: Any) -> str:
@@ -192,9 +192,30 @@ def words(f: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
 # --- per detector ------------------------------------------------------------------------------
 
 
+def _entity_words(spec: dict[str, Any], f: dict[str, Any]) -> dict[str, Any]:
+    """What an entity is called and what it does, from the Business Model (an insurer's partner
+    banks issue policies; 24 Nov 2026). Without words: customers that invoice, as before."""
+    fam = str(f.get("family", ""))
+    e = (
+        spec.get("probes", {}).get("entities", {}).get(fam.split(":", 1)[1], {})
+        if fam.startswith("entity:")
+        else {}
+    )
+    w = e.get("words") or {}
+    return {
+        "noun": w.get("noun") or "customer",
+        "plural": w.get("plural") or "customers",
+        "did": w.get("did") or "invoiced",
+        "doing": w.get("doing") or "invoicing",
+        "event": w.get("event") or "invoice",
+        "own": bool(w),
+    }
+
+
 def _missing(f: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
     sl = f["slots"]
     src = _source(spec, f)
+    w = _entity_words(spec, f)
     if f["state"] == "measured":  # the group of active customers gone silent
         weeks = round(float(sl.get("gap_lengthened_weeks") or 0))
         gaps = (
@@ -223,23 +244,35 @@ def _missing(f: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
             "title": (
                 f"{fmt.num(sl['count'])} "
                 + (
-                    "customer still marked active hasn’t"
+                    f"{w['noun']} still marked active hasn’t"
                     if sl["count"] == 1
-                    else "customers still marked active haven’t"
+                    else f"{w['plural']} still marked active haven’t"
                 )
-                + f" invoiced in {fmt.num(sl['quiet_days'])}+ days"
+                + f" {w['did']} in {fmt.num(sl['quiet_days'])}+ days"
             ),
             "line": f"Together {money(sl['total_12m'])} over the last 12 months.{gaps}",
             "consequence": f"{money(sl['total_12m'])} a year outside view",
             "why_unseen": (
-                f"{src} has no churn status. Customers don’t cancel; they stop ordering, so no "
-                "row is created."
+                f"{src} has no status for a {w['noun']} that goes quiet, so no row shows it."
+                if w["own"]
+                else f"{src} has no churn status. Customers don’t cancel; they stop ordering, so "
+                "no row is created."
             ),
-            "question": "Who owns an account that hasn’t cancelled but has stopped buying?",
+            "question": (
+                f"Who looks after a {w['noun']} that’s still active but has gone quiet?"
+                if w["own"]
+                else "Who owns an account that hasn’t cancelled but has stopped buying?"
+            ),
             "rows": {
-                "headers": ["Account", "Last invoice", "Silent", "Reorder gap", "Last 12 m"],
+                "headers": [
+                    w["noun"].capitalize() if w["own"] else "Account",
+                    f"Last {w['event']}",
+                    "Silent",
+                    "Reorder gap",
+                    "Last 12 m",
+                ],
                 "rows": rows,
-                "noun": "accounts",
+                "noun": w["plural"] if w["own"] else "accounts",
                 "total": int(sl["count"]),
                 "note": "No chart by design: these accounts produce no rows.",
             },
@@ -284,13 +317,17 @@ def _missing(f: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
     settle.append("Or connect a deal list with activity dates; this finding re-runs tonight")
     settle.append(f"If it is a known pause, add it; Sweep stops flagging {name} until the end date")
     return {
-        "title": f"{name} stopped invoicing on {_d(sl.get('last'))}",
+        "title": f"{name} stopped {w['doing']} on {_d(sl.get('last'))}",
         "line": "The gap is measured. Why it happened can’t be told from the data Othor AI reads.",
         "consequence": "needs deal activity or a call",
-        "why_unseen": f"{src} has no status for a customer who stops ordering, so no row shows it.",
+        "why_unseen": (
+            f"{src} has no status for a {w['noun']} that stops {w['doing']}, so no row shows it."
+            if w["own"]
+            else f"{src} has no status for a customer who stops ordering, so no row shows it."
+        ),
         "question": f"Have {name}’s orders moved elsewhere, or are they on hold?",
         "measured": [
-            ["Last invoice", _d(sl.get("last"))],
+            [f"Last {w['event']}", _d(sl.get("last"))],
             ["Usual rhythm", rhythm],
             ["Gap now", f"{fmt.num(sl.get('gap_days', 0))} days"],
             ["Value at risk", money(f["money"]) if f.get("money") else ""],
@@ -318,15 +355,16 @@ def _variance(f: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
     verb = "tripled" if ratio >= 3 else "doubled" if ratio >= 2 else "widened"
     metric = _name(spec, f["metric"])
     where = f" at {f['breakdown_value']}" if f.get("breakdown_value") else ""
+    began = sl.get("since") or sl["started"]  # the first start reported, while it stays open
     return {
         "title": (
-            f"{metric} spread{where} {verb} from {_d(sl['started'])} while the average held at "
+            f"{metric} spread{where} {verb} from {_d(began)} while the average held at "
             f"{_unit(f, sl['mean_recent'])}"
         ),
         "line": _slowest(f, sl),
         "consequence": "spread usually comes before complaints",
         "why_unseen": "Reports show the average, and the average has not moved.",
-        "question": f"What changed in {_lower(metric)}{where} in the week of {_d(sl['started'])}?",
+        "question": f"What changed in {_lower(metric)}{where} in the week of {_d(began)}?",
     }
 
 
@@ -519,6 +557,12 @@ def _step(f: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
         "line": (
             f"From {_unit(f, sl['before'])} to {_unit(f, sl['after'])}, held for "
             f"{fmt.num(sl['weeks_held'])} weeks."
+            # #138 (owner, 25 Nov 2026): a step from 0 has no share of its linked ₹ to read
+            + (
+                " The money at risk can't be sized: it started from 0."
+                if sl.get("money_unsized")
+                else ""
+            )
         ),
         # 0.33.1: the line named no date ("It has held since"); it says the week the step began
         "consequence": f"it has held since the week of {_d(sl['change_week'])}",

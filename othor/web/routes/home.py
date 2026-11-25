@@ -130,6 +130,10 @@ def home(
             ctx["fpanel"] = weather_view.forecast_panel(
                 s, svc.settings, ctx.get("weather_run"), (week or "")[:8]
             )
+            # #109 (owner, 25 Nov 2026): the quick panel stays on Home and opens that week on
+            # Forecasts, with the Forecasts page installed
+            if ctx["fpanel"] is not None and weather_view.forecasts_on():
+                ctx["fpanel"]["forecasts"] = weather_view.week_on_forecasts(ctx["fpanel"]["week"])
         if panel == "big-picture":  # v0.19 (M19.5): in the side panel, normal or extended
             from othor.ai.gateway import provider_for
             from othor.web import big_picture_view as bpv
@@ -159,27 +163,47 @@ def home(
             return RedirectResponse(f"/home?panel=othor&subject=proposal:{row.id}", 303)
         if done and (row := _proposal(s, done)) is not None and row.status != "open":
             ctx["proposals"] = _with_decided(s, ctx["proposals"], row)
+        ctx["size_lead"] = _size_lead(s, done)
         s.expunge_all()
     ctx["ask_in_title"] = True  # #86: Ask Othor AI sits by Big Picture, not in the top bar
     return page(request, "home/home.html", ctx)
+
+
+def _size_lead(s: Session, done: str | None) -> dict[str, Any]:
+    """#76: the top number suggested for the company's size, first on Suggested by Othor AI, and
+    the calm toast with Undo when the owner just set one aside with Not now."""
+    from othor.ontology import size_numbers
+
+    out: dict[str, Any] = {"item": size_numbers.home_item(s)}
+    row = _proposal(s, done) if done else None
+    if row is not None and row.kind == size_numbers.KIND and row.status == "declined":
+        out["toast"] = {
+            "text": "Not now · Othor AI suggests it again when your numbers change",
+            "action": f"/home/proposals/{row.id}/undo?back=home",
+            "label": "Undo",
+        }
+    return out
 
 
 def _with_decided(s: Session, rows: list[dict[str, Any]], p: Proposal) -> list[dict[str, Any]]:
     """The decided proposal back in its place in the list (same order as the open ones), as the
     row with its Undo (M12b: the note sits where the row was)."""
     order = s.scalars(
-        sa.select(Proposal.id)
+        sa.select(Proposal)
         .where(sa.or_(Proposal.status == "open", Proposal.id == p.id), Proposal.kind != "join")
         .order_by(Proposal.created_at, Proposal.id)
     ).all()
-    at = [str(i) for i in order].index(str(p.id))
+    ids = [str(x.id) for x in hv.review_order(order)]
+    shown = {r["id"] for r in rows}
+    at = len([i for i in ids[: ids.index(str(p.id))] if i in shown])
+    declined = (
+        "Not now · Othor AI suggests it again when your numbers change"
+        if p.kind == "size_number"
+        else "Declined · it won’t be proposed again"
+    )
     decided = {
         **hv.proposal_row(p),
-        "decided": (
-            "Accepted · applies from tonight’s run"
-            if p.status == "accepted"
-            else "Declined · it won’t be proposed again"
-        ),
+        "decided": "Accepted · applies from tonight’s run" if p.status == "accepted" else declined,
     }
     return [*rows[:at], decided, *rows[at:]]
 

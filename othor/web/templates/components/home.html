@@ -107,7 +107,7 @@
 {% from "components/buttons.html" import button, link %}
 {% from "components/forms.html" import action_form %}
 {% if sg.cards %}<section class="flex flex-col gap-16" aria-label="Suggested by Othor AI" id="suggested">
-  <div class="flex flex-wrap items-baseline justify-between gap-12"><h2 class="caps-title">Suggested by Othor AI · {{ fmt.num(sg.count) }}</h2><span class="hint">From last night’s results · nothing changes until you choose</span></div>
+  <div class="flex flex-wrap items-baseline justify-between gap-12"><h2 class="caps-title">Suggested by Othor AI · {{ fmt.num(sg.count) }}</h2><span class="hint">From last night’s results</span></div>
   <div class="brief-cards" data-rows>{% for c in sg.cards %}{{ c }}{% endfor %}</div>
   {% if sg.more %}<div class="flex flex-wrap items-center gap-16">{% for m in sg.more %}{{ link(m.label if loop.first else (m.short or m.label), m.href) }}{% endfor %}</div>{% endif %}
 </section>{% endif %}

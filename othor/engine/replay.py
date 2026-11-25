@@ -55,6 +55,10 @@ def _replay(ctx: EngineContext, run_id: uuid.UUID) -> Replay:
     doc = json.loads(raw)
     inputs = load_inputs(files, spec.compiled, doc)
     out = compute(inputs)
+    if "size" not in json.loads(files.outputs_json.read_bytes()):
+        # #76 (25 Nov 2026) added the company's size to every run's outputs; a run sealed before
+        # it has none, and nothing read it then
+        out.doc.pop("size", None)
     goals: list[Any] = []
     fdoc: dict[str, Any] = {"goals": goals}
     if run.kind != "manual":  # the forecast step, from the same outputs (M7)
@@ -91,9 +95,15 @@ def _replay(ctx: EngineContext, run_id: uuid.UUID) -> Replay:
         diff += _same_file(files.outputs / AHEAD, ahead, "forecasts ahead")
     if run.kind not in ("manual", "fixture"):  # neither runs Sweep
         from othor.engine.orchestrator import sweep_inputs
-        from othor.engine.sweep import run_sweep
+        from othor.engine.sweep import run_sweep, stored_versions
 
         extra = sweep_inputs(files, spec.compiled, doc)
+        made_with: dict[str, Any] = {}
+        if "detector_versions" not in extra["context"]:
+            # sealed before its context named them (#138): the versions its results recorded,
+            # so it replays with the rules it was made with
+            stored = read_json(files.outputs / "detection.json") or []
+            made_with = {"detector_versions": stored_versions(stored)}
         sw = run_sweep(
             spec.compiled,
             spec.hash,
@@ -101,7 +111,7 @@ def _replay(ctx: EngineContext, run_id: uuid.UUID) -> Replay:
             inputs.points,
             out.points,
             extra["probe_files"],
-            {**extra["context"], "goals": goals},
+            {**extra["context"], **made_with, "goals": goals},
         )
         out.doc["sweep"] = sw.doc
         if run.kind in BRIEF_KINDS:  # the brief issues (M8), from the same outputs

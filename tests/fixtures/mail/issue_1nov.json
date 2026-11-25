@@ -59,10 +59,10 @@
    "key": "finding:83f4e966442fc01cd415cf2c",
    "kind": "finding",
    "metric": "dispatch_time",
-   "money": "₹4.59 Cr at risk",
+   "money": "₹4.06 Cr at risk",
    "money_note": null,
    "status": "New",
-   "text": "Ask what changed at Coimbatore from 7 Sep: the spread of dispatch time tripled while the average held at 4.3 days.",
+   "text": "Ask what changed at Coimbatore from 14 Sep: the spread of dispatch time tripled while the average held at 4.3 days.",
    "watch": {
     "breakdown_value": "Coimbatore",
     "can": true,
@@ -75,7 +75,7 @@
    "why": [
     {
      "fingerprint": "83f4e966442fc01cd415cf2c",
-     "title": "Dispatch time spread at Coimbatore tripled from 7 Sep while the average held at 4.3 days"
+     "title": "Dispatch time spread at Coimbatore tripled from 14 Sep while the average held at 4.3 days"
     }
    ]
   }
@@ -300,7 +300,7 @@
   },
   {
    "change": "New",
-   "chart": "{\"alt_text\":\"Dispatch time at Coimbatore: the spread from the lowest to the highest tenth widened from 7 Sep while the average held at 4.3 days.\",\"annotations\":[{\"at\":\"2026-09-07\",\"from\":null,\"label\":\"7 Sep · spread starts widening\",\"role\":\"negative\",\"style\":\"dashed\",\"to\":null,\"type\":\"vline\",\"value\":null}],\"band\":{\"forecast_run_id\":null,\"label\":\"middle 80%\",\"level\":\"0.800000\",\"lower\":[[\"2026-08-02\",\"3.600000\"],[\"2026-08-09\",\"3.870000\"],[\"2026-08-16\",\"3.800000\"],[\"2026-08-23\",\"3.800000\"],[\"2026-08-30\",\"3.780000\"],[\"2026-09-06\",\"3.720000\"],[\"2026-09-13\",\"3.640000\"],[\"2026-09-20\",\"3.260000\"],[\"2026-09-27\",\"3.110000\"],[\"2026-10-04\",\"3.660000\"],[\"2026-10-11\",\"3.550000\"],[\"2026-10-18\",\"3.460000\"],[\"2026-10-25\",\"3.280000\"]],\"role\":\"negative\",\"series_id\":\"avg\",\"source\":\"p10-p90\",\"upper\":[[\"2026-08-02\",\"4.640000\"],[\"2026-08-09\",\"4.340000\"],[\"2026-08-16\",\"4.340000\"],[\"2026-08-23\",\"4.280000\"],[\"2026-08-30\",\"4.280000\"],[\"2026-09-06\",\"4.590000\"],[\"2026-09-13\",\"4.460000\"],[\"2026-09-20\",\"4.920000\"],[\"2026-09-27\",\"4.960000\"],[\"2026-10-04\",\"4.870000\"],[\"2026-10-11\",\"4.730000\"],[\"2026-10-18\",\"4.700000\"],[\"2026-10-25\",\"4.720000\"]]},\"categories\":[],\"explore\":{},\"id\":\"finding:83f4e966442fc01cd415cf2c\",\"kind\":\"line\",\"period\":{\"from\":\"2026-08-02\",\"grain\":\"week\",\"to\":\"2026-10-25\",\"tz\":\"Asia/Kolkata\"},\"provenance\":{\"finding\":\"83f4e966442fc01cd415cf2c\",\"metric_id\":\"dispatch_time\"},\"series\":[{\"emphasis\":false,\"id\":\"avg\",\"name\":\"average 4.3 d\",\"points\":[[\"2026-08-02\",\"4.110000\"],[\"2026-08-09\",\"4.110000\"],[\"2026-08-16\",\"4.080000\"],[\"2026-08-23\",\"4.090000\"],[\"2026-08-30\",\"4.090000\"],[\"2026-09-06\",\"4.110000\"],[\"2026-09-13\",\"4.120000\"],[\"2026-09-20\",\"4.460000\"],[\"2026-09-27\",\"4.420000\"],[\"2026-10-04\",\"4.210000\"],[\"2026-10-11\",\"4.250000\"],[\"2026-10-18\",\"4.100000\"],[\"2026-10-25\",\"4.450000\"]],\"role\":\"neutral\",\"style\":\"line\"}],\"spec_version\":1,\"title\":\"Dispatch time, Coimbatore · 2-week window\",\"unit\":{\"code\":null,\"decimals\":1,\"scale\":\"none\",\"type\":\"days\"},\"x\":{\"label\":null,\"type\":\"time\"},\"y\":{\"label\":null,\"zero_based\":false}}",
+   "chart": "{\"alt_text\":\"Dispatch time at Coimbatore: the spread from the lowest to the highest tenth widened from 14 Sep while the average held at 4.3 days.\",\"annotations\":[{\"at\":\"2026-09-14\",\"from\":null,\"label\":\"14 Sep · spread starts widening\",\"role\":\"negative\",\"style\":\"dashed\",\"to\":null,\"type\":\"vline\",\"value\":null}],\"band\":{\"forecast_run_id\":null,\"label\":\"middle 80%\",\"level\":\"0.800000\",\"lower\":[[\"2026-08-02\",\"3.600000\"],[\"2026-08-09\",\"3.870000\"],[\"2026-08-16\",\"3.800000\"],[\"2026-08-23\",\"3.800000\"],[\"2026-08-30\",\"3.780000\"],[\"2026-09-06\",\"3.720000\"],[\"2026-09-13\",\"3.640000\"],[\"2026-09-20\",\"3.260000\"],[\"2026-09-27\",\"3.110000\"],[\"2026-10-04\",\"3.660000\"],[\"2026-10-11\",\"3.550000\"],[\"2026-10-18\",\"3.460000\"],[\"2026-10-25\",\"3.280000\"]],\"role\":\"negative\",\"series_id\":\"avg\",\"source\":\"p10-p90\",\"upper\":[[\"2026-08-02\",\"4.640000\"],[\"2026-08-09\",\"4.340000\"],[\"2026-08-16\",\"4.340000\"],[\"2026-08-23\",\"4.280000\"],[\"2026-08-30\",\"4.280000\"],[\"2026-09-06\",\"4.590000\"],[\"2026-09-13\",\"4.460000\"],[\"2026-09-20\",\"4.920000\"],[\"2026-09-27\",\"4.960000\"],[\"2026-10-04\",\"4.870000\"],[\"2026-10-11\",\"4.730000\"],[\"2026-10-18\",\"4.700000\"],[\"2026-10-25\",\"4.720000\"]]},\"categories\":[],\"explore\":{},\"id\":\"finding:83f4e966442fc01cd415cf2c\",\"kind\":\"line\",\"period\":{\"from\":\"2026-08-02\",\"grain\":\"week\",\"to\":\"2026-10-25\",\"tz\":\"Asia/Kolkata\"},\"provenance\":{\"finding\":\"83f4e966442fc01cd415cf2c\",\"metric_id\":\"dispatch_time\"},\"series\":[{\"emphasis\":false,\"id\":\"avg\",\"name\":\"average 4.3 d\",\"points\":[[\"2026-08-02\",\"4.110000\"],[\"2026-08-09\",\"4.110000\"],[\"2026-08-16\",\"4.080000\"],[\"2026-08-23\",\"4.090000\"],[\"2026-08-30\",\"4.090000\"],[\"2026-09-06\",\"4.110000\"],[\"2026-09-13\",\"4.120000\"],[\"2026-09-20\",\"4.460000\"],[\"2026-09-27\",\"4.420000\"],[\"2026-10-04\",\"4.210000\"],[\"2026-10-11\",\"4.250000\"],[\"2026-10-18\",\"4.100000\"],[\"2026-10-25\",\"4.450000\"]],\"role\":\"neutral\",\"style\":\"line\"}],\"spec_version\":1,\"title\":\"Dispatch time, Coimbatore · 2-week window\",\"unit\":{\"code\":null,\"decimals\":1,\"scale\":\"none\",\"type\":\"days\"},\"x\":{\"label\":null,\"type\":\"time\"},\"y\":{\"label\":null,\"zero_based\":false}}",
    "confidence": "high",
    "consequence": {
     "date": null,
@@ -309,17 +309,17 @@
    "detector": "rising_variance",
    "fingerprint": "83f4e966442fc01cd415cf2c",
    "label": "Rising variance",
-   "line": "The slowest tenth now take 4.9 days, up from 4.6 days.",
+   "line": "The slowest tenth now take 4.9 days, up from 4.5 days.",
    "link": "calc",
    "metric": "dispatch_time",
-   "money": "₹4.59 Cr at risk",
+   "money": "₹4.06 Cr at risk",
    "rank": 2,
    "rows": null,
-   "score": "13766785.73",
+   "score": "12173092.60",
    "since": "2026-11-01",
    "stale": false,
    "state": "assessed",
-   "title": "Dispatch time spread at Coimbatore tripled from 7 Sep while the average held at 4.3 days"
+   "title": "Dispatch time spread at Coimbatore tripled from 14 Sep while the average held at 4.3 days"
   },
   {
    "change": "New",
@@ -409,7 +409,7 @@
   "resolved": 0,
   "worse": 0
  },
- "situation": "South fell ₹1.4 Cr; West’s rise hid it. Dispatch time spread at Coimbatore tripled from 7 Sep while the average held at 4.3 days. 14 customers still marked active haven’t invoiced in 90+ days. Freight expense tracked metres dispatched for 20 weeks, then decoupled on 14 Sep.",
+ "situation": "South fell ₹1.4 Cr; West’s rise hid it. Dispatch time spread at Coimbatore tripled from 14 Sep while the average held at 4.3 days. 14 customers still marked active haven’t invoiced in 90+ days. Freight expense tracked metres dispatched for 20 weeks, then decoupled on 14 Sep.",
  "stale": [],
  "still_open": [],
  "tests": 362,
@@ -494,17 +494,17 @@
  "title": "South fell ₹1.4 Cr while West’s growth hid it; three accounts carry 72% of the drop and none has invoiced since 9 Oct; one is Skarfab’s known pause to 1 Dec.",
  "watching": [
   {
-   "id": "be9d30d7-3511-4038-8b5c-cf5fd4c853b3",
+   "id": "76c63c3a-a383-4b85-aef9-b4f7d868e8bc",
    "label": "Active customers silent 90+ days",
    "text": "Active customers silent 90+ days · 14 · alert above 8 · owner Priya Menon"
   },
   {
-   "id": "558cf79b-3793-4b65-83be-ee6a4a74a124",
+   "id": "625ae389-cd08-47a7-8b26-42fa1c1e4b76",
    "label": "Dispatch time spread, Coimbatore · 7 days",
    "text": "Dispatch time spread, Coimbatore · 7 days · 2.2 · alert above 1.6 · owner Aditya Naik"
   },
   {
-   "id": "4e8a785d-465b-462a-b1bf-79bffc3e2a47",
+   "id": "556fa8f9-1949-4464-a17d-f45fd416fbd6",
    "label": "Freight per metre vs 6-month average",
    "text": "Freight per metre vs 6-month average · +13% · alert above +10% · owner Leela Tandon"
   }

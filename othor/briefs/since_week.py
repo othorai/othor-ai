@@ -62,6 +62,14 @@ def how(status: str, note: str | None, date: str | None, detector: str | None) -
         return f"Became too small to matter{on}"
     if note.startswith("No longer tested"):
         return f"No longer checked from{on.removeprefix(' on')}" if on else "No longer checked"
+    from othor.engine.findings import BELOW_BAR, WEAKER
+
+    # #142: fell under the bar, not back to normal. Only the words stored from #142: the brief
+    # is replayed, so a night before it keeps what it said
+    if note.startswith(WEAKER):
+        return f"Weakened below the bar{on}"
+    if note.startswith(BELOW_BAR):
+        return f"Below the bar{on}"
     if detector == "cross_source":
         return f"The two sources agree again{on}"
     return f"Back to normal{on}"

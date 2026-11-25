@@ -24,8 +24,10 @@ from tests.fixtures.sample_company.load import load_mysql, load_postgres, write_
 
 STREAM = os.environ.get("OTHOR_SAMPLE_STREAM", "shared")
 DEMO = STREAM == "demo"
-ERP_DB = "erp_e2e_demo" if DEMO else "erp_e2e"
-DW_DB = "sales_dw_e2e_demo" if DEMO else "sales_dw_e2e"
+# one pair per pytest-xdist worker (gw0, gw1, …): the nights load them, so workers can't share them
+_W = f"_{w}" if (w := os.environ.get("PYTEST_XDIST_WORKER")) else ""
+ERP_DB = ("erp_e2e_demo" if DEMO else "erp_e2e") + _W
+DW_DB = ("sales_dw_e2e_demo" if DEMO else "sales_dw_e2e") + _W
 RO = "othor_ro"
 
 # the tables the sample Ontology reads (the generator's fillers aren't loaded: faster nights)

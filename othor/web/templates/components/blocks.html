@@ -161,3 +161,17 @@
 {% macro company_logo(company, size="sm") -%}
 {% if company and company.logo_sha %}<img class="co-logo {{ size }}" src="/logo/{{ company.logo_sha }}.png" alt="{{ company.name }} logo">{% endif %}
 {%- endmacro %}
+
+{# The company's browser tab icon (Company identity 1.0): the three links of the page's head, by
+   id, so Settings can swap them out of band when the logo, the choice or the name changes.
+   `links`: tab_icon.links(company) · 16, 32 and 180 px. #}
+{% macro tab_icon_links(links, oob=False) -%}
+<link id="tab-icon-32" rel="icon" href="{{ links['32'] }}" sizes="32x32" type="image/png"{% if oob %} hx-swap-oob="outerHTML"{% endif %}>
+<link id="tab-icon-16" rel="icon" href="{{ links['16'] }}" sizes="16x16" type="image/png"{% if oob %} hx-swap-oob="outerHTML"{% endif %}>
+<link id="tab-icon-180" rel="apple-touch-icon" href="{{ links['180'] }}"{% if oob %} hx-swap-oob="outerHTML"{% endif %}>
+{%- endmacro %}
+
+{# The tab icon at its own size, in Settings' line about the browser tab #}
+{% macro tab_icon_img(url) -%}
+<img class="tab-icon" src="{{ url }}" alt="" width="16" height="16">
+{%- endmacro %}

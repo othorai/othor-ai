@@ -219,12 +219,14 @@ def create_app(
 
     from othor.web.routes import (
         again,
+        audit,
         auth,
         big_picture,
         brief,
         home,
         links,
         meta,
+        model_settings,
         ontology,
         othor_chat,
         pages,
@@ -271,6 +273,8 @@ def create_app(
     app.include_router(big_picture.router)  # before pages' catch-all (v0.19, M19.5)
     app.include_router(ontology.router)  # before pages: /ontology (M10b)
     app.include_router(othor_chat.router)  # the Othor AI chat's actions (Chat 1.0, 0.26)
+    app.include_router(audit.router)  # the Audit log (0.35), before pages' catch-all
+    app.include_router(model_settings.router)  # Settings › AI Model (0.37)
     app.include_router(links.router)  # recipients' signed links (no sign-in) and the mail webhook
     core_paths = {getattr(r, "path", "") for r in app.routes}
     for p in loaded:  # plug-in endpoints (0.27), an exact path each, before pages' catch-alls

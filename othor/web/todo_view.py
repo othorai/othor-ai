@@ -58,6 +58,11 @@ def watch_href(back: str, fp: str, run: int) -> str | None:
     return to + "?" + urlencode({"panel": "watch", "fp": fp, "run": run})
 
 
+def action_plan_href(brief_id: Any) -> str:
+    """A brief's own Action plan, on its signed-in page (#110, owner 25 Nov 2026)."""
+    return f"/brief/{brief_id}#action-plan"
+
+
 def _held(s: Session, today: dt.date) -> dict[str, str]:
     from othor.web.brief_view import held
 
@@ -146,6 +151,7 @@ def rows(
     out = []
     for n, a in enumerate(shown, start=1):
         fps = list(a.get("fingerprints") or [])
+        ids = a.get("brief_ids") or {}
         why = []
         for w in a.get("why") or []:
             if w.get("fingerprint"):
@@ -182,6 +188,13 @@ def rows(
                 "money": a.get("money") or "",
                 "money_note": a.get("money_note") or "",
                 "briefs": list(a.get("briefs") or []),
+                # #110 (owner, 25 Nov 2026): each brief it is in, a link to that brief's own
+                # Action plan (Home's card and the Action plan page; a brief's own rows have none)
+                "brief_links": [
+                    {"name": b, "href": action_plan_href(ids[b])}
+                    for b in a.get("briefs") or []
+                    if b in ids
+                ],
                 "fp": fps[0] if fps else None,
                 "also": ",".join(fps[1:]),
                 "holdable": run is not None and a.get("kind") != "goal" and bool(fps),
@@ -233,6 +246,8 @@ class Page:
     date: dt.date | None = None
     time: str = ""
     briefs: list[tuple[str, int]] = field(default_factory=list)  # (name, count) for the tabs
+    # #110 (owner, 25 Nov 2026): each brief's name to its own Action plan
+    links: dict[str, str] = field(default_factory=dict)
     start: list[dict[str, Any]] = field(default_factory=list)
     also: list[dict[str, Any]] = field(default_factory=list)
     nothing: list[str] = field(default_factory=list)
@@ -319,12 +334,14 @@ def page(s: Session, today: dt.date, back: str = "action-plan") -> Page:
         for a in words.actions(issue.body, issue.prose):
             key = a["key"] if a.get("kind") != "finding" else "|".join(sorted(a["fingerprints"]))
             if key not in merged:
-                merged[key] = {**a, "briefs": []}
+                merged[key] = {**a, "briefs": [], "brief_ids": {}}
                 runs[key] = Repo(s).get(Run, issue.run_id)
             if b.name not in merged[key]["briefs"]:
                 merged[key]["briefs"].append(b.name)
+                merged[key]["brief_ids"][b.name] = b.id
                 counts[b.name] = counts.get(b.name, 0) + 1
     p.briefs = [(b.name, counts[b.name]) for b, _ in got if counts.get(b.name)]
+    p.links = {b.name: action_plan_href(b.id) for b, _ in got if counts.get(b.name)}
     p.nothing = nothing
     units = _units(s, next(iter(runs.values()), None))
     all_rows = []

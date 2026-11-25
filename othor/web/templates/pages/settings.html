@@ -13,7 +13,9 @@
 {# #106 (owner, 21 Nov 2026): tabs across the top, Company first and MCP second, then the rest in
    their order; one pane at a time, switched in place, the address keeping ?tab= #}
 {% set mcp_html = slot("settings.end") %}
-{% set tab_items = [("company", "Company")] + ([("mcp", "MCP")] if mcp_html | trim else []) + [("charts", "Charts"), ("delivery", "Delivery"), ("data", "Your data")] + ([("licence", "Licence")] if licence else []) %}
+{# 0.34: People, from the Enterprise plug-in (multiple users); none in the open core #}
+{% set people_html = slot("settings.people") %}
+{% set tab_items = [("company", "Company")] + ([("people", "People")] if people_html | trim else []) + ([("mcp", "MCP")] if mcp_html | trim else []) + [("ai", "AI Model"), ("charts", "Charts"), ("delivery", "Delivery"), ("data", "Your data")] + ([("licence", "Licence")] if licence and user.is_super_admin else []) %}
 {% set keys = tab_items | map("first") | list %}
 {% set current = tab if tab in keys else "company" %}
 <div class="flex flex-col gap-24" hx-target="#toast-dock" hx-swap="innerHTML">
@@ -21,6 +23,7 @@
   {% call tab_pane("company", current) %}
   {% call el('section', 'section lines', attrs={"aria-label": "Company"}) %}
     {% call el("div", "section-head") %}Company{% endcall %}
+    {% include "partials/settings_name.html" %}
     {% call el('div', 'section-row') %}{% call el("p", "title") %}Fiscal year starts{% endcall %}
       {{ listbox("value", fy_months, company.fiscal_year_start_month | string, id="fy", small=True, attrs='hx-post="/settings" hx-vals=\'{"field": "fiscal_year_start_month"}\' hx-include="this" aria-label="Fiscal year starts"') }}{% endcall %}
     {% call el('div', 'section-row') %}{% call el("p", "title") %}Currency{% endcall %}
@@ -35,7 +38,10 @@
     {{ slot("settings.company.advanced") }}
   {% endcall %}
   {% endcall %}
+  {% if people_html | trim %}{% call tab_pane("people", current) %}{{ people_html }}{% endcall %}{% endif %}
   {% if mcp_html | trim %}{% call tab_pane("mcp", current) %}{{ mcp_html }}{% endcall %}{% endif %}
+  {# 0.37 (Any model): which model writes Othor AI's words #}
+  {% call tab_pane("ai", current) %}{% include "partials/settings_model.html" %}{% endcall %}
   {% call tab_pane("charts", current) %}
   {# v0.25 (M25.1, owner 18 Nov 2026): how every chart is drawn, on pages, in emails and PDFs #}
   {% call el('section', 'section lines', attrs={"aria-label": "Charts"}) %}
@@ -56,6 +62,13 @@
   {% endcall %}
   {# Your data: the export, and deleting the company under it ("download everything first") #}
   {% call tab_pane("data", current) %}
+  {% if not user.is_super_admin %}
+  {# 0.34: export and delete stay with the super admin #}
+  {% call el('section', 'section lines', attrs={"aria-label": "Your data"}) %}
+    {% call el("div", "section-head") %}Your data{% endcall %}
+    {% call el('div', 'section-row') %}{% call el('p', 'sub') %}Only the super admin can export everything or delete the company.{% endcall %}{% endcall %}
+  {% endcall %}
+  {% else %}
   {# v0.18 (M18.1): everything Othor AI computed and the owner wrote, as one zip #}
   {% call el('section', 'section lines', attrs={"aria-label": "Your data"}) %}
     {% call el("div", "section-head") %}Your data{% endcall %}
@@ -67,6 +80,7 @@
     {% call el('div', 'section-row') %}<div>{% call el('p', 'title') %}Delete {{ company.name }}{% endcall %}{% call el('p', 'sub') %}Stops runs, briefs and sign-in at once · your data is removed for good 30 days later · {{ link("download everything first", "#export-row") }}{% endcall %}</div>
       {% call el("button", "btn sm danger", attrs={"type": "button", "data-dialog-open": "close-dlg"}) %}Delete the company…{% endcall %}{% endcall %}
   {% endcall %}
+  {% endif %}
   {% endcall %}
   {% if licence %}{% call tab_pane("licence", current) %}{% include "partials/settings_licence.html" %}{% endcall %}{% endif %}
 </div>

@@ -96,7 +96,7 @@ def _name(spec: dict[str, Any], metric: str) -> str:
 
 
 def _low(s: str) -> str:
-    return s if s[:2].isupper() else s[:1].lower() + s[1:]
+    return fmt.lower_first(s)
 
 
 # --- the series --------------------------------------------------------------------------------
@@ -415,8 +415,8 @@ def goal_updates(
         label = f"{name} FY{by.year % 100:02d}" if fy else name
         when = "" if fy else f" by {fmt.day_month(by)}"
         text = (
-            f"{label}: heading for {values.rounded(unit, g['projection'])} against the "
-            f"{values.rounded(unit, g['target'])} goal{when}"
+            f"{label}: heading for {values.rounded(unit, g['projection'], like=g['target'])} "
+            f"against the {values.goal_target(unit, g['target'])} goal{when}"
         )
         if g.get("probability") is not None:
             text += f", {int(g['probability'])}% likely to reach it"

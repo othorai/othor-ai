@@ -115,17 +115,42 @@ def indicator_text(v: Any, kind: str | None) -> str:
     return fmt.num(d, decimals=1)
 
 
-def rounded(unit: str | None, v: Any) -> str:
-    """A goal's figure with no false precision: ₹ crore to one decimal (₹57.2 Cr, ₹60 Cr),
-    days and other units whole or to one decimal."""
+def places(v: Any, most: int = 2) -> int:
+    """How many decimals a typed figure carries: '3.5' → 1, '45' → 0, '45.00' → 0 (#147)."""
+    d = Decimal(str(v)).normalize()
+    exp = d.as_tuple().exponent
+    return min(most, max(0, -exp)) if isinstance(exp, int) else 0
+
+
+def rounded(unit: str | None, v: Any, like: Any = None) -> str:
+    """A goal's figure with no false precision: ₹ crore to one decimal (₹57.2 Cr, ₹60 Cr), a
+    count whole (#148), days and other numbers to the decimals of the goal's own target (`like`,
+    at most two): a 3.5 d target tracks at 3.6 d, never '4 d' (#147). Without `like`, as before
+    #147: days whole, other numbers to one decimal (a goal's figure always passes its target)."""
     d = Decimal(str(v))
     if unit == "inr":
         return fmt.inr_cr_rounded(d)
-    if unit == "days":
-        return f"{fmt.num(d)} d"
     if unit == "inr_per_metre":
         return fmt.inr_plain(d)
-    return fmt.num(d, decimals=1)
+    if unit == "count":
+        return fmt.num(d)
+    if unit in ("percent", "ratio"):
+        return fmt.num(d, decimals=1)
+    n = places(like) if like is not None else (0 if unit == "days" else 1)
+    if unit == "days":
+        return f"{fmt.num(d, decimals=n)} d"
+    return fmt.num(d, decimals=n)
+
+
+def goal_target(unit: str | None, v: Any) -> str:
+    """A goal's own target, to its own decimals: 'at most 3.5 d' (#147), '2,27,200' (#148)."""
+    return rounded(unit, v, like=v)
+
+
+def goal_value(unit: str | None, v: Any, like: Any = None) -> str:
+    """A goal's figure where a page writes figures the way `text` does: days to the target's
+    decimals (#147) and counts whole (#148), every other unit as `text`."""
+    return rounded(unit, v, like=like) if unit in ("days", "count") else text(unit, v)
 
 
 def text_band(unit: str | None, lo: Any, hi: Any) -> str:
@@ -143,13 +168,18 @@ def text_band(unit: str | None, lo: Any, hi: Any) -> str:
     return f"{head}–{tail}"
 
 
-def band(unit: str | None, lo: Any, hi: Any) -> str:
-    """'₹55.9–58.5 Cr', '38–44 d'."""
+def band(unit: str | None, lo: Any, hi: Any, like: Any = None) -> str:
+    """'₹55.9–58.5 Cr', '38–44 d', '3.4–3.9 d' for a 3.5 d target, a count whole."""
     a, b = Decimal(str(lo)), Decimal(str(hi))
     if unit == "inr":
         return fmt.inr_cr_band(a, b)
-    if unit == "days":
-        return f"{fmt.num(a)}–{fmt.num(b)} d"
     if unit == "inr_per_metre":
         return fmt.inr_plain_band(a, b)
-    return f"{fmt.num(a, decimals=1)}–{fmt.num(b, decimals=1)}"
+    if unit == "count":
+        return f"{fmt.num(a)}–{fmt.num(b)}"
+    if unit in ("percent", "ratio"):
+        return f"{fmt.num(a, decimals=1)}–{fmt.num(b, decimals=1)}"
+    n = places(like) if like is not None else (0 if unit == "days" else 1)
+    if unit == "days":
+        return f"{fmt.num(a, decimals=n)}–{fmt.num(b, decimals=n)} d"
+    return f"{fmt.num(a, decimals=n)}–{fmt.num(b, decimals=n)}"

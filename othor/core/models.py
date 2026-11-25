@@ -97,6 +97,9 @@ class Company(IdMixin, Base):
     chart_values: Mapped[str] = mapped_column(sa.String(8), default="key")
     # the company's logo (M15.7): a PNG we re-encoded, stored as companies/<id>/logo/<sha>.png
     logo_sha: Mapped[str | None] = mapped_column(sa.String(64))
+    # the browser tab's icon (Company identity 1.0, 0.37): None = the logo when there is one,
+    # else the letters of the name; "letters" = the letters even with a logo (the owner chose)
+    tab_icon: Mapped[str | None] = mapped_column(sa.String(8))
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     deleted_at: Mapped[datetime | None] = mapped_column()
     # closed by the owner (M18.2): purged after this, unless support reopens it before

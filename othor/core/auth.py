@@ -40,6 +40,10 @@ LOCK_FOR = timedelta(minutes=15)
 MAX_CODES_PER_HOUR = 10
 SESSION_TTL = timedelta(days=30)
 HANDOFF_TTL = timedelta(seconds=60)
+# `make demo`'s one-time sign-in link (owner, 25 Nov 2026): a handoff that lives 15 minutes. Only
+# `othor demo` makes one (it refuses outside OTHOR_ENV=dev) and only /auth/demo takes one (404
+# outside dev); /auth/handoff refuses it, so a long link can't sign anyone in on a production host.
+DEMO_LINK_TTL = timedelta(minutes=15)
 NO_COMPANY = uuid.UUID(int=0)
 INVITE_TTL = timedelta(days=14)
 SYSTEM = "system"
@@ -362,6 +366,21 @@ class AuthService:
             )
             return int(res.rowcount or 0)  # type: ignore[attr-defined]
 
+    def end_member(self, user_id: uuid.UUID, company_id: uuid.UUID) -> int:
+        """A person removed from a company (0.34): their sessions on it end at once; their
+        sessions on other companies stay. Returns the sessions ended."""
+        with self.sf() as s, s.begin():
+            res = s.execute(
+                sa.update(AuthSession)
+                .where(
+                    AuthSession.user_id == user_id,
+                    AuthSession.company_id == company_id,
+                    AuthSession.revoked_at.is_(None),
+                )
+                .values(revoked_at=self.now())
+            )
+            return int(res.rowcount or 0)  # type: ignore[attr-defined]
+
     def revoke_all(self, user_id: uuid.UUID) -> int:
         with self.sf() as s, s.begin():
             res = s.execute(
@@ -373,7 +392,11 @@ class AuthService:
 
     # handoff -------------------------------------------------------------------------------
 
-    def create_handoff(self, user_id: uuid.UUID, company_id: uuid.UUID) -> str:
+    def create_handoff(
+        self, user_id: uuid.UUID, company_id: uuid.UUID, *, ttl: timedelta = HANDOFF_TTL
+    ) -> str:
+        if ttl not in (HANDOFF_TTL, DEMO_LINK_TTL):
+            raise ValueError("a handoff lives 60 seconds, or 15 minutes for make demo's link")
         handoff = secrets.token_urlsafe(32)
         now = self.now()
         with self.sf() as s, s.begin():
@@ -384,8 +407,8 @@ class AuthService:
                     user_id=user_id,
                     token_hash=None,
                     handoff_hash=_sha(handoff),
-                    handoff_expires_at=now + HANDOFF_TTL,
-                    expires_at=now + HANDOFF_TTL,
+                    handoff_expires_at=now + ttl,
+                    expires_at=now + ttl,
                     last_seen_at=now,
                     created_at=now,
                 )
@@ -393,8 +416,15 @@ class AuthService:
         return handoff
 
     def redeem_handoff(
-        self, handoff: str, company_id: uuid.UUID, user_agent: str | None = None
+        self,
+        handoff: str,
+        company_id: uuid.UUID,
+        user_agent: str | None = None,
+        *,
+        demo: bool = False,
     ) -> str:
+        """Once. `demo`: only make demo's 15-minute link (the /auth/demo route, dev only);
+        otherwise only the 60-second signup handoff, so neither route takes the other's."""
         now = self.now()
         with self.sf() as s, s.begin():
             row = s.scalars(
@@ -406,6 +436,7 @@ class AuthService:
                 or row.revoked_at
                 or not row.handoff_expires_at
                 or row.handoff_expires_at <= now
+                or (row.handoff_expires_at - row.created_at > HANDOFF_TTL) != demo
             ):
                 raise BadHandoff()
             token = secrets.token_urlsafe(32)

@@ -15,6 +15,7 @@ import sqlalchemy as sa
 from othor.ai.gateway import model_status
 from othor.connectors.models import Source
 from othor.connectors.sql.query_log import QueryLog
+from othor.core import actors
 from othor.core.models import Company
 from othor.core.tenancy import tenant_scope
 from othor.jobs.models import Job
@@ -149,7 +150,8 @@ def run(ctx: WorkerContext, job: Job) -> None:
                     co,
                     row_now,
                     reply,
-                    actor=str(job.payload.get("actor") or "owner"),
+                    # 0.35: Othor AI applied it on the person's request
+                    actor=actors.othor_ai(job.payload.get("actor")),
                     today=ctx.clock().date(),
                 )
         _done(s, mid)

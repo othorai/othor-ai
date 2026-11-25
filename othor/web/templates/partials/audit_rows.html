@@ -1,0 +1,5 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# The Audit log's rows (0.35), swapped in place: the whole body after a filter, or the next rows
+   and the next "Load more" in place of the button. #}
+{% from "components/audit.html" import audit_body, audit_rows_more %}
+{% if a.next_only %}{{ audit_rows_more(a) }}{% else %}{{ audit_body(a) }}{% endif %}

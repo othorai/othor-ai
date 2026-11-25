@@ -1,0 +1,10 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{% extends "shells/app.html" %}
+{% from "components/blocks.html" import page_title %}
+{% from "components/audit.html" import audit_filters, audit_body %}
+{% block title %}Audit log · {{ company.name }}{% endblock %}
+{% block crumb %}Audit log{% endblock %}
+{% block main %}
+{% call page_title("Audit log", lede=page_ledes.audit) %}{{ audit_filters(a) }}{% endcall %}
+{{ audit_body(a) }}
+{% endblock %}

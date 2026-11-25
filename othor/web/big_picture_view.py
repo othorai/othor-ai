@@ -25,10 +25,13 @@ FINDINGS = 8  # Sweep's open findings beyond the briefs' own, at most
 def available(settings: Settings, s: Session, now: Any, provider: Any) -> bool:
     """A model to write with: configured, and not marked down by a recent failed call."""
     from othor.ai.gateway import model_status
+    from othor.ai.providers import routing
 
+    if routing.choice(s, "reports") is not None:  # the company's own model (0.37)
+        return model_status(settings, s, now, "reports")[1] in ("ok", "capped")
     if not getattr(provider, "configured", False):
         return False
-    return model_status(settings, s, now)[1] != "down"
+    return model_status(settings, s, now, "reports")[1] != "down"
 
 
 def stored(s: Session, run: Run, language: str) -> BigPicture | None:

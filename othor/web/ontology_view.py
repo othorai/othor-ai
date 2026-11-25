@@ -21,7 +21,7 @@ from othor.core import fmt
 from othor.core.config import Settings
 from othor.core.models import Company
 from othor.engine.models import Finding, Run, Watch
-from othor.engine.store import RunFiles, read_json, read_points_cached
+from othor.engine.store import RunFiles, read_json
 from othor.ontology import content, service
 from othor.ontology.models import OntologyRecord, OntologyVersion, Question, Spec
 
@@ -50,11 +50,20 @@ FILTERS = ("all", "confirmed", "needs", "unbriefed")
 class RunData:
     run: Run | None
     spec: dict[str, Any]
-    points: list[Any] = field(default_factory=list)
     record: list[dict[str, Any]] = field(default_factory=list)
     goals: list[dict[str, Any]] = field(default_factory=list)
     stale: dict[str, dt.date] = field(default_factory=dict)
     files: RunFiles | None = None
+
+    @property
+    def points(self) -> list[Any]:
+        """Every point of the run, read when asked for (load test, 25 Nov 2026: a page that
+        shows a few metrics reads them through `run_cache.by_metric` instead)."""
+        if self.files is None:
+            return []
+        from othor.web import run_cache
+
+        return run_cache.points(self.files.series)
 
 
 def run_data(s: Session, settings: Settings) -> RunData:
@@ -73,7 +82,6 @@ def run_data(s: Session, settings: Settings) -> RunData:
     return RunData(
         run,
         spec,
-        read_points_cached(files.series) if files.series.exists() else [],
         (context.get("forecasts") or {}).get("of_record") or [],
         forecasts.get("goals") or [],
         stale_as_of(spec, outputs.get("coverage") or {}),
@@ -282,7 +290,8 @@ def goal_rows(s: Session, rd: RunData, today: dt.date) -> list[dict[str, Any]]:
         if g2.get("probability") is not None and not reached and by >= today:
             bits.append(f"{g2['probability']}% likely")
         if g2.get("projection") is not None and not reached and by >= today:
-            bits.append(f"heading for {values.text(unit, g2['projection'])}")
+            proj = values.goal_value(unit, g2["projection"], like=b["target"])
+            bits.append(f"heading for {proj}")
         out.append(
             {
                 "key": r.key,
@@ -537,13 +546,15 @@ def level_view(s: Session, settings: Settings, *, upto: int = 3) -> dict[str, An
     from othor.ai.gateway import model_status
     from othor.chat import level_drafts
     from othor.core.models import utcnow
-    from othor.ontology import levels
+    from othor.ontology import levels, size_numbers
 
     v = levels.check(s).view()
     found = level_drafts.drafts(s)
+    sized = size_numbers.level_rows(s)  # #76: a number for the company's size that fits the item
     for g in v["groups"]:
         for row in g["rows"]:
             row["drafts"] = [] if row["done"] else found.get(row["key"], [])
+            row["size"] = [] if row["done"] else sized.get(row["key"], [])
     v["groups"] = [g for g in v["groups"] if g["level"] <= upto]
     available, _ = model_status(settings, s, utcnow())
     v["can_find"] = available and bool(v["left"])
@@ -932,7 +943,7 @@ def history(s: Session, names: dict[str, str]) -> list[dict[str, Any]]:
             )
         else:
             meta_extra = ""
-        who = names.get(v.created_by, "Othor AI" if v.created_by == "system" else "Owner")
+        who = _version_who(v.created_by, names)
         meta = f"{where_from(v)} · {who} · {effect(v)}{meta_extra}"
         if same is not None:
             meta += f" · same content as v{same}"
@@ -1004,6 +1015,19 @@ def _short(v: Any) -> str:
     if isinstance(v, list):
         return ", ".join(_short(x) for x in v)
     return "changed"
+
+
+def _version_who(raw: str, names: dict[str, str]) -> str:
+    """Who made a version: the person, "Othor AI (asked by …)" for a change it applied on their
+    request (0.35), "Othor AI" for the system's own."""
+    from othor.core import actors
+
+    a = actors.parse(raw)
+    if a.kind == actors.SYSTEM_KIND:
+        return "Othor AI"
+    if a.kind == actors.USER:
+        return names.get(a.user_id or "", "Super admin")
+    return actors.label(a, names)
 
 
 def user_names(s: Session) -> dict[str, str]:

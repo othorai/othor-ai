@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""The shared account menu (4d1): name, email · Owner, divider, Sign out → 1g."""
+"""The shared account menu (4d1): name, email · Super admin, divider, Sign out → 1g."""
 
 from tests.web.conftest import Env, signup
 
@@ -9,7 +9,7 @@ def test_menu_in_the_app_shell(env: Env) -> None:
     c, host = env.client, env.host("indigothread")
     html = c.get(f"{host}/settings").text
     assert 'aria-label="Account menu for Uday Kamath"' in html
-    assert "uk@indigothread.example · Owner" in html
+    assert "uk@indigothread.example · Super admin" in html
     assert ">Sign out</button>" in html and "Log out" not in html
     assert "Sign out everywhere" not in html
     assert "⌘K" not in html  # Search is on the roadmap, not in v0.1

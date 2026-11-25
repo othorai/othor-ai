@@ -59,8 +59,9 @@ def _metres(d: Decimal) -> str:
     return f"{fmt.num(d)} m"
 
 
-def _one(unit: str | None, v: Any) -> str:
-    """One figure, as precise as it needs to be: lakh under ₹1 Cr, metres whole."""
+def _one(unit: str | None, v: Any, like: Any = None) -> str:
+    """One figure, as precise as it needs to be: lakh under ₹1 Cr, metres whole. `like`: a
+    goal's target, whose decimals a goal's figure in days keeps (#147)."""
     d = Decimal(str(v))
     if unit == "inr" and abs(d) < Decimal("1e7"):
         return values.text(unit, d)
@@ -68,7 +69,7 @@ def _one(unit: str | None, v: Any) -> str:
         return _metres(d)
     if unit == "count":  # customers, orders: whole numbers (owner, 15 Nov 2026)
         return fmt.num(d.quantize(Decimal(1)))
-    return values.rounded(unit, d)
+    return values.rounded(unit, d, like=like)
 
 
 def _band(unit: str | None, lo: Any, hi: Any) -> str:
@@ -124,7 +125,7 @@ def _chance(spec: dict[str, Any], g: dict[str, Any]) -> str | None:
     if p is None:
         return None
     unit = _unit(spec, g["metric"])
-    target = values.rounded(unit, g["target"])
+    target = values.goal_target(unit, g["target"])
     if g.get("direction", "at_least") == "at_least":
         return (
             f"{p}% likely to reach the {target} goal"
@@ -418,7 +419,7 @@ def rows(
             when = (
                 f"for {_fy(by)}" if "to_date" in goal and goal.get("to_date") else f"by {by:%b %Y}"
             )
-            lead = f"{_one(unit, goal['projection'])} expected {when}"
+            lead = f"{_one(unit, goal['projection'], like=goal['target'])} expected {when}"
             rng = _band(unit, goal["p10"], goal["p90"])
             bits = [f"{lead} ({rng})", _chance(spec, goal)]
             row["card"] = _card(

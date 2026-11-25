@@ -24,8 +24,8 @@
   <div class="flex flex-col gap-12">
     {% call el("div", layout="flex items-baseline justify-between gap-12") %}{% call el("p", "caps-title") %}Connected · {{ fmt.num(cards | length) }}{% endcall %}{% call el("span", "hint") %}Read in place. Read-only.{% endcall %}{% endcall %}
     {% if cards %}
-    {% call el('div', 'table-wrap') %}{% call el('table', 'table flush') %}
-      <thead><tr><th>Source</th><th>Status</th><th>Last updated</th><th>Feeds</th><th>Rows read nightly</th><th></th></tr></thead>
+    {% call el('div', 'table-wrap') %}{% call el('table', 'table flush one-line') %}
+      <thead><tr><th>Source</th><th>Status</th><th>Last updated</th><th>Feeds</th><th>Rows read nightly</th><th colspan="3"></th></tr></thead>
       <tbody>{% for c in cards %}
       <tr>
         <td><div class="flex items-center gap-12">{{ kind_tile({"postgres": "PG", "mysql": "MY", "gsheets": "GS"}[c.src.kind]) }}<div class="min-w-0">{% call el("p", "src-name") %}{% if c.src.display_name %}{{ c.src.display_name }} · {{ c.src.config.database if c.src.kind != "gsheets" else c.title }}{% else %}{{ kn[c.src.kind] if c.src.kind != "gsheets" else c.title }}{% if c.src.kind != "gsheets" %} · {{ c.src.config.database }}{% endif %}{% endif %}{% endcall %}
@@ -37,7 +37,11 @@
         <td>{% if nw %}{{ chip((nw[0] ~ " · " ~ nw[2]) if nw[0] in ("Updated", "Up to date") and nw[2] != "–" else (nw[3] or nw[0]), dot=(nw[1] if nw[1] in ("ok", "warn", "neg") else "muted")) }}{% else %}–{% endif %}</td>
         <td>{% if c.feeds %}{{ fmt.num(c.feeds | length) }} metric{{ "s" if c.feeds | length != 1 else "" }}{% else %}–{% endif %}</td>
         <td>{% if c.src.health and c.src.health.last_read %}{{ fmt.num(c.src.health.last_read.rows) }}{% else %}–{% endif %}</td>
-        {% call el('td', 'num') %}<div class="flex items-center justify-end gap-6">{{ button("Tables", "", "sm", href="/sources?panel=tables&s=" ~ c.src.id) }}{% if c.src.kind == "postgres" %}{{ button("Schemas", "", "sm", href="/sources?panel=schemas&s=" ~ c.src.id) }}{% endif %}{{ button("Manage", "soft", "sm", href="/sources?panel=manage&s=" ~ c.src.id) }}</div>{% endcall %}
+        {# owner, 24 Nov 2026: Tables | Schemas | Manage in their own cells, so each lines up down
+           the rows; only PostgreSQL has Schemas, the others keep its place empty #}
+        {% call el('td', 'act') %}{{ button("Tables", "", "sm", href="/sources?panel=tables&s=" ~ c.src.id) }}{% endcall %}
+        {% call el('td', 'act') %}{% if c.src.kind == "postgres" %}{{ button("Schemas", "", "sm", href="/sources?panel=schemas&s=" ~ c.src.id) }}{% endif %}{% endcall %}
+        {% call el('td', 'act') %}{{ button("Manage", "soft", "sm", href="/sources?panel=manage&s=" ~ c.src.id) }}{% endcall %}
       </tr>{% endfor %}</tbody>
     {% endcall %}{% endcall %}
     {% else %}
@@ -109,7 +113,7 @@
     "subtitle": "Confirm the ones that look right, then add them. Nothing changes until you do."} %}
   {% include "setup/_check_confirm.html" %}
 {% elif panel == "chat" and chat_panel %}
-  {% with panel=chat_panel %}{% from "components/panels.html" import DRAFT_NOTE %}{% include "setup/_chat.html" %}{% endwith %}
+  {% with panel=chat_panel %}{% include "setup/_chat.html" %}{% endwith %}
 {% elif panel == "manage" and sel %}
   {% include "sources/_manage.html" %}
 {% elif panel == "reconnect" and sel %}

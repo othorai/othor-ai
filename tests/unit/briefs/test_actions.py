@@ -176,10 +176,11 @@ def test_a_breached_watch_on_a_number_no_item_covers():
     within = {**w, "id": "w3", "status": "within"}
     got = _build([SOUTH], watches=[w, same, within])
     assert [a["key"] for a in got] == ["finding:a1", "watch:w1"]
-    # 0.33.1: the number's name in lower case mid-sentence, "the limit you set"
+    # 0.33.1: the number's name in lower case mid-sentence; 24 Nov 2026: the label's comma read
+    # out ("receivables over 60 days, share reads 13%" was the label pasted in)
     assert got[1]["text"] == (
-        "Ask Leela Tandon why receivables over 60 days, share reads 13%, above the 12% limit "
-        "you set."
+        "Ask Leela Tandon why the share of receivables over 60 days reads 13%, above your "
+        "limit of 12%."
     )
 
 
@@ -221,6 +222,21 @@ def test_a_name_after_the_colon_keeps_its_capital():
 def test_many_silent_customers_are_named_before_they_are_called():
     assert actions.finding_text(SILENT) == (
         "Have someone call the 14 customers still marked active who haven’t invoiced in 90+ days."
+    )
+
+
+def test_silent_entities_keep_their_own_noun():
+    """An insurer's partner banks (an insurance pilot, 24 Nov 2026), not "customers"."""
+    f = {
+        **SILENT,
+        "text": {
+            **SILENT["text"],
+            "title": ("6 partner banks still marked active haven’t issued a policy in 90+ days"),
+        },
+    }
+    assert actions.finding_text(f) == (
+        "Have someone call the 6 partner banks still marked active who haven’t issued a policy "
+        "in 90+ days."
     )
 
 
@@ -285,8 +301,8 @@ def _watch_only(w, spec=SPEC, **kw):
 def test_a_watch_never_reads_above_a_limit_it_equals():
     got = _watch_only(W_REC)
     assert got[0]["text"] == (
-        "Ask Leela Tandon why receivables over 60 days, share reads 12.04%, above the 12% limit "
-        "you set."
+        "Ask Leela Tandon why the share of receivables over 60 days reads 12.04%, above your "
+        "limit of 12%."
     )
 
 
@@ -304,9 +320,25 @@ def test_a_watch_in_days_reads_in_days():
         "owner_name": "Aditya Naik",
         "indicator": {"kind": "spread", "metric": "dispatch_time", "breakdown_value": "Coimbatore"},
     }
+    # 24 Nov 2026 (the 100-night test): the place is said as a place, not after a comma
     assert _watch_only(w, SPEC_DT)[0]["text"] == (
-        "Ask Aditya Naik why dispatch time spread, Coimbatore reads 2.2 days, above the 1.6 days "
-        "limit you set."
+        "Ask Aditya Naik why dispatch time spread for Coimbatore reads 2.2 days, above your "
+        "limit of 1.6 days."
+    )
+
+
+def test_a_watch_without_one_number_keeps_its_own_name():
+    w = {
+        **W_REC,
+        "id": "w8",
+        "label": "Active customers silent 90+ days",
+        "value": "17",
+        "threshold": "8",
+        "owner_name": "Priya Menon",
+        "indicator": {"kind": "finding_slot", "detector": "missing_records", "slot": "count"},
+    }
+    assert _watch_only(w, SPEC_DT)[0]["text"] == (
+        "Ask Priya Menon why active customers silent 90+ days reads 17, above your limit of 8."
     )
 
 

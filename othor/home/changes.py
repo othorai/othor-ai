@@ -181,12 +181,12 @@ def tables_named(s: Session, line: str, subject: str) -> list[dict[str, Any]]:
 def _numbers_ok(change: dict[str, Any], inputs: dict[str, Any], said: str) -> bool:
     """Every numeral in the change is in the input JSON, or is one of the owner's own numbers
     as written or scaled (65 → 6500000 for "₹65 L", 650000000 for "₹65 Cr")."""
-    from othor.ai.guards import numbers_grounded, numerals
+    from othor.ai.guards import allowed_numerals, numbers_grounded, numerals
 
     text = json.dumps(change, ensure_ascii=False)
     if numbers_grounded(text, inputs):
         return True
-    allowed = numerals(json.dumps(inputs, ensure_ascii=False, default=str))
+    allowed = allowed_numerals(inputs)
     own: set[Decimal] = set()
     for n in numerals(said):
         try:

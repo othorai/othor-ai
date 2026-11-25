@@ -219,3 +219,22 @@ def test_an_answer_reads_dates_plainly() -> None:
         "As of the last run on 18 Nov 2026, net revenue"
     )
     assert plain_dates("order 2026-13-45 stays") == "order 2026-13-45 stays"
+
+
+def test_a_request_shows_its_companys_zone_wherever_it_formats():
+    """#125 (25 Nov 2026): the request's company zone reaches every render in the request, even
+    one set in another thread's copy of the context before the page sets it; an explicit zone
+    (an email, a PDF) still wins inside its block; nothing is left over after the request."""
+    import contextvars
+
+    t = dt.datetime(2026, 11, 25, 14, 0, tzinfo=dt.UTC)
+    token = fmt.request_holder()
+    try:
+        contextvars.copy_context().run(fmt.set_request_tz, "America/New_York")
+        assert fmt.clock(t) == "9:00 AM EST"
+        with fmt.display_tz("Asia/Kolkata"):
+            assert fmt.clock(t) == "7:30 PM IST"
+        assert fmt.clock(t) == "9:00 AM EST"
+    finally:
+        fmt.end_request(token)
+    assert fmt.clock(t) == "7:30 PM IST"

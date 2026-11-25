@@ -116,7 +116,7 @@ def test_ask_in_every_top_bar_and_questions_as_one_message(tmp_path: Path, fake_
         assert "I have 2 questions" in page and "suggested an answer for each" in page
         assert "My suggestion" in page and "Needs you" not in page and "Apply 2 answers" in page
         assert "Suggest edits" in page and 'id="oc-reply"' not in page  # no reply box at first
-        assert "Drafts only" in page
+        assert "Drafts only" not in page
         page = env.client.get(h + "/home?panel=othor&subject=questions&edit=1").text
         assert 'id="oc-reply"' in page and "Nothing is applied until you press Apply" not in page
 

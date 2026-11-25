@@ -81,7 +81,7 @@ def use_plugins(dirs: list[Path]) -> None:
 
 
 # a core item whose icon isn't named after its key (What to do, #110)
-NAV_ICONS = {"action-plan": "flag"}  # owner, 22 Nov 2026 (was check)
+NAV_ICONS = {"action-plan": "flag", "audit": "clock"}  # owner, 22 Nov 2026 (was check); 0.35
 
 
 @pass_context
@@ -160,16 +160,32 @@ CARDS_MAX = 3  # Home's Suggested by Othor AI: one row of the brief-card grid
 
 
 @pass_context
-def slot_cards(ctx: Any, name: str, limit: int = CARDS_MAX) -> dict[str, Any] | None:
+def slot_cards(
+    ctx: Any, name: str, limit: int = CARDS_MAX, lead: dict[str, Any] | None = None
+) -> dict[str, Any] | None:
     """A slot that plug-ins fill with cards (Home's Suggested by Othor AI, 20 Nov 2026). Each
     fragment's context gives `items` (newest first), `total` and `more` ({label, short, href}),
     and may give a `toast` ({text, action, label}: what an action just did, with its Undo); its
     template draws one card from `item`. The cards are interleaved across plug-ins, in load order,
     up to `limit`; a plug-in with more than it got shows its `more` link. None when nothing is
-    offered and nothing was just done (the section is hidden); the core knows no plug-in."""
+    offered and nothing was just done (the section is hidden); the core knows no plug-in.
+
+    `lead`: the core's own card, first (#76: the top number suggested for the company's size,
+    {item, toast}, drawn by components/size_card.html)."""
     from othor.core import plugins
 
     groups: list[tuple[Any, dict[str, Any]]] = []
+    if lead and (lead.get("item") or lead.get("toast")):
+        groups.append(
+            (
+                plugins.Fragment(name, "components/size_card.html"),
+                {
+                    "items": [lead["item"]] if lead.get("item") else [],
+                    "total": 1 if lead.get("item") else 0,
+                    **({"toast": lead["toast"]} if lead.get("toast") else {}),
+                },
+            )
+        )
     for f in plugins.fragments(name):
         try:
             extra = f.context(ctx) if f.context is not None else None
@@ -219,7 +235,8 @@ PAGE_LEDES = {
     "ontology": "How Othor AI understands your business, and how complete it is.",
     "sources": "Where your numbers come from, and how fresh each source is.",
     "usage": "What Othor AI’s drafting and wording used this month.",
-    "settings": "Your company, delivery and charts, and your data.",
+    "audit": "Who did what in Othor AI, and when. Newest first.",
+    "settings": "Your company, the model Othor AI writes with, charts, delivery and your data.",
 }
 
 templates.env.globals["page_ledes"] = PAGE_LEDES

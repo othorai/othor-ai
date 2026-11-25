@@ -97,6 +97,51 @@ pay Anthropic directly, and Anthropic is then your provider, not ours). Only com
 to it (the brief's numbers and findings as sentences, metric names): no rows from your databases
 and no personal columns, ever. If it's unreachable, Othor AI falls back to templates by itself.
 
+### A local model with Ollama
+
+To keep even the drafting inside your network, run a model with [Ollama](https://ollama.com) and
+point Othor AI at it. No key and no outside service:
+
+```
+OTHOR_MODEL_PROVIDER=ollama
+OTHOR_MODEL_ID=qwen3:30b-a3b          # or gpt-oss:20b; whatever `ollama list` shows
+OTHOR_MODEL_BASE_URL=http://ollama:11434
+OTHOR_MODEL_CONTEXT=32768             # tokens; setup drafts need a long context
+OTHOR_MODEL_THINK=                    # off · low · medium · high (blank: the model's default)
+```
+
+- **On Linux**, run Ollama beside the image (`docker run -d --gpus=all -v ollama:/root/.ollama
+  -p 11434:11434 --name ollama ollama/ollama`, on the same Docker network as Othor AI), then
+  `docker exec ollama ollama pull qwen3:30b-a3b`. A GPU with 24 GB or more keeps drafts quick;
+  on CPU only they still arrive, slowly.
+- **On a Mac**, install the Ollama app and run it natively: Docker on a Mac can't use the GPU.
+  From the container, reach it at `OTHOR_MODEL_BASE_URL=http://host.docker.internal:11434`.
+
+Only that host is let through the outbound client. The same rules apply as for any model: names
+and computed results only, every number in a draft checked against the computed ones, and the
+nightly run never waits for it. A local model can't read PDFs; an uploaded PDF is then read from its
+text layer only.
+
+### Any other model (0.37)
+
+Any OpenAI-compatible API works through one provider with presets:
+
+```
+OTHOR_MODEL_PROVIDER=openai_compat
+OTHOR_MODEL_PRESET=openai     # gemini · azure · mistral · deepseek · groq · together · openrouter · local
+OTHOR_MODEL_ID=gpt-5
+OTHOR_MODEL_API_KEY=…         # not needed for `local`
+OTHOR_MODEL_BASE_URL=…        # only for azure (https://your-resource.openai.azure.com) and local
+                              # (LM Studio, vLLM, llama.cpp: http://host:port/v1)
+```
+
+Or set it in the app: **Settings › AI Model** (super admin and admins) picks a provider and model
+for every kind of work, or one each for *Understanding your business*, *Writing your reports* and
+*Answering you*, with the key pasted there (stored encrypted with the instance key, never shown
+again) and **Check this model** to try it with one short call on made-up figures. A choice made in
+Settings is used before the env setting; *Back to the usual model* returns to env. Only the chosen
+provider's host is let through the outbound client.
+
 ## A server only your network reaches
 
 Let's Encrypt can't reach a server that isn't on the internet. Set `CADDYFILE=Caddyfile.internal`

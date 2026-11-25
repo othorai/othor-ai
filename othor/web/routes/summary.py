@@ -153,7 +153,7 @@ def merge(
 
     from othor.engine import proposals
     from othor.engine.models import Proposal
-    from othor.engine.store import read_points
+    from othor.web import run_cache
     from othor.web.ontology_view import run_data
 
     svc = services(request)
@@ -164,7 +164,7 @@ def merge(
             rd = run_data(s, svc.settings)
             if rd.run is None or rd.files is None or not rd.files.series.exists():
                 return toast(request, "Summary has no run to read yet.", 400)
-            pts = read_points(rd.files.series)
+            pts = run_cache.points(rd.files.series)
             pairs = proposals.same_numbers(rd.spec, pts)
             if not any({k, d} == {keep, drop} for k, d, _n, _g in pairs):
                 return toast(request, "These two numbers no longer give the same values.", 400)

@@ -77,6 +77,10 @@ def plain_reason(status: str, reason: str) -> str:
         return "Now below the amount worth reporting"
     if reason == "No longer tested":
         return "No longer checked"
+    from othor.engine.findings import shown_reason, under_bar
+
+    if under_bar(reason):  # #142: fell under the bar; the numbers may still show it
+        return shown_reason(reason)
     return "The numbers no longer show it"
 
 

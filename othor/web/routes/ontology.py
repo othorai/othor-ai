@@ -91,6 +91,9 @@ def ontology(
         from othor.web.routes.home import _proposal, _with_decided
 
         ctx["proposals"] = hv.proposal_rows(s)
+        from othor.ontology import size_numbers
+
+        ctx["size_lead"] = size_numbers.lead_line(s)  # #76: the size, above its suggestions
         if decided and (row := _proposal(s, decided)) is not None and row.status != "open":
             ctx["proposals"] = _with_decided(s, ctx["proposals"], row)
         # the tabs (owner, 23 Nov 2026): the full Numbers list opens on its tab

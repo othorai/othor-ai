@@ -14,6 +14,9 @@ Expression AST (JSON):
     {"op": "+", "args": [a, b]}              + - * / = <> < <= > >= and or not in is_null not_null
     {"fn": "coalesce", "args": [...]}        coalesce · abs · days_between · add_days · date
                                              · days_in_period (derived only, no args)
+    {"fn": "top_share", "args": [{"metric": m}, {"lit": "customer"}, {"lit": 10}]}
+                                             derived only, the whole formula: the largest N
+                                             values of m's breakdown as a share of m (#76)
     {"case": [[cond, value], ...], "else": value}
 """
 
@@ -43,7 +46,15 @@ OPS = {
     "is_null",
     "not_null",
 }
-FNS = {"coalesce": None, "abs": 1, "days_between": 2, "add_days": 2, "date": 1, "days_in_period": 0}
+FNS = {
+    "coalesce": None,
+    "abs": 1,
+    "days_between": 2,
+    "add_days": 2,
+    "date": 1,
+    "days_in_period": 0,
+    "top_share": 3,
+}
 PARAMS = {"as_of", "period_start", "period_end"}
 _IDENT_OK = set("abcdefghijklmnopqrstuvwxyz0123456789_ ()₹/.-ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
@@ -99,6 +110,9 @@ def check_expr(node: Any, *, derived: bool = False, path: str = "expr") -> None:
             raise ExprError(f"{path}: wrong number of arguments for {fn}")
         if fn == "days_in_period" and not derived:
             raise ExprError(f"{path}: days_in_period is for derived formulas")
+        if fn == "top_share":
+            _check_top_share(args, derived=derived, path=path)
+            return
         for i, a in enumerate(args):
             check_expr(a, derived=derived, path=f"{path}.{fn}[{i}]")
         return
@@ -114,6 +128,24 @@ def check_expr(node: Any, *, derived: bool = False, path: str = "expr") -> None:
             check_expr(node["else"], derived=derived, path=f"{path}.else")
         return
     raise ExprError(f"{path}: unknown expression {sorted(node)}")
+
+
+def _check_top_share(args: list[Any], *, derived: bool, path: str) -> None:
+    """[{"metric": m}, {"lit": breakdown}, {"lit": n}]: the largest n of m's breakdown, as a
+    share of m (#76, Top 10 customers' share)."""
+    if not derived:
+        raise ExprError(f"{path}: top_share is for derived formulas")
+    m, by, n = args
+    if not isinstance(m, dict) or "metric" not in m:
+        raise ExprError(f"{path}.top_share[0]: a metric")
+    check_expr(m, derived=True, path=f"{path}.top_share[0]")
+    if not isinstance(by, dict) or set(by) != {"lit"} or not isinstance(by["lit"], str):
+        raise ExprError(f"{path}.top_share[1]: a breakdown's key")
+    if not by["lit"] or not set(by["lit"]) <= set("abcdefghijklmnopqrstuvwxyz0123456789_"):
+        raise ExprError(f"{path}.top_share[1]: a breakdown's key")
+    ok = isinstance(n, dict) and set(n) == {"lit"} and type(n["lit"]) is int
+    if not ok or not 1 <= n["lit"] <= 100:
+        raise ExprError(f"{path}.top_share[2]: how many, 1 to 100")
 
 
 def walk(node: Any) -> list[dict[str, Any]]:
@@ -286,6 +318,13 @@ class Entity(Body):
     active_values: list[str] = Field(default_factory=list)
     identity_column: str | None = None  # a tax id (GSTIN): "billing moved to another entity"
     created_column: str | None = None
+    # what one is called and what it does, in the business's own words (24 Nov 2026: an
+    # insurer's partner banks issue policies); unset: customers that invoice
+    noun: str | None = None  # "partner bank"
+    plural: str | None = None  # "partner banks"
+    did: str | None = None  # "issued a policy" (… haven’t issued a policy in 90+ days)
+    doing: str | None = None  # "issuing policies" (… stopped issuing policies on 9 Oct)
+    event: str | None = None  # "policy" (Last policy)
 
 
 class BreakdownBody(Body):

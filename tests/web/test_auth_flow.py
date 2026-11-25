@@ -168,3 +168,26 @@ def test_the_first_code_box_has_the_cursor(env: Env) -> None:
     assert len(boxes) == 6
     assert "autofocus" in boxes[0] and "is-focus" in boxes[0]
     assert not any("autofocus" in b for b in boxes[1:])
+
+
+def test_the_code_sent_twice_still_lands_signed_in(env: Env) -> None:
+    """#117 (owner, 24 Nov 2026, Firefox): the code form submitted twice (the sixth digit
+    submits it, then Continue, Enter or autofill again). The first signs in and clears the
+    sign-in email; the second must land on the company, not back on the email field."""
+    signup(env)
+    c, host = env.client, env.host("indigothread")
+    tok = env.csrf(f"{host}/setup/upload")
+    c.post(f"{host}/logout", data={"csrf": tok}, follow_redirects=False)
+    tok = env.csrf(f"{host}/login")
+    c.post(f"{host}/login", data={"csrf": tok, "email": "uk@indigothread.example"})
+    code = env.last_code("uk@indigothread.example")
+    digits = {f"code{i}": d for i, d in enumerate(code)}
+    first = c.post(f"{host}/login/code", data={"csrf": tok, **digits}, follow_redirects=False)
+    assert first.headers["location"] == "/setup/upload"
+    again = c.post(f"{host}/login/code", data={"csrf": tok, **digits}, follow_redirects=False)
+    assert again.status_code == 303 and again.headers["location"] == "/setup/upload"
+    # without a session, a stray code post still goes to the email step
+    c.cookies.clear()
+    tok = env.csrf(f"{host}/login")
+    stray = c.post(f"{host}/login/code", data={"csrf": tok, **digits}, follow_redirects=False)
+    assert stray.headers["location"] == "/login"

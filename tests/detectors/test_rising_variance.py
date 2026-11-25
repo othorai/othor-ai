@@ -53,3 +53,49 @@ def test_a_level_that_moved_is_not_rising_variance():
     x[-28:] = 6.0 + noise(4, 28, 1.2)
     (r,), _ = run(_ctx(x))
     assert float(r.p_value) == 1 and "level moved" in r.reason
+
+
+def test_the_start_is_when_the_spread_widened_not_where_the_search_begins():
+    """25 Nov 2026 (the Coimbatore date that moved): the start was always the first of the 8
+    candidate weeks (run date − 8 weeks), because a quiet week passed once the wide weeks after it
+    were pooled with it; so "from" slid a week every night, and a widening 30 days old read as 8
+    weeks old. The start is the week that best splits narrow from wide."""
+    for ago in (30, 40, 50):  # under 4 weeks old it is measured over the last 4 weeks
+        for seed in (1, 5, 9):
+            x = 4.1 + noise(seed, 140, 0.4)
+            x[-ago:] = 4.1 + noise(seed + 1, ago, 1.2)
+            (r,), _ = run(_ctx(x))
+            began = RUN - dt.timedelta(days=ago)
+            start = dt.date.fromisoformat(r.slots["started"])
+            assert float(r.p_value) < 1e-4, (ago, seed)
+            assert abs((start - began).days) <= 7, (ago, seed, start, began)
+
+
+def test_a_young_widening_reports_its_own_start_not_the_test_window():
+    """A widening under 4 weeks old is tested over the last 4 weeks, but its start (and the money
+    since it) is the week it widened, not the window's first day."""
+    x = 4.1 + noise(21, 140, 0.4)
+    x[-16:] = 4.1 + noise(22, 16, 1.6)
+    rev = np.full(140, 200_000.0)
+    (r,), _ = run(_ctx(x, rev))
+    assert float(r.p_value) < 1e-3
+    start = dt.date.fromisoformat(r.slots["started"])
+    assert abs((start - (RUN - dt.timedelta(days=16))).days) <= 7, start
+    assert abs(float(r.money) - 200_000.0 * (RUN - start).days) < 1
+
+
+def test_a_run_made_with_version_1_replays_its_start():
+    """#138: version 1 stays in the code for runs made with it (before 25 Nov): its start is the
+    first candidate week whose spread, pooled with the weeks after it, is wide (here the search's
+    first week), and its results say version 1."""
+    x = 4.1 + noise(1, 140, 0.4)
+    x[-30:] = 4.1 + noise(2, 30, 1.2)
+    ctx = _ctx(x)
+    (new,), _ = run(ctx)
+    ctx.versions = {"rising_variance": "1"}
+    (old,), _ = run(ctx)
+    assert new.version == "2" and old.version == "1"
+    first = RUN - dt.timedelta(weeks=8)
+    assert old.slots["started"] == (first - dt.timedelta(days=first.weekday())).isoformat()
+    assert new.slots["started"] != old.slots["started"]
+    assert old.window[0].isoformat() == old.slots["started"]

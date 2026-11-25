@@ -120,7 +120,7 @@ def tile(
         else:
             comp = {"kind": "band", "text": "in band"}
     elif goal is not None and goal.get("aggregate", "value") == "value":
-        target = values.text(unit, goal["target"]).replace(" d", "")
+        target = values.goal_value(unit, goal["target"], like=goal["target"]).replace(" d", "")
         target = target.replace(fmt.currency_symbol(), "")
         if goal.get("on_track"):
             comp = {"kind": "goal", "text": f"on track for {target} · vs target"}

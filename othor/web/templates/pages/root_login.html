@@ -12,7 +12,7 @@
   {% call el("p", "lede") %}Enter your company’s Othor AI address.{% endcall %}
   {% call el('div', 'field') %}
     <label for="f-slug">Company address</label>
-    {% call el('div', 'input-group' ~ ((' is-error' if error else '') | string | e)) %}<input id="f-slug" name="slug" value="{{ value }}" autocomplete="off" spellcheck="false" autofocus{% if error %} aria-invalid="true" aria-describedby="e-slug"{% endif %}>{% call el("span", "suffix") %}.{{ base_domain }}{% endcall %}{% endcall %}
+    {% call el('div', 'input-group' ~ ((' is-error' if error else '') | string | e)) %}<input id="f-slug" name="slug" value="{{ value }}" autocomplete="off" autocapitalize="none" spellcheck="false" data-lowercase autofocus{% if error %} aria-invalid="true" aria-describedby="e-slug"{% endif %}>{% call el("span", "suffix") %}.{{ base_domain }}{% endcall %}{% endcall %}
     {% if error %}{% call el("p", "field-error", attrs='id="e-slug"') %}{{ error }}{% endcall %}{% endif %}
   {% endcall %}
   {{ button("Continue", "primary", "lg", type="submit", block=True) }}

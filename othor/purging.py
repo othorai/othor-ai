@@ -135,6 +135,7 @@ def purge(s: Session, settings: Settings, company_id: uuid.UUID, now: dt.datetim
             name="Deleted company",
             website=None,
             logo_sha=None,
+            tab_icon=None,
             closed_by=None,
             purged_at=now,
         )

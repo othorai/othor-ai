@@ -1,0 +1,18 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# #76 (owner, 25 Nov 2026): the top number suggested for the company's size on Home's "Suggested
+   by Othor AI" (item = size_numbers.home_item): its computed figure on the card's stage, what to
+   watch, the figure sentence, the reason and the goal it serves. Review opens it in To review on
+   the Business Model page; Not now sets it aside in place, until the numbers behind it change. #}
+{% from "components/buttons.html" import button %}
+{% from "components/forms.html" import action_form %}
+<div class="brief-card has-visual" data-row="size:{{ item.id }}">
+  <div class="visual">{% if item.figure %}<span class="morning-big">{{ item.figure }}</span>{% endif %}</div>
+  <div class="body">
+  <div class="head"><span class="brief-tag">New number</span><span class="status"><span class="dot accent"></span>For your size</span></div>
+  <p class="headline">{{ item.title }}</p>
+  <p class="meta"><span>{% if item.line_b %}{{ item.line_b[0] }}<b>{{ item.line_b[1] }}</b>{{ item.line_b[2] }}{% else %}{{ item.line }}{% endif %}</span></p>
+  <div class="flex items-center gap-8 mt-8">
+    {{ button("Review", "soft", href="/ontology#proposals") }}
+    {% call action_form("/home/proposals/" ~ item.id ~ "/decline?back=home", csrf_token) %}{{ button("Not now", "quiet", size="sm", type="submit") }}{% endcall %}
+  </div>
+</div></div>

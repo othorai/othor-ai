@@ -1,0 +1,303 @@
+# SPDX-License-Identifier: Apache-2.0
+# Numbers suggested for the company's size (#76, docs/plans/next-1126.md §3).
+#
+# The owner edits this file. Othor AI reads it as it is: nothing here is a number shown to anyone,
+# every figure is computed by code from the company's own numbers (non-negotiable 1). A change to
+# this file is a change to the release, like code, so a night replays the same way (rule 2).
+#
+# How to edit:
+# - `bands`: smallest first. A company's band is its net revenue over the last 12 complete
+#   months, in ₹ crore (another currency is converted at `rates` below). `from` is where the band
+#   starts (that figure belongs to this band). `numbers` lists the band's numbers in the order
+#   Othor AI offers them; one that serves a goal that is off track still goes first.
+# - `numbers`: one entry per number. Add one, or change its words, freely. Each has:
+#     name     the plain name the number gets in the Business Model
+#     home     the line on Home's "Suggested by Othor AI"
+#     area     Sales, Collections, Operations, Finance or Customers
+#     unit     inr, percent, count, days, inr_per_metre
+#     level    the Business Model checklist item it helps (numbers, parts, customers, …)
+#     same     keys or names that mean the company already has it (then it isn't suggested)
+#     build    how it is built:
+#                top: 10, of: revenue, by: customer   the largest 10's share of a number
+#                take: a, less: b, over: c, by: [...]  (a − b) ÷ c, per breakdown when `by`
+#                table: [stock, inventory]           needs a table named like this, with a
+#                                                    number and a date (dates: 2 for two dates)
+#     figure   the one computed figure, in words; {value} {count} {month} {low} {revenue} are
+#              filled in by code from the company's numbers
+#     reason   why a company of this size watches it, in plain words, with no numbers
+#     needs    what to connect when no source has it
+# - `parts`: how Othor AI recognises the company's own numbers a build uses, by key or name.
+
+version: 1
+
+# ₹ for one unit of another currency, fixed for this release (owner, 25 Nov 2026) and written into
+# each company's spec, so a night and its replay convert the same way.
+rates:
+  as_of: "2026-11"
+  USD: "84"
+
+bands:
+  - key: under_10
+    label: under ₹10 Cr
+    from: 0
+    numbers: [cash_in_hand, collected_vs_invoiced, top10_share, monthly_gross_profit]
+  - key: "10_100"
+    label: ₹10–100 Cr
+    from: 10
+    numbers:
+      - top10_share
+      - gross_margin_pct
+      - revenue_per_active_customer
+      - collected_vs_invoiced
+      - receivables_over_60
+      - stock_days
+      - new_customers
+  - key: "100_1000"
+    label: ₹100–1,000 Cr
+    from: 100
+    numbers:
+      - working_capital_days
+      - margin_by_plant
+      - stock_days
+      - cost_per_unit
+      - capacity_used
+      - on_time_delivery
+  - key: over_1000
+    label: over ₹1,000 Cr
+    from: 1000
+    numbers:
+      - margin_by_unit
+      - return_on_capital
+      - cash_conversion_cycle
+      - spend_under_contract
+      - growth_against_plan
+
+parts:
+  cost_of_goods:
+    keys: [cogs, cost_of_goods, cost_of_sales]
+    names: [cost of goods, cost of goods sold, cost of sales, cogs]
+  active_customers:
+    keys: [active_customers, customers_active]
+    names: [active customers]
+  collections:
+    keys: [collections, receipts, cash_collected]
+    names: [collections, receipts, cash collected]
+  invoiced:
+    keys: [invoiced_value, invoiced, billing, gross_sales]
+    names: [invoiced value, invoiced, billing, gross sales]
+  cash:
+    keys: [cash_balance, cash, bank_balance]
+    names: [cash balance, cash in hand, bank balance]
+  units:
+    keys: [metres_dispatched, units_sold, quantity_sold, units_made]
+    names: [metres dispatched, units sold, units made]
+
+numbers:
+  top10_share:
+    name: Top 10 customers’ share of net revenue
+    home: Watch how much your 10 largest customers carry
+    area: Customers
+    unit: percent
+    level: customers
+    same: [top10_share, top 10 customers’ share of net revenue, customer concentration]
+    build: {top: 10, of: revenue, by: customer}
+    figure: Your 10 largest customers carried {value} of {revenue} in the last 12 months, across {count} customers
+    reason: At your size, one of them going quiet moves the whole year
+
+  gross_margin_pct:
+    name: Gross margin %
+    home: See your gross margin as a share of sales
+    area: Finance
+    unit: percent
+    level: parts
+    same: [gross_margin_pct, gross_margin, gross margin %, gross margin]
+    build: {take: revenue, less: cost_of_goods, over: revenue}
+    figure: '{revenue} less cost of goods: {value} over the last 12 months'
+    reason: It shows when prices or costs move before profit does
+
+  revenue_per_active_customer:
+    name: Net revenue per active customer
+    home: See what each active customer brings in
+    area: Customers
+    unit: inr
+    level: parts
+    same: [revenue_per_active_customer, net revenue per active customer, revenue per customer]
+    build: {take: revenue, over: active_customers}
+    figure: '{value} per active customer in {month}'
+    reason: It tells growth from more customers apart from growth from each one buying more
+
+  collected_vs_invoiced:
+    name: Cash collected against invoiced
+    home: See how much of what you invoice comes in
+    area: Collections
+    unit: percent
+    level: parts
+    same: [collected_vs_invoiced, collection_rate, cash collected against invoiced, collection rate]
+    build: {take: collections, over: invoiced}
+    figure: You collected {value} of what you invoiced in the last 12 months
+    reason: Sales only help once the cash is in
+
+  receivables_over_60:
+    name: Receivables over 60 days
+    home: Watch what customers owe for more than two months
+    area: Collections
+    unit: inr
+    level: numbers
+    same: [receivables_over_60, receivables over 60 days, overdue receivables]
+    build: {table: [receivable, outstanding, debtor]}
+    needs: a table of open invoices with their due dates
+    reason: Old dues are the cash most likely never to come in
+
+  stock_days:
+    name: Stock days
+    home: Watch how long stock sits before it sells
+    area: Operations
+    unit: days
+    level: numbers
+    same: [stock_days, inventory_days, stock days, inventory days, days of stock]
+    build: {table: [stock, inventory]}
+    needs: a stock or inventory table
+    reason: Stock that sits ties up cash a growing company needs
+
+  new_customers:
+    name: New customers a month
+    home: Count the customers you win each month
+    area: Customers
+    unit: count
+    level: customers
+    same: [new_customers, new customers, new customers a month]
+    build: {table: [customer, client, party]}
+    needs: a customer list with the date each one started
+    reason: Growth at your size comes from winning new accounts, not only bigger orders
+
+  monthly_gross_profit:
+    name: Gross profit
+    home: See what is left after the cost of goods
+    area: Finance
+    unit: inr
+    level: parts
+    same: [gross_profit, monthly_gross_profit, gross profit, monthly profit]
+    build: {take: revenue, less: cost_of_goods}
+    figure: '{value} a month on average over the last 12 months'
+    reason: A small company lives on what each month leaves over
+
+  cash_in_hand:
+    name: Cash in hand
+    home: Watch the cash in your bank
+    area: Finance
+    unit: inr
+    level: numbers
+    same: [cash_balance, cash_in_hand, cash balance, cash in hand, bank balance]
+    build: {table: [bank, cash]}
+    needs: your bank balances
+    reason: At your size cash in hand decides how far you can go
+
+  working_capital_days:
+    name: Working-capital days
+    home: See how many days of sales your working capital holds
+    area: Finance
+    unit: days
+    level: parts
+    same: [working_capital_days, working capital days, cash conversion cycle]
+    build: {table: [payable, creditor, vendor_invoice]}
+    needs: payables, beside your stock and receivables
+    reason: At your size working capital, not profit, sets how fast you can grow
+
+  margin_by_plant:
+    name: Gross margin % by plant
+    home: Compare the margin each plant or region makes
+    area: Finance
+    unit: percent
+    level: breakdowns
+    same: [margin_by_plant, gross margin % by plant, margin by plant]
+    build: {take: revenue, less: cost_of_goods, over: revenue, by: [plant, region]}
+    figure: '{low} made the lowest margin, {value} over the last 12 months, of {count}'
+    reason: One weak plant or region can hide inside a healthy total
+
+  cost_per_unit:
+    name: Cost per unit made
+    home: Watch what each unit costs to make
+    area: Operations
+    unit: inr_per_metre
+    level: parts
+    same: [cost_per_unit, cost_per_metre, cost per unit, cost per metre]
+    build: {take: cost_of_goods, over: units}
+    figure: '{value} a unit over the last 12 months'
+    reason: At scale a small move in unit cost is a large move in profit
+
+  capacity_used:
+    name: Capacity used
+    home: See how much of your capacity you use
+    area: Operations
+    unit: percent
+    level: numbers
+    same: [capacity_used, capacity_utilisation, capacity used, utilisation]
+    build: {table: [machine_hour, capacity, production]}
+    needs: machine hours or production against capacity
+    reason: Spare capacity is growth you have already paid for
+
+  on_time_delivery:
+    name: On-time delivery
+    home: Watch how many orders leave on time
+    area: Operations
+    unit: percent
+    level: numbers
+    same: [on_time_delivery, on time delivery, otif]
+    build: {table: [dispatch, delivery, shipment], dates: 2}
+    needs: dispatches with the date promised and the date sent
+    reason: Late orders cost repeat business before they show in sales
+
+  margin_by_unit:
+    name: Gross margin % by business unit
+    home: Compare the margin each business unit makes
+    area: Finance
+    unit: percent
+    level: breakdowns
+    same: [margin_by_unit, margin by business unit]
+    build: {take: revenue, less: cost_of_goods, over: revenue, by: [business_unit, division, segment]}
+    figure: '{low} made the lowest margin, {value} over the last 12 months, of {count}'
+    reason: In a group, the total hides which business earns its keep
+
+  return_on_capital:
+    name: Return on capital employed
+    home: See what the capital in the business earns
+    area: Finance
+    unit: percent
+    level: numbers
+    same: [roce, return_on_capital, return on capital employed]
+    build: {table: [asset_register, fixed_asset, balance_sheet]}
+    needs: a balance sheet or fixed-asset register
+    reason: At your size capital is the scarce thing, not sales
+
+  cash_conversion_cycle:
+    name: Cash conversion cycle
+    home: See how long cash is tied up from purchase to payment
+    area: Finance
+    unit: days
+    level: parts
+    same: [cash_conversion_cycle, cash conversion cycle]
+    build: {table: [payable, creditor, vendor_invoice]}
+    needs: payables, beside your stock and receivables
+    reason: Days of cash freed at your size pay for a year of growth
+
+  spend_under_contract:
+    name: Spend under contract
+    home: See how much you buy under contract
+    area: Operations
+    unit: percent
+    level: numbers
+    same: [spend_under_contract, spend under contract]
+    build: {table: [contract, purchase_order]}
+    needs: purchase orders with their contracts
+    reason: Buying off contract is where large companies leak margin
+
+  growth_against_plan:
+    name: Growth against plan by segment
+    home: Compare each segment’s growth with its plan
+    area: Sales
+    unit: percent
+    level: goals
+    same: [growth_against_plan, segment growth against plan]
+    build: {table: [budget, plan, target]}
+    needs: your plan or budget by segment
+    reason: A plan per segment shows which part of the group is behind

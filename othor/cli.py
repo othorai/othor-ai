@@ -75,17 +75,24 @@ def seed(
     scale: Annotated[
         str, typer.Option(help="default (fast, ~20k invoices) or large (perf + 4,000-table scan)")
     ] = "default",
-    mysql_url: Annotated[
-        str, typer.Option(envvar="OTHOR_SAMPLE_MYSQL_URL")
-    ] = "mysql+pymysql://root:root_dev@localhost:3307/erp_db",
-    pg_url: Annotated[
-        str, typer.Option(envvar="OTHOR_SAMPLE_PG_URL")
-    ] = "postgresql+psycopg://dw_admin:dw_admin_dev@localhost:5443/sales_dw",
+    mysql_url: Annotated[str | None, typer.Option(envvar="OTHOR_SAMPLE_MYSQL_URL")] = None,
+    pg_url: Annotated[str | None, typer.Option(envvar="OTHOR_SAMPLE_PG_URL")] = None,
 ) -> None:
     """Dev only: generate the Indigo Thread sample company into erp_db, sales_dw and Sheets.
 
-    Writes the Sheets fixtures too.
+    Writes the Sheets fixtures too. Without the URLs, the sample databases of `make dev` on
+    localhost, at the ports docker-compose.yml publishes (OTHOR_ERP_DB_PORT, OTHOR_SALES_DW_PORT).
     """
+    import os
+
+    mysql_url = mysql_url or (
+        f"mysql+pymysql://root:root_dev@localhost:{os.environ.get('OTHOR_ERP_DB_PORT') or 3307}"
+        "/erp_db"
+    )
+    pg_url = pg_url or (
+        "postgresql+psycopg://dw_admin:dw_admin_dev@localhost:"
+        f"{os.environ.get('OTHOR_SALES_DW_PORT') or 5443}/sales_dw"
+    )
     try:
         from tests.fixtures.sample_company import generate, load
     except ImportError:
@@ -111,13 +118,22 @@ def seed(
 
 
 @app.command()
-def web(host: str = "127.0.0.1", port: int = 8000, reload: bool = False) -> None:
-    """Serve the web UI."""
+def web(
+    host: str = "127.0.0.1",
+    port: int = 8000,
+    reload: bool = False,
+    workers: Annotated[
+        int | None, typer.Option(help="Web processes (default OTHOR_WEB_WORKERS, 1)", min=1)
+    ] = None,
+) -> None:
+    """Serve the web UI. Several processes share the port (each its own app, page caches and
+    database pool); the scheduler runs only in `othor worker`."""
     import uvicorn
 
     from othor.core.logging import configure_logging
 
     configure_logging()  # uvicorn's access log goes through the redacting handler
+    n = 1 if reload else (workers or get_settings().web_workers)
     uvicorn.run(
         "othor.web.app:create_app",
         factory=True,
@@ -125,6 +141,7 @@ def web(host: str = "127.0.0.1", port: int = 8000, reload: bool = False) -> None
         port=port,
         reload=reload,
         reload_dirs=["othor"] if reload else None,
+        workers=n,
         log_config=None,
     )
 
@@ -188,22 +205,36 @@ def demo(
     date: Annotated[str, typer.Option(help="The night to run (sees data up to the day before)")] = (
         "2026-11-01"
     ),
+    currency: Annotated[
+        str, typer.Option(help="USD (New York time) or INR (India time), for a new install")
+    ] = "USD",
 ) -> None:
     """Dev and demo only (`make demo`): the Indigo Thread sample company set up in this app, its
-    sample databases connected read-only and its Business Model confirmed; then one night run.
-    Needs `make dev && make seed`. An existing indigothread is left as it is."""
+    sample databases connected read-only and its Business Model confirmed; then one night run and
+    a one-time sign-in link (15 minutes). Needs `make dev && make seed` and OTHOR_ENV=dev. An
+    existing indigothread is left as it is."""
+    import os
+
+    if get_settings().env != "dev":
+        typer.echo("demo is dev-only: OTHOR_ENV is not dev", err=True)
+        raise typer.Exit(2)
+    currency = currency.upper()
     try:
         from tests.fixtures.sample_company import app_demo
     except ImportError:
         typer.echo("demo is dev-only: tests/fixtures is not in this image", err=True)
         raise typer.Exit(2) from None
+    if currency not in app_demo.TIMEZONE:
+        typer.echo(f"--currency is USD or INR, not {currency!r}", err=True)
+        raise typer.Exit(2)
+    from othor.core.auth import DEMO_LINK_TTL, AuthService
     from othor.core.tenancy import tenant_scope
     from othor.ontology import service as ontology_service
 
     ctx, _ = _engine_ctx(None)
-    got = app_demo.install(ctx)
+    got = app_demo.install(ctx, currency=currency)
     with ctx.sf() as s, tenant_scope(got.company_id):
-        if not ontology_service.confirmed(s):
+        if not ontology_service.confirmed(s) or got.user_id is None:
             typer.echo(
                 f"This app already has a company {app_demo.SLUG!r} that make demo didn't set up. "
                 "Start from empty databases (make down, then docker compose down -v) and run "
@@ -212,15 +243,20 @@ def demo(
             )
             raise typer.Exit(1)
     typer.echo(
-        "Indigo Thread Co. set up: sample databases connected read-only, Business Model confirmed"
+        f"Indigo Thread Co. set up in {got.currency}: sample databases connected read-only, "
+        "Business Model confirmed"
         if got.created
-        else "Indigo Thread Co. is already set up; running the night again"
+        else f"Indigo Thread Co. is already set up (in {got.currency}); running the night again"
     )
     run(company=app_demo.SLUG, date=date, kind="nightly" if got.created else "manual")
-    link = get_settings().instance_url(app_demo.SLUG, "/login")
+    t = AuthService(ctx.sf, ctx.key).create_handoff(got.user_id, got.company_id, ttl=DEMO_LINK_TTL)
+    link = get_settings().instance_url(app_demo.SLUG, f"/auth/demo?t={t}")
+    login = get_settings().instance_url(app_demo.SLUG, "/login")
     typer.echo(
-        f"\nOpen {link} and sign in as {app_demo.EMAIL}.\n"
-        "The six-digit code arrives in Mailpit: http://localhost:8026"
+        f"\nOpen {link}\n(it signs you in once, within 15 minutes).\n"
+        f"Link expired? Sign in at {login} as {app_demo.EMAIL}; "
+        "the six-digit code arrives in Mailpit: "
+        f"http://localhost:{os.environ.get('OTHOR_MAILPIT_PORT') or 8026}"
     )
 
 

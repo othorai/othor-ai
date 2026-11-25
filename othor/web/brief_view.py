@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from othor.briefs import service
 from othor.briefs.models import Brief, BriefIssue
-from othor.briefs.words import card_title
+from othor.briefs.words import card_title, reworded, words_note
 from othor.briefs.words import shown as shown_words
 from othor.charts.spec import ChartSpec
 from othor.core import fmt
@@ -47,6 +47,9 @@ class BriefView:
     spec_version: int | None
     # the day's newest issue: a Run again now makes a newer one, the 06:00 one stays (v0.11)
     latest_of_day: bool = True
+    # the (i) Words row: from templates, or how many sentences Othor AI reworded (#124)
+    words_note: str = "from templates"
+    reworded: tuple[int, int] = (0, 0)  # (sentences reworded, sentences)
 
 
 def _chart(raw: str | None) -> ChartSpec | None:
@@ -181,6 +184,8 @@ def load(
         more_in_sweep=more,
         spec_version=version,
         latest_of_day=latest_of_day,
+        words_note=words_note(body, issue.prose if issue else None),
+        reworded=reworded(body, issue.prose if issue else None),
     )
 
 
@@ -743,17 +748,20 @@ def edit_view(
     dirty = body != saved
     effect, title_now = "", ""
     if dirty:
+        points = run_cache.points(files.series)  # the run's index, not the file (25 Nov 2026)
         before = step.preview(
             files,
             spec,
             run.run_date,
             {**saved, "id": str(brief.id), "number": v.number, **_default(brief)},
+            points,
         )
         after = step.preview(
             files,
             spec,
             run.run_date,
             {**body, "id": str(brief.id), "number": v.number + 1, **_default(brief)},
+            points,
         )
         effect = edit.effect(before, after)
         title_now = str(after.get("title") or "")
@@ -763,8 +771,7 @@ def edit_view(
         .order_by(BriefVersion.number.desc())
     ).first()
     when = by.created_at if by else brief.created_at
-    who = (by.created_by if by else "") or "Othor AI"
-    who = "Othor AI" if who == "system" else who.split("@")[0].split(" ")[0]
+    who = _who(s, (by.created_by if by else "") or "system")
     return EditView(
         brief=brief,
         version=v.number,
@@ -919,7 +926,13 @@ def new_preview(
     run, spec, files = parts
     options = run_cache.scope_options(spec, files.series)
     body = edit.clean(draft, spec, options)
-    issue = step.preview(files, spec, run.run_date, {**body, "id": "draft", "number": 0})
+    issue = step.preview(
+        files,
+        spec,
+        run.run_date,
+        {**body, "id": "draft", "number": 0},
+        run_cache.points(files.series),
+    )
     day = tomorrow or run.run_date + dt.timedelta(days=1)
     return {
         "draft": body,
@@ -976,7 +989,7 @@ def ask_cards(s: Session, settings: Settings, suggested: list[Any]) -> list[dict
         if len(vals) >= 2 and head:
             label = str((spec.get("breakdowns") or {}).get(b, {}).get("name") or b).lower()
             what = str(metrics.get(head[0], {}).get("name") or head[0])
-            what = what[:1].lower() + what[1:] if what[1:2].islower() else what  # not DSO
+            what = fmt.lower_first(what)  # not DSO, not TiO2
             q = (
                 f"How do {vals[0]} and {vals[1]} compare on {what}?"
                 if len(vals) == 2
@@ -1059,6 +1072,7 @@ def add_options(s: Session, settings: Settings, f: dict[str, Any]) -> list[dict[
                     "number": v.number,
                     **_default(b),
                 },
+                run_cache.points(files.series),
             )
             fps = [i["fingerprint"] for i in after.get("items") or []]
             if f["fingerprint"] in fps:
@@ -1102,3 +1116,25 @@ def in_todays_briefs(s: Session, run: Run) -> dict[str, Any]:
         for it in i.body.get("items") or []:
             titles.setdefault(it["fingerprint"], it["title"])
     return {"fps": set(titles), "titles": list(titles.values()), "brief": first}
+
+
+def _who(s: Session, raw: str) -> str:
+    """Who last changed a brief, by first name (0.35: a person is written by id; older versions
+    carry their email); the night's own versions read "Othor AI"."""
+    from othor.core import actors
+    from othor.core.models import AppUser
+
+    a = actors.parse(raw)
+    if a.kind not in (actors.USER, actors.OTHOR_AI):
+        return "Othor AI"
+    if a.email:
+        return actors.first_name(a.email)
+    u = (
+        s.scalars(sa.select(AppUser).where(AppUser.id == uuid.UUID(a.user_id))).first()
+        if a.user_id
+        else None
+    )
+    name = actors.first_name((u.name or u.email) if u else "")
+    if a.kind == actors.OTHOR_AI:
+        return f"Othor AI (asked by {name})" if name else "Othor AI"
+    return name or "Othor AI"

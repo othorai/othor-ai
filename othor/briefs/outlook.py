@@ -376,7 +376,9 @@ def _goal_items(
                 )
             )
         elif not g.get("on_track"):
-            line = LINES["goal_amber"].format(goal=name, projection=values.text(unit, proj))
+            line = LINES["goal_amber"].format(
+                goal=name, projection=values.goal_value(unit, proj, like=g["target"])
+            )
             out.append(
                 Item(
                     "goal",
@@ -391,7 +393,9 @@ def _goal_items(
                 )
             )
         else:
-            line = LINES["goal_on_track"].format(goal=name, projection=values.text(unit, proj))
+            line = LINES["goal_on_track"].format(
+                goal=name, projection=values.goal_value(unit, proj, like=g["target"])
+            )
             out.append(
                 Item(
                     "goal",

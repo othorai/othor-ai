@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "properties": {
+    "title": {"type": "string"},
+    "line": {"type": "string"},
+    "situation": {"type": "string"},
+    "actions": {"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["title", "line", "situation", "actions"],
+  "additionalProperties": false
+}

@@ -195,6 +195,11 @@ def read_points(path: Path) -> list[Point]:
     return list(read_points_cached(path))
 
 
+def read_points_file(path: Path) -> list[Point]:
+    """A file's points read from disk, leaving the cache as it is (the pages' index builder)."""
+    return _read_file(path)
+
+
 def _read_file(path: Path) -> list[Point]:
     import duckdb
 

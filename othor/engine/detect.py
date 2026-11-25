@@ -12,6 +12,14 @@ A result that doesn't become a finding keeps the first reason that stopped it, i
 not eligible → no signal (raw p ≥ 0.01) → below materiality (no ₹ at stake, or under the floor) →
 not significant after FDR → suppressed by a known pattern → also seen as another finding (one
 finding per detector, family and window).
+
+Keeping a finding open (#142, 25 Nov 2026): a result opens a finding at q ≤ the spec's `fdr_q`
+(0.01); a finding already open after the previous detecting run stays open while its q ≤
+`KEEP_Q` (0.05). q depends on how many tests ran, so adding breakdowns moved q (0.0076 → 0.0108)
+with p unchanged and closed open findings; the looser bar to stay open stops that flip. Every
+other gate (raw p under 0.01, the floor, known patterns, holds) applies as before. The rule is a
+run input (the context's `fdr_keep`, with last night's findings), so a run sealed before it
+replays unchanged. Only the inside pool keeps: a plug-in's pool tests at its own q.
 """
 
 from __future__ import annotations
@@ -27,6 +35,7 @@ from othor.engine.detectors.base import Context, Coverage, Result
 
 RAW_P = Decimal("0.01")
 HIGH_Q = Decimal("0.001")
+KEEP_Q = Decimal("0.05")  # an open finding stays open while its q is at most this (#142)
 PREFER = ("listed", "headline")  # among one family's results, the metric the owner sees
 INSIDE = "inside"
 
@@ -84,7 +93,11 @@ class Detection:
         }
 
 
-def run(ctx: Context) -> Detection:
+def run(
+    ctx: Context, open_before: frozenset[str] = frozenset(), keep_q: Decimal | None = None
+) -> Detection:
+    """`open_before`: the fingerprints open (or held) after the previous detecting run;
+    `keep_q`: the bar to stay open (None: a run before #142, no keeping)."""
     from othor.core import features
 
     results: list[Result] = []
@@ -103,11 +116,12 @@ def run(ctx: Context) -> Detection:
         pools[pool_of(r).name].append(r)
     for name, rs in sorted(pools.items()):
         pool = POOLS[name]
-        bh(rs, inside_q if pool.q is None else pool.q, pool=name)
+        bh(rs, inside_q if pool.q is None else pool.q, pool=name, keep=keep_q)
     for r in results:
         pool = pool_of(r)
         q = inside_q if pool.q is None else pool.q
-        r.passed, r.reason = _gate(r, floor if pool.materiality else None, ctx, q)
+        keep = keep_q if pool.name == INSIDE and _was_open(r, open_before) else None
+        r.passed, r.reason = _gate(r, floor if pool.materiality else None, ctx, q, keep=keep)
     _dedupe(ctx, results)
     for r in results:
         if r.passed:
@@ -122,8 +136,17 @@ def _held(reason: str | None) -> bool:
     return bool(reason) and (reason.startswith("snoozed until") or reason == "muted")  # type: ignore[union-attr]
 
 
-def bh(results: list[Result], q: Decimal, pool: str = INSIDE) -> None:
-    """Benjamini–Hochberg q-values over every result with a p-value (one pool's tests)."""
+def _was_open(r: Result, open_before: frozenset[str]) -> bool:
+    if not open_before:
+        return False
+    from othor.engine.findings import fingerprint
+
+    return fingerprint(r) in open_before
+
+
+def bh(results: list[Result], q: Decimal, pool: str = INSIDE, keep: Decimal | None = None) -> None:
+    """Benjamini–Hochberg q-values over every result with a p-value (one pool's tests). `keep`:
+    the inside pool's bar to stay open (#142), recorded in each test's provenance."""
     tested = [
         r for r in results if r.eligible and r.p_value is not None and r.slots.get("kind") != "goal"
     ]
@@ -141,25 +164,35 @@ def bh(results: list[Result], q: Decimal, pool: str = INSIDE) -> None:
         r.params = {**r.params, "fdr_q": str(q), "tests": m}
         if pool != INSIDE:  # provenance names a plug-in's pool; inside results keep their bytes
             r.params["pool"] = pool
+        elif keep is not None:  # only from #142: a run before it keeps its bytes
+            r.params["keep_q"] = str(keep)
 
 
 GOAL_AT_RISK = "goal at risk"
 
 
-def _gate(r: Result, floor: Decimal | None, ctx: Context, q: Decimal) -> tuple[bool, str | None]:
-    """`floor` None: the result's pool has no money (no materiality gate)."""
+def _gate(
+    r: Result, floor: Decimal | None, ctx: Context, q: Decimal, keep: Decimal | None = None
+) -> tuple[bool, str | None]:
+    """`floor` None: the result's pool has no money (no materiality gate). `keep`: the bar to
+    stay open, for a finding open after the previous detecting run (#142); None otherwise."""
     if not r.eligible:
         return False, r.reason or "not eligible"
     if r.p_value is None or Decimal(r.p_value) >= RAW_P:
         return False, r.reason or "no signal"
-    if floor is not None and (r.money is None or Decimal(r.money) < floor):
+    # a step from 0 whose money can't be sized is reported, saying so (#138, owner 25 Nov 2026)
+    unsized = r.money is None and r.slots.get("money_unsized") is True
+    if floor is not None and not unsized and (r.money is None or Decimal(r.money) < floor):
         return False, "below materiality"
     if r.slots.get("kind") == "goal":
         # where the year will land, not an anomaly (decided 5 Nov 2026): tested and recorded,
         # never a Sweep finding; the brief's goal line and Home's at-risk proposal read it
         return False, GOAL_AT_RISK
     if r.q_value is None or Decimal(r.q_value) > q:
-        return False, f"not significant after FDR (q {r.q_value})"
+        if keep is None or r.q_value is None or Decimal(r.q_value) > keep:
+            return False, f"not significant after FDR (q {r.q_value})"
+        # over the bar to open, under the bar to stay open: provenance says it was kept
+        r.params = {**r.params, "kept_open": "true"}
     pattern = suppressed_by(ctx, r)
     if pattern:
         return False, f"suppressed by {pattern}"

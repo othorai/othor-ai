@@ -185,6 +185,7 @@ def _from_source(s: Session, inp: SetupInputs, payload: dict[str, Any], actor: s
         rules=inp.rules,
         vocabulary=inp.vocabulary,
         names=" ".join(str(f.get("title") or "") for f in (src.config or {}).get("files", [])),
+        refs=inp.refs,  # #116: a metric drafted from an upload maps to the same tab connected
     )
     changed = []
     for key, body in got.redrafted:

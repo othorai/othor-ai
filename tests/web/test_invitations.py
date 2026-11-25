@@ -32,7 +32,13 @@ BAD = "This invitation can’t be used"
 
 @pytest.fixture
 def ienv(tmp_path: Path) -> Env:
+    from othor.core import plugins
+
     url = f"sqlite:///{tmp_path / 'web.db'}"
+    # the app loads the installed plug-ins, so migrate their branches too, whatever an earlier
+    # test in this worker loaded (tests run in parallel since 24 Nov 2026)
+    plugins.reset()
+    plugins.load(Settings(_env_file=None, env="test"))  # type: ignore[call-arg]
     upgrade(url)
     relay, clock = MemoryRelay(), Clock()
     settings = Settings(

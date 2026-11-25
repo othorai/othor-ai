@@ -182,7 +182,7 @@ def role_for(item: dict[str, Any], spec: dict[str, Any] | None) -> str:
     )
     if not role:
         name = str(m.get("name") or "").strip()
-        role = f"whoever looks after {name[:1].lower() + name[1:]}" if name else ""
+        role = f"whoever looks after {fmt.lower_first(name)}" if name else ""
     where = str(item.get("breakdown_value") or "").strip()
     return f"{role} for {where}" if role and where else role
 
@@ -230,10 +230,7 @@ def _on_plan(tiles: list[dict[str, Any]], names: dict[str, str]) -> list[str]:
 
 def _sentence(names: list[str]) -> list[str]:
     """The first name as written; the rest lower case unless an acronym (DSO)."""
-    return [
-        n if i == 0 or n.split()[0].isupper() else n[:1].lower() + n[1:]
-        for i, n in enumerate(names)
-    ]
+    return [n if i == 0 else fmt.lower_first(n) for i, n in enumerate(names)]
 
 
 def line(tiles: list[dict[str, Any]], names: dict[str, str]) -> str:
@@ -256,12 +253,14 @@ def still_open_title(rows: list[dict[str, Any]]) -> str:
     """A quiet day with items still open from before (owner, 21 Nov 2026): nothing new came up,
     and how many are still open, the largest first. `rows`: {title, day} by money, largest
     first; `day` is how long the item has been open."""
-    top = rows[0]
-    what = f"{str(top['title']).rstrip('.')}, day {fmt.num(int(top['day']))}"
+    days = int(rows[0]["day"])
+    span = f"{fmt.num(days)} day{'s' if days != 1 else ''}"
+    # owner, 24 Nov 2026 (option B): the count and how long, not the largest item's whole title
+    # ("…held at 4.3 days, day 45" read as one measurement); the items are listed below
     if len(rows) == 1:
-        return f"Nothing new came up. 1 item from last week is still open: {what}."
+        return f"Nothing new came up; 1 item from last week is still open, for {span}."
     n = fmt.num(len(rows))
-    return f"Nothing new came up. {n} items from last week are still open; the largest: {what}."
+    return f"Nothing new came up; {n} items from last week are still open, the largest for {span}."
 
 
 def drill_sentence(d: dict[str, Any]) -> str:

@@ -255,7 +255,6 @@
 {%- endmacro %}
 
 {# The footer note where Othor AI drafts (non-negotiable 6): the quiet shared one #}
-{% macro nb_note() -%}{% from "components/panels.html" import draft_note %}{{ draft_note() }}{%- endmacro %}
 
 {# M15.7 · Download PDF: a button that opens a dialog with two ticks; the form is a plain GET, so
    the browser downloads the file and the page stays. pdf: {action, hidden} (routes/brief.pdf_ctx) #}

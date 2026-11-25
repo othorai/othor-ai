@@ -52,9 +52,12 @@ LABEL = {
     "othor_chat": "Othor AI chat: a reply to a set of answers",
     "ask_route": "Ask Othor AI: find the answer",
     "ask_answer": "Ask Othor AI: say the answer",
+    "model_check": "Check this model",
     "look_back_plan": "Plan a Look back report",
     "look_back_drill": "Look further in a Look back report",
     "look_back_suggest": "Suggest Look backs",
+    "outside_suggest": "Suggest outside numbers to test",
+    "size_numbers": "Suggest numbers for your size and goals",
     "look_back_write": "Write a Look back report",
     # Discover 2.0 (Enterprise Edition, 0.29): a group's dashboard write-up
     "discover_summary": "Write a Discover group's summary",
@@ -244,9 +247,18 @@ def cap_tokens(company_cap: int | None, default: int) -> int:
 
 
 def used_this_month(s: Session, tz: ZoneInfo, now: dt.datetime) -> int:
-    """Tokens this company used this month (its own time zone), from the call log."""
+    """Tokens this company used this month (its own time zone) on Othor AI's own model, from the
+    call log: calls on the company's own model (its key, its own server) don't count toward the
+    allowance (owner, 25 Nov 2026), though AI usage lists them."""
     month = _aware(now).astimezone(tz).date().replace(day=1)
-    return totals(s, month, tz).tokens
+    a, b = _bounds(month, tz)
+    tin, tout = s.execute(
+        sa.select(
+            sa.func.coalesce(sa.func.sum(ModelCall.tokens_in), 0),
+            sa.func.coalesce(sa.func.sum(ModelCall.tokens_out), 0),
+        ).where(ModelCall.created_at >= a, ModelCall.created_at < b, ModelCall.own_key.is_(False))
+    ).one()
+    return int(tin) + int(tout)
 
 
 def over_cap(

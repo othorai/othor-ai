@@ -113,7 +113,9 @@ def goal_text(body: dict[str, Any], unit: str | None, names: dict[str, str]) -> 
     name = names.get(str(body.get("metric")), str(body.get("name") or body.get("metric")))
     word = "at most" if body.get("direction") == "at_most" else "at least"
     by = dt.date.fromisoformat(str(body["by"]))
-    target = values.text(unit, body["target"])
+    # #147/#148: a day target keeps its own decimals ('at most 3.5 d', never '4 d'), a count whole
+    t = body["target"]
+    target = values.goal_target(unit, t) if unit in ("days", "count") else values.text(unit, t)
     if body.get("aggregate") == "fiscal_year_total":
         return f"{name} {word} {target} for the year to {fmt.day_month_year(by)}"
     return f"{name} {word} {target} by {fmt.day_month_year(by)}"

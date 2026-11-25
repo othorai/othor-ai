@@ -246,13 +246,13 @@ def test_a_quiet_day_with_items_still_open_says_so_the_largest_first():
     open: the key message says so; "Nothing significant came up" only when nothing is open."""
     one = _issue([_dso("old", "900000", days=13)])
     assert one["quiet"] and not one["items"]
-    assert (
-        one["title"] == "Nothing new came up. 1 item from last week is still open: DSO old, day 13."
-    )
+    # 24 Nov 2026 (owner, option B): the count and how long, short; the items are listed below
+    # (the 100-night test: "…held at 4.3 days, day 45" read as one measurement)
+    assert one["title"] == "Nothing new came up; 1 item from last week is still open, for 13 days."
     three = _issue([_dso("a", "500000"), _dso("b", "900000", days=12), _dso("c", "700000")])
     assert three["quiet"]
     assert three["title"] == (
-        "Nothing new came up. 3 items from last week are still open; the largest: DSO b, day 12."
+        "Nothing new came up; 3 items from last week are still open, the largest for 12 days."
     )
     assert _issue([])["title"] == "DSO is on plan; nothing significant came up."
 

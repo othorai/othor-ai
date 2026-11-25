@@ -6,6 +6,7 @@ from decimal import Decimal
 
 import numpy as np
 
+from othor.engine.detectors import common
 from othor.engine.detectors.changepoint import run
 from tests.detectors.synth import context, noise, points, spec, weeks
 
@@ -60,3 +61,49 @@ def test_old_changes_and_short_history():
     (r,), cov = run(context(sp, points("rec", "week", weeks(3), [1, 2, 3])))
     assert not r.eligible and r.reason == "insufficient history" and cov.status == "could_not_run"
     assert Decimal(r.p_value or "1") == 1 or r.p_value is None
+
+
+# A step in a number with no ₹ of its own (truck fill, stock in kg, a count) puts at risk the ₹ of
+# the metric it names in `at_stake`, since the change (owner, 24 Nov 2026; as rising variance).
+def _linked(link: bool):
+    fill = {"kind": "flow", "unit": "percent", "agg": "avg"}
+    if link:
+        fill["at_stake"] = {"metric": "freight"}
+    sp = spec(fill=fill, freight={"kind": "flow", "unit": "inr", "agg": "sum"})
+    x = 0.82 + noise(5, 52, 0.01)
+    x[-6:] -= 0.23  # truck fill drops from 82% to 59%, six weeks ago
+    rupees = np.full(52, 300_000.0)
+    return context(sp, points("fill", "week", W, x) + points("freight", "week", W, rupees))
+
+
+def test_a_non_rupee_step_with_a_link_puts_its_linked_money_at_risk():
+    """Since #138 (v3) the share the move says: 82% → 59% fill is 23 points of the whole."""
+    (r,) = [x for x in run(_linked(True))[0] if x.metric == "fill"]
+    assert r.direction == "down" and r.slots["weeks_held"] == 6
+    move = abs(float(r.slots["after"]) - float(r.slots["before"]))
+    assert abs(move - 0.23) < 0.01
+    assert abs(float(r.money) - move * 300_000 * 6) < 2  # that share of freight since the change
+    assert r.money_basis == (
+        f"{common.share_text(move)} of freight at risk for fill since {W[-6].isoformat()}"
+    )
+
+
+def test_the_old_rule_put_the_whole_linked_money_at_risk():
+    ctx = _linked(True)
+    ctx.versions = {"changepoint": "2"}  # a run made with v2 (24 Nov to #138) replays with it
+    (r,) = [x for x in run(ctx)[0] if x.metric == "fill"]
+    assert abs(float(r.money) - 300_000 * 6) < 1  # the ₹ through freight since the change
+    assert r.money_basis == f"freight at risk for fill since {W[-6].isoformat()}"
+
+
+def test_a_non_rupee_step_without_a_link_has_no_money():
+    (r,) = [x for x in run(_linked(False))[0] if x.metric == "fill"]
+    assert r.direction == "down" and r.money is None and r.money_basis == ""
+
+
+def test_the_at_risk_money_reads_as_at_risk():
+    from othor.engine.sweep_text import money_tag
+
+    f = {"detector": "changepoint", "money": "1800000", "money_basis": "freight at risk for x"}
+    assert money_tag(f).endswith(" at risk")
+    assert not money_tag({**f, "money_basis": "weekly step in rev × 8 weeks"}).endswith("risk")

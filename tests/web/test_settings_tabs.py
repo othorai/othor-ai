@@ -27,10 +27,10 @@ def test_the_tabs_open_on_company_and_follow_the_address(tmp_path: Path) -> None
         h = env.host("indigothread")
         page = env.client.get(h + "/settings").text
         # Licence last when the install runs several companies (as here)
-        assert _tabs(page) == ["company", "charts", "delivery", "data", "licence"]
+        assert _tabs(page) == ["company", "ai", "charts", "delivery", "data", "licence"]
         assert _shown(page) == ["company"]
         # every pane is in the page, so a tab shows without asking the server again
-        for key in ("company", "charts", "delivery", "data", "licence"):
+        for key in ("company", "ai", "charts", "delivery", "data", "licence"):
             assert f'data-pane="{key}"' in page
         assert 'href="?tab=charts"' in page
         charts = env.client.get(h + "/settings?tab=charts").text

@@ -119,6 +119,12 @@ def page(request: Request, name: str, ctx: dict[str, Any], status: int = 200) ->
         "base_domain": services(request).settings.base_domain,
         "app_env": services(request).settings.env,  # the site's footer: Performance only when live
     }
+    if company is not None and ctx.get("user"):
+        # the company's own tab icon on its signed-in pages (Company identity 1.0); othor.ai,
+        # sign-in and a recipient's link keep the Othor AI icon
+        from othor.web import tab_icon
+
+        base["tab_icon"] = tab_icon.links(company)
     if ctx.get("nav") in PAUSED_ON and company is not None:
         base["paused"] = paused_text(request, company)
     if request.query_params.get("panel") == "contact" and ctx.get("user") and company:
@@ -512,6 +518,12 @@ async def login_code_submit(request: Request) -> Response:
     svc = services(request)
     email = _login_email(request, svc)
     if not email:
+        # the code form sent twice (#117: the sixth digit submits it, then Continue, Enter or
+        # autofill again): the first signed in and cleared the sign-in email, so this one goes
+        # where the sign-in went, not back to the email field
+        sess = svc.auth.session_for(request.cookies.get(session_cookie_name(request)))
+        if sess is not None and sess.company_id == site.company.id:
+            return RedirectResponse(resume_path(svc, site.company.id, request), 303)
         return RedirectResponse("/login", 303)
     code = _digits(await request.form())
     common = {
@@ -1044,12 +1056,27 @@ def signup_address_submit(
 
 @router.get("/auth/handoff")
 def handoff(request: Request, t: str = "") -> Response:
+    return _redeem(request, t, demo=False)
+
+
+@router.get("/auth/demo")
+def demo_link(request: Request, t: str = "") -> Response:
+    """`make demo`'s one-time sign-in link (owner, 25 Nov 2026): 15 minutes, once. Dev only: on
+    any other OTHOR_ENV the address doesn't exist."""
+    if services(request).settings.env != "dev":
+        return not_found(request, resolve_site(request))
+    return _redeem(request, t, demo=True)
+
+
+def _redeem(request: Request, t: str, *, demo: bool) -> Response:
     site = resolve_site(request)
     if site.company is None:
         return not_found(request, site)
     svc = services(request)
     try:
-        token = svc.auth.redeem_handoff(t, site.company.id, request.headers.get("user-agent"))
+        token = svc.auth.redeem_handoff(
+            t, site.company.id, request.headers.get("user-agent"), demo=demo
+        )
     except auth.BadHandoff:
         return RedirectResponse("/login", 303)
     sess = svc.auth.session_for(token)
@@ -1061,6 +1088,7 @@ def handoff(request: Request, t: str = "") -> Response:
         actor=sess.user_id,
         object_type="user",
         object_id=sess.user_id,
+        after={"via": "demo link"} if demo else None,
     )
     resp = RedirectResponse(resume_path(svc, site.company.id, request), 303)
     if return_path(request):

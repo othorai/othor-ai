@@ -58,7 +58,7 @@ def test_the_issue_stores_its_actions_and_the_brief_shows_them(night):  # noqa: 
         "Call Tessora EU and Ravira Exports",
         "Ask Priya Menon, Head of Sales",
         "November close in 29 days",
-        "₹4.59 Cr at risk",
+        "₹4.06 Cr at risk",  # the spread since 14 Sep (rising variance v2, 25 Nov 2026)
     ):
         assert x in t, x
     # holds return to the brief; Watch only on the one whose check can draft a watch
@@ -354,3 +354,72 @@ def test_the_briefs_action_plan_is_last_just_above_since_last_week(night):  # no
     for later in ('aria-label="Since last week"', ">Since last week<"):
         if later in page:
             assert plan < page.index(later)
+
+
+# --- #110 (owner, 25 Nov 2026): Home and the page link to each brief's own Action plan, and the
+# brief links back to the plan across the briefs (docs/plans/next-1126.md § 1) ----------------
+
+
+def test_homes_card_links_each_brief_to_its_own_action_plan(night):  # noqa: F811
+    env, h, cid, _rid, svc = night
+    bid, _ = _brief(svc, cid)
+    home = env.client.get(h + "/home").text
+    card = home[home.index('aria-label="Today’s action plan"') :].split("</section>", 1)[0]
+    to = f'href="/brief/{bid}#action-plan"'
+    # the heading: "From your briefs: Leadership · 3" before See all
+    head = card.split("</div>", 1)[0]
+    assert "From your briefs:" in _text(head) and "Leadership · 3" in _text(head)
+    assert to in head and head.index("From your briefs") < head.index("See all 3 →")
+    # every row's brief chip is a link to that brief's Action plan, still a chip
+    assert card.count(f'<a class="chip soft" {to}') == 3
+    assert "Leadership ›" in _text(card)
+
+
+def test_the_briefs_action_plan_has_its_anchor_and_the_way_back(night):  # noqa: F811
+    env, h, cid, _rid, svc = night
+    bid, _ = _brief(svc, cid)
+    page = env.client.get(h + f"/brief/{bid}").text
+    sec = page[page.rindex("<section", 0, page.index('aria-label="Action plan"')) :]
+    sec = sec.split("</section>", 1)[0]
+    assert 'id="action-plan"' in sec.split(">", 1)[0]
+    assert 'href="/action-plan"' in sec and "Today’s plan across your briefs →" in _text(sec)
+    # its own rows don't name the brief they are in
+    assert f"/brief/{bid}#action-plan" not in sec
+    # the read-only link (as recipients see it) has neither
+    shared = env.client.get(h + f"/brief/{bid}/shared").text
+    ro = shared[shared.index('aria-label="Action plan"') :].split("</section>", 1)[0]
+    assert 'id="action-plan"' not in shared and 'href="/action-plan"' not in ro
+    assert "Today’s plan across your briefs" not in _text(shared)
+
+
+def test_the_action_plan_page_opens_each_brief_from_its_tab(night):  # noqa: F811
+    env, h, cid, _rid, svc = night
+    bid, _ = _brief(svc, cid)
+    page = env.client.get(h + "/action-plan").text
+    main = page[page.index('id="main"') :]
+    # a brief's tab has its line, hidden until that tab is on (in place, othor.js); All has none
+    m = re.search(r'<p[^>]*data-wtd-line="Leadership"[^>]*>(.*?)</p>', main, re.S)
+    assert m is not None and " hidden" in m.group(0).split(">", 1)[0]
+    line = _text(m.group(1)).strip()
+    assert line == "Leadership brief · 3 actions today · Open it in the brief →"
+    assert f'href="/brief/{bid}#action-plan"' in m.group(1)
+    assert 'data-wtd-line="all"' not in main
+    # the rows' brief chips are links too
+    assert f'<a class="chip soft" href="/brief/{bid}#action-plan"' in main
+    from pathlib import Path
+
+    js = (Path(__file__).resolve().parents[2] / "othor/web/static/js/othor.js").read_text()
+    assert "data-wtd-line" in js
+
+
+def test_without_forecasts_the_weeks_and_whats_ahead_stay_as_they_were(night):  # noqa: F811
+    """#109 (owner, 25 Nov 2026): without the Forecasts licence nothing changes: the week cards
+    open their panel on Home, and neither it nor the brief's What's ahead links to Forecasts."""
+    env, h, cid, _rid, svc = night
+    bid, _ = _brief(svc, cid)
+    home = env.client.get(h + "/home").text
+    assert 'href="/forecasts' not in home and "Open Forecasts" not in home
+    p = env.client.get(h + "/home?panel=forecast&week=1", headers={"X-Othor-Panel": "1"}).text
+    assert 'href="/forecasts' not in p and "Open that week in Forecasts" not in p
+    brief = env.client.get(h + f"/brief/{bid}").text
+    assert 'href="/forecasts' not in brief and "All forecasts" not in brief

@@ -1,0 +1,61 @@
+{#- SPDX-License-Identifier: Apache-2.0 -#}
+{# Audit log (0.35): a = the /audit route's view. Who did what, and when, newest first. A row with
+   a before and after opens in place (a <details>); the filters and "Load more" swap rows in place. #}
+{% from "components/forms.html" import select %}
+{% from "components/blocks.html" import empty_state %}
+{% from "components/icons.html" import icon %}
+
+{% macro audit_filters(a) -%}
+<form class="audit-filters" id="audit-filters" method="get" action="/audit" hx-get="/audit/rows" hx-trigger="change" hx-target="#audit-body" hx-swap="outerHTML">
+  {{ select("who", a.who_options, a.f.who, small=True, attrs='aria-label="Who"') }}
+  {{ select("kind", a.kind_options, a.f.kind, small=True, attrs='aria-label="Kind"') }}
+  {{ select("days", a.ranges, a.f.days, small=True, attrs='aria-label="When"') }}
+  <button class="btn sm" type="submit" formaction="/audit.csv">{{ icon("download") }}Download CSV</button>
+  <noscript><button class="btn sm" type="submit">Show</button></noscript>
+</form>
+{%- endmacro %}
+
+{% macro audit_what(r) -%}
+<span class="audit-what">{% for text, href in r.what %}{% if href %}<a href="{{ href }}">{{ text }}</a>{% else %}{{ text }}{% endif %}{% endfor %}</span>
+{%- endmacro %}
+
+{% macro audit_row(r) -%}
+{% if r.details or r.note %}
+<details class="audit-row">
+  <summary class="audit-line"><span class="audit-when">{{ r.when }}</span><span class="audit-who">{{ r.who }}</span>{{ audit_what(r) }}<span class="audit-toggle"><span class="t">Details</span>{{ icon("chevron-down") }}</span></summary>
+  <div class="audit-details">
+    <p class="caps-title">Details</p>
+    {% if r.details %}<div class="audit-diff">
+      <span class="h k"></span><span class="h">Before</span><span class="h">After</span>
+      {% for label, was, now in r.details %}<span class="k">{{ label }}</span><span class="was{{ ' gone' if was and now and was != now else '' }}">{{ was or "—" }}</span><span>{{ now or "—" }}</span>{% endfor %}
+    </div>{% endif %}
+    {% if r.note or r.links %}<p class="audit-note">{{ r.note }}{% for label, href in r.links %}{{ " · " if r.note or not loop.first else "" }}<a href="{{ href }}">{{ label }}</a>{% endfor %}</p>{% endif %}
+  </div>
+</details>
+{% else %}
+<div class="audit-row"><div class="audit-line"><span class="audit-when">{{ r.when }}</span><span class="audit-who">{{ r.who }}</span>{{ audit_what(r) }}<span class="audit-toggle"></span></div></div>
+{% endif %}
+{%- endmacro %}
+
+{% macro audit_more(a) -%}
+{% if a.more %}<button class="btn audit-more" id="audit-more" type="button" hx-get="/audit/rows?{{ a.f.query() }}&amp;after={{ a.more | urlencode }}" hx-target="#audit-more" hx-swap="outerHTML">Load more</button>{% endif %}
+{%- endmacro %}
+
+{# "Load more": the next rows and the next button, in place of the button #}
+{% macro audit_rows_more(a) -%}
+{% for r in a.rows %}{{ audit_row(r) }}{% endfor %}{{ audit_more(a) }}
+{%- endmacro %}
+
+{% macro audit_body(a) -%}
+<div id="audit-body" class="audit-body">
+  {% if a.rows %}
+  <div class="audit-list">
+    <div class="audit-head" aria-hidden="true"><span>When</span><span>Who</span><span>What</span><span></span></div>
+    {% for r in a.rows %}{{ audit_row(r) }}{% endfor %}
+    {{ audit_more(a) }}
+  </div>
+  {% else %}
+  {{ empty_state(None, "Nothing here yet", "Nothing matches these choices. Try everyone, every kind or a longer time.") }}
+  {% endif %}
+</div>
+{%- endmacro %}

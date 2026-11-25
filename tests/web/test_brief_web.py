@@ -332,9 +332,9 @@ def test_a_new_brief_from_one_question_then_undo(night):  # noqa: F811
         "Change anything",
         "Create brief",
         "Are my top 4 accounts still buying?",
-        "Drafts only. Numbers are computed, not written. Nothing changes until you apply.",
     ):
         assert line in text, line
+    assert "Drafts only" not in text  # no note on any screen (owner, 24 Nov 2026)
     # the model is off in tests: the default numbers with the question, and one amber line
     assert "Drafted by rules: Othor AI isn’t available right now" in text
     draft = _h.unescape(re.search(r'name="draft" value="([^"]*)"', page).group(1))
@@ -371,9 +371,7 @@ def test_new_brief_step_1_in_the_questions_panel_style(night):  # noqa: F811
     assert 'class="nb-ai"' not in panel and "ai-box-mark" not in panel  # #95: no logo in the box
     assert '<textarea class="input" id="f-question" name="question"' in panel
     assert "Suggested for " in text and 'class="nb-suggest"' in panel
-    assert (
-        "Drafts only. Numbers are computed, not written. Nothing changes until you apply." in text
-    )
+    assert "Drafts only" not in text
     # the cards fill the box: buttons that don't submit, each with where it came from
     cards = re.findall(r'<button class="nb-card" type="button" data-tell-fill="([^"]+)"', panel)
     assert 1 <= len(cards) <= 3

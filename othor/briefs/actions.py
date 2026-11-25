@@ -83,10 +83,9 @@ def _low(text: str, keep: set[str]) -> str:
     letter lower-cased, unless it opens with a name, an abbreviation (DSO) or a number."""
     if not text or not text[0].isupper():
         return text
-    first = text.split()[0].rstrip(",;:’'s")
-    if first.isupper() or any(text.startswith(n) for n in keep if n):
+    if any(text.startswith(n) for n in keep if n):
         return text
-    return text[:1].lower() + text[1:]
+    return fmt.lower_first(text)
 
 
 # the 0.33.1 sentences (the 100-night run): a finding's own title reworded into an action, every
@@ -97,7 +96,9 @@ _SPREAD = re.compile(
     r"^(?P<what>.+?) spread at (?P<where>.+?) (?P<how>\w+) from (?P<date>\d{1,2} \w+)(?P<rest>.*)$"
 )
 _SILENT = re.compile(
-    r"^(?P<n>[\d,]+) (?P<noun>customers|accounts|suppliers|partners) (?P<mid>.+?) "
+    # the entity's own plural from the Business Model ("partner banks"), else the usual nouns
+    r"^(?P<n>[\d,]+) (?P<noun>customers|accounts|suppliers|partners|[a-z][a-z ]*?(?= still ))"
+    r" (?P<mid>.+?) "
     r"(?P<verb>haven’t|have not|stopped|aren’t)(?P<tail>.*)$"
 )
 _FALL = re.compile(r"^(?P<a>.+?) fell (?P<m>[^;]+); (?P<b>.+?)’s rise hid it$")
@@ -171,7 +172,7 @@ def _goal_action(spec: dict[str, Any], g: dict[str, Any], line: dict[str, Any]) 
     m = spec.get("metrics", {}).get(g["metric"], {})
     unit = m.get("unit")
     name = str(m.get("name") or g["metric"])
-    low = name if name.split()[0].isupper() else name[:1].lower() + name[1:]
+    low = fmt.lower_first(name)
     target, proj = Decimal(str(g["target"])), Decimal(str(g["projection"]))
     by = fmt.day_month(dt.date.fromisoformat(str(g["by"])))
     up = g.get("direction", "at_least") == "at_least"
@@ -240,13 +241,23 @@ def _shown(text: str) -> Decimal | None:
         return None
 
 
+def _lower_first(name: str) -> str:
+    return fmt.lower_first(name)  # DSO and TiO2 stay as written
+
+
 def _watch_name(label: str) -> str:
-    """A watch's label as a phrase mid-sentence: its first part ("Dispatch time spread,
-    Coimbatore · 7 days" → "dispatch time spread, Coimbatore"), first letter lower-cased unless
-    it's an abbreviation (DSO)."""
+    """A watch's label as a phrase mid-sentence, its first part only (before " · "), first letter
+    lower-cased unless it's an abbreviation (DSO). A comma is read out (24 Nov 2026, the 100-night
+    test): a capitalised part after it is a place or a name ("Dispatch time spread, Coimbatore" →
+    "dispatch time spread for Coimbatore"), a lower-case one is a measure ("Receivables over 60
+    days, share" → "the share of receivables over 60 days")."""
     name = label.split(" · ")[0].strip()
-    first = name.split()[0] if name.split() else ""
-    return name if first.isupper() else name[:1].lower() + name[1:]
+    head, sep, tail = name.partition(", ")
+    if not sep or not tail.strip():
+        return _lower_first(name)
+    if tail[:1].isupper():
+        return f"{_lower_first(head)} for {tail}"
+    return f"the {tail} of {_lower_first(head)}"
 
 
 def _watch_action(spec: dict[str, Any], w: dict[str, Any]) -> dict[str, Any]:
@@ -262,7 +273,7 @@ def _watch_action(spec: dict[str, Any], w: dict[str, Any]) -> dict[str, Any]:
         "key": f"watch:{w['id']}",
         "fingerprints": [str(w["from_finding"])] if w.get("from_finding") else [],
         "metric": metric,
-        "text": f"{lead} {name} reads {now}, {word} the {thr} limit you set.",
+        "text": f"{lead} {name} reads {now}, {word} your limit of {thr}.",
         "why": [{"title": str(w["label"]), "watch": str(w["id"])}],
         "status": f"{word.capitalize()} the limit",
         # the sentence names who to ask; the row doesn't say it twice (0.33.1)

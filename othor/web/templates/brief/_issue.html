@@ -33,7 +33,7 @@
   {% if since_line %}{% set _ = about.append(("Since " ~ since_word, since_line | striptags)) %}{% endif %}
   {% if b.stale %}{% set _ = about.append(("Stale", fmt.num(b.stale | length) ~ " number" ~ ("s" if b.stale | length != 1 else "") ~ " from a source not updated")) %}{% endif %}
   {% if early %}{% set _ = about.append(("Building history", fmt.num(early | length) ~ " number" ~ ("s" if early | length != 1 else ""))) %}{% endif %}
-  {% set _ = about.append(("Words", "rewritten by Othor AI, figures checked" if bv.issue.prose.source == "model" else "from templates")) %}
+  {% set _ = about.append(("Words", bv.words_note)) %}
   {% call el("div", "brief-kicker") %}
     {% call el("div", "name") %}{{ bv.brief.name }}{{ info_list(about, id="brief-about", label="About this brief") }}{% endcall %}
     {% call el("p", "when") %}{{ fmt.date_short(bv.issue.date) }} · {{ ("sent " ~ fmt.clock(sent_at) ~ " to " ~ fmt.num(sent_n)) if sent_at else fmt.clock(b.time) }}{% if b.stale %}{% call el("span", "fresh") %}{% call el("span", "dot warn") %}{% endcall %}{{ fmt.num(b.stale | length) }} number{{ "s" if b.stale | length != 1 else "" }} from a stale source{% endcall %}{% endif %}{% endcall %}
@@ -93,7 +93,7 @@
   {% for sec in b.get("sections") or [] %}{{ brief_extra(sec) }}{% endfor %}
 
   {# v0.19 (M19.4): where the headline numbers are heading, after the findings (owner) #}
-  {% if b.ahead %}{% call el("div", layout="mt-16") %}{{ whats_ahead(b.ahead, b.ahead_note) }}{% endcall %}{% endif %}
+  {% if b.ahead %}{% call el("div", layout="mt-16") %}{{ whats_ahead(b.ahead, b.ahead_note, fc=(ahead_fc is defined and ahead_fc and not readonly)) }}{% endcall %}{% endif %}
 
   {% if b.watching %}{% set w0 = b.watching[0] %}{% set since = (watch_since or {}).get(w0.id | string) if watch_since is defined else None %}{{ watching("Watching · " ~ fmt.num(b.watching | length) ~ " breached", w0.text ~ (" · since " ~ fmt.day_month(since) if since else "") ~ (" · " ~ fmt.num(b.watching | length - 1) ~ " more" if b.watching | length > 1 else ""), href="/sweep?tab=watching", action=("" if readonly else "Open →")) }}{% endif %}
 
@@ -108,5 +108,5 @@
   {% if b.get("week") %}{% call el("div", layout="mt-16") %}{{ since_week(b["week"], None if readonly or not bv.run else (bv.run.number, bv.brief.id, csrf_token), held if held is defined else None, None if readonly else "/sweep") }}{% endcall %}{% endif %}
 
   {% set run_tab = (base ~ "/finding/" ~ items[0].fingerprint ~ "?" ~ q ~ "&tab=run") if items else ("/sweep?run=" ~ bv.run.number if bv.run else "") %}
-  {% if not recipient_link and view == "full" %}{% call el("p", "brief-footer") %}Every number is computed{% if bv.run %} · {% call el("a", "link-u", attrs={"href": run_tab}) %}Run #{{ "%04d" | format(bv.run.number) }}{% if bv.spec_version %} · spec v{{ bv.spec_version }}{% endif %} · replayable{% endcall %}{% endif %} · {{ "prose rewritten, numbers checked" if bv.issue.prose.source == "model" else "template prose" }}{% endcall %}{% endif %}
+  {% if not recipient_link and view == "full" %}{% call el("p", "brief-footer") %}Every number is computed{% if bv.run %} · {% call el("a", "link-u", attrs={"href": run_tab}) %}Run #{{ "%04d" | format(bv.run.number) }}{% if bv.spec_version %} · spec v{{ bv.spec_version }}{% endif %} · replayable{% endcall %}{% endif %} · {% set rw, rw_of = bv.reworded %}{{ "template prose" if not rw else ("prose rewritten, numbers checked" if rw == rw_of else "prose partly rewritten, numbers checked") }}{% endcall %}{% endif %}
 {% endif %}

@@ -121,7 +121,7 @@ def rows_sql(
             if stack is not None and label == stack.label and out in stack.negate:
                 e = exp.Neg(this=exp.Paren(this=e))
             if out == date_out:
-                date = scope.column(node, where="date", convert=False)
+                date = scope.date_column(node, where="date")
             sel_cols.append(exp.alias_(e, out, quoted=True))
         if label is not None and stack is not None:
             sel_cols.append(exp.alias_(lit(label), stack.kind_out, quoted=True))

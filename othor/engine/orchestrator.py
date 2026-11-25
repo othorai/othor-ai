@@ -517,12 +517,21 @@ def _write_context(ctx: EngineContext, info: RunInfo) -> None:
         record = forecasts_of_record(s, run, info.run_date)
     previous: list[dict[str, Any]] = []
     status: list[dict[str, Any]] = []
+    tests_before: int | None = None
     if prev is not None:
         files = RunFiles(ctx.settings.runs_dir(info.company_id), prev.id)
         previous = read_json(files.outputs / "findings.json") or []
         status = read_json(files.outputs / "watches.json") or []
-    ctx_doc = carry_context(previous, rows, status, holds)
+        # #142: how many tests it ran, so a finding that fell under the bar can say why
+        got = ((read_json(files.outputs_json) or {}).get("sweep") or {}).get("tests")
+        tests_before = int(got) if got is not None else None
+    ctx_doc = carry_context(previous, rows, status, holds, tests_before=tests_before)
     ctx_doc["forecasts"] = record
+    # #138: the detector versions tonight's Sweep runs, sealed with the inputs so replay runs the
+    # same ones (a context stored before has none: replay reads them from the stored results)
+    from othor.engine.sweep import current_versions
+
+    ctx_doc["detector_versions"] = current_versions()
     # 0.28.3: a full re-read asked for this run (othor admin reread), sealed with the inputs so a
     # replay forecasts the same; only when there is one, so earlier runs' contexts are unchanged
     from othor.engine.sources import reread_request
@@ -1006,10 +1015,31 @@ def questions(ctx: EngineContext, info: RunInfo) -> SourceOutcome:
         )
         props += proposals.definition(s, run, info.spec)
         props += proposals.duplicate(s, run, info.spec, read_points(info.files.series))
+        props += _size_numbers(s, run, info)
         s.commit()
         return SourceOutcome(
             True, {"candidates": len(cands), "raised": len(made), "proposals": len(props)}
         )
+
+
+def _size_numbers(s: Session, run: Run, info: RunInfo) -> list[Any]:
+    """#76: the numbers suggested for the company's size and goals, from the run's `size`, the
+    scanned catalog (names and kinds) and the goals' states tonight. Never fails the night."""
+    from othor.ontology import goal_link, size_numbers
+    from othor.ontology.compiler.catalog import load_catalog
+
+    try:
+        size = (read_json(info.files.outputs_json) or {}).get("size")
+        goals = goal_link.states(
+            info.spec,
+            (read_json(info.files.outputs / FORECASTS) or {}).get("goals") or [],
+            goal_link.at_risk_keys(read_json(info.files.outputs / "detection.json") or []),
+        )
+        with s.begin_nested():
+            return size_numbers.propose(s, run, info.spec, size, load_catalog(s), goals)
+    except Exception as e:
+        log.warning("size suggestions skipped: %s", type(e).__name__)
+        return []
 
 
 def seal(ctx: EngineContext, info: RunInfo, spec: Spec) -> SourceOutcome:

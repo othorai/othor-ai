@@ -469,6 +469,7 @@ a.card.is-disabled, .card[aria-disabled="true"] { opacity: .55; pointer-events: 
 .co-logo { display: block; width: 28px; height: 28px; object-fit: contain; border-radius: var(--radius-6, 6px); flex: none; }
 .co-logo.md { width: 40px; height: 40px; }
 .co-logo.lg { width: 48px; height: 48px; margin: 0 0 12px; }
+.tab-icon { display: block; width: 16px; height: 16px; border-radius: 3px; flex: none; }  /* the browser tab's icon at its own size (Company identity 1.0) */
 .nav-item { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 8px; border-radius: var(--radius-4); color: var(--color-ink-2);
   text-decoration: none; font-size: var(--text-15); transition: background var(--transition-quick); }
 .nav-item svg { width: 18px; height: 18px; stroke: var(--color-muted); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
@@ -644,6 +645,11 @@ progress.bar::-moz-progress-bar { background: var(--color-accent); border-radius
 .card.flush { overflow: visible; }
 .table.flush td:first-child, .table.flush th:first-child { padding-left: 14px; }
 .table td.wrap { white-space: normal; line-height: var(--leading-row); padding-top: 8px; padding-bottom: 8px; }
+/* a table whose cells stay on one line (Data sources, owner 24 Nov 2026), and its row buttons in
+   their own narrow cells so each button lines up down the rows, an empty cell keeping its place */
+.table.one-line th, .table.one-line td { white-space: nowrap; }
+.table td.act { width: 1%; padding-left: 3px; padding-right: 3px; text-align: right; }
+.table td.act:last-child { padding-right: 12px; }
 .code-block { font-family: var(--font-mono); font-size: var(--text-meta); line-height: var(--leading-read); background: var(--color-surface); border: 1px solid var(--color-rule);
   border-radius: var(--radius-8); padding: 12px 14px; white-space: pre-wrap; color: var(--color-ink); overflow: auto;
   max-height: 320px; }  /* a long generated query scrolls; the panel's other sections stay in view (M12b) */
@@ -1851,9 +1857,6 @@ tr.is-decided > td { background: var(--color-surface); }
 .tabs-table td.tab-use .link { display: block; margin-top: 6px; white-space: nowrap; }
 
 /* the quiet draft note (owner, 12 Nov 2026, #33): one short grey line, the full sentence behind (i) */
-.draft-note { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: var(--text-meta); color: var(--color-muted-2); }
-.draft-note .info { width: 16px; height: 16px; font-size: var(--text-label); }
-.draft-note .pop-body { width: 280px; }
 
 /* #38: a headline tile opens its number's panel */
 a.brief-tile.is-link { color: inherit; text-decoration: none; cursor: pointer; transition: border-color var(--transition-quick), background var(--transition-quick); }
@@ -1938,6 +1941,12 @@ a.brief-tile.is-link:focus-visible { outline: none; box-shadow: var(--shadow-foc
 .ahead-depth summary { cursor: pointer; color: var(--color-accent-deep); font-weight: 500; }
 .ahead-depth ul { margin: 6px 0 0 16px; list-style: disc; display: flex; flex-direction: column; gap: 2px; }
 .ahead-learn { margin-top: 8px; font-size: var(--text-meta); }
+/* #109 (owner, 25 Nov 2026): on the signed-in brief with Forecasts, All forecasts by the heading
+   and each number's line and range there; Home's week panel opens its week there */
+.ahead-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.ahead-head .link, .ahead-go .link { font-size: var(--text-meta); }
+.ahead-go { margin-top: 4px; }
+.wx-panel-go { margin: 0; }
 .ahead-tech { margin-top: 6px; overflow-wrap: anywhere; color: var(--color-muted-2); font-family: var(--font-mono); font-size: var(--text-label); }
 .ahead-visual { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
 .ahead-card { display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 1px solid var(--color-border); border-radius: var(--radius-12); background: var(--color-bg); }
@@ -2806,6 +2815,11 @@ a.brief-card:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
 .fc-week-l { margin: 14px 0 0; font-size: var(--text-row); font-weight: 600; color: var(--color-ink); }
 .fc-week-i { margin: 8px 0 0; padding-left: 16px; font-size: var(--text-meta); line-height: var(--leading-row); color: var(--color-ink-2); }
 .fc-week-i li + li { margin-top: 4px; }
+/* #109 (owner, 25 Nov 2026): the week opened from Home's panel, outlined; a line opens its chart */
+.fc-week { scroll-margin-top: 96px; }
+.fc-week.is-on { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+.fc-week-i a { color: inherit; text-decoration: underline dotted var(--color-muted-2); text-underline-offset: 3px; }
+.fc-week-i a:hover { color: var(--color-accent-deep); }
 .fc-table th { background: transparent; border-bottom: 1px solid var(--color-rule); font-size: var(--text-label); font-weight: 600; letter-spacing: var(--tracking-caps); text-transform: uppercase; white-space: nowrap; }
 .fc-table th .pop { vertical-align: middle; margin-left: 4px; text-transform: none; letter-spacing: 0; }
 .fc-table td { vertical-align: middle; padding-top: 14px; padding-bottom: 14px; }
@@ -2884,7 +2898,7 @@ a.brief-card:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
    Home's card and the What to do page draw (components/todo.html), on the dashboard rows */
 .wtd-sec { margin-bottom: 36px; }
 .wtd-sec[hidden], .wtd-list .db-row[hidden] { display: none; }
-.wtd-in-brief { margin: 24px 0 8px; }
+.wtd-in-brief { margin: 24px 0 8px; scroll-margin-top: 96px; }
 .wtd-home { margin-bottom: 28px; }
 .wtd-tabs { margin: 4px 0 28px; }
 .wtd-list .db-row { align-items: flex-start; padding: 18px 0; }
@@ -2905,7 +2919,17 @@ a.brief-card:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
 .wtd-foot { display: grid; gap: 10px; }
 .wtd-held-line { margin: 8px 0 0; padding-top: 16px; border-top: 1px solid var(--color-rule); font-size: var(--text-row); color: var(--color-muted); }
 .wtd-held-line .link { font-size: var(--text-row); }
+/* #110 (owner, 25 Nov 2026): each brief named on a row opens that brief's own Action plan (still a
+   chip); Home's heading names the briefs it draws from; the page's line on a brief's tab */
+.wtd-briefs a.chip { text-decoration: none; color: var(--color-ink-2); }
+.wtd-briefs a.chip:hover { color: var(--color-accent-deep); }
+.wtd-home-r { display: inline-flex; align-items: baseline; flex-wrap: wrap; justify-content: flex-end; gap: 4px 16px; }
+.wtd-from .link { font-size: var(--text-row); }
+.wtd-lead { margin: -16px 0 24px; font-size: var(--text-row); color: var(--color-muted); }
+.wtd-lead[hidden] { display: none; }
+.wtd-lead .link { font-size: var(--text-row); }
 @media (max-width: 559px) {
+  .wtd-from { display: none; }
   .wtd-list .db-row { flex-wrap: wrap; column-gap: 12px; }
   .wtd-r { order: 3; min-width: 0; width: 100%; flex-direction: row; justify-content: space-between; align-items: center; padding-left: 34px; }
   .wtd-list .v { text-align: left; }
@@ -2968,3 +2992,46 @@ a.hold-btn { text-decoration: none; }
 .wtd-res-more[open] > summary { display: none; }
 .wtd-res-week { margin: 12px 0 0; font-size: var(--text-row); color: var(--color-muted); }
 .wtd-res-week .link { font-size: var(--text-row); }
+/* 0.35 · Audit log: rows of when · who · what; a row with a before and after opens in place */
+.audit-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.audit-body { display: flex; flex-direction: column; gap: 20px; }
+.audit-list { display: flex; flex-direction: column; }
+.audit-head, .audit-line { display: grid; grid-template-columns: 170px 200px minmax(0, 1fr) 96px; gap: 16px; align-items: baseline; padding: 12px 14px; }
+.audit-head { padding-top: 0; padding-bottom: 8px; order: -1; font-size: var(--text-meta); font-weight: 600; color: var(--color-muted-2); text-transform: uppercase; letter-spacing: var(--tracking-caps); border-bottom: 1px solid var(--color-border); }
+.audit-row { border-bottom: 1px solid var(--color-row); font-size: var(--text-row); }
+.audit-when { color: var(--color-muted); white-space: nowrap; }
+.audit-who { color: var(--color-ink); }
+.audit-what { color: var(--color-ink); line-height: var(--leading-row); min-width: 0; overflow-wrap: anywhere; }
+.audit-what a { color: var(--color-ink); text-decoration: underline; text-underline-offset: 2px; }
+.audit-what a:hover { color: var(--color-accent-deep); }
+.audit-toggle { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; color: var(--color-muted); }
+.audit-toggle .icon { width: 14px; height: 14px; transition: transform 120ms ease; }
+details.audit-row > summary { list-style: none; cursor: pointer; }
+details.audit-row > summary::-webkit-details-marker { display: none; }
+details.audit-row > summary:hover, details.audit-row[open] > summary { background: var(--color-select-tint); }
+details.audit-row[open] .audit-toggle { color: var(--color-ink); }
+details.audit-row[open] .audit-toggle .icon { transform: rotate(180deg); }
+details.audit-row > summary:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.audit-details { background: var(--color-surface); padding: 14px 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.audit-diff { display: grid; grid-template-columns: 170px minmax(0, 1fr) minmax(0, 1fr); column-gap: 16px; }
+.audit-diff > span { padding: 8px 0; border-bottom: 1px solid var(--color-row); overflow-wrap: anywhere; }
+.audit-diff > .h { padding-top: 0; font-size: var(--text-meta); color: var(--color-muted); }
+.audit-diff > .k { font-size: var(--text-meta); color: var(--color-muted); }
+.audit-diff > .was { color: var(--color-muted); }
+.audit-diff > .was.gone { text-decoration: line-through; }
+.audit-note { margin: 0; font-size: var(--text-meta); color: var(--color-muted); }
+.audit-note a { color: var(--color-ink); text-decoration: underline; text-underline-offset: 2px; }
+.audit-more { align-self: center; }
+@media (max-width: 720px) {
+  .audit-head { display: none; }
+  .audit-line { grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 12px 4px; }
+  .audit-line .audit-when { order: 1; font-size: var(--text-meta); }
+  .audit-line .audit-toggle { order: 2; grid-row: span 3; align-self: center; }
+  .audit-line .audit-who { order: 3; font-size: var(--text-meta); color: var(--color-muted); }
+  .audit-line .audit-what { order: 4; grid-column: 1; }
+  .audit-toggle .t { display: none; }
+  .audit-details { padding: 12px 4px; }
+  .audit-diff { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .audit-diff > .k { grid-column: 1 / -1; border-bottom: 0; padding-bottom: 0; }
+  .audit-diff > .h.k { display: none; }
+}

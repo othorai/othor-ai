@@ -4,16 +4,21 @@
    "How this forecast was made", in place. rows: the issue body's `ahead`. -#}
 {#- 16 Nov 2026 (owner): each row also shows Big Picture's forecast card (expected, likely range,
    goal, how likely), with the line chart beside it, its likely range in the same cyan. -#}
-{% macro whats_ahead(rows, note=none) -%}
+{#- #109 (owner, 25 Nov 2026): `fc` (the signed-in brief page, Forecasts installed): "All forecasts
+   →" by the heading and, per number, its line and range on Forecasts. Never on the read-only link,
+   the PDF or the email. -#}
+{% macro whats_ahead(rows, note=none, fc=False) -%}
 {% if rows %}
 <section class="ahead" aria-label="What's ahead">
-  <p class="caps-title">What’s ahead</p>
+  {% if fc %}<div class="ahead-head"><p class="caps-title">What’s ahead</p><a class="link" href="/forecasts?window=4w">All forecasts →</a></div>
+  {% else %}<p class="caps-title">What’s ahead</p>{% endif %}
   <div class="ahead-rows">
   {% for r in rows %}
     <div class="ahead-row" id="ahead-{{ r.metric }}">
       <div class="ahead-text">
         <p class="ahead-says"><b>{{ r.name }}</b>{% if r.says %}: {{ r.says }}{% else %}: <span class="ahead-why">{{ r.why }}</span>{% endif %}</p>
         {% if r.confidence %}<p class="ahead-conf"><span class="conf conf-{{ r.confidence.level }}">{{ r.confidence.word }}</span> {{ r.confidence.why }}</p>{% endif %}
+        {% if fc and r.says and r.metric %}<p class="ahead-go"><a class="link" href="/forecasts?number={{ r.metric }}#fc-chart">See its line and range on Forecasts →</a></p>{% endif %}
         {% if r.depth %}<details class="ahead-depth"><summary>How this forecast was made</summary>
           <ul>
             {% for k in ("method", "range", "last", "changed") %}{% if r.depth[k] %}<li>{{ r.depth[k] }}</li>{% endif %}{% endfor %}

@@ -12,7 +12,7 @@
   {% if single %}<input type="hidden" name="slug" value="{{ v.slug }}">{% else %}
   {% call el('div', 'field') %}
     <label for="f-slug">Company address</label>
-    {% call el('div', 'input-group') %}<input id="f-slug" name="slug" value="{{ v.slug }}" autocomplete="off" spellcheck="false" autofocus
+    {% call el('div', 'input-group') %}<input id="f-slug" name="slug" value="{{ v.slug }}" autocomplete="off" autocapitalize="none" spellcheck="false" data-lowercase autofocus
       hx-get="/signup/address/check" hx-trigger="input changed delay:250ms" hx-target="#slug-check" hx-swap="outerHTML">{% call el("span", "suffix") %}.{{ base_domain }}{% endcall %}{% endcall %}
     {% with slug=v.slug %}{% include "partials/slug_check.html" %}{% endwith %}
     {% call el("p", "hint", layout="mt-12") %}Lowercase letters, numbers and hyphens.{% endcall %}

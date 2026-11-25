@@ -205,7 +205,7 @@ def _base_sql(
             cols: list[exp.Expr] = []
             group: list[exp.Expr] = []
             if flow:
-                date = scope.column(_date_ref(body["date"]), where="date", convert=False)
+                date = scope.date_column(_date_ref(body["date"]), where="date")
                 p = period(date, grain, dialect)
                 cols.append(exp.alias_(p, "period", quoted=True))
                 group.append(p.copy())
@@ -263,7 +263,7 @@ def _base_sql(
         for c in _where(scope, body):
             ev = ev.where(c)
         if flow:
-            date = scope.column(_date_ref(body["date"]), where="date", convert=False)
+            date = scope.date_column(_date_ref(body["date"]), where="date")
             ev = ev.where(exp.GTE(this=date, expression=exp.cast(placeholder("from"), "DATE")))
             ev = ev.order_by(exp.Ordered(this=date.copy(), desc=True))
         sql = to_sql(ev.limit(EVIDENCE_LIMIT), dialect)
@@ -334,7 +334,7 @@ def _allocation_sql(
     )
     scope = Scope(m, cat, t, rules, dialect)
     value = render(body["measure"]["expr"], scope, where="measure")
-    date = scope.column(_date_ref(body["date"]), where="date", convert=False)
+    date = scope.date_column(_date_ref(body["date"]), where="date")
     p = period(date, grain, dialect)
     fk = scope.column(_date_ref(fkey), where="allocation key", convert=False)
     on_w: exp.Expr = exp.EQ(this=fk.copy(), expression=exp.column("k", table=ALLOC_W, quoted=True))
@@ -494,7 +494,7 @@ def _unmapped_sql(
         if body["measure"].get("expr")
         else None
     )
-    date = scope.column(_date_ref(body["date"]), where="date", convert=False)
+    date = scope.date_column(_date_ref(body["date"]), where="date")
     pfx = exp.Substring(this=code.copy(), start=exp.Literal.number(1), length=exp.Literal.number(n))
     p = period(date, "month", dialect)
     sel = exp.select(
@@ -574,9 +574,67 @@ def _refs(formula: dict[str, Any]) -> list[dict[str, Any]]:
     return [n for n in walk(formula) if "metric" in n]
 
 
+def _top_share_sql(m: str, formula: dict[str, Any], grain: str, kinds: dict[str, str]) -> str:
+    """The largest N values of a number's breakdown as a share of its total, per period (#76,
+    Top 10 customers' share): ranked by value, ties by name; "Other" (the breakdown cap's rest)
+    is never one of the N. A period with no total, or a total of zero, has no value."""
+    import sqlglot
+
+    ref, by, n = formula["args"]
+    of = str(ref["metric"])
+    if kinds.get(of) == "snapshot":
+        raise CompileError(f"{m}: the largest values' share is for a total per period, not a level")
+    # the shape is fixed text; the record's values (the number, the breakdown, how many) go in
+    # as sqlglot literals through placeholders, never concatenated into the statement
+    values = {
+        "metric": lit(of),
+        "grain": lit(grain),
+        "by": lit(str(by["lit"])),
+        "other": lit(OTHER_BUCKET),
+        "n": lit(int(n["lit"])),
+    }
+    tree = sqlglot.parse_one(TOP_SHARE_SQL, read="duckdb").transform(
+        lambda node: (
+            values[node.name].copy()
+            if isinstance(node, exp.Placeholder) and node.name in values
+            else node
+        )
+    )
+    return to_sql(tree, "duckdb")
+
+
+TOP_SHARE_SQL = """
+WITH b AS (
+  SELECT "period", "breakdown_value", "value",
+    ROW_NUMBER() OVER (
+      PARTITION BY "period" ORDER BY "value" DESC NULLS LAST, "breakdown_value"
+    ) AS "rk"
+  FROM series
+  WHERE "metric" = :metric AND "grain" = :grain AND "breakdown" = :by
+    AND "breakdown_value" <> :other AND "value" IS NOT NULL
+), t AS (
+  SELECT "period", "value" FROM series
+  WHERE "metric" = :metric AND "grain" = :grain AND "breakdown" = ''
+), s AS (
+  SELECT "period", SUM("value") AS "top" FROM b WHERE "rk" <= :n GROUP BY "period"
+)
+SELECT t."period", NULL AS "breakdown_value",
+  CASE WHEN t."value" IS NULL OR t."value" = 0 THEN NULL
+    ELSE COALESCE(s."top", 0) / t."value" END AS "value",
+  CASE WHEN t."value" IS NULL OR t."value" = 0 THEN 'not_determinable' ELSE 'ok' END AS "state"
+FROM t LEFT JOIN s ON s."period" = t."period"
+ORDER BY t."period"
+"""
+
+
+OTHER_BUCKET = "Other"  # the breakdown cap's rest (engine.compute.OTHER)
+
+
 def _derived_sql(
     m: str, formula: dict[str, Any], grain: str, bkey: str | None, kinds: dict[str, str]
 ) -> str:
+    if formula.get("fn") == "top_share":
+        return _top_share_sql(m, formula, grain, kinds)
     refs = _refs(formula)
     names = sorted({r["metric"] for r in refs})
     alias = {name: f"c{i}" for i, name in enumerate(names)}
@@ -907,7 +965,11 @@ def compile_records(
                 usable = all(
                     bkey is None or bkey in (out_metrics[r["metric"]].get("breakdowns") or [])
                     for r in _refs(f)
-                )
+                ) and not (bkey and f.get("fn") == "top_share")  # a share has no breakdown
+                if f.get("fn") == "top_share":
+                    _by = str(f["args"][1]["lit"])
+                    if _by not in (out_metrics[_refs(f)[0]["metric"]].get("breakdowns") or []):
+                        raise CompileError(f"{m}: {_refs(f)[0]['metric']} has no {_by} breakdown")
                 if not usable:
                     continue
                 queries[f"{grain}:{bkey or ''}"] = _derived_sql(m, f, grain, bkey, kinds)
@@ -1019,6 +1081,13 @@ def compile_records(
     if floor is not None or cur != "INR":
         amount = floor["amount"] if floor else DEFAULT_FLOOR.get(cur, "5000")
         spec["detectors"] = {**DETECTOR_DEFAULTS, "materiality_inr": str(amount)}
+    # #76: the ₹ rate fixed for this release, for the company's size band; only for another
+    # currency than ₹, so an INR company compiles as before
+    from othor.ontology.size import spec_rate
+
+    rate = spec_rate(cur)
+    if rate is not None:
+        spec["size"] = rate
     _plugin_parts(records, spec)
     for m, entry in out_metrics.items():
         if entry.get("status") == "active" and (entry.get("queries") or entry.get("components")):
